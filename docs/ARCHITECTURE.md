@@ -801,6 +801,7 @@ Three distinct concepts, deliberately kept separate because they have different 
 | `NATURAL_VARIATION` | `material.isNaturalVariable` | Grain/colour/knot disclaimer (notice) |
 | `FLOOR_MATCH` | product type `FLOOR_ELEMENT` | „Dokładne dopasowanie odcienia do istniejącej podłogi może nie być możliwe." (warning, acknowledged) |
 | `UNSUPPORTED_GLYPH` | char outside font coverage | error |
+| `THICKNESS_EXCEEDS_MACHINE` *(added 2026-08-23, D7)* | `thicknessMm > machine.maxWorkpieceThicknessMm` | „Wybrana grubość (…) przekracza możliwości naszej maszyny — maksymalnie (…). Wybierz mniejszą grubość." (error) |
 
 Scale factor for `LINE_TOO_THIN`: the design's declared minimum line width is defined **at its reference width**; rendering it at `widthMm` scales all features by `widthMm / design.referenceWidthMm`. (This adds `referenceWidthMm` to `Design` — noted as a schema addendum.)
 
@@ -816,10 +817,11 @@ Scale factor for `LINE_TOO_THIN`: the design's declared minimum line width is de
 > `prisma/migrations/20260823010000_add_machine_thickness_limit`. The machine
 > is a [TwoTrees TTC6050](https://pl.twotrees3d.com/en/products/twotrees-ttc6050-cnc-router-machine-800w-spindle-4th-axis),
 > whose spec sheet states "600 x 500 x 100 mm" verbatim — external
-> confirmation, not just a retelling. See `docs/HANDOVER.md` §9 for the full
-> resolution, including one dead end (a "10 mm" answer that turned out to
-> describe material thickness, not the module floor) and the fact that the
-> thickness limit is stored but **not yet enforced** by any feasibility rule.
+> confirmation, not just a retelling. `domain/feasibility` now enforces this
+> limit as `THICKNESS_EXCEEDS_MACHINE` (§8, §9b of `docs/HANDOVER.md`). See
+> `docs/HANDOVER.md` §9 for the full resolution, including one dead end (a
+> "10 mm" answer that turned out to describe material thickness, not the
+> module floor).
 
 **Inputs:** `widthMm`, `heightMm`, machine usable area (`600 × 900 mm` nominal → **`580 × 880 mm` effective** after clamping and tool clearance — configurable, not hardcoded; **superseded, see note above**), material `maxSheetWidthMm/maxSheetHeightMm`, `minModuleMm` (default 150), `grainDirection`.
 
@@ -1379,7 +1381,7 @@ Your §40 checklist, plus the items this analysis added. Kept in `docs/CHECKLIST
 | R1b | I cannot execute the test suite, so "green" is your observation, not mine | A silent regression could be reported as passing | Every claim of passing tests is tied to output you paste back; failure messages written to state the expected reason |
 | R2 | MUI's default look reads "admin dashboard", contradicting premium positioning | Brand failure — the stated primary risk of the whole project | Aggressive theme override (§2.1); design review of the homepage before P3 |
 | R3 | MUI is client-side; naive use kills SEO and LCP on catalogue pages | Lost organic traffic — the main acquisition channel | RSC/island split enforced by lint rule + a test asserting no `@mui/material` import in `(marketing)`/`(shop)` server components |
-| R4 | ~~Feasibility constraints are guesses until real machine data exists~~ **Partially resolved 2026-08-23** — real usable area and module floor confirmed (D7); the machine's Z-axis limit is stored (`MachineSettings.maxWorkpieceThicknessMm = 100`) but **not yet enforced** by any `domain/feasibility` rule | Promising unmanufacturable results, or over-warning and losing sales | All constraints are DB values, not constants; tune from real production without a deploy. A THICKNESS_EXCEEDS_MACHINE rule is still open work |
+| R4 | ~~Feasibility constraints are guesses until real machine data exists~~ **Resolved 2026-08-23** — real usable area and module floor confirmed (D7); `domain/feasibility` now enforces `THICKNESS_EXCEEDS_MACHINE` against `MachineSettings.maxWorkpieceThicknessMm = 100`, tested including the boundary. A separate, still-open question: the TwoTrees spec's "20 mm carving layer height" is a different limit (per-pass cut depth into a surface, not workpiece clearance) that would inform a future design-relief-depth check — not built, not the same gap as this row | Promising unmanufacturable results, or over-warning and losing sales | All constraints are DB values, not constants; tune from real production without a deploy |
 | R5 | Modular splitting off-by-one at exact boundaries | Wrong module count → wrong price and wrong production plan | Boundary tests written before implementation (§9) |
 | R6 | Money as float | Off-by-grosz vs. invoices | Integer grosze by construction, enforced in `domain/money` |
 | R7 | Unsanitized customer SVG | Stored XSS | §13.1 step 3; served as attachment / rasterized |
@@ -1417,7 +1419,7 @@ Each of these has a defined extension point in the model above; none requires a 
 | ~~D4~~ | Real numbers for material `pricePerM2`, machine rate per minute, module surcharge, packaging tiers | The pricing engine is structurally correct but produces meaningless złoty without them | **Resolved 2026-08-23** — seed `TODO_PRICING` placeholders, clearly marked, swapped before launch. Not yet implemented; blocked only on the seed script itself (P2) |
 | **D5** | Product photography and design assets — available, or placeholders? | Brief §6 makes imagery the core of the brand | Ship P2 with clearly-marked placeholders, swap before launch |
 | **D6** | Customer accounts required at checkout, or guest checkout too? | Affects cart, order lookup, and the auth surface | Guest checkout + optional account — fewer abandoned carts |
-| ~~D7~~ | Real machine usable area and minimum module size | §9 currently assumes 580 × 880 mm effective and 150 mm minimum | **Resolved 2026-08-23** — 600×500mm usable, 150mm min module, 100mm max Z-thickness (new `MachineSettings.maxWorkpieceThicknessMm`, not yet enforced by any rule). Full detail in `docs/HANDOVER.md` §9 |
+| ~~D7~~ | Real machine usable area and minimum module size | §9 currently assumes 580 × 880 mm effective and 150 mm minimum | **Resolved 2026-08-23** — 600×500mm usable, 150mm min module, 100mm max Z-thickness (`MachineSettings.maxWorkpieceThicknessMm`, now enforced by `domain/feasibility` as `THICKNESS_EXCEEDS_MACHINE`). Full detail in `docs/HANDOVER.md` §9 |
 | **D8** | Confirm the `KITCHEN_TILE` default size (70 × 120 mm) and whether customers may deviate | Affects preset vs custom size logic | Fixed presets matching common Polish backsplash tile formats |
 
 ---

@@ -61,7 +61,7 @@ src/domain/personalization/validate.ts     text length, lines, real font glyph c
 src/domain/feasibility/rules.ts            errors / warnings / notices about manufacturability
 src/domain/order-status/transitions.ts     order status graph — legal moves, actor permission, the design-review gate
 src/content/pl/messages.ts                 every customer-visible Polish string
-tests/unit/*.test.ts                       11 files, 291 assertions
+tests/unit/*.test.ts                       11 files, 298 assertions
 ```
 
 Two of those need a closer look before you build on them, because
@@ -408,13 +408,20 @@ retelling of it. Two things from the same page, neither acted on:
   "500W Spindle Motor" — worth the owner confirming which they actually
   bought, though nothing in this schema models spindle wattage today.
 - The page separately lists **"Carving Layer Height: Non-metal 0.1mm–20mm"**,
-  which reads as maximum cut depth per pass/operation — a different number
-  from the 100 mm Z-travel already stored in `maxWorkpieceThicknessMm`. If a
-  `THICKNESS_EXCEEDS_MACHINE` feasibility rule is ever built (§8's open gap,
-  noted above), it likely needs the 20 mm figure, not the 100 mm one. Also on
-  the page: ER11 collet, 0.5–7 mm tool diameter — a plausible sanity floor for
-  `Design.minLineWidthUm` whenever real design metadata is entered, since a
-  0.2 mm line cannot be cut by a 0.5 mm bit.
+  a different number from the 100 mm Z-travel in `maxWorkpieceThicknessMm`. An
+  earlier version of this note said the 20 mm figure was the one a
+  `THICKNESS_EXCEEDS_MACHINE` rule would need — **that was wrong, corrected
+  2026-08-23.** The two numbers answer different physical questions: 100 mm is
+  Z-axis clearance under the gantry — whether a workpiece fits in the machine
+  at all — and 20 mm is how deep a single carving pass can cut into a
+  surface, which is a property of a *design's* relief depth
+  (`Design.minEngraveDepthMm`), not of the material blank's own thickness.
+  §8's gap was specifically about a chosen product thickness exceeding the
+  machine — that needs 100 mm, and that is what got built (see §9b below). A
+  design-relief-depth check against the 20 mm figure is still open, separate
+  work, not yet built. Also on the page: ER11 collet, 0.5–7 mm tool diameter —
+  a plausible sanity floor for `Design.minLineWidthUm` whenever real design
+  metadata is entered, since a 0.2 mm line cannot be cut by a 0.5 mm bit.
 
 **D4, resolved 2026-08-23: seed `TODO_PRICING` placeholders**, invented
 plausible round numbers, never shown to a customer, swapped before launch.
@@ -455,6 +462,28 @@ product's numbers should look like once seeded.
 
 Idempotency was verified by running `npm run db:seed` twice in a row: the
 second run left `PricingSettings` untouched and reported so explicitly.
+
+## 9b. THICKNESS_EXCEEDS_MACHINE — the flagged gap, closed 2026-08-23
+
+`domain/feasibility` now rejects a configured thickness greater than
+`MachineSettings.maxWorkpieceThicknessMm` (100 mm — D7). `FeasibilityInput`
+gained two required fields: `thicknessMm: number | null` (`null` for product
+types with no THICKNESS step — WALL_ART, KITCHEN_TILE) and
+`machine: MachineConstraints`. The mapper gained `toMachineConstraints`,
+symmetrical with `toDesignConstraints`/`toMaterialConstraints`.
+
+Adding a new `FeasibilityCode` broke the typecheck in an unexpected place —
+`src/content/pl/messages.ts`'s `feasibilityMessage` switch is exhaustive over
+that union, so TypeScript refused to compile until a Polish message existed
+for the new code. That is the lint rule working as designed, not a bug to
+route around: every domain code has exactly one Polish translation, enforced
+by the compiler rather than by someone remembering to add it. Do not add a
+`default: return ''` case to make an exhaustiveness error go away — that is
+what the switch is for.
+
+Boundary is inclusive: a thickness exactly equal to the limit is allowed, not
+rejected, consistent with every other boundary in this codebase. Mutation-
+tested (flipped `>` to `>=`, confirmed exactly one test catches it).
 
 ## 10. Working style the owner expects
 

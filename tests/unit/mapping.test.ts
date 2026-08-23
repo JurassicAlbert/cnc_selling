@@ -11,6 +11,7 @@ import {
   toDesignConstraints,
   toDimensionEnvelope,
   toFontSpec,
+  toMachineConstraints,
   toMaterialConstraints,
   toPersonalizationSpec,
   toPricingInput,
@@ -85,6 +86,7 @@ const machine: MachineSettingsRow = {
   usableWidthMm: 580,
   usableHeightMm: 880,
   minModuleMm: 150,
+  maxWorkpieceThicknessMm: 100,
 };
 
 function pricingRows(overrides: Partial<PricingRows> = {}): PricingRows {
@@ -173,6 +175,18 @@ describe('toSplitLimits', () => {
   });
 });
 
+describe('toMachineConstraints', () => {
+  it('carries the Z-axis limit through unchanged — it is already integer mm', () => {
+    expect(toMachineConstraints(machine).maxWorkpieceThicknessMm).toBe(100);
+  });
+
+  it('rejects a non-integer value instead of rounding it away', () => {
+    expect(() =>
+      toMachineConstraints({ ...machine, maxWorkpieceThicknessMm: 100.5 }),
+    ).toThrow(MappingError);
+  });
+});
+
 describe('toDesignConstraints and toMaterialConstraints', () => {
   it('converts micrometres to the millimetres the domain compares in', () => {
     expect(toDesignConstraints(design).minLineWidthMm).toBe(1.5);
@@ -204,6 +218,8 @@ describe('toDesignConstraints and toMaterialConstraints', () => {
       material: toMaterialConstraints(material),
       moduleCount: 1,
       isFloorElement: false,
+      thicknessMm: null,
+      machine: toMachineConstraints(machine),
     });
 
     const line = findings.find((f) => f.code === 'LINE_TOO_THIN');

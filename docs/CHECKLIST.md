@@ -3,7 +3,7 @@
 Reviewed item by item before the project is considered finished (brief §40–41).
 `[ ]` not started · `[~]` in progress · `[x]` done and verified by a passing test or manual check.
 
-**Last verified: 2026-08-23** — `npm test` 291/291 green, `npm run typecheck` clean, on Node v22.15.0 /
+**Last verified: 2026-08-23** — `npm test` 298/298 green, `npm run typecheck` clean, on Node v22.15.0 /
 TypeScript 7.0.2 / Vitest 4.1.11 / Prisma 7.9.1. P1 is now genuinely complete (all 7 modules from
 ARCHITECTURE.md §22). `domain/compatibility` and `domain/order-status` were correctly left unchecked
 here all along — the overstatement was `docs/HANDOVER.md`'s prose claiming P1 "is complete and
@@ -37,10 +37,10 @@ Postgres up, migration applied). The Next.js app shell is not started.
 - [x] `domain/modules` — split algorithm, exact boundary, sliver avoidance, min module clamp, remainder distribution, infeasible case, grain rotation rule
 - [x] `domain/pricing` — every component isolated, rounding at .5, min-price clamp, quantity, version pinning
 - [x] `domain/personalization` — length, lines, glyph coverage, Polish diacritics, empty, whitespace-only, emoji
-- [x] `domain/feasibility` — thin line at scale, detail level vs size, min text height, boundary equality, notices
+- [x] `domain/feasibility` — thin line at scale, detail level vs size, min text height, boundary equality, notices, machine thickness limit (`THICKNESS_EXCEEDS_MACHINE`, added 2026-08-23 using D7's real 100mm Z-clearance, boundary mutation-tested)
 - [ ] `domain/configuration` — step machine, invalid step order, unknown option, incomplete config
 - [x] `domain/order-status` — legal and illegal transitions, design-review gate, actor permission — 22 assertions (`src/domain/order-status/transitions.ts`); the transition graph is this project's own design (ARCHITECTURE.md didn't fully specify one), documented in the module's header comment
-- [x] Full unit suite green with no DB and no framework imports — 291 assertions, no Next/Prisma/I/O imports (verified 2026-08-23)
+- [x] Full unit suite green with no DB and no framework imports — 298 assertions, no Next/Prisma/I/O imports (verified 2026-08-23)
 
 ## P2 — Catalogue
 

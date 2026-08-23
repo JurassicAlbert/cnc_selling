@@ -63,6 +63,8 @@ export function feasibilityMessage(finding: FeasibilityFinding): string {
       return 'To drewno naturalne. Rysunek słojów, odcień i sęki różnią się w każdym egzemplarzu — Twój produkt będzie jedyny w swoim rodzaju.';
     case 'FLOOR_MATCH_NOT_GUARANTEED':
       return 'Dokładne dopasowanie odcienia do istniejącej podłogi może nie być możliwe. Drewno naturalne różni się partiami, a kolor zmienia się z czasem.';
+    case 'THICKNESS_EXCEEDS_MACHINE':
+      return `Wybrana grubość (${mm(Number(finding.params.thicknessMm))}) przekracza możliwości naszej maszyny — maksymalnie ${mm(Number(finding.params.maxThicknessMm))}. Wybierz mniejszą grubość.`;
   }
 }
 

@@ -56,7 +56,7 @@ npm install
 npm run db:up
 npm run db:deploy      # applies the initial migration
 
-npm test               # 291 assertions across eleven files, about a second
+npm test               # 298 assertions across eleven files, about a second
 npm run typecheck      # TypeScript strict, noUncheckedIndexedAccess, no emit
 ```
 

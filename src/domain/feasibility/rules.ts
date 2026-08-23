@@ -20,7 +20,8 @@ export type FeasibilityCode =
   | 'DETAIL_SPACING_TOO_TIGHT'
   | 'MODULAR_BUILD'
   | 'NATURAL_VARIATION'
-  | 'FLOOR_MATCH_NOT_GUARANTEED';
+  | 'FLOOR_MATCH_NOT_GUARANTEED'
+  | 'THICKNESS_EXCEEDS_MACHINE';
 
 export type FeasibilityFinding = {
   readonly code: FeasibilityCode;
@@ -48,12 +49,24 @@ export type MaterialConstraints = {
   readonly isNaturalVariable: boolean;
 };
 
+export type MachineConstraints = {
+  /** The machine's real Z-axis clearance (D7). A workpiece thicker than this does not fit. */
+  readonly maxWorkpieceThicknessMm: number;
+};
+
 export type FeasibilityInput = {
   readonly widthMm: number;
   readonly design: DesignConstraints;
   readonly material: MaterialConstraints;
   readonly moduleCount: number;
   readonly isFloorElement: boolean;
+  /**
+   * The chosen thickness, or `null` for a product type with no THICKNESS
+   * step (§5) — WALL_ART and KITCHEN_TILE never supply one, and the check
+   * is skipped rather than guessing a value that was never configured.
+   */
+  readonly thicknessMm: number | null;
+  readonly machine: MachineConstraints;
 };
 
 export function evaluateFeasibility(
@@ -100,6 +113,18 @@ export function evaluateFeasibility(
       params: {
         widthMm: input.widthMm,
         recommendedMinWidthMm: design.minRecommendedWidthMm,
+      },
+    });
+  }
+
+  if (input.thicknessMm !== null && input.thicknessMm > input.machine.maxWorkpieceThicknessMm) {
+    findings.push({
+      code: 'THICKNESS_EXCEEDS_MACHINE',
+      severity: 'error',
+      requiresAcknowledgement: false,
+      params: {
+        thicknessMm: input.thicknessMm,
+        maxThicknessMm: input.machine.maxWorkpieceThicknessMm,
       },
     });
   }

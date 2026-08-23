@@ -35,12 +35,18 @@ const MDF: MaterialConstraints = {
   isNaturalVariable: false,
 };
 
+/** The TwoTrees TTC6050's real Z-axis clearance (D7, confirmed 2026-08-23). */
+const MACHINE = { maxWorkpieceThicknessMm: 100 };
+
 const BASE: FeasibilityInput = {
   widthMm: 600,
   design: DESIGN,
   material: OAK,
   moduleCount: 1,
   isFloorElement: false,
+  /** No THICKNESS step for this product type (e.g. WALL_ART, KITCHEN_TILE). */
+  thicknessMm: null,
+  machine: MACHINE,
 };
 
 function codesOf(overrides: Partial<FeasibilityInput> = {}): string[] {
@@ -157,6 +163,36 @@ describe('evaluateFeasibility — notices', () => {
 
   it('does not disclose natural variation for MDF', () => {
     expect(codesOf({ material: MDF })).not.toContain('NATURAL_VARIATION');
+  });
+});
+
+describe('evaluateFeasibility — machine thickness limit', () => {
+  it('says nothing when the product type has no thickness step at all', () => {
+    // thicknessMm: null — e.g. WALL_ART, KITCHEN_TILE (§5's step table).
+    expect(codesOf({ thicknessMm: null })).not.toContain('THICKNESS_EXCEEDS_MACHINE');
+  });
+
+  it('allows a thickness comfortably within the machine limit', () => {
+    expect(codesOf({ thicknessMm: 27 })).not.toContain('THICKNESS_EXCEEDS_MACHINE');
+  });
+
+  it('allows a thickness exactly at the machine limit — inclusive, not exclusive', () => {
+    expect(codesOf({ thicknessMm: 100 })).not.toContain('THICKNESS_EXCEEDS_MACHINE');
+  });
+
+  it('blocks a thickness one millimetre over the machine limit', () => {
+    const finding = evaluateFeasibility({ ...BASE, thicknessMm: 101 }).find(
+      (f) => f.code === 'THICKNESS_EXCEEDS_MACHINE',
+    );
+    expect(finding?.severity).toBe('error');
+    expect(finding?.requiresAcknowledgement).toBe(false);
+    expect(finding?.params).toEqual({ thicknessMm: 101, maxThicknessMm: 100 });
+  });
+
+  it('respects the machine limit actually passed in, not a hardcoded one', () => {
+    // A different machine (or a future second machine) has a different limit.
+    const codes = codesOf({ thicknessMm: 60, machine: { maxWorkpieceThicknessMm: 50 } });
+    expect(codes).toContain('THICKNESS_EXCEEDS_MACHINE');
   });
 });
 

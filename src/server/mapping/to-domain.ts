@@ -22,6 +22,7 @@
 import type { DimensionEnvelope } from '@/domain/dimensions/dimensions';
 import type {
   DesignConstraints,
+  MachineConstraints,
   MaterialConstraints,
 } from '@/domain/feasibility/rules';
 import type { SplitLimits } from '@/domain/modules/split';
@@ -99,7 +100,7 @@ export type DesignRow = Pick<
 
 export type MachineSettingsRow = Pick<
   MachineSettingsModel,
-  'usableWidthMm' | 'usableHeightMm' | 'minModuleMm'
+  'usableWidthMm' | 'usableHeightMm' | 'minModuleMm' | 'maxWorkpieceThicknessMm'
 >;
 
 export type PersonalizationSpecRow = Pick<
@@ -205,6 +206,15 @@ export function toMaterialConstraints(material: MaterialRow): MaterialConstraint
       'material.minDetailSpacingUm',
     ),
     isNaturalVariable: material.isNaturalVariable,
+  };
+}
+
+export function toMachineConstraints(machine: MachineSettingsRow): MachineConstraints {
+  return {
+    maxWorkpieceThicknessMm: requireInteger(
+      machine.maxWorkpieceThicknessMm,
+      'machine.maxWorkpieceThicknessMm',
+    ),
   };
 }
 
