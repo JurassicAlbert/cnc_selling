@@ -50,6 +50,7 @@ import type { FeasibilityCode } from '@/domain/feasibility/rules';
 import { formatPln } from '@/domain/money/money';
 import { formatMmAsCentimetres, parseCentimetresToMm } from '@/domain/text/numeric-input';
 import {
+  COPY,
   dimensionMessage,
   feasibilityMessage,
   numericInputMessage,
@@ -81,6 +82,10 @@ const QUANTITY = 1;
 type ConfiguratorProps = {
   readonly productSlug: string;
   readonly options: ConfiguratorOptionData;
+  /** „Produkt obejmuje blat. Nogi nie są w zestawie." and similar — shown in the summary too (§12). */
+  readonly materialNotesPl: string | null;
+  /** Floor/panel products: no preset sizes, and a mandatory acknowledgement in the summary (§11). */
+  readonly requiresExactSize: boolean;
   readonly dimensionEnvelope: {
     readonly minWidthMm: number;
     readonly maxWidthMm: number;
@@ -89,13 +94,20 @@ type ConfiguratorProps = {
   };
 };
 
-export function Configurator({ productSlug, options, dimensionEnvelope }: ConfiguratorProps) {
+export function Configurator({
+  productSlug,
+  options,
+  materialNotesPl,
+  requiresExactSize,
+  dimensionEnvelope,
+}: ConfiguratorProps) {
   const router = useRouter();
   const [selections, setSelections] = useState<Selections>(EMPTY_SELECTIONS);
   const [stepIndex, setStepIndex] = useState(0);
   const [snapshot, setSnapshot] = useState<ConfiguratorSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [acknowledged, setAcknowledged] = useState<ReadonlySet<FeasibilityCode>>(new Set());
+  const [exactSizeAcknowledged, setExactSizeAcknowledged] = useState(false);
   const [clearedNotice, setClearedNotice] = useState<string | null>(null);
   const [widthInput, setWidthInput] = useState('');
   const [heightInput, setHeightInput] = useState('');
@@ -373,6 +385,9 @@ export function Configurator({ productSlug, options, dimensionEnvelope }: Config
           <SummaryStep
             snapshot={snapshot}
             selections={selections}
+            options={options}
+            materialNotesPl={materialNotesPl}
+            requiresExactSize={requiresExactSize}
             acknowledged={acknowledged}
             onAcknowledge={(code, value) =>
               setAcknowledged((prev) => {
@@ -382,6 +397,8 @@ export function Configurator({ productSlug, options, dimensionEnvelope }: Config
                 return next;
               })
             }
+            exactSizeAcknowledged={exactSizeAcknowledged}
+            onAcknowledgeExactSize={setExactSizeAcknowledged}
             isComplete={checkConfigurationComplete(steps, selections).ok}
           />
         )}
@@ -451,14 +468,25 @@ function OptionStep({
 
 function SummaryStep({
   snapshot,
+  selections,
+  options,
+  materialNotesPl,
+  requiresExactSize,
   acknowledged,
   onAcknowledge,
+  exactSizeAcknowledged,
+  onAcknowledgeExactSize,
   isComplete,
 }: {
   readonly snapshot: ConfiguratorSnapshot | null;
   readonly selections: Selections;
+  readonly options: ConfiguratorOptionData;
+  readonly materialNotesPl: string | null;
+  readonly requiresExactSize: boolean;
   readonly acknowledged: ReadonlySet<FeasibilityCode>;
   readonly onAcknowledge: (code: FeasibilityCode, value: boolean) => void;
+  readonly exactSizeAcknowledged: boolean;
+  readonly onAcknowledgeExactSize: (value: boolean) => void;
   readonly isComplete: boolean;
 }) {
   if (snapshot === null) {
@@ -483,13 +511,46 @@ function SummaryStep({
     );
   }
 
+  const selectedVariantReceivesPl =
+    selections.installationVariant === null
+      ? null
+      : (options.installVariants.find((v) => v.code === selections.installationVariant)
+          ?.receivesPl ?? null);
+
   const outstandingAcknowledgements = pricing.feasibility.filter(
     (finding) => finding.requiresAcknowledgement && !acknowledged.has(finding.code),
   );
-  const canProceed = isComplete && !pricing.blockingError && outstandingAcknowledgements.length === 0;
+  const canProceed =
+    isComplete &&
+    !pricing.blockingError &&
+    outstandingAcknowledgements.length === 0 &&
+    (!requiresExactSize || exactSizeAcknowledged);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {materialNotesPl !== null && <Alert severity="info">{materialNotesPl}</Alert>}
+
+      {selectedVariantReceivesPl !== null && (
+        <div>
+          <strong>{SITE.catalogueInstallationVariantsLabelPl}:</strong> {selectedVariantReceivesPl}
+        </div>
+      )}
+
+      {requiresExactSize && (
+        <Alert severity="warning">
+          <div>{COPY.floorFinalDimensions}</div>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={exactSizeAcknowledged}
+                onChange={(e) => onAcknowledgeExactSize(e.target.checked)}
+              />
+            }
+            label={SITE.configuratorAcknowledgeRequiredPl}
+          />
+        </Alert>
+      )}
+
       {pricing.feasibility.map((finding) => (
         <Alert
           key={finding.code}

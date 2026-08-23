@@ -999,6 +999,35 @@ real Back/Forward click does under the hood) — price recomputed correctly
 (343,90 zł → 701,84 zł), module count updated (1 → 4), a `MODULAR_BUILD`
 notice appeared, all with no page reload and zero console errors.
 
+### Two more §7's/§11/§12 gaps closed, same day, third pass
+
+**The summary now surfaces `receivesPl` and `materialNotesPl`.** Both
+fields were already fetched by `getActiveProductBySlug` and rendered on the
+product page (P2); they just weren't threaded through to the configurator's
+`SummaryStep`. Now they are: `materialNotesPl` (added to
+`ProductDetail`/`getConfiguratorProductData`'s caller, passed down as a new
+`Configurator` prop) renders as an info alert whenever non-null, and the
+currently-selected installation variant's `receivesPl` is looked up from the
+`options` prop already on the page and shown labelled "Warianty montażu".
+This is the same `Product.materialNotesPl` field the P3 checklist's "Blat.
+Nogi nie są w zestawie." line refers to — closing both lines with one fix,
+since it's one field shown in a second place, not two separate pieces of
+copy.
+
+**Floor/panel products now show §11's mandatory acknowledgement.** A new
+`requiresExactSize` boolean flows from `Product` through
+`getActiveProductBySlug` into `Configurator`; when true, the summary renders
+`COPY.floorFinalDimensions` — "Podaję ostateczne wymiary. Produkt zostanie
+wykonany na wymiar i nie wymaga docinania.", already defined in
+`messages.ts` since the very first P1 pass but never actually used anywhere
+until now — behind its own required checkbox, separate from (and in
+addition to) the `FLOOR_MATCH_NOT_GUARANTEED` feasibility warning's own
+acknowledgement. **Browser-verified end to end** on the real floor panel
+product (`panel-podlogowy-z-grawerem`, the one seeded row with
+`requiresExactSize: true`): configured through all 6 steps to SUMMARY, both
+warnings rendered, the add-to-cart button stayed disabled with only one of
+the two boxes checked, and enabled only once both were.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

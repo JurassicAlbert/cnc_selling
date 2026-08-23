@@ -55,6 +55,8 @@ export type ProductDetail = {
   readonly maxWidthMm: number;
   readonly minHeightMm: number;
   readonly maxHeightMm: number;
+  /** Floor/panel products: the customer must state final dimensions (§11) — no trimming after the fact. */
+  readonly requiresExactSize: boolean;
   readonly category: { readonly slug: string; readonly namePl: string };
   readonly images: readonly { readonly url: string; readonly altPl: string }[];
   readonly materials: readonly { readonly namePl: string }[];
@@ -86,6 +88,7 @@ export async function getActiveProductBySlug(slug: string): Promise<ProductDetai
       maxWidthMm: true,
       minHeightMm: true,
       maxHeightMm: true,
+      requiresExactSize: true,
       category: { select: { slug: true, namePl: true } },
       images: {
         orderBy: { sortOrder: 'asc' },

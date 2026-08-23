@@ -85,6 +85,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
               <Configurator
                 productSlug={product.slug}
                 options={configuratorData.options}
+                materialNotesPl={product.materialNotesPl}
+                requiresExactSize={product.requiresExactSize}
                 dimensionEnvelope={{
                   minWidthMm: product.minWidthMm,
                   maxWidthMm: product.maxWidthMm,
