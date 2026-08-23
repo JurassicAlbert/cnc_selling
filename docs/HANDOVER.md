@@ -62,7 +62,7 @@ src/domain/feasibility/rules.ts            errors / warnings / notices about man
 src/domain/order-status/transitions.ts     order status graph — legal moves, actor permission, the design-review gate
 src/domain/configuration/steps.ts          the configurator's step machine — §5's step lists, §7.1's entry gating (added 2026-08-23, P3)
 src/content/pl/messages.ts                 every customer-visible Polish string
-tests/unit/*.test.ts                       13 files, 345 assertions
+tests/unit/*.test.ts                       13 files, 354 assertions
 ```
 
 Two of those need a closer look before you build on them, because
@@ -937,19 +937,9 @@ also reflected in `docs/CHECKLIST.md`'s P3 section, marked `[~]` or `[ ]`,
 not silently checked off:
 
 - The 2D preview (§7.3) — not started.
-- Unavailable materials/designs are *hidden* rather than *shown disabled
-  with a Polish reason*, which is what §7.2 actually specifies. A
-  simplification for this pass, not a design decision — worth a follow-up.
 - No `Configuration` DB row is written — selections live in React state and
   the URL only. "Price breakdown... stored" (a P3 checklist line) needs this,
   and it's naturally cart-adjacent (P5) rather than configurator-only work.
-- Clearing a selection (e.g. finish, when material changes) happens
-  correctly but silently — no Polish message tells the customer it happened
-  or why, which §7.1 explicitly calls for.
-- No `popstate` listener: the URL updates on every change, but the
-  **browser** Back/Forward buttons change the address bar without
-  re-syncing component state. Refresh-persistence works; back/forward
-  navigation does not yet.
 - No sticky price summary, no mobile-viewport check, no preset sizes (none
   are seeded yet either), no installation-variant diagrams rendered (the
   `diagramUrl` is fetched, just not displayed), no `requiresExactSize`
@@ -959,6 +949,55 @@ not silently checked off:
 None of these are silent gaps — each one is a specific, findable line in
 `docs/CHECKLIST.md`'s P3 section. The next pass on P3 should treat that list
 as the actual work order, not re-derive it from scratch.
+
+### Three more §7.1/§7.2 gaps closed the same day
+
+Three items flagged above as open were closed in a second pass, same day:
+
+**Unavailable options are now shown disabled with a reason, not hidden.**
+§7.2 is explicit that a hidden option "looks like a missing feature" while a
+disabled one "teaches the customer the rule." `resolveOptionAvailability`
+(`src/server/configurator/resolve-options.ts`) returns **every** option —
+available or not — annotated with a `reason` code, computed by calling the
+already-tested `domain/compatibility` functions twice (once at baseline,
+once narrowed by the current selection) and diffing the two sets, rather
+than re-implementing the compatibility rules a second time. 9 new fixture
+tests. `unavailabilityReasonMessage` in `messages.ts` turns each code into
+Polish; the UI renders every entry, `disabled` and with a `title` tooltip
+for the unavailable ones. **Not browser-verified against real data** — every
+seeded product today has exactly one material, one design, and at most one
+finish, so there is currently nothing live to disable. Worth a real check
+once a product is seeded with two or more of something.
+
+**Clearing a dependent selection is now conditional, and explained.** The
+first version blanket-cleared `finishId` on *every* material change and
+`thicknessMm` on *every* installation-variant change, whether or not the old
+value was actually still valid — safe, but more aggressive than §7.1
+describes ("if the current finish is no longer compatible it is cleared").
+Now checked against the real catalogue data already on the page (the static
+`options` prop) before clearing: `selectMaterial`/`selectInstallationVariant`
+in `Configurator.tsx` only clear the dependent field when it is genuinely
+incompatible, and show a dismissible Polish notice explaining why when they
+do. Same live-data caveat as above — nothing seeded today actually exercises
+the "still valid, don't clear" branch, since there is only one material per
+product to switch between.
+
+**A real `popstate` listener now makes the browser's own Back/Forward
+buttons work.** The URL round-trips every selection (that part already
+worked — see the refresh-persistence fix above), but nothing re-synced
+`selections` state when the URL changed from *outside* the component's own
+`router.replace` calls — which is exactly what happens on a real Back/Forward
+click, or when Next reuses a cached instance of this route. Fixed with a
+`window.addEventListener('popstate', ...)` that re-reads the URL and
+re-resolves the furthest reachable step, using the same
+`readSelectionsFromSearch`/`writeSelectionsToSearch` pair the mount-hydration
+path already used (extracted into shared helpers specifically so the two
+paths can't drift apart). **Verified live**, since this one doesn't need
+extra seed data to exercise: `history.pushState` to a URL with different
+`w`/`h` values, then dispatch a `popstate` event by hand (exactly what a
+real Back/Forward click does under the hood) — price recomputed correctly
+(343,90 zł → 701,84 zł), module count updated (1 → 4), a `MODULAR_BUILD`
+notice appeared, all with no page reload and zero console errors.
 
 ## 10. Working style the owner expects
 

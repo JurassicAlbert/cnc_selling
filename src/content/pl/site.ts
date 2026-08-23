@@ -62,4 +62,8 @@ export const SITE = {
   configuratorCartNotBuiltPl:
     'Dodawanie do koszyka nie jest jeszcze dostępne — ten krok zostanie uruchomiony w kolejnym etapie budowy sklepu.',
   configuratorProductionDaysLabelPl: 'Czas realizacji',
+  configuratorClearedFinishPl:
+    'Wybrane wykończenie zostało wyczyszczone, ponieważ nie jest dostępne dla nowo wybranego materiału.',
+  configuratorClearedThicknessPl:
+    'Wybrana grubość została wyczyszczona, ponieważ nie mieści się w wybranym sposobie montażu.',
 } as const;

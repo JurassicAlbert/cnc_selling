@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { EMPTY_SELECTIONS, type Selections } from '@/domain/configuration/steps';
-import { resolveOptions } from '@/server/configurator/resolve-options';
+import { resolveOptionAvailability, resolveOptions } from '@/server/configurator/resolve-options';
 import type { ConfiguratorOptionData } from '@/server/configurator/resolve-options';
 import { priceConfiguration } from '@/server/configurator/price-configuration';
 import type { ConfiguratorPricingData } from '@/server/configurator/price-configuration';
@@ -29,7 +29,10 @@ const optionData: ConfiguratorOptionData = {
       id: 'dab',
       namePl: 'Dąb',
       isAvailable: true,
-      finishes: [{ id: 'olejowanie', namePl: 'Olejowanie', isAvailable: true }],
+      finishes: [
+        { id: 'olejowanie', namePl: 'Olejowanie', isAvailable: true },
+        { id: 'lakierowanie', namePl: 'Lakierowanie', isAvailable: false },
+      ],
     },
     {
       id: 'gres-bialy',
@@ -140,6 +143,101 @@ describe('resolveOptions', () => {
   it('lists every installation variant, unfiltered', () => {
     const result = resolveOptions(optionData, EMPTY_SELECTIONS);
     expect(result.installVariantCodes).toEqual(['ON_TOP', 'OVERLAY']);
+  });
+});
+
+describe('resolveOptionAvailability — every option, annotated, never hidden (§7.2)', () => {
+  it('marks a structurally unavailable material with its own reason', () => {
+    const result = resolveOptionAvailability(optionData, EMPTY_SELECTIONS);
+    const entry = result.materials.find((m) => m.id === 'unavailable-material');
+    expect(entry).toEqual({
+      id: 'unavailable-material',
+      namePl: 'Materiał niedostępny',
+      isAvailable: false,
+      reason: 'MATERIAL_NOT_OFFERED',
+    });
+  });
+
+  it('marks an otherwise-available material excluded by the chosen design', () => {
+    const result = resolveOptionAvailability(
+      optionData,
+      selections({ designId: 'wzor-tylko-dab' }),
+    );
+    const gres = result.materials.find((m) => m.id === 'gres-bialy');
+    expect(gres).toEqual({
+      id: 'gres-bialy',
+      namePl: 'Gres biały',
+      isAvailable: false,
+      reason: 'EXCLUDED_BY_DESIGN',
+    });
+  });
+
+  it('a material unavailable for BOTH reasons reports the more fundamental one', () => {
+    const result = resolveOptionAvailability(
+      optionData,
+      selections({ designId: 'wzor-tylko-dab' }),
+    );
+    const entry = result.materials.find((m) => m.id === 'unavailable-material');
+    expect(entry?.reason).toBe('MATERIAL_NOT_OFFERED'); // not EXCLUDED_BY_DESIGN
+  });
+
+  it('lists every material, including available ones, with a null reason', () => {
+    const result = resolveOptionAvailability(optionData, EMPTY_SELECTIONS);
+    expect(result.materials.map((m) => m.id)).toEqual(['dab', 'gres-bialy', 'unavailable-material']);
+    const dab = result.materials.find((m) => m.id === 'dab');
+    expect(dab).toEqual({ id: 'dab', namePl: 'Dąb', isAvailable: true, reason: null });
+  });
+
+  it('marks an inactive/non-sellable design unavailable regardless of material', () => {
+    const result = resolveOptionAvailability(optionData, EMPTY_SELECTIONS);
+    const entry = result.designs.find((d) => d.id === 'wzor-nieaktywny');
+    expect(entry).toEqual({
+      id: 'wzor-nieaktywny',
+      namePl: 'Wzór wycofany',
+      isAvailable: false,
+      reason: 'DESIGN_NOT_OFFERED',
+    });
+  });
+
+  it('marks a design excluded by the chosen material', () => {
+    const result = resolveOptionAvailability(optionData, selections({ materialId: 'gres-bialy' }));
+    const entry = result.designs.find((d) => d.id === 'wzor-tylko-dab');
+    expect(entry).toEqual({
+      id: 'wzor-tylko-dab',
+      namePl: 'Wzór tylko na dąb',
+      isAvailable: false,
+      reason: 'EXCLUDED_BY_MATERIAL',
+    });
+  });
+
+  it('marks a structurally unavailable finish, once a material is chosen', () => {
+    const result = resolveOptionAvailability(optionData, selections({ materialId: 'dab' }));
+    const entry = result.finishes.find((f) => f.id === 'lakierowanie');
+    expect(entry).toEqual({
+      id: 'lakierowanie',
+      namePl: 'Lakierowanie',
+      isAvailable: false,
+      reason: 'FINISH_NOT_OFFERED',
+    });
+  });
+
+  it('lists no finishes before a material is chosen', () => {
+    const result = resolveOptionAvailability(optionData, EMPTY_SELECTIONS);
+    expect(result.finishes).toEqual([]);
+  });
+
+  it('marks a thickness excluded by the chosen installation variant', () => {
+    const result = resolveOptionAvailability(
+      optionData,
+      selections({ installationVariant: 'OVERLAY' }),
+    );
+    const entry = result.thicknesses.find((t) => t.id === '27');
+    expect(entry).toEqual({
+      id: '27',
+      namePl: '27 mm',
+      isAvailable: false,
+      reason: 'THICKNESS_EXCEEDS_INSTALLATION_VARIANT',
+    });
   });
 });
 

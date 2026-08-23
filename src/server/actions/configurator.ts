@@ -13,13 +13,15 @@ import { checkConfigurationComplete, stepsForProductType } from '@/domain/config
 import type { Selections, StepCode } from '@/domain/configuration/steps';
 import type { ConfiguratorPricingResult } from '@/server/configurator/price-configuration';
 import { priceConfiguration } from '@/server/configurator/price-configuration';
-import type { ResolvedOptions } from '@/server/configurator/resolve-options';
-import { resolveOptions } from '@/server/configurator/resolve-options';
+import type { ResolvedOptionAvailability, ResolvedOptions } from '@/server/configurator/resolve-options';
+import { resolveOptionAvailability, resolveOptions } from '@/server/configurator/resolve-options';
 import { getConfiguratorProductData } from '@/server/repositories/configurator';
 
 export type ConfiguratorSnapshot = {
   readonly steps: readonly StepCode[];
   readonly options: ResolvedOptions;
+  /** Every option, annotated available/unavailable-with-reason — never hidden (§7.2). */
+  readonly availability: ResolvedOptionAvailability;
   readonly pricing: ConfiguratorPricingResult;
   readonly isComplete: boolean;
 };
@@ -40,6 +42,7 @@ export async function getConfiguratorSnapshot(
 
   const steps = stepsForProductType(data.typeCode);
   const options = resolveOptions(data.options, selections);
+  const availability = resolveOptionAvailability(data.options, selections);
 
   const material =
     selections.materialId === null ? null : (data.materialsById.get(selections.materialId) ?? null);
@@ -84,6 +87,7 @@ export async function getConfiguratorSnapshot(
     snapshot: {
       steps,
       options,
+      availability,
       pricing,
       isComplete: checkConfigurationComplete(steps, selections).ok,
     },

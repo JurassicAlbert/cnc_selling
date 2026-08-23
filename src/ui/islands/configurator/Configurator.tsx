@@ -25,7 +25,7 @@
  * an honest label rather than doing nothing silently.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
@@ -53,9 +53,13 @@ import {
   dimensionMessage,
   feasibilityMessage,
   numericInputMessage,
+  unavailabilityReasonMessage,
 } from '@/content/pl/messages';
 import { SITE } from '@/content/pl/site';
-import type { ConfiguratorOptionData } from '@/server/configurator/resolve-options';
+import type {
+  ConfiguratorOptionData,
+  OptionAvailability,
+} from '@/server/configurator/resolve-options';
 import { getConfiguratorSnapshot } from '@/server/actions/configurator';
 import type { ConfiguratorSnapshot } from '@/server/actions/configurator';
 
@@ -92,36 +96,49 @@ export function Configurator({ productSlug, options, dimensionEnvelope }: Config
   const [snapshot, setSnapshot] = useState<ConfiguratorSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [acknowledged, setAcknowledged] = useState<ReadonlySet<FeasibilityCode>>(new Set());
+  const [clearedNotice, setClearedNotice] = useState<string | null>(null);
   const [widthInput, setWidthInput] = useState('');
   const [heightInput, setHeightInput] = useState('');
   const [widthError, setWidthError] = useState<string | null>(null);
   const [heightError, setHeightError] = useState<string | null>(null);
   const hydrated = useRef(false);
   const initialStepResolved = useRef(false);
+  const stepsRef = useRef<readonly StepCode[]>([]);
+
+  const applyUrlSelections = useCallback((search: string) => {
+    const restored = readSelectionsFromSearch(search);
+    setSelections(restored);
+    setWidthInput(restored.widthMm !== null ? formatMmAsCentimetres(restored.widthMm) : '');
+    setHeightInput(restored.heightMm !== null ? formatMmAsCentimetres(restored.heightMm) : '');
+    setWidthError(null);
+    setHeightError(null);
+    return restored;
+  }, []);
 
   // Hydrate from the URL exactly once, on mount, so a refresh or a shared
   // link resumes where the customer left off (brief §36).
   useEffect(() => {
     if (hydrated.current) return;
     hydrated.current = true;
-    const params = new URLSearchParams(window.location.search);
-    const widthMm = intOrNull(params.get('w'));
-    const heightMm = intOrNull(params.get('h'));
-    setSelections({
-      designId: params.get('d'),
-      customUploadId: null,
-      materialId: params.get('m'),
-      widthMm,
-      heightMm,
-      thicknessMm: intOrNull(params.get('t')),
-      finishId: params.get('f'),
-      installationVariant: params.get('i'),
-      personalizationText: params.get('p'),
-      fontId: null,
-    });
-    if (widthMm !== null) setWidthInput(formatMmAsCentimetres(widthMm));
-    if (heightMm !== null) setHeightInput(formatMmAsCentimetres(heightMm));
-  }, []);
+    applyUrlSelections(window.location.search);
+  }, [applyUrlSelections]);
+
+  // The browser's own Back/Forward buttons change the URL without any of
+  // our own effects running — `router.replace` never pushes a history
+  // entry, so this fires only when navigation actually happened elsewhere
+  // (leaving and returning to this URL, or Next reusing a cached instance
+  // of this route). Without this listener the address bar changes but the
+  // rendered configurator does not, which is exactly the bug brief §36
+  // flags as "browser back button during configuration".
+  useEffect(() => {
+    function onPopState() {
+      const restored = applyUrlSelections(window.location.search);
+      initialStepResolved.current = true;
+      setStepIndex(furthestEnterable(stepsRef.current, restored));
+    }
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [applyUrlSelections]);
 
   // Every change re-fetches steps/options/price from the server. Never
   // computed locally — this is the entire point of §10.2.
@@ -142,18 +159,7 @@ export function Configurator({ productSlug, options, dimensionEnvelope }: Config
         }
       }
     });
-    const params = new URLSearchParams();
-    if (selections.designId !== null) params.set('d', selections.designId);
-    if (selections.materialId !== null) params.set('m', selections.materialId);
-    if (selections.widthMm !== null) params.set('w', String(selections.widthMm));
-    if (selections.heightMm !== null) params.set('h', String(selections.heightMm));
-    if (selections.thicknessMm !== null) params.set('t', String(selections.thicknessMm));
-    if (selections.finishId !== null) params.set('f', selections.finishId);
-    if (selections.installationVariant !== null) params.set('i', selections.installationVariant);
-    if (selections.personalizationText !== null && selections.personalizationText !== '') {
-      params.set('p', selections.personalizationText);
-    }
-    const query = params.toString();
+    const query = writeSelectionsToSearch(selections);
     router.replace(query.length > 0 ? `?${query}` : '?', { scroll: false });
     return () => {
       cancelled = true;
@@ -161,6 +167,7 @@ export function Configurator({ productSlug, options, dimensionEnvelope }: Config
   }, [selections, productSlug, router]);
 
   const steps = snapshot?.steps ?? [];
+  stepsRef.current = steps;
 
   // A selection change can invalidate a downstream step's prerequisites — if
   // the customer is currently sitting past the furthest step still
@@ -191,6 +198,48 @@ export function Configurator({ productSlug, options, dimensionEnvelope }: Config
     setSelections((prev) => ({ ...prev, heightMm: height.ok ? height.mm : null }));
   }, [heightInput]);
 
+  // Clearing a dependent selection is only correct when it is ACTUALLY no
+  // longer compatible — never a blanket clear on every change — and the
+  // customer is told why (§7.1: "never silently keep an incompatible
+  // state... the customer is told, in Polish, that it was cleared and
+  // why"). Checked against the real catalogue data already on the page
+  // (`options`), not guessed.
+  const selectMaterial = useCallback(
+    (materialId: string) => {
+      if (selections.finishId === null) {
+        setSelections((prev) => ({ ...prev, materialId }));
+        return;
+      }
+      const stillOffered = options.materials
+        .find((material) => material.id === materialId)
+        ?.finishes.some((finish) => finish.id === selections.finishId && finish.isAvailable);
+      if (stillOffered) {
+        setSelections((prev) => ({ ...prev, materialId }));
+        return;
+      }
+      setClearedNotice(SITE.configuratorClearedFinishPl);
+      setSelections((prev) => ({ ...prev, materialId, finishId: null }));
+    },
+    [options, selections.finishId],
+  );
+
+  const selectInstallationVariant = useCallback(
+    (code: string) => {
+      if (selections.thicknessMm === null) {
+        setSelections((prev) => ({ ...prev, installationVariant: code }));
+        return;
+      }
+      const cap = options.installVariants.find((variant) => variant.code === code)?.maxThicknessMm;
+      if (cap === null || cap === undefined || selections.thicknessMm <= cap) {
+        setSelections((prev) => ({ ...prev, installationVariant: code }));
+        return;
+      }
+      setClearedNotice(SITE.configuratorClearedThicknessPl);
+      setSelections((prev) => ({ ...prev, installationVariant: code, thicknessMm: null }));
+    },
+    [options, selections.thicknessMm],
+  );
+
   if (steps.length === 0) {
     return loading ? (
       <CircularProgress size={24} />
@@ -219,12 +268,17 @@ export function Configurator({ productSlug, options, dimensionEnvelope }: Config
         ))}
       </Stepper>
 
+      {clearedNotice !== null && (
+        <Alert severity="info" onClose={() => setClearedNotice(null)}>
+          {clearedNotice}
+        </Alert>
+      )}
+
       <div style={{ minHeight: 160 }}>
         {currentStep === 'DESIGN' && (
           <OptionStep
             title={STEP_LABEL.DESIGN}
-            entries={options.designs}
-            availableIds={snapshot?.options.designIds ?? []}
+            entries={snapshot?.availability.designs ?? []}
             selectedId={selections.designId}
             onSelect={(id) => setSelections((prev) => ({ ...prev, designId: id }))}
           />
@@ -233,22 +287,16 @@ export function Configurator({ productSlug, options, dimensionEnvelope }: Config
         {currentStep === 'MATERIAL' && (
           <OptionStep
             title={STEP_LABEL.MATERIAL}
-            entries={options.materials}
-            availableIds={snapshot?.options.materialIds ?? []}
+            entries={snapshot?.availability.materials ?? []}
             selectedId={selections.materialId}
-            onSelect={(id) =>
-              setSelections((prev) => ({ ...prev, materialId: id, finishId: null }))
-            }
+            onSelect={selectMaterial}
           />
         )}
 
         {currentStep === 'FINISH' && (
           <OptionStep
             title={STEP_LABEL.FINISH}
-            entries={selections.materialId === null
-              ? []
-              : (options.materials.find((m) => m.id === selections.materialId)?.finishes ?? [])}
-            availableIds={snapshot?.options.finishIds ?? []}
+            entries={snapshot?.availability.finishes ?? []}
             selectedId={selections.finishId}
             onSelect={(id) => setSelections((prev) => ({ ...prev, finishId: id }))}
           />
@@ -257,20 +305,21 @@ export function Configurator({ productSlug, options, dimensionEnvelope }: Config
         {currentStep === 'INSTALLATION_VARIANT' && (
           <OptionStep
             title={STEP_LABEL.INSTALLATION_VARIANT}
-            entries={options.installVariants.map((v) => ({ id: v.code, namePl: v.namePl }))}
-            availableIds={snapshot?.options.installVariantCodes ?? []}
+            entries={options.installVariants.map((v) => ({
+              id: v.code,
+              namePl: v.namePl,
+              isAvailable: true,
+              reason: null,
+            }))}
             selectedId={selections.installationVariant}
-            onSelect={(code) =>
-              setSelections((prev) => ({ ...prev, installationVariant: code, thicknessMm: null }))
-            }
+            onSelect={selectInstallationVariant}
           />
         )}
 
         {currentStep === 'THICKNESS' && (
           <OptionStep
             title={STEP_LABEL.THICKNESS}
-            entries={options.thicknesses.map((t) => ({ id: String(t.thicknessMm), namePl: t.labelPl }))}
-            availableIds={(snapshot?.options.thicknessesMm ?? []).map(String)}
+            entries={snapshot?.availability.thicknesses ?? []}
             selectedId={selections.thicknessMm === null ? null : String(selections.thicknessMm)}
             onSelect={(id) => setSelections((prev) => ({ ...prev, thicknessMm: Number(id) }))}
           />
@@ -356,25 +405,24 @@ export function Configurator({ productSlug, options, dimensionEnvelope }: Config
 // Sub-components
 // ---------------------------------------------------------------------------
 
-type NamedEntry = { readonly id: string; readonly namePl: string };
-
+/**
+ * Renders EVERY option, never just the selectable ones — ARCHITECTURE.md
+ * §7.2: an unavailable option is shown disabled with a Polish reason, not
+ * hidden, so the customer learns the rule instead of wondering where an
+ * option went.
+ */
 function OptionStep({
   title,
   entries,
-  availableIds,
   selectedId,
   onSelect,
 }: {
   readonly title: string;
-  readonly entries: readonly NamedEntry[];
-  readonly availableIds: readonly string[];
+  readonly entries: readonly OptionAvailability[];
   readonly selectedId: string | null;
   readonly onSelect: (id: string) => void;
 }) {
-  const availableSet = useMemo(() => new Set(availableIds), [availableIds]);
-  const visible = entries.filter((entry) => availableSet.has(entry.id));
-
-  if (visible.length === 0) {
+  if (entries.length === 0) {
     return <Alert severity="info">{SITE.configuratorNoOptionsPl}</Alert>;
   }
 
@@ -387,8 +435,13 @@ function OptionStep({
       }}
       aria-label={title}
     >
-      {visible.map((entry) => (
-        <ToggleButton key={entry.id} value={entry.id}>
+      {entries.map((entry) => (
+        <ToggleButton
+          key={entry.id}
+          value={entry.id}
+          disabled={!entry.isAvailable}
+          title={entry.reason === null ? undefined : unavailabilityReasonMessage(entry.reason)}
+        >
           {entry.namePl}
         </ToggleButton>
       ))}
@@ -484,6 +537,42 @@ function intOrNull(value: string | null): number | null {
   if (value === null) return null;
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+/**
+ * The two halves of the URL <-> Selections mapping, kept next to each other
+ * on purpose: a field added to one and not the other is exactly how a
+ * refresh silently drops data.
+ */
+function readSelectionsFromSearch(search: string): Selections {
+  const params = new URLSearchParams(search);
+  return {
+    designId: params.get('d'),
+    customUploadId: null,
+    materialId: params.get('m'),
+    widthMm: intOrNull(params.get('w')),
+    heightMm: intOrNull(params.get('h')),
+    thicknessMm: intOrNull(params.get('t')),
+    finishId: params.get('f'),
+    installationVariant: params.get('i'),
+    personalizationText: params.get('p'),
+    fontId: null,
+  };
+}
+
+function writeSelectionsToSearch(selections: Selections): string {
+  const params = new URLSearchParams();
+  if (selections.designId !== null) params.set('d', selections.designId);
+  if (selections.materialId !== null) params.set('m', selections.materialId);
+  if (selections.widthMm !== null) params.set('w', String(selections.widthMm));
+  if (selections.heightMm !== null) params.set('h', String(selections.heightMm));
+  if (selections.thicknessMm !== null) params.set('t', String(selections.thicknessMm));
+  if (selections.finishId !== null) params.set('f', selections.finishId);
+  if (selections.installationVariant !== null) params.set('i', selections.installationVariant);
+  if (selections.personalizationText !== null && selections.personalizationText !== '') {
+    params.set('p', selections.personalizationText);
+  }
+  return params.toString();
 }
 
 function furthestEnterable(steps: readonly StepCode[], selections: Selections): number {

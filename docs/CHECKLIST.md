@@ -3,7 +3,7 @@
 Reviewed item by item before the project is considered finished (brief §40–41).
 `[ ]` not started · `[~]` in progress · `[x]` done and verified by a passing test or manual check.
 
-**Last verified: 2026-08-23** — `npm test` 345/345 green, `npm run typecheck` clean, `npm run build`
+**Last verified: 2026-08-23** — `npm test` 354/354 green, `npm run typecheck` clean, `npm run build`
 clean, `npm run lint` clean, `npm run e2e` 4/4 green (desktop + mobile), Lighthouse SEO 100/100, on
 Node v22.15.0 / TypeScript 7.0.2 / Vitest 4.1.11 / Prisma 7.9.1 / Next.js 16.3.2 / MUI 9.3.1 / Biome
 2.5.10. **P0 is complete. P2 is functionally complete** — real catalogue seeded, category/product
@@ -127,7 +127,7 @@ are genuinely unbuilt still — marked `[ ]`, not glossed over. Full detail in
 - [x] Step machine renders the correct steps per product type — `src/domain/configuration/steps.ts` (30 unit assertions) + `src/server/actions/configurator.ts`; browser-verified for WALL_ART (6 steps), KITCHEN_TILE (INSTALLATION_VARIANT first, 6 steps), LOFT_FURNITURE (THICKNESS included, 7 steps)
 - [~] Design selection works (ready-made, collections, custom) — ready-made selection works and is browser-verified; no `DesignCollection` is seeded to exercise collections; `CUSTOM_UPLOAD` (the CUSTOM product type's equivalent) is not built — P4's upload pipeline
 - [x] Only sellable designs offered (rights status filter) — `availableDesigns` already filtered `rightsStatus` (P1); confirmed live, only the one `APPROVED_COMMERCIAL` design appears
-- [~] Material selection works, unavailable options disabled with a Polish reason — selection works and is filtered correctly, but unavailable options are **hidden**, not shown disabled with a reason as §7.2 specifies. A real, deliberate simplification for this pass, not an oversight — needs a follow-up pass
+- [x] Material selection works, unavailable options disabled with a Polish reason — `resolveOptionAvailability` (`src/server/configurator/resolve-options.ts`, 9 assertions) returns every option with an `isAvailable`/`reason` pair, computed by comparing two calls to the already-tested `domain/compatibility` functions; the UI renders every option with unavailable ones `disabled` and a `title` tooltip via `unavailabilityReasonMessage`. Not browser-verified against real data — every seeded product currently has exactly one material/design/finish, so there is nothing live to disable yet; verified by fixture tests instead
 - [~] Size selection — presets and custom dimensions — custom dimensions work, browser-verified, with a real bug caught and fixed live (see `docs/HANDOVER.md` §9f). No `ProductPresetSize` rows are seeded, so preset-size selection has nothing to render yet
 - [x] Thickness step for tabletops and floor elements — browser-verified on the loft product (`stolek-loftowy-z-grawerem`, shares `TABLE_TOP`'s step list): "27 mm" / "40 mm" render from real `ProductThickness` rows
 - [x] Finish selection filtered by material — browser-verified: oak (`dab`) offers "Olejowanie"; gres (`gres-bialy`) honestly shows "not available for this configuration yet" rather than a fake option, matching the real gap the seed script already flagged
@@ -144,10 +144,10 @@ are genuinely unbuilt still — marked `[ ]`, not glossed over. Full detail in
 - [~] Large products correctly represented as modules — module *count* is computed correctly (`domain/modules`, unit-tested) and shown as a number; no layout *diagram* is rendered
 - [x] Modular build framed as a feature, not a limitation — the existing `MODULAR_BUILD` Polish copy (P1) renders as an info alert, unchanged
 - [x] Feasibility warnings shown, with acknowledgement where required — unit-tested (17 assertions in `tests/unit/configurator-server.test.ts`) and wired into the UI with a checkbox per warning; not yet exercised live against a product whose real data actually triggers one
-- [~] Incompatible selections cleared explicitly with an explanation, never silently swapped — selections ARE cleared (e.g. finish clears when material changes) but with no Polish explanation shown to the customer when it happens — a real gap against §7.1's explicit requirement
+- [x] Incompatible selections cleared explicitly with an explanation, never silently swapped — the previous version blanket-cleared finish on every material change and thickness on every installation-variant change, whether or not the old value was actually still valid; now checked conditionally against the real catalogue data and only cleared (with a dismissible Polish notice) when genuinely incompatible. Not browser-verified against real data for the same reason as the line above — one material per product today, so a material change has nothing to invalidate live yet
 - [x] All configuration combinations validated server-side — every check (dimensions, feasibility, modules, pricing) runs inside the Server Action against real rows
 - [x] Configuration persists across page refresh — browser-verified: the full selection round-trips through the URL, and a refresh resumes at the furthest step the restored selections actually reach (a real bug — always resetting to step 1 — was caught and fixed live)
-- [ ] Browser back/forward behaves correctly — the URL updates on every change, but there is no `popstate` listener re-syncing `selections` state, so the Back button changes the address bar without changing what's rendered. Known, not yet fixed
+- [x] Browser back/forward behaves correctly — a `popstate` listener now re-syncs `selections` and re-resolves the furthest reachable step whenever the URL changes outside the component's own control. Browser-verified by simulating a real back/forward URL change (`history.pushState` + a dispatched `popstate` event, exactly what the browser fires): price and module count recomputed correctly (343,90 zł → 701,84 zł, 1 → 4 modules) with no reload and zero console errors
 - [ ] Sticky price summary on desktop and mobile — not built; the summary is inline, not positioned
 - [ ] Configurator usable on mobile — not verified this pass (no mobile-viewport check was run)
 

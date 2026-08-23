@@ -131,3 +131,112 @@ function designAllowedMaterialIds(
   const design = data.designs.find((candidate) => candidate.id === designId);
   return design?.allowedMaterialIds ?? [];
 }
+
+// ---------------------------------------------------------------------------
+// Annotated availability — ARCHITECTURE.md §7.2: "Unavailable options are
+// shown disabled with a Polish reason, not hidden — a hidden option looks
+// like a missing feature; a disabled one with a reason teaches the customer
+// the rule." `resolveOptions` above answers "which ids may I select"; this
+// answers "what do I render for every option that exists, and why is one of
+// them greyed out" — every reason is derived by comparing two calls to the
+// already-tested `domain/compatibility` functions, never by re-implementing
+// their rules here.
+// ---------------------------------------------------------------------------
+
+export type UnavailabilityReason =
+  | 'MATERIAL_NOT_OFFERED'
+  | 'EXCLUDED_BY_DESIGN'
+  | 'DESIGN_NOT_OFFERED'
+  | 'EXCLUDED_BY_MATERIAL'
+  | 'FINISH_NOT_OFFERED'
+  | 'THICKNESS_EXCEEDS_INSTALLATION_VARIANT';
+
+export type OptionAvailability = {
+  readonly id: string;
+  readonly namePl: string;
+  readonly isAvailable: boolean;
+  readonly reason: UnavailabilityReason | null;
+};
+
+export type ResolvedOptionAvailability = {
+  readonly materials: readonly OptionAvailability[];
+  readonly designs: readonly OptionAvailability[];
+  /** Empty before a material is chosen — there is nothing to enumerate yet. */
+  readonly finishes: readonly OptionAvailability[];
+  readonly thicknesses: readonly OptionAvailability[];
+};
+
+export function resolveOptionAvailability(
+  data: ConfiguratorOptionData,
+  selections: Selections,
+): ResolvedOptionAvailability {
+  const materialRows = data.materials.map((material) => ({
+    materialId: material.id,
+    isAvailable: material.isAvailable,
+  }));
+  const materialBaseline = new Set(availableMaterials(materialRows, []));
+  const materialNarrowed = new Set(
+    availableMaterials(materialRows, designAllowedMaterialIds(data, selections.designId)),
+  );
+  const materials = data.materials.map((material): OptionAvailability => {
+    if (!materialBaseline.has(material.id)) {
+      return { id: material.id, namePl: material.namePl, isAvailable: false, reason: 'MATERIAL_NOT_OFFERED' };
+    }
+    if (!materialNarrowed.has(material.id)) {
+      return { id: material.id, namePl: material.namePl, isAvailable: false, reason: 'EXCLUDED_BY_DESIGN' };
+    }
+    return { id: material.id, namePl: material.namePl, isAvailable: true, reason: null };
+  });
+
+  const designRows = data.designs.map((design) => ({
+    designId: design.id,
+    isActive: design.isActive,
+    rightsStatus: design.rightsStatus,
+    allowedMaterialIds: design.allowedMaterialIds,
+  }));
+  const designBaseline = new Set(availableDesigns(designRows, null));
+  const designNarrowed = new Set(availableDesigns(designRows, selections.materialId));
+  const designs = data.designs.map((design): OptionAvailability => {
+    if (!designBaseline.has(design.id)) {
+      return { id: design.id, namePl: design.namePl, isAvailable: false, reason: 'DESIGN_NOT_OFFERED' };
+    }
+    if (!designNarrowed.has(design.id)) {
+      return { id: design.id, namePl: design.namePl, isAvailable: false, reason: 'EXCLUDED_BY_MATERIAL' };
+    }
+    return { id: design.id, namePl: design.namePl, isAvailable: true, reason: null };
+  });
+
+  const selectedMaterial =
+    selections.materialId === null
+      ? null
+      : (data.materials.find((material) => material.id === selections.materialId) ?? null);
+  const finishes: OptionAvailability[] =
+    selectedMaterial === null
+      ? []
+      : selectedMaterial.finishes.map((finish) => ({
+          id: finish.id,
+          namePl: finish.namePl,
+          isAvailable: finish.isAvailable,
+          reason: finish.isAvailable ? null : 'FINISH_NOT_OFFERED',
+        }));
+
+  const selectedVariant =
+    selections.installationVariant === null
+      ? null
+      : (data.installVariants.find((variant) => variant.code === selections.installationVariant) ??
+        null);
+  const thicknessAvailable = new Set(
+    availableThicknesses(data.thicknesses, selectedVariant?.maxThicknessMm ?? null),
+  );
+  const thicknesses = data.thicknesses.map((thickness): OptionAvailability => {
+    const isAvailable = thicknessAvailable.has(thickness.thicknessMm);
+    return {
+      id: String(thickness.thicknessMm),
+      namePl: thickness.labelPl,
+      isAvailable,
+      reason: isAvailable ? null : 'THICKNESS_EXCEEDS_INSTALLATION_VARIANT',
+    };
+  });
+
+  return { materials, designs, finishes, thicknesses };
+}

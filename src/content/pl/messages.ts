@@ -15,6 +15,7 @@ import type { DimensionIssue } from '@/domain/dimensions/dimensions';
 import type { FeasibilityFinding } from '@/domain/feasibility/rules';
 import type { PersonalizationIssue } from '@/domain/personalization/validate';
 import type { ParseErrorCode } from '@/domain/text/numeric-input';
+import type { UnavailabilityReason } from '@/server/configurator/resolve-options';
 import { formatMmAsCentimetres } from '@/domain/text/numeric-input';
 import { countPl } from '@/domain/text/plural';
 import { NOUNS } from '@/domain/text/nouns';
@@ -98,6 +99,31 @@ export function configurationErrorMessage(code: ConfigurationErrorCode): string 
       return 'Ta opcja nie dotyczy wybranego produktu.';
     case 'CONFIGURATION_INCOMPLETE':
       return 'Konfiguracja nie jest jeszcze kompletna. Uzupełnij wszystkie wymagane kroki.';
+  }
+}
+
+/**
+ * Why one configurator option is shown disabled instead of hidden —
+ * ARCHITECTURE.md §7.2: "a disabled option with a reason teaches the
+ * customer the rule." Not a P1 domain code — it comes from
+ * `server/configurator/resolve-options.ts`, which combines the already
+ * domain-tested compatibility rules with real product rows — but it is
+ * exactly the kind of customer-visible code this file exists to translate.
+ */
+export function unavailabilityReasonMessage(reason: UnavailabilityReason): string {
+  switch (reason) {
+    case 'MATERIAL_NOT_OFFERED':
+      return 'Ten materiał jest obecnie niedostępny.';
+    case 'EXCLUDED_BY_DESIGN':
+      return 'Niedostępny dla wybranego wzoru.';
+    case 'DESIGN_NOT_OFFERED':
+      return 'Ten wzór jest obecnie niedostępny.';
+    case 'EXCLUDED_BY_MATERIAL':
+      return 'Niedostępny dla wybranego materiału.';
+    case 'FINISH_NOT_OFFERED':
+      return 'To wykończenie jest obecnie niedostępne.';
+    case 'THICKNESS_EXCEEDS_INSTALLATION_VARIANT':
+      return 'Zbyt duża grubość dla wybranego sposobu montażu.';
   }
 }
 
