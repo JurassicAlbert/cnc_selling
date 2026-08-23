@@ -134,7 +134,7 @@ are genuinely unbuilt still — marked `[ ]`, not glossed over. Full detail in
 - [ ] Personalization with font selection and live text preview — not built. No `Font` row is seeded — real cmap-parsed glyph coverage is a safety property (`domain/personalization`'s own header), not something to fabricate placeholder data for. The step shows an honest "coming soon, skippable" notice instead
 - [ ] Preview updates immediately on every change — the 2D preview (§7.3) is not built this pass at all
 - [ ] Preview shows module seams when modular — depends on the preview above
-- [x] Kitchen installation variants selectable, as the first step — browser-verified; diagrams (`diagramUrl`) are fetched but not yet rendered in the UI, so "with diagrams" is not yet true
+- [x] Kitchen installation variants selectable, with diagrams, as the first step — browser-verified including the diagram: selecting a variant now renders its `descPl` and `diagramUrl` (a real, honestly-labelled placeholder SVG, same convention as product photography — see `prisma/seed.ts`'s header)
 - [x] Summary states plainly what the customer receives per variant — the summary now surfaces `InstallationVariant.receivesPl` for the chosen variant and `Product.materialNotesPl` verbatim; browser-verified on the loft product (materialNotesPl about the bought-in metal base) and the KITCHEN_TILE product's install-variant text
 - [x] Floor/panel products require exact dimensions and the matching acknowledgement — `requiresExactSize` gates a new mandatory checkbox in the summary showing §11's exact copy (`COPY.floorFinalDimensions`, already defined, previously unused); browser-verified on the floor panel product (`panel-podlogowy-z-grawerem`) end to end: the add-to-cart button stays disabled until both this AND the `FLOOR_MATCH_NOT_GUARANTEED` feasibility warning are acknowledged, then enables
 - [x] "Blat. Nogi nie są w zestawie." shown on product page, summary and confirmation — shown on the product page (P2) and now also the configurator summary (same fix as the line above — `materialNotesPl` renders in both places from the same DB field). "confirmation" (order confirmation) doesn't exist yet — no orders exist until P5
@@ -143,13 +143,13 @@ are genuinely unbuilt still — marked `[ ]`, not glossed over. Full detail in
 - [~] Price breakdown available and stored — available (returned in every snapshot, and rendered); NOT stored — no `Configuration` DB row is written yet. That is cart integration (P5), not this pass
 - [~] Large products correctly represented as modules — module *count* is computed correctly (`domain/modules`, unit-tested) and shown as a number; no layout *diagram* is rendered
 - [x] Modular build framed as a feature, not a limitation — the existing `MODULAR_BUILD` Polish copy (P1) renders as an info alert, unchanged
-- [x] Feasibility warnings shown, with acknowledgement where required — unit-tested (17 assertions in `tests/unit/configurator-server.test.ts`) and wired into the UI with a checkbox per warning; not yet exercised live against a product whose real data actually triggers one
+- [x] Feasibility warnings shown, with acknowledgement where required — unit-tested (17 assertions in `tests/unit/configurator-server.test.ts`) and wired into the UI with a checkbox per warning; browser-verified live on the floor panel product: `NATURAL_VARIATION`/`MODULAR_BUILD` (notices, no acknowledgement) and `FLOOR_MATCH_NOT_GUARANTEED` (warning, real checkbox, correctly gates add-to-cart) all rendered from real data
 - [x] Incompatible selections cleared explicitly with an explanation, never silently swapped — the previous version blanket-cleared finish on every material change and thickness on every installation-variant change, whether or not the old value was actually still valid; now checked conditionally against the real catalogue data and only cleared (with a dismissible Polish notice) when genuinely incompatible. Not browser-verified against real data for the same reason as the line above — one material per product today, so a material change has nothing to invalidate live yet
 - [x] All configuration combinations validated server-side — every check (dimensions, feasibility, modules, pricing) runs inside the Server Action against real rows
 - [x] Configuration persists across page refresh — browser-verified: the full selection round-trips through the URL, and a refresh resumes at the furthest step the restored selections actually reach (a real bug — always resetting to step 1 — was caught and fixed live)
 - [x] Browser back/forward behaves correctly — a `popstate` listener now re-syncs `selections` and re-resolves the furthest reachable step whenever the URL changes outside the component's own control. Browser-verified by simulating a real back/forward URL change (`history.pushState` + a dispatched `popstate` event, exactly what the browser fires): price and module count recomputed correctly (343,90 zł → 701,84 zł, 1 → 4 modules) with no reload and zero console errors
 - [ ] Sticky price summary on desktop and mobile — not built; the summary is inline, not positioned
-- [ ] Configurator usable on mobile — not verified this pass (no mobile-viewport check was run)
+- [~] Configurator usable on mobile — a real, sitewide bug was found and fixed this pass: `h1`/`h2`/`h3` had no responsive sizing at all (a leftover gap from extracting static theme tokens, §9e), so a 96px heading overflowed a 375px viewport on every page, not just the configurator. Fixed with a `clamp()` fluid scale in `theme-vars.css`, verified at both 375px (no overflow) and 1280px (exactly the original 96px, zero regression). Layout and CSS are verified; full touch-interaction click-through was not — the browser tool's click action consistently timed out under mobile touch-emulation in this session (no console errors, so likely a tooling artifact, not an app bug, but genuinely unconfirmed) — worth a retry next session
 
 ## P4 — Upload, design review, IP
 
@@ -320,7 +320,7 @@ are genuinely unbuilt still — marked `[ ]`, not glossed over. Full detail in
 - [ ] Address form in Polish order (street, number, postal code, city)
 - [ ] Polish quotation marks „ … " in copy
 - [ ] No line break after single-letter words (w, i, z, o, a)
-- [ ] Mobile layout verified
+- [~] Mobile layout verified — a real sitewide overflow bug (unresponsive h1-h3, found via the P3 mobile check) was fixed 2026-08-23, see the P3 section. Checked on the product page and configurator only, not category pages, the homepage, or the admin panel (which doesn't exist yet)
 - [ ] Tablet layout verified
 - [ ] Desktop layout verified
 - [ ] No critical console errors

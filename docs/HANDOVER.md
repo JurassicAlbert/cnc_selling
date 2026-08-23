@@ -1028,6 +1028,63 @@ product (`panel-podlogowy-z-grawerem`, the one seeded row with
 warnings rendered, the add-to-cart button stayed disabled with only one of
 the two boxes checked, and enabled only once both were.
 
+### Fourth pass, same day: the installation diagram, and a real sitewide bug found only by checking mobile
+
+**Installation-variant diagrams now render.** `diagramUrl` was already
+fetched (it had to be, to build `ConfiguratorOptionData`) but never
+displayed. Selecting a variant now shows its `descPl` and the diagram image
+underneath the option buttons — a real, honestly-labelled placeholder SVG,
+the same convention as product photography (`prisma/seed.ts`'s header on
+why nothing here is a downloaded stock image). Browser-verified: selecting
+"Montaż na istniejącym fartuchu" on the KITCHEN_TILE product renders the
+description and the "diagram w przygotowaniu" placeholder correctly.
+
+**A real, sitewide bug, found by actually checking the configurator at
+mobile width.** `h1` rendered at a literal 96px — MUI's stable desktop
+Typography default, which `theme-vars.css` captures verbatim — on every
+page, including a 375px phone, where it overflowed the viewport
+horizontally. This is not a configurator bug specifically: `Heading` is the
+one primitive every page uses, so this affected the homepage, every
+category page, and every product page, and nobody had actually looked at
+mobile since P0 (the cross-cutting checklist's "Mobile layout verified" line
+was still unchecked, and now it's clear why — this is exactly the kind of
+thing that line exists to catch). Root cause: the live `ThemeProvider`
+this project deliberately stopped mounting site-wide (§9e's Lighthouse fix)
+is what normally runs MUI's `responsiveFontSizes()` on top of the fixed
+scale; extracting static tokens instead kept the fixed sizes but dropped
+the responsive behaviour that went with them, and nothing caught the gap
+until this pass actually resized a browser to 375px.
+
+**Fix:** `h1`/`h2`/`h3` (the variants large enough to plausibly overflow) in
+`theme-vars.css` now use `clamp()` with a fluid formula tuned so the
+*preferred* term equals the original fixed value exactly at 1200px — the
+`Container` primitive's own `max-width` — so nothing at or above that width
+changes from what §9e already verified via `getComputedStyle`. Verified
+both ends, not just the mobile fix: at 375px, `h1` no longer overflows
+(confirmed visually and the failure mode is gone); at 1280px,
+`getComputedStyle(h1).fontSize` is exactly `"96px"`, byte-identical to
+before. (One tooling note for whoever continues this: the dev server's CSS
+chunk filename is not content-hashed, so the Browser pane's own network
+layer served a stale cached copy after the edit despite the file on disk
+and a fresh `curl`/`fetch(cache:'no-store')` both being correct — a
+cache-busted stylesheet `<link>` confirmed the real content was right.
+Not an application bug; don't chase it if it recurs, just bypass the cache
+to verify.)
+
+**What mobile verification did NOT reach this pass.** CSS/layout is
+confirmed (no overflow, at the one breakpoint that mattered for this bug).
+Full touch-driven click-through of the configurator — tapping an option,
+confirming the step advances — could not be completed: the browser tool's
+click action consistently timed out once the viewport was set to a mobile
+preset (which also switches on touch-event emulation). No console error
+appeared before or after the timeout, which points to a tooling artifact in
+this session rather than an application bug — the same MUI `ToggleButton`
+`onClick` handler is already proven working via ordinary mouse clicks at
+desktop width, across three different products, earlier the same day — but
+this is genuinely unconfirmed, not silently assumed fine. Worth a clean
+retry in a fresh session before checking off "Configurator usable on
+mobile" for real.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

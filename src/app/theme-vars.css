@@ -42,9 +42,21 @@
   --mui-palette-divider: #e6e0d8;
   --mui-palette-error-main: #8c3a2e;
 
-  --mui-font-h1: 300 6rem/1.167 var(--font-display);
-  --mui-font-h2: 300 3.75rem/1.2 var(--font-display);
-  --mui-font-h3: 400 3rem/1.167 var(--font-display);
+  /*
+   * h1-h3 use a fluid clamp() instead of a fixed size — MUI's stable desktop
+   * Typography scale is what's captured above, but the live ThemeProvider
+   * this project intentionally stopped mounting site-wide (see this file's
+   * header) is what normally applies `responsiveFontSizes()` on top of it.
+   * Without it, 6rem (96px) rendered as literal 96px text on a 375px phone
+   * and overflowed the viewport — a real bug found only by actually looking
+   * at a page at mobile width, not by any type-check. Each clamp is tuned so
+   * the MIDDLE (preferred) term equals the original fixed value exactly at
+   * 1200px, the Container's own max-width, so nothing above that width
+   * changes from what §9e already verified via getComputedStyle.
+   */
+  --mui-font-h1: 300 clamp(2.5rem, calc(2.5rem + (100vw - 375px) * 0.0679), 6rem)/1.167 var(--font-display);
+  --mui-font-h2: 300 clamp(2rem, calc(2rem + (100vw - 375px) * 0.03394), 3.75rem)/1.2 var(--font-display);
+  --mui-font-h3: 400 clamp(1.75rem, calc(1.75rem + (100vw - 375px) * 0.02424), 3rem)/1.167 var(--font-display);
   --mui-font-h4: 400 2.125rem/1.235 var(--font-display);
   --mui-font-h5: 400 1.5rem/1.334 var(--font-display);
   --mui-font-h6: 500 1.25rem/1.6 var(--font-display);

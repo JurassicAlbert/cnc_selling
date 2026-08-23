@@ -57,6 +57,7 @@ import {
   unavailabilityReasonMessage,
 } from '@/content/pl/messages';
 import { SITE } from '@/content/pl/site';
+import { Text } from '@/ui/primitives/Text';
 import type {
   ConfiguratorOptionData,
   OptionAvailability,
@@ -264,6 +265,10 @@ export function Configurator({
   const canGoNext =
     stepIndex < steps.length - 1 && isStepEnterable(steps, stepIndex + 1, selections);
   const canGoBack = stepIndex > 0;
+  const selectedInstallVariant =
+    selections.installationVariant === null
+      ? null
+      : (options.installVariants.find((v) => v.code === selections.installationVariant) ?? null);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -315,17 +320,30 @@ export function Configurator({
         )}
 
         {currentStep === 'INSTALLATION_VARIANT' && (
-          <OptionStep
-            title={STEP_LABEL.INSTALLATION_VARIANT}
-            entries={options.installVariants.map((v) => ({
-              id: v.code,
-              namePl: v.namePl,
-              isAvailable: true,
-              reason: null,
-            }))}
-            selectedId={selections.installationVariant}
-            onSelect={selectInstallationVariant}
-          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <OptionStep
+              title={STEP_LABEL.INSTALLATION_VARIANT}
+              entries={options.installVariants.map((v) => ({
+                id: v.code,
+                namePl: v.namePl,
+                isAvailable: true,
+                reason: null,
+              }))}
+              selectedId={selections.installationVariant}
+              onSelect={selectInstallationVariant}
+            />
+            {selectedInstallVariant !== null && (
+              <div>
+                <Text muted>{selectedInstallVariant.descPl}</Text>
+                {/* biome-ignore lint/performance/noImgElement: placeholder SVGs get nothing from next/image's raster pipeline — same as Card.tsx */}
+                <img
+                  src={selectedInstallVariant.diagramUrl}
+                  alt={selectedInstallVariant.namePl}
+                  style={{ width: '100%', maxWidth: 400, height: 'auto', display: 'block' }}
+                />
+              </div>
+            )}
+          </div>
         )}
 
         {currentStep === 'THICKNESS' && (
