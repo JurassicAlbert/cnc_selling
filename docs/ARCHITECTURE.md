@@ -808,7 +808,18 @@ Scale factor for `LINE_TOO_THIN`: the design's declared minimum line width is de
 
 ## 9. Modular splitting algorithm
 
-**Inputs:** `widthMm`, `heightMm`, machine usable area (`600 × 900 mm` nominal → **`580 × 880 mm` effective** after clamping and tool clearance — configurable, not hardcoded), material `maxSheetWidthMm/maxSheetHeightMm`, `minModuleMm` (default 150), `grainDirection`.
+> **D7 resolved 2026-08-23.** The figures below were the pre-launch
+> assumption. The real machine, confirmed with the owner: **`usableWidthMm =
+> 600`, `usableHeightMm = 500`**, `minModuleMm` kept at **150**, plus a Z-axis
+> limit not covered by this section at all — `maxWorkpieceThicknessMm = 100`,
+> added to `MachineSettings` in
+> `prisma/migrations/20260823010000_add_machine_thickness_limit`. See
+> `docs/HANDOVER.md` §9 for the full resolution, including one dead end (a
+> "10 mm" answer that turned out to describe material thickness, not the
+> module floor) and the fact that the thickness limit is stored but **not yet
+> enforced** by any feasibility rule.
+
+**Inputs:** `widthMm`, `heightMm`, machine usable area (`600 × 900 mm` nominal → **`580 × 880 mm` effective** after clamping and tool clearance — configurable, not hardcoded; **superseded, see note above**), material `maxSheetWidthMm/maxSheetHeightMm`, `minModuleMm` (default 150), `grainDirection`.
 
 ```
 usableW = min(machine.usableWMm, material.maxSheetWidthMm)
@@ -1366,7 +1377,7 @@ Your §40 checklist, plus the items this analysis added. Kept in `docs/CHECKLIST
 | R1b | I cannot execute the test suite, so "green" is your observation, not mine | A silent regression could be reported as passing | Every claim of passing tests is tied to output you paste back; failure messages written to state the expected reason |
 | R2 | MUI's default look reads "admin dashboard", contradicting premium positioning | Brand failure — the stated primary risk of the whole project | Aggressive theme override (§2.1); design review of the homepage before P3 |
 | R3 | MUI is client-side; naive use kills SEO and LCP on catalogue pages | Lost organic traffic — the main acquisition channel | RSC/island split enforced by lint rule + a test asserting no `@mui/material` import in `(marketing)`/`(shop)` server components |
-| R4 | Feasibility constraints are guesses until real machine data exists | Promising unmanufacturable results, or over-warning and losing sales | All constraints are DB values, not constants; tune from real production without a deploy |
+| R4 | ~~Feasibility constraints are guesses until real machine data exists~~ **Partially resolved 2026-08-23** — real usable area and module floor confirmed (D7); the machine's Z-axis limit is stored (`MachineSettings.maxWorkpieceThicknessMm = 100`) but **not yet enforced** by any `domain/feasibility` rule | Promising unmanufacturable results, or over-warning and losing sales | All constraints are DB values, not constants; tune from real production without a deploy. A THICKNESS_EXCEEDS_MACHINE rule is still open work |
 | R5 | Modular splitting off-by-one at exact boundaries | Wrong module count → wrong price and wrong production plan | Boundary tests written before implementation (§9) |
 | R6 | Money as float | Off-by-grosz vs. invoices | Integer grosze by construction, enforced in `domain/money` |
 | R7 | Unsanitized customer SVG | Stored XSS | §13.1 step 3; served as attachment / rasterized |
@@ -1401,10 +1412,10 @@ Each of these has a defined extension point in the model above; none requires a 
 | ~~D2~~ | ~~Minimal operator console~~ | **Resolved 2026-08-23** — superseded: a full admin panel is in scope (§16A) | — |
 | **D2b** | Does the storefront launch once P7a (approve designs / confirm payment / advance status) is done, or do you wait for the complete panel? | Determines whether you can take real orders in ~⅔ of the total build time or at the end | Launch on P7a. Taking real orders while the rest of the panel is built is how you find out what the panel actually needs |
 | **D3** | Discount codes in MVP? | Your project rules list "discounts" as tests-first; the brief never mentions them | Out of scope; add in Phase 2 |
-| **D4** | Real numbers for material `pricePerM2`, machine rate per minute, module surcharge, packaging tiers | The pricing engine is structurally correct but produces meaningless złoty without them | Send a rough price list; I'll seed placeholders clearly marked `TODO_PRICING` |
+| ~~D4~~ | Real numbers for material `pricePerM2`, machine rate per minute, module surcharge, packaging tiers | The pricing engine is structurally correct but produces meaningless złoty without them | **Resolved 2026-08-23** — seed `TODO_PRICING` placeholders, clearly marked, swapped before launch. Not yet implemented; blocked only on the seed script itself (P2) |
 | **D5** | Product photography and design assets — available, or placeholders? | Brief §6 makes imagery the core of the brand | Ship P2 with clearly-marked placeholders, swap before launch |
 | **D6** | Customer accounts required at checkout, or guest checkout too? | Affects cart, order lookup, and the auth surface | Guest checkout + optional account — fewer abandoned carts |
-| **D7** | Real machine usable area and minimum module size | §9 currently assumes 580 × 880 mm effective and 150 mm minimum | Confirm from the actual machine |
+| ~~D7~~ | Real machine usable area and minimum module size | §9 currently assumes 580 × 880 mm effective and 150 mm minimum | **Resolved 2026-08-23** — 600×500mm usable, 150mm min module, 100mm max Z-thickness (new `MachineSettings.maxWorkpieceThicknessMm`, not yet enforced by any rule). Full detail in `docs/HANDOVER.md` §9 |
 | **D8** | Confirm the `KITCHEN_TILE` default size (70 × 120 mm) and whether customers may deviate | Affects preset vs custom size logic | Fixed presets matching common Polish backsplash tile formats |
 
 ---

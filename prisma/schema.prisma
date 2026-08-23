@@ -497,18 +497,31 @@ model PricingSettings {
 
 /// True singleton: one row, id = 1. The real machine's usable area after
 /// clamping and tool clearance, plus the smallest module we will produce.
-/// These are DB values and not constants precisely because they are currently
-/// assumptions (open decision D7) and must be correctable without a deploy.
+/// These are DB values and not constants because they must be correctable
+/// without a deploy.
+///
+/// D7 resolved 2026-08-23 with the owner: usableWidthMm 600, usableHeightMm
+/// 500 (the machine can feed material either way, so which axis is which
+/// does not matter), minModuleMm kept at the original 150 assumption, and
+/// maxWorkpieceThicknessMm 100 — the machine's Z-axis limit, a hardware
+/// capability distinct from `ProductThickness` or any material's own sheet
+/// limits. Recorded here for the seed script (P2); not yet enforced by any
+/// domain rule — `domain/feasibility` has no THICKNESS_EXCEEDS_MACHINE check
+/// yet, so a product configured thicker than this is not currently rejected.
 model MachineSettings {
-  id                    Int      @id @default(1)
-  usableWidthMm         Int
-  usableHeightMm        Int
-  minModuleMm           Int
+  id                      Int      @id @default(1)
+  usableWidthMm           Int
+  usableHeightMm          Int
+  minModuleMm             Int
+  /// The machine's Z-axis limit. Distinct from a material's own sheet or
+  /// thickness limits — this one is a hardware ceiling that applies no
+  /// matter what is being cut.
+  maxWorkpieceThicknessMm Int
   /// Allowance per joint, reserved for the future production pipeline.
-  jointAllowanceMm      Int      @default(0)
+  jointAllowanceMm        Int      @default(0)
   /// Weekly capacity for the admin production load view (§16A.1 module 10).
-  weeklyCapacityMinutes Int      @default(0)
-  updatedAt             DateTime @updatedAt
+  weeklyCapacityMinutes   Int      @default(0)
+  updatedAt               DateTime @updatedAt
 }
 
 // ---------------------------------------------------------------------------

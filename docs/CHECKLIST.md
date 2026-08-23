@@ -16,7 +16,7 @@ TypeScript 7.0.2 / Vitest 4.1.11 / Prisma 7.9.1. P1 is complete; the P0 data lay
 - [ ] Playwright configured, desktop + mobile projects
 - [x] Docker Postgres for local dev and tests — `docker-compose.yml` running (Postgres 16, separate dev and test databases, `unaccent` in both, verified via `psql`); published on host port **5433**, not 5432 — a native Postgres install already owns 5432 on this machine
 - [x] Prisma schema + first migration applies cleanly — 33 models; `npm run db:deploy` applied `20260823000000_init` to a live database, all 34 tables + `_prisma_migrations` confirmed via `\dt`, hand-written CHECK constraints and the `PricingSettings_single_active` partial unique index confirmed present (verified 2026-08-23)
-- [ ] Seed script structure in place — blocked on D4 (real prices) and D7 (real machine area); no placeholder script written on purpose
+- [ ] Seed script structure in place — **unblocked 2026-08-23**: D4 resolved (seed `TODO_PRICING` placeholders) and D7 resolved (machine 600×500mm usable, 150mm min module, 100mm max Z-thickness — `MachineSettings.maxWorkpieceThicknessMm` added in `20260823010000_add_machine_thickness_limit`); script itself not yet written
 - [ ] MUI theme implemented (palette, typography, radius, shadows, no uppercase buttons)
 - [ ] CSS-variables theme so RSC pages consume brand tokens
 - [ ] RSC / client-island boundary documented and enforced

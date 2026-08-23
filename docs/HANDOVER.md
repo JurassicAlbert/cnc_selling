@@ -347,29 +347,43 @@ items rather than at the end.
 | ~~D-DB~~ | ~~Docker Desktop or a hosted Neon branch?~~ | **Resolved 2026-08-23: Docker Desktop.** `docker-compose.yml` is in the repo |
 | D2b | Launch the storefront once P7a (approve designs / confirm payment / advance status) works, or wait for the complete admin panel? | Launch on P7a |
 | D3 | Discount codes in MVP? The owner's TDD rules list "discounts" but the brief never mentions them | Out of scope; Phase 2 |
-| D4 | Real material prices per m², machine rate per minute, module surcharge, packaging tiers | Needed before seed data means anything; use `TODO_PRICING` placeholders and say so |
+| ~~D4~~ | ~~Real material prices per m², machine rate per minute, module surcharge, packaging tiers~~ | **Resolved 2026-08-23: seed `TODO_PRICING` placeholders**, clearly marked, swapped before launch. Not written yet — needs the seed script (P2) |
 | D5 | Product photography — available, or placeholders? | Clearly-marked placeholders, swapped before launch |
 | D6 | Guest checkout allowed, or account required? | Guest + optional account |
-| D7 | **Real machine usable area and minimum module size.** Currently assumed 580 × 880 mm effective and 150 mm minimum | Confirm from the actual machine — it changes module counts and therefore prices |
+| ~~D7~~ | ~~Real machine usable area and minimum module size.~~ | **Resolved 2026-08-23 with the owner** — see below |
 | D8 | Kitchen tile default size (70 × 120 mm) and whether customers may deviate | Fixed presets matching common Polish backsplash formats |
 
-D7 and D4 are the two that make the difference between a structurally correct
-engine and one that produces meaningful złoty. Raise them early.
+**D7, resolved 2026-08-23.** The real numbers, and one schema change:
 
-**Both are now blocking, not merely early.** The schema stores machine limits
-and rates as data, so nothing is hardcoded and nothing needs a migration when
-the real numbers arrive — but the seed script cannot be written until they do,
-and P2 cannot start without seed data. Concretely, what is needed:
+- `usableWidthMm = 600`, `usableHeightMm = 500` — the machine's real X/Y
+  travel. Which axis is "width" is arbitrary: the owner confirmed material can
+  be fed either way, so this pairing is a labelling choice, not a constraint.
+- `minModuleMm = 150` — the original assumption stands. The owner's first
+  answer (10 mm) turned out to describe minimum **material thickness**, a
+  different axis entirely, not the module-split floor.
+- `maxWorkpieceThicknessMm = 100` — new. The machine's Z-axis limit. This did
+  not fit any existing field — `MachineSettings` only had X/Y and the module
+  floor — so it was added as a genuine schema change, not just a seeded
+  value: `prisma/schema.prisma` plus
+  `prisma/migrations/20260823010000_add_machine_thickness_limit`, applied to
+  both the dev and test databases. **Not yet enforced anywhere** —
+  `domain/feasibility` has no rule comparing a chosen thickness against it.
+  That is a real gap, not an oversight: building the rule was out of scope for
+  "resolve the decision" and needs its own test-first pass.
+- The owner also mentioned material won't practically go below **10 mm**
+  thick. Recorded here for whoever writes seed data; not enforced by any
+  constraint, since it may vary by material and nothing asked for that yet.
 
-- **D7:** the machine's real usable area in mm after clamping and tool
-  clearance, and the smallest module worth producing. The current 580 × 880 mm
-  and 150 mm are assumptions; they decide module counts, which decide prices.
-- **D4:** price per m² per material, machine rate per minute for CNC and for
-  laser, the per-extra-module surcharge, packaging tiers, and VAT (23% unless
-  told otherwise).
+**D4, resolved 2026-08-23: seed `TODO_PRICING` placeholders**, invented
+plausible round numbers, never shown to a customer, swapped before launch.
+Not implemented yet — no seed script exists (P2, "Seed data: materials,
+finishes, designs, 5 products…" in `docs/ARCHITECTURE.md` §22), and writing
+one is a bigger task than resolving the pricing question. What it unblocks:
+`prisma/seed.ts` can now be written without waiting on real numbers.
 
-A rough price list is enough to start. Placeholders would be marked
-`TODO_PRICING` and never shown to a customer.
+D7 and D4 were the two that made the difference between a structurally
+correct engine and one that produces meaningful złoty; both are now resolved,
+and P2 seed work is unblocked.
 
 ## 10. Working style the owner expects
 
