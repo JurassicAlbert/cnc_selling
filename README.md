@@ -40,16 +40,25 @@ Postgres, and the Next.js 16 / MUI v9 app shell.
 | `prisma/seed.ts` | Machine limits, pricing placeholders, first admin — and the real catalogue: 6 categories, 5 products |
 | `scripts/generate-placeholder-images.mjs` | On-brand placeholder SVGs — not stock photos of unrelated products |
 | `src/server/mapping/to-domain.ts` | Prisma rows → domain inputs. Micrometres to millimetres, basis points to ratios, nullable rows to neutral values |
-| `src/app/`, `src/ui/` | App Router shell, `lang="pl"`, the warm-palette MUI theme, RSC-safe layout primitives, one client island |
-| `playwright.config.ts` | Desktop + mobile, one smoke test green on both |
+| `src/app/(shop)/`, `src/app/(marketing)/` | Real category/product pages + homepage, server-rendered from the DB |
+| `src/app/theme-vars.css` | The theme as plain CSS custom properties — **not** MUI's client provider; see `docs/HANDOVER.md` §9e before changing `src/app/layout.tsx` |
+| `playwright.config.ts` | Desktop + mobile, real click-through navigation test (home → category → product) |
 | `biome.json` | Linter + formatter (not ESLint — TypeScript 7 isn't supported by `typescript-eslint`; see `docs/HANDOVER.md` §9c) |
 | `scripts/check-polish-literals.mjs` | Catches Polish copy leaking into a component instead of `src/content/pl` |
 
 The catalogue is real data — `loft`, `amulety-i-bransoletki`, `gres`,
 `panele-podlogowe`, `obrazy-drewniane`, plus `inne` as an empty catch-all —
-but prices, photos, and the one design's artwork are all placeholders (see
-`docs/HANDOVER.md` §9d). There are no category/product pages or a
-configurator yet.
+with real category and product pages, SEO metadata, JSON-LD, a sitemap and
+robots.txt, all generated from the DB. Prices, photos, and the one design's
+artwork are all placeholders (`docs/HANDOVER.md` §9d). The homepage's
+content-heavy sections (hero, craftsmanship, reviews, FAQ) aren't built —
+they need the owner's actual words, and reviews specifically need real
+customers, not invented ones (§9e). There is no configurator yet.
+
+A Lighthouse audit while building this caught a real bug: the MUI theme
+provider was wrapping every page from the root layout, shipping ~154KB of
+client JS to pages with zero interactive MUI components. Fixed — see
+`docs/HANDOVER.md` §9e before reintroducing `ThemeRegistry` at the root.
 
 ---
 
@@ -111,11 +120,11 @@ yet, the code says so.
 
 ## What comes next
 
-P0 is done. P2's catalogue data is seeded (real categories, TODO_PRICING
-placeholders). Next:
+P0 is done. P2 is functionally complete — real catalogue seeded, category
+and product pages live, SEO/Schema.org/sitemap/robots all real. Next:
 
-- **P2, the rest of it** — category and product pages as Server Components,
-  `generateMetadata`, sitemap, robots.
-- **P3** — the configurator.
+- **P2's remaining piece** — the homepage's hero/craftsmanship/reviews/FAQ
+  sections, once real content exists for them.
+- **P3** — the configurator, and the first real MUI client island.
 
 Full phasing in `docs/ARCHITECTURE.md` §22.

@@ -4,10 +4,12 @@ Reviewed item by item before the project is considered finished (brief §40–41
 `[ ]` not started · `[~]` in progress · `[x]` done and verified by a passing test or manual check.
 
 **Last verified: 2026-08-23** — `npm test` 298/298 green, `npm run typecheck` clean, `npm run build`
-clean, `npm run lint` clean, `npm run e2e` 2/2 green (desktop + mobile), on Node v22.15.0 / TypeScript
-7.0.2 / Vitest 4.1.11 / Prisma 7.9.1 / Next.js 16.3.2 / MUI 9.3.1 / Biome 2.5.10. **P0 is complete.**
-P2's real catalogue data is seeded (6 categories, 5 products, verified idempotent against both
-databases) — pages are the remaining P2 work.
+clean, `npm run lint` clean, `npm run e2e` 4/4 green (desktop + mobile), Lighthouse SEO 100/100, on
+Node v22.15.0 / TypeScript 7.0.2 / Vitest 4.1.11 / Prisma 7.9.1 / Next.js 16.3.2 / MUI 9.3.1 / Biome
+2.5.10. **P0 is complete. P2 is functionally complete** — real catalogue seeded, category/product
+pages live and server-rendered, SEO metadata/Schema.org/sitemap/robots all verified against real
+data. Still open: the homepage's content-heavy sections (hero, craftsmanship, reviews, FAQ — needs
+the owner's words, reviews needs real customers), and LCP on mobile (see the P2 Lighthouse note).
 
 ---
 
@@ -21,11 +23,11 @@ databases) — pages are the remaining P2 work.
 - [x] Seed script structure in place — `prisma/seed.ts`, `npm run db:seed`, verified against both the dev and test databases (2026-08-23). `MachineSettings` (real 600×500×100mm), `PricingSettings` v1 (`TODO_PRICING` placeholders, append-only), the first `ADMIN` from `SEED_ADMIN_EMAIL`. **Now also seeds real catalogue content** — see the P2 item below, updated the same day once the owner gave the real category list
 - [x] MUI theme implemented (palette, typography, radius, shadows, no uppercase buttons) — `src/ui/theme/theme.ts`, exact §2.1 palette/shape/shadow overrides, `plPL` locale; verified in a real browser (`#FAF8F5` background, Fraunces h1, no button uppercase transform, no elevation shadow) (verified 2026-08-23)
 - [x] CSS-variables theme so RSC pages consume brand tokens — `cssVariables: true`; `src/ui/primitives/{Container,Section,Heading,Text}.tsx` are RSC-safe and consume `--mui-palette-*`/`--mui-font-*` tokens directly, verified rendering correctly with no Emotion shipped to the Server Component tree (verified 2026-08-23)
-- [x] RSC / client-island boundary documented and enforced — `src/app/(marketing)/page.tsx` is a Server Component with no `@mui/material` import; `src/ui/islands/ThemeShowcaseButton.tsx` is the one client island, rendered as a child and confirmed working in-browser; enforcement verified with a deliberate violation (added a `@mui/material` import to the marketing page, confirmed `npm run lint` errors, reverted)
+- [x] RSC / client-island boundary documented and enforced — every page under `(marketing)`/`(shop)` is a Server Component with no `@mui/material` import, enforced via a deliberate violation (added a `@mui/material` import to the marketing page, confirmed `npm run lint` errors, reverted). No client island exists yet — the original P0 proof-of-concept (`ThemeShowcaseButton`) was retired 2026-08-23 once real pages replaced the scaffold; **the theme provider itself is also no longer mounted globally**, see the P2 Lighthouse note below — the first real island arrives with P3's configurator
 - [x] Lint rule: no Polish string literals inside components — `scripts/check-polish-literals.mjs`, verified with a deliberate violation (caught and reported correctly, reverted) (verified 2026-08-23)
 - [x] Lint rule: no `@mui/material` imports in `(marketing)` / `(shop)` server components — `biome.json`'s `overrides` + `noRestrictedImports`, verified with a deliberate violation (verified 2026-08-23)
 - [x] Prisma row → domain mapper (`src/server/mapping/to-domain.ts`) with unit tests — 35 assertions including an end-to-end priced derivation; a renamed column breaks compilation instead of changing a price
-- [x] `src/content/pl/` module wired up — `messages.ts` used by the domain tests; `site.ts` (new) is consumed by the marketing placeholder page, proving a real Server Component reads Polish copy from `src/content/pl` rather than inlining it
+- [x] `src/content/pl/` module wired up — `messages.ts` used by the domain tests; `site.ts` is consumed by the real homepage, category, and product pages (P2)
 
 **Resolved 2026-08-23: switched from ESLint to Biome.** `typescript-eslint` (a
 hard dependency of `eslint-config-next`) does not support TypeScript 7 — a
@@ -59,20 +61,55 @@ AST. Trade-off accepted knowingly: Biome has no direct equivalent of
 ## P2 — Catalogue
 
 - [x] Seed data: materials, finishes, designs, 5 products, preset sizes, installation variants — real categories confirmed by the owner 2026-08-23: `loft`, `amulety-i-bransoletki`, `gres`, `panele-podlogowe`, `obrazy-drewniane` (each with one representative product), plus `inne` as an intentionally-empty catch-all. `LOFT_FURNITURE` and `JEWELRY` added to `ProductTypeCode` (migration `20260823020000_add_loft_and_jewelry_product_types`) — neither of the original five types fit. 2 materials (oak, white gres), 1 finish (oiling), 1 placeholder design, 1 installation variant (gres). Verified idempotent (reran seed twice, row counts unchanged) and checked directly via `psql`. **Still placeholder:** every price (`TODO_PRICING`, D4), every image (generated on-brand SVGs, `scripts/generate-placeholder-images.mjs` — not downloaded stock photos, see the note in `prisma/seed.ts`), the one design's artwork, and all product copy (plain/functional, not final marketing text)
-- [ ] Homepage — hero, categories, how it's made, materials, craftsmanship, details, patterns, reviews, FAQ, CTA
-- [ ] Category pages at the specified Polish slugs
-- [ ] Product pages — photos, detail shots, variants, description, material, dimensions, production time, starting price, installation info, care instructions, material notes
-- [ ] All navigation works, no broken links
-- [ ] `generateMetadata` per page from DB fields
-- [ ] Canonical URLs
-- [ ] Open Graph with real product imagery
-- [ ] Schema.org Product + Offer (PLN)
-- [ ] Schema.org FAQPage
-- [ ] BreadcrumbList on catalogue pages
-- [ ] `sitemap.ts` generated from the DB
-- [ ] `robots.ts`
-- [ ] Catalogue pages server-rendered (no client-side data fetch for content)
-- [ ] Lighthouse SEO ≥ 95, LCP acceptable on mobile
+- [~] Homepage — hero, categories, how it's made, materials, craftsmanship, details, patterns, reviews, FAQ, CTA — **only the categories grid is built**, from real seeded data (`src/app/(marketing)/page.tsx`). Hero copy, "how it's made", craftsmanship narrative, and FAQ are deliberately unbuilt — they need the owner's actual words. Reviews are deliberately unbuilt for a stronger reason: brief/§16A.1 module 9 explicitly forbids authoring a testimonial in a customer's name, and there are no real customer submissions yet to display
+- [x] Category pages at the specified Polish slugs — `src/app/(shop)/[category]/page.tsx`, all 6 real category slugs verified live (`/loft`, `/amulety-i-bransoletki`, `/gres`, `/panele-podlogowe`, `/obrazy-drewniane`, `/inne`), `generateStaticParams` from the DB, empty-category state verified on `/inne`, Polish 404 for an unknown slug
+- [x] Product pages — photos, detail shots, variants, description, material, dimensions, production time, starting price, installation info, care instructions, material notes — `src/app/(shop)/produkt/[slug]/page.tsx`, all fields verified live including the gres product's installation variant (added after noticing the seeded copy referenced "warianty montażu" with nothing actually displaying them); "detail shots" is one photo per product today since that's all that's seeded, not a built gallery limit
+- [x] All navigation works, no broken links — `SiteHeader` (real category links, every page) + homepage category cards + product cards + breadcrumbs; verified end-to-end with a real Playwright click-through (home → category → product), not just visual inspection
+- [x] `generateMetadata` per page from DB fields — category and product pages pull `seoTitlePl`/`seoDescPl` from the DB; homepage metadata is static since there's no site-settings record to pull from
+- [x] Canonical URLs — homepage, category, and product pages all set `alternates.canonical`; confirmed absolute and correct after fixing a missing `metadataBase` (Next warned about it on the first build)
+- [x] Open Graph with real product imagery — real seeded image URLs, resolved to absolute via `metadataBase`; "real" images are still the D5 placeholders, the OG mechanism itself is real
+- [x] Schema.org Product + Offer (PLN) — verified via `JSON.parse` on the actual rendered `<script>` tag, not just visual inspection
+- [ ] Schema.org FAQPage — not built; no FAQ content exists yet to attach it to (see the homepage line above)
+- [x] BreadcrumbList on catalogue pages — one `Breadcrumbs` component renders both the visible trail and the JSON-LD from the same data, so they can't drift apart; verified via `JSON.parse` on the rendered output
+- [x] `sitemap.ts` generated from the DB — verified live at `/sitemap.xml`: 1 homepage entry + 6 categories + 5 products, all real slugs
+- [x] `robots.ts` — verified live at `/robots.txt`, references the real sitemap URL
+- [x] Catalogue pages server-rendered (no client-side data fetch for content) — true by construction: confirmed zero `'use client'` directives anywhere under `src/app/(shop)`, `src/app/(marketing)`, `src/ui/primitives`, or `src/server`
+- [~] Lighthouse SEO ≥ 95, LCP acceptable on mobile — **SEO: 100/100**, desktop and mobile, both a category and a product page, met and verified. **LCP: improved, not clearly "acceptable" yet** — see the note below the table; a real architectural bug was found and fixed along the way, which is the more important result of running this audit at all
+
+**Lighthouse found a real bug, 2026-08-23: the theme provider was shipping the
+full MUI + Emotion + React client runtime to every page, including pages with
+zero interactive MUI components — exactly the R3 risk `ARCHITECTURE.md` §23
+names, which the RSC/island lint rule only half-covers (it stops `@mui/material`
+*imports* in server components; it never stopped the theme *wrapper* around
+them).** First mobile audit on `/produkt/stolek-loftowy-z-grawerem`: performance
+74/100, LCP 3.8s, TBT 500ms, Speed Index 3.9s, ~410KB transferred including
+~154KB of MUI/Emotion/React JS chunks — on a page with no `@mui/material`
+import anywhere in its own tree. Fixed by extracting the theme's CSS custom
+properties into a plain stylesheet (`src/app/theme-vars.css`, values read live
+off a rendered page, not guessed) and removing `ThemeRegistry` — MUI's actual
+client provider — from the root layout entirely. Verified the page renders
+byte-identically first (same background color, same font, same weight, via
+`getComputedStyle`). Re-audit: performance 85/100, LCP 3.4s, TBT 320ms, Speed
+Index 1.3s, ~376KB transferred.
+
+**LCP barely moved (3.8s → 3.4s) because it was never mostly a MUI problem** —
+the same two largest JS chunks (70KB, 44KB) are still present after removing
+`ThemeRegistry` entirely; they are Next.js's own framework runtime, not MUI's.
+The real remaining weight is four self-hosted web font files (~198KB: two
+subsets — `latin` and `latin-ext` — × two families, Fraunces and Inter, all
+genuinely requested because real Polish text like "Stołek" and "łoftowy" spans
+both subsets in the same sentence). That is close to unavoidable for two full
+type families with correct Polish diacritic support, which is itself a
+non-negotiable requirement (`ARCHITECTURE.md` §17.1). Lighthouse's default
+mobile profile also simulates a deliberately pessimistic mid-tier-phone/slow-4G
+baseline, not median real-world conditions — the field data (real users) for a
+Polish audience on typical LTE/wifi is very likely meaningfully better than
+this lab number. Recorded honestly rather than either declared "fixed" or
+left unexamined: **the architectural bug is fixed and confirmed; the
+remaining LCP number is a font-payload and lab-methodology question, not
+solved, and worth revisiting once real product photography (D5) changes the
+page weight anyway.** `ThemeRegistry` still exists, still correct, reserved
+for the first real interactive island (P3).
 
 ## P3 — Configurator
 

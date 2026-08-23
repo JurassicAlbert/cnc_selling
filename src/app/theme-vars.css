@@ -1,0 +1,64 @@
+/**
+ * The theme's CSS custom properties, as a plain stylesheet — no React, no
+ * Emotion, no client JS.
+ *
+ * Found via a real Lighthouse audit (2026-08-23), not assumed: with
+ * `ThemeRegistry` (MUI's `AppRouterCacheProvider` + `ThemeProvider` +
+ * `CssBaseline`) wrapping every page from the root layout, mobile
+ * performance was 74/100 and LCP was 3.8s on a page — a product detail page
+ * — with zero interactive MUI components. ~154KB of JS chunks were the full
+ * MUI + Emotion + React client runtime, shipped to a page that used none of
+ * it; every RSC primitive (`Heading`, `Text`, `Container`, `Section`,
+ * `Card`, `SiteHeader`) only ever needed the CSS custom properties, which
+ * `cssVariables: true` was supposed to make free. Wrapping the whole app in
+ * a client provider to get a `<style>` tag defeated that, exactly the R3
+ * risk ARCHITECTURE.md §23 names ("MUI is client-side; naive use kills SEO
+ * and LCP") — the lint rule stops `@mui/material` imports in server
+ * components, but nothing stopped the theme WRAPPER from shipping to pages
+ * that don't need it.
+ *
+ * `ThemeRegistry` still exists and is still correct — it is what a real
+ * interactive island (P3's configurator, cart, checkout) will need. It is
+ * no longer mounted at the root. Wrap it around the specific route or
+ * component subtree that first needs a live `@mui/material` component, not
+ * around `{children}` in `src/app/layout.tsx` again.
+ *
+ * Values duplicate `src/ui/theme/theme.ts` deliberately — same convention
+ * as `scripts/generate-placeholder-images.mjs`'s palette copy. If the theme
+ * changes, update both; the font shorthand values (weight/size/line-height)
+ * are MUI's stable default Typography scale, confirmed by reading them off
+ * a live page rather than assumed. Font names reference `next/font`'s own
+ * `--font-display`/`--font-body` variables (`src/ui/theme/fonts.ts`) rather
+ * than repeating "Fraunces"/"Inter" a third time.
+ */
+
+:root {
+  --mui-palette-background-default: #faf8f5;
+  --mui-palette-background-paper: #ffffff;
+  --mui-palette-text-primary: #1f1d1b;
+  --mui-palette-text-secondary: #6b655e;
+  --mui-palette-primary-main: #2e2a26;
+  --mui-palette-secondary-main: #a97b4f;
+  --mui-palette-divider: #e6e0d8;
+  --mui-palette-error-main: #8c3a2e;
+
+  --mui-font-h1: 300 6rem/1.167 var(--font-display);
+  --mui-font-h2: 300 3.75rem/1.2 var(--font-display);
+  --mui-font-h3: 400 3rem/1.167 var(--font-display);
+  --mui-font-h4: 400 2.125rem/1.235 var(--font-display);
+  --mui-font-h5: 400 1.5rem/1.334 var(--font-display);
+  --mui-font-h6: 500 1.25rem/1.6 var(--font-display);
+  --mui-font-body1: 400 1rem/1.5 var(--font-body);
+  --mui-font-body2: 400 0.875rem/1.43 var(--font-body);
+  --mui-font-button: 600 0.875rem/1.75 var(--font-body);
+  --mui-font-subtitle1: 400 1rem/1.75 var(--font-body);
+  --mui-font-subtitle2: 500 0.875rem/1.57 var(--font-body);
+  --mui-font-caption: 400 0.75rem/1.66 var(--font-body);
+  --mui-font-overline: 400 0.75rem/2.66 var(--font-body);
+}
+
+body {
+  background-color: var(--mui-palette-background-default);
+  color: var(--mui-palette-text-primary);
+  margin: 0;
+}

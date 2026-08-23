@@ -82,14 +82,17 @@ Two of those need a closer look before you build on them, because
   stage, a customer only before their order is confirmed. If the owner wants
   a different cancellation policy, this is a small, isolated change.
 
-**P0 is complete; P2's data layer has started** — built across 2026-08-23:
+**P0 is complete; P2 is functionally complete** — built across 2026-08-23:
 data layer, Next.js/MUI shell, a linter swap after TypeScript 7 turned out to
-be incompatible with the obvious choice, then real catalogue content once
-the owner gave the real category list. Full detail, in the order it was
-built, is in §9a (seed script), §9b (the machine-thickness feasibility
-rule), §9c (the app shell, and the ESLint → Biome switch), and §9d (the
-catalogue — two new product types, on-brand placeholder imagery, 6
-categories, 5 products). Headline inventory:
+be incompatible with the obvious choice, real catalogue content once the
+owner gave the real category list, then the category/product pages
+themselves — during which a real Lighthouse audit caught the theme provider
+shipping MUI's full client runtime to every page. Full detail, in the order
+it was built, is in §9a (seed script), §9b (machine-thickness feasibility
+rule), §9c (app shell, ESLint → Biome), §9d (the catalogue — two new
+product types, placeholder imagery), and §9e (category/product pages, a
+JSON-LD security fix, and the Lighthouse-caught bug — read this one before
+touching `src/app/layout.tsx` or `ThemeRegistry`). Headline inventory:
 
 ```
 prisma/schema.prisma                    33 models, validated, MIGRATED — applied to a live database
@@ -97,8 +100,11 @@ docker-compose.yml                      Postgres 16, dev + test databases, runni
 prisma/seed.ts                          structural baseline + real catalogue — §9a, §9d
 scripts/generate-placeholder-images.mjs on-brand SVG placeholders, not stock photos — §9d
 src/server/mapping/to-domain.ts         Prisma rows -> domain inputs. The seam. Unit-tested.
-next.config.ts, src/app/, src/ui/       Next.js 16 App Router shell + MUI v9 theme — §9c
-playwright.config.ts, tests/e2e/        desktop + mobile, one smoke test green on both — §9c
+src/server/db/, src/server/repositories/  Prisma singleton + the only files that query for page content — §9e
+src/app/(shop)/, src/app/(marketing)/   real category/product pages + homepage — §9e
+src/app/theme-vars.css                  theme tokens as plain CSS — NOT ThemeRegistry — read §9e first
+next.config.ts, src/ui/                 Next.js 16 App Router shell + MUI v9 theme — §9c, §9e
+playwright.config.ts, tests/e2e/        desktop + mobile, real click-through navigation test — §9c, §9e
 biome.json                              linter + formatter; the @mui/material restriction lives here — §9c
 scripts/check-polish-literals.mjs       the Polish-literal check — a script, not a Biome rule, on purpose — §9c
 ```
@@ -109,9 +115,10 @@ scripts/check-polish-literals.mjs       the Polish-literal check — a script, n
 rewrite `tsconfig.json`'s `compilerOptions` in place (`jsx`, `allowJs`,
 `include`) on `dev`/`build` — expected behaviour, not a regression to revert.
 
-**Still not started:** category and product RSC pages (§9d explains why
-that's deliberately a separate pass), `generateMetadata`, sitemap, robots —
-the rest of P2's checklist items.
+**Still not started:** the homepage's content-heavy sections (hero,
+craftsmanship, reviews, FAQ — needs the owner's words; reviews needs real
+customers, full stop, see §9e), Schema.org FAQPage (nothing to attach it to
+yet), and everything in P3 (the configurator).
 
 ## 3. Status of the first action — done, 2026-08-23
 
@@ -705,6 +712,115 @@ both databases, full suite green throughout. Building `/loft`,
 `/produkt/[slug]`, etc. is real, separate work (P2's other checklist items:
 `generateMetadata`, canonical URLs, Schema.org, sitemap) and deserves its
 own pass rather than being rushed onto the end of a schema-plus-seed change.
+
+## 9e. Category & product pages, and a real bug Lighthouse caught — 2026-08-23
+
+The pages deferred in §9d. Built against the real seeded catalogue, verified
+in a browser at every step, not just by `tsc`/`next build` succeeding.
+
+```
+src/server/db/client.ts                 the one Prisma client instance, globalThis-cached for dev HMR
+src/server/repositories/{categories,products}.ts  the only files that query Prisma for page content
+src/app/(shop)/[category]/page.tsx      category listing, generateStaticParams + generateMetadata from the DB
+src/app/(shop)/[category]/not-found.tsx Polish 404 for an unknown category slug
+src/app/(shop)/produkt/[slug]/page.tsx  product detail, Schema.org Product+Offer, installation variants
+src/app/(shop)/produkt/[slug]/not-found.tsx  Polish 404 for an unknown product slug
+src/app/(marketing)/page.tsx            REPLACED — real homepage (categories grid), scaffold retired
+src/ui/primitives/{Grid,Card,Breadcrumbs,SiteHeader}.tsx  new RSC-safe primitives
+src/ui/seo/json-ld.ts                   safe JSON-LD serialization — see the security note below
+src/app/sitemap.ts, src/app/robots.ts   generated from the DB
+```
+
+**The homepage scaffold and its one client island are gone.**
+`ThemeShowcaseButton` and `src/ui/islands/` were P0 proof-of-concept only —
+now that real pages exist and nothing on them is interactive, keeping a fake
+"test button" around would itself have been the kind of placeholder-dressed-
+as-real-feature this project's rules forbid. `tests/e2e/shell.spec.ts` was
+rewritten to verify the same underlying facts (`lang="pl"`, exact background
+colour, no uppercase buttons) against the real homepage, plus a real
+click-through navigation test (home → category → product). The first real
+client island arrives with P3's configurator.
+
+**A real security finding, not a lint false positive.** Biome's
+`noDangerouslySetInnerHtml` flagged both JSON-LD `<script>` tags (Breadcrumbs,
+Product). This is a genuine, well-documented JSON-LD XSS vector: plain
+`JSON.stringify` does not escape `<`, so a value containing the literal
+substring `</script>` — a product name, say, once a real admin panel lets
+staff edit one freely — would close the script tag early and let whatever
+follows be parsed as HTML. Fixed properly, not suppressed blind:
+`src/ui/seo/json-ld.ts`'s `toSafeJsonLd` escapes every `<` to `<` (the
+standard mitigation, transparent to any real JSON parser) before the
+`dangerouslySetInnerHTML` Biome comment is silenced. One mechanical lesson
+worth recording: Biome's `biome-ignore` suppression comment must be a `//`
+comment attached directly to the flagged JSX **attribute**, not a `{/* */}`
+JSX-children comment floating before the element — the latter silently does
+nothing (Biome reports `suppressions/unused`), which is what happened on the
+first attempt.
+
+### The Lighthouse-caught architectural bug — the important part of this pass
+
+Running a real Lighthouse audit (not assumed, not skipped) on
+`/produkt/stolek-loftowy-z-grawerem` found: performance 74/100, LCP 3.8s, TBT
+500ms, ~410KB transferred — **including ~154KB of MUI + Emotion + React
+client JS, on a page with no `@mui/material` import anywhere in its own
+file tree.**
+
+The cause: `ThemeRegistry` (`AppRouterCacheProvider` + `ThemeProvider` +
+`CssBaseline` — MUI's actual client provider) was mounted in
+`src/app/layout.tsx`, wrapping `{children}` for every single page. The
+RSC/island lint rule only ever stopped `@mui/material` **imports** inside
+`(marketing)`/`(shop)` server components; it never stopped the theme
+**wrapper** around them, because the wrapper lives in the root layout, one
+level up, outside what that rule scans. This is exactly the R3 risk
+`ARCHITECTURE.md` §23 names ("MUI is client-side; naive use kills SEO and
+LCP on catalogue pages") — half-mitigated by the lint rule, but not fully,
+and nothing caught the gap until a real audit ran against a real page.
+
+**Fix:** extracted the theme's CSS custom properties into a plain stylesheet,
+`src/app/theme-vars.css` — no React, no Emotion, zero client JS. Values were
+read live off a rendered page via `getComputedStyle` (not guessed from MUI's
+docs), including the exact font shorthand strings for every typography
+variant, not just the ones already in use, so the next primitive that needs
+`--mui-font-subtitle1` or similar doesn't require another audit-and-extract
+round trip. `ThemeRegistry` was removed from the root layout entirely — it
+still exists, still works, and is reserved for wrapping the first real
+interactive island (P3's configurator, cart, checkout) rather than the whole
+app. Verified the page renders byte-identically before touching anything
+further: same background colour, same font family, same font weight, via
+`getComputedStyle` in a live browser, both before and after.
+
+**Result, before → after, same page, same Lighthouse config:**
+
+| | Before | After |
+|---|---|---|
+| Performance | 74/100 | 85/100 |
+| LCP | 3.8s | 3.4s |
+| TBT | 500ms | 320ms |
+| Speed Index | 3.9s | 1.3s |
+| Transferred | ~410KB | ~376KB |
+
+**LCP barely moved, and that is an honest finding, not a failure to fix
+the bug.** The same two largest JS chunks (70KB, 44KB) are present in both
+runs — they are Next.js's own framework runtime, not MUI's, and were never
+going to move. What's actually left is four self-hosted web font files
+(~198KB): two subsets (`latin`, `latin-ext`) × two families (Fraunces,
+Inter), all genuinely requested because real Polish text — "Stołek
+loftowy" in the same string — spans both subsets. That is close to
+unavoidable cost for correct Polish diacritic support, which is itself
+non-negotiable (§17.1), not bloat to trim. Lighthouse's default mobile
+profile is also a deliberately pessimistic simulated baseline (mid-tier
+phone, throttled slow-4G), not median real-world conditions; real Polish
+users on typical LTE/wifi almost certainly see something meaningfully
+better than this lab number. None of that is used here to wave the number
+away — **the architectural bug is fixed and confirmed by measurement; the
+remaining LCP figure is a font-payload and lab-methodology question, left
+open rather than either falsely resolved or silently ignored.** Worth
+revisiting once real product photography (D5) changes the page weight
+anyway, which will need its own Lighthouse pass regardless.
+
+**SEO: 100/100**, desktop and mobile, both a category and a product page —
+this is the number the checklist's "≥ 95" threshold was actually about, and
+it's clean.
 
 ## 10. Working style the owner expects
 

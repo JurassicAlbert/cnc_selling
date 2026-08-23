@@ -402,9 +402,9 @@ async function seedProducts(
   materials: SeededMaterials,
   design: SeededDesign,
 ): Promise<void> {
-  const loft = categories['loft'];
+  const loft = categories.loft;
   const amulety = categories['amulety-i-bransoletki'];
-  const gres = categories['gres'];
+  const gres = categories.gres;
   const panele = categories['panele-podlogowe'];
   const obrazy = categories['obrazy-drewniane'];
   if (
