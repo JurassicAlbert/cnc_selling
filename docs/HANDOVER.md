@@ -374,6 +374,24 @@ items rather than at the end.
   thick. Recorded here for whoever writes seed data; not enforced by any
   constraint, since it may vary by material and nothing asked for that yet.
 
+**Confirmed against the manufacturer, same day.** The owner's machine is a
+[TwoTrees TTC6050](https://pl.twotrees3d.com/en/products/twotrees-ttc6050-cnc-router-machine-800w-spindle-4th-axis).
+Its spec sheet states working area **"600 x 500 x 100 mm"** verbatim — an
+external source agreeing with the owner's recollection, not just a second
+retelling of it. Two things from the same page, neither acted on:
+
+- The listing's title says "800W Spindle" but its own specs table says
+  "500W Spindle Motor" — worth the owner confirming which they actually
+  bought, though nothing in this schema models spindle wattage today.
+- The page separately lists **"Carving Layer Height: Non-metal 0.1mm–20mm"**,
+  which reads as maximum cut depth per pass/operation — a different number
+  from the 100 mm Z-travel already stored in `maxWorkpieceThicknessMm`. If a
+  `THICKNESS_EXCEEDS_MACHINE` feasibility rule is ever built (§8's open gap,
+  noted above), it likely needs the 20 mm figure, not the 100 mm one. Also on
+  the page: ER11 collet, 0.5–7 mm tool diameter — a plausible sanity floor for
+  `Design.minLineWidthUm` whenever real design metadata is entered, since a
+  0.2 mm line cannot be cut by a 0.5 mm bit.
+
 **D4, resolved 2026-08-23: seed `TODO_PRICING` placeholders**, invented
 plausible round numbers, never shown to a customer, swapped before launch.
 Not implemented yet — no seed script exists (P2, "Seed data: materials,

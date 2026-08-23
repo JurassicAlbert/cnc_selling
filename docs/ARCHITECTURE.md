@@ -813,11 +813,13 @@ Scale factor for `LINE_TOO_THIN`: the design's declared minimum line width is de
 > 600`, `usableHeightMm = 500`**, `minModuleMm` kept at **150**, plus a Z-axis
 > limit not covered by this section at all — `maxWorkpieceThicknessMm = 100`,
 > added to `MachineSettings` in
-> `prisma/migrations/20260823010000_add_machine_thickness_limit`. See
-> `docs/HANDOVER.md` §9 for the full resolution, including one dead end (a
-> "10 mm" answer that turned out to describe material thickness, not the
-> module floor) and the fact that the thickness limit is stored but **not yet
-> enforced** by any feasibility rule.
+> `prisma/migrations/20260823010000_add_machine_thickness_limit`. The machine
+> is a [TwoTrees TTC6050](https://pl.twotrees3d.com/en/products/twotrees-ttc6050-cnc-router-machine-800w-spindle-4th-axis),
+> whose spec sheet states "600 x 500 x 100 mm" verbatim — external
+> confirmation, not just a retelling. See `docs/HANDOVER.md` §9 for the full
+> resolution, including one dead end (a "10 mm" answer that turned out to
+> describe material thickness, not the module floor) and the fact that the
+> thickness limit is stored but **not yet enforced** by any feasibility rule.
 
 **Inputs:** `widthMm`, `heightMm`, machine usable area (`600 × 900 mm` nominal → **`580 × 880 mm` effective** after clamping and tool clearance — configurable, not hardcoded; **superseded, see note above**), material `maxSheetWidthMm/maxSheetHeightMm`, `minModuleMm` (default 150), `grainDirection`.
 
