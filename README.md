@@ -30,17 +30,24 @@ test-driven before a single framework dependency exists.
 | `src/domain/order-status` | Legal order status transitions, actor permission, the design-review gate |
 | `src/content/pl` | Every customer-visible Polish string |
 
-**Half of P0, the data layer** — the Prisma schema, the first migration, local
-Postgres, and the mapper between them.
+**P0, the foundation** — Prisma schema and migration applied to a running
+Postgres, and the Next.js 16 / MUI v9 app shell.
 
 | File | What it is |
 |---|---|
-| `prisma/schema.prisma` | 33 models. The header comment states the unit rules the whole file obeys |
-| `prisma/migrations/20260823000000_init` | Initial SQL, including hand-written `CHECK` constraints Prisma cannot express |
+| `prisma/schema.prisma` | 33 models, migrated. The header comment states the unit rules the whole file obeys |
 | `docker-compose.yml` | Postgres 16, bound to localhost, with a separate test database |
+| `prisma/seed.ts` | Machine limits, one placeholder pricing version, the first admin — structural only, no catalogue content |
 | `src/server/mapping/to-domain.ts` | Prisma rows → domain inputs. Micrometres to millimetres, basis points to ratios, nullable rows to neutral values |
+| `src/app/`, `src/ui/` | App Router shell, `lang="pl"`, the warm-palette MUI theme, RSC-safe layout primitives, one client island |
+| `playwright.config.ts` | Desktop + mobile, one smoke test green on both |
 
-There is no Next.js app, no MUI theme and no seed data yet.
+`npm run lint` does not currently work — TypeScript 7 isn't yet supported by
+`typescript-eslint`. Doesn't affect `dev`/`build`/`test`/`e2e`. See
+`docs/HANDOVER.md` §9c for the detail and the options.
+
+There is no seed catalogue content yet (real products need the owner's copy,
+not invented placeholders) and no configurator.
 
 ---
 
@@ -58,6 +65,8 @@ npm run db:deploy      # applies the initial migration
 
 npm test               # 298 assertions across eleven files, about a second
 npm run typecheck      # TypeScript strict, noUncheckedIndexedAccess, no emit
+npm run build           # Next.js production build
+npm run dev             # http://localhost:3000
 ```
 
 `npm test` and `npm run typecheck` need no database — every test in `tests/unit`
@@ -65,6 +74,7 @@ is pure. `.env` is only needed once you talk to Postgres; copy `.env.example`.
 
 ```powershell
 npm run test:watch     # re-run on save
+npm run e2e             # Playwright, desktop + mobile (installs browsers on first run)
 npm run db:logs        # follow the Postgres container
 npm run db:down        # stop it, keeping the data
 ```
@@ -98,11 +108,12 @@ yet, the code says so.
 
 ## What comes next
 
-- **P0 completion** — Next.js 16 app shell, MUI v9 theme, the RSC/island lint
-  rules, Playwright config. The schema, migration and Docker Postgres are
-  already in.
-- **P2** — catalogue: seed data, category and product pages as Server
-  Components, SEO metadata, sitemap.
+- **P0's one loose end** — get `npm run lint` running again (blocked on
+  TypeScript 7 vs. `typescript-eslint`; see `docs/HANDOVER.md` §9c for the
+  three options).
+- **P2** — catalogue: real seed data (materials, designs, 5 products — needs
+  the owner's content, not invented placeholders), category and product
+  pages as Server Components, SEO metadata, sitemap.
 - **P3** — the configurator.
 
 Full phasing in `docs/ARCHITECTURE.md` §22.

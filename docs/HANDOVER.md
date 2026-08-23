@@ -82,29 +82,31 @@ Two of those need a closer look before you build on them, because
   stage, a customer only before their order is confirmed. If the owner wants
   a different cancellation policy, this is a small, isolated change.
 
-**The data layer landed on 2026-08-23** and is the first half of P0:
+**P0 is now functionally complete, built across 2026-08-23** — the data
+layer, then the Next.js/MUI shell. Full detail, in the order it was built, is
+in §9a (seed script), §9b (the machine-thickness feasibility rule), and §9c
+(the app shell + a real ESLint/TypeScript-7 blocker that needs the owner's
+call). Headline inventory:
 
 ```
-prisma/schema.prisma                   33 models, validated; see the header comment for the unit rules
-prisma/migrations/20260823000000_init  initial SQL, generated offline, NOT YET APPLIED
-prisma.config.ts                       Prisma 7 keeps the datasource URL here, not in the schema
-docker-compose.yml                     Postgres 16, dev + test databases, localhost-only
-docker/postgres-init/01-databases.sql  creates cnc_selling_test and the unaccent extension
-.env.example                           DATABASE_URL / TEST_DATABASE_URL
-src/server/mapping/to-domain.ts        Prisma rows -> domain inputs. The seam. Unit-tested.
-tests/unit/mapping.test.ts             35 assertions, including a full priced derivation
+prisma/schema.prisma                    33 models, validated, MIGRATED — applied to a live database
+docker-compose.yml                      Postgres 16, dev + test databases, running on host port 5433
+prisma/seed.ts                          MachineSettings + PricingSettings v1 + first ADMIN — §9a
+src/server/mapping/to-domain.ts         Prisma rows -> domain inputs. The seam. Unit-tested.
+next.config.ts, src/app/, src/ui/       Next.js 16 App Router shell + MUI v9 theme — §9c
+playwright.config.ts, tests/e2e/        desktop + mobile, one smoke test green on both — §9c
+eslint.config.mjs, eslint-rules/        written, CANNOT CURRENTLY RUN — see §9c's blocker
 ```
 
-Also present: `package.json` (test toolchain + Prisma, no app dependencies
-yet), `tsconfig.json`, `vitest.config.ts` (with the `@/` -> `src/` alias),
-`.gitignore`, `README.md`.
+`src/generated/prisma` is the generated Prisma client. Gitignored, rebuilt by
+`npm install` (postinstall) or `npm run prisma:generate`, never edited.
+`next-env.d.ts` is likewise gitignored and Next-generated; Next can also
+rewrite `tsconfig.json`'s `compilerOptions` in place (`jsx`, `allowJs`,
+`include`) on `dev`/`build` — expected behaviour, not a regression to revert.
 
-`src/generated/prisma` is the generated client. It is gitignored, rebuilt by
-`npm install` (postinstall) or `npm run prisma:generate`, and never edited.
-
-**Everything else does not exist yet.** No `src/app/`, no `src/ui/`, no Next.js
-config, no seed data, no app dependencies installed. The database has never
-been started: the migration is written but unapplied.
+**Still not started:** the RSC/island lint rules cannot be verified until the
+ESLint blocker (§9c) is resolved; P2 catalogue content (real Polish copy,
+seed data, product photography — D5 still open).
 
 ## 3. Status of the first action — done, 2026-08-23
 
@@ -484,6 +486,108 @@ what the switch is for.
 Boundary is inclusive: a thickness exactly equal to the limit is allowed, not
 rejected, consistent with every other boundary in this codebase. Mutation-
 tested (flipped `>` to `>=`, confirmed exactly one test catches it).
+
+## 9c. Next.js 16 app shell + MUI theme — built and verified, 2026-08-23
+
+The rest of P0 that wasn't the data layer. Verified in a real browser (Claude
+Browser), not just by `tsc`/`next build` succeeding — that distinction
+mattered, because one real bug only showed up on screen (below).
+
+```
+next.config.ts                          minimal — no images.domains yet, no photography exists (D5)
+src/ui/theme/fonts.ts                   next/font/google, Fraunces + Inter, latin-ext, self-hosted
+src/ui/theme/theme.ts                   the §2.1 palette/shape/shadow overrides, cssVariables: true, plPL
+src/ui/theme/ThemeRegistry.tsx          the one client boundary the root layout needs
+src/ui/primitives/{Container,Section}   RSC-safe layout atoms, consume --mui-palette-* directly
+src/ui/primitives/{Heading,Text}        RSC-safe typography atoms — see the bug note below
+src/ui/islands/ThemeShowcaseButton.tsx  the one client island in this pass; proves the composition works
+src/content/pl/site.ts                  static site-chrome copy (not a domain-code translation — that's messages.ts)
+src/app/layout.tsx                      lang="pl", wraps children in ThemeRegistry
+src/app/(marketing)/page.tsx            placeholder home page — scaffolding, not real P2 copy
+playwright.config.ts                    desktop-chromium + mobile-safari
+tests/e2e/shell.spec.ts                 lang="pl", exact background colour, island renders, no uppercase button
+```
+
+**Font pairing (Fraunces + Inter) was picked, not decided by the owner.**
+§2.1 names three display-serif options and two body options as equally
+acceptable — a swappable choice, not a firm instruction. Changing it is a
+two-line edit in `fonts.ts`. Say so if a different pairing is wanted.
+
+**A real bug, found only by looking at the rendered page.** The first version
+of the marketing placeholder used raw `<h1>`/`<p>` tags styled by nothing —
+`tsc` and `next build` were both silent, but a browser screenshot showed the
+heading rendering in the BODY font, not the display font. Cause: a raw HTML
+element gets none of MUI's typography styling automatically; that only
+happens through the `Typography` component or its generated class, and an
+RSC-safe primitive can't import that without pulling in `@mui/material`.
+`cssVariables: true` does still solve this — MUI publishes each typography
+variant as a single `font` shorthand custom property (`--mui-font-h1` is
+literally `300 6rem/1.167 "Fraunces", "Fraunces Fallback"`), and
+`style={{ font: 'var(--mui-font-h1)' }}` on a plain tag works — but you have
+to know to reach for it. `Heading`/`Text` in `src/ui/primitives` exist so the
+next person doesn't rediscover this by staring at a screenshot. **Type-check
+green is not the same claim as "it renders correctly" — this is why §21
+distinguishes them, and why the browser check happened before this was
+called done.**
+
+Also confirmed in-browser, not assumed: `lang="pl"` on `<html>`; background
+exactly `rgb(250, 248, 245)` (`#FAF8F5`); the button has no uppercase
+transform and no elevation shadow; every font request resolves to
+`localhost:3000/_next/static/...` — zero requests to `fonts.googleapis.com`,
+confirming the self-hosting requirement actually holds and isn't just
+configured correctly on paper.
+
+### The ESLint / TypeScript 7 blocker — needs the owner's call
+
+`npm run lint` throws immediately:
+
+```
+typescript-eslint does not support TS 7.0.
+```
+
+This is **not a config mistake** — it is a hardcoded version guard inside
+`@typescript-eslint/parser` itself (`if (versionMajor >= 7) throw ...`),
+confirmed by reading the installed package source, not just the error
+message. Tracked upstream:
+[typescript-eslint#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940),
+unresolved as of 2026-08-23. `eslint-config-next` (Next's own recommended
+config, which this project uses) depends on the `typescript-eslint`
+meta-package internally, so this blocks **all** ESLint linting — not just the
+two rules this session wrote, everything Next's config would otherwise catch
+(accessibility, react-hooks correctness, etc.).
+
+**What it does NOT block**, confirmed by actually running each: `next dev`,
+`next build` (Next 16 does not run ESLint during build by default — this
+was checked, not assumed), `tsc --noEmit`, `vitest`, `playwright test`. The
+app is fully usable; only `npm run lint` itself is broken.
+
+Three ways forward. This session did not pick one, because each is a real
+trade-off the owner should weigh, not a routine implementation detail:
+
+1. **Downgrade `typescript` to 6.x.** Restores linting immediately. Reverses
+   this session's own earlier move TO TypeScript 7 (the `baseUrl` removal
+   fix, §3) — undoing a deliberate choice to work around a different
+   session's problem feels like the wrong direction, but it is the fastest
+   fix if linting matters more than staying current.
+2. **Wait for upstream support**, wired up already, just not runnable yet.
+   Zero work now; `npm run lint` starts working the moment
+   `typescript-eslint` ships a compatible release — no way to predict when.
+3. **Switch to [Biome](https://biomejs.dev/)** (`@biomejs/biome`, confirmed
+   available on the registry, 2.5.10 latest as of this session). Its own
+   Rust-based parser is unrelated to `typescript-eslint`, so it is entirely
+   unaffected by this gap. Trade-off: no direct equivalent of
+   `@next/eslint-plugin-next`'s Next.js-specific rules (e.g. catching
+   `<img>` where `next/image` belongs) — Biome's rule set is generic
+   JS/TS/React, not framework-aware. The two custom rules this session wrote
+   (`eslint-rules/no-polish-literal.mjs`, the `@mui/material` import
+   restriction) would need reimplementing in Biome's own rule format; the
+   *logic* transfers directly, only the syntax doesn't.
+
+Recommendation, if one is wanted: **option 2 for now** — the tooling is
+written and correct, the app itself is fully functional and verified, and
+nothing in P2/P3 actually needs `npm run lint` to pass. Revisit if the wait
+drags past a few weeks or a specific PR review process starts depending on
+it.
 
 ## 10. Working style the owner expects
 
