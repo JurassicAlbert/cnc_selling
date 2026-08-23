@@ -38,25 +38,49 @@ and are binding.
 
 ## 2. What already exists — do not rewrite it
 
-**Phase P1, the pure domain layer, is complete and delivered.** It has no
-Next.js, no Prisma, no database and no I/O. Every rate and limit is passed in
-as an argument.
+**Phase P1, the pure domain layer, is now genuinely complete — as of
+2026-08-23.** This handover previously said P1 was "complete and delivered"
+while two of its seven modules (`compatibility`, `order-status`) did not
+exist; `docs/CHECKLIST.md` had them correctly unchecked the whole time, so
+trust the checklist over old handover prose if the two ever disagree again.
+Everything below now has no Next.js, no Prisma, no database and no I/O —
+every rate and limit is passed in as an argument.
 
 ```
-src/domain/money/money.ts              grosze arithmetic, basis-point factors, VAT, half-up rounding
-src/domain/text/plural.ts              Polish three-form plurals via Intl.PluralRules
-src/domain/text/nouns.ts               countable noun table (moduł/moduły/modułów ...)
-src/domain/text/numeric-input.ts       comma-decimal parsing, cm -> integer mm, dimension formatting
-src/domain/text/collation.ts           Polish sort order, diacritic folding, search matching
-src/domain/dimensions/dimensions.ts    size envelopes, aspect ratio, invalid input
-src/domain/modules/split.ts            modular splitting, layout, production order
-src/domain/pricing/types.ts            PricingInput / PriceBreakdown contract
-src/domain/pricing/calculate.ts        the single source of truth for price
-src/domain/personalization/validate.ts text length, lines, real font glyph coverage
-src/domain/feasibility/rules.ts        errors / warnings / notices about manufacturability
-src/content/pl/messages.ts             every customer-visible Polish string
-tests/unit/*.test.ts                   9 files, 252 assertions
+src/domain/money/money.ts                  grosze arithmetic, basis-point factors, VAT, half-up rounding
+src/domain/text/plural.ts                  Polish three-form plurals via Intl.PluralRules
+src/domain/text/nouns.ts                   countable noun table (moduł/moduły/modułów ...)
+src/domain/text/numeric-input.ts           comma-decimal parsing, cm -> integer mm, dimension formatting
+src/domain/text/collation.ts               Polish sort order, diacritic folding, search matching
+src/domain/dimensions/dimensions.ts        size envelopes, aspect ratio, invalid input
+src/domain/compatibility/resolve.ts        option filtering — §7.2's four availableX() functions
+src/domain/modules/split.ts                modular splitting, layout, production order
+src/domain/pricing/types.ts                PricingInput / PriceBreakdown contract
+src/domain/pricing/calculate.ts            the single source of truth for price
+src/domain/personalization/validate.ts     text length, lines, real font glyph coverage
+src/domain/feasibility/rules.ts            errors / warnings / notices about manufacturability
+src/domain/order-status/transitions.ts     order status graph — legal moves, actor permission, the design-review gate
+src/content/pl/messages.ts                 every customer-visible Polish string
+tests/unit/*.test.ts                       11 files, 291 assertions
 ```
+
+Two of those need a closer look before you build on them, because
+`ARCHITECTURE.md` doesn't fully specify either:
+
+- **`domain/compatibility`** implements §7.2's four `availableX()` functions
+  exactly, including the trap in `Design.materials`' own doc comment: empty
+  `DesignMaterial` rows mean "every material the product allows", not
+  "allows nothing". Get that inverted and every design silently vanishes from
+  every product's material list.
+- **`domain/order-status`** encodes a transition graph that is **this
+  project's own design**, not something copied from the architecture doc —
+  it only enumerates the `OrderStatus` values, not the edges between them.
+  It follows two things that ARE specified (§15's NEW-vs-AWAITING_PAYMENT
+  creation rule, §13.3's design-review gate) and adds one policy of its own,
+  stated in the module's header comment so it can be argued with:
+  **cancellation ends once an order ships** — staff may cancel at any earlier
+  stage, a customer only before their order is confirmed. If the owner wants
+  a different cancellation policy, this is a small, isolated change.
 
 **The data layer landed on 2026-08-23** and is the first half of P0:
 

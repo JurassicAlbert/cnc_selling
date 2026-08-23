@@ -22,10 +22,12 @@ test-driven before a single framework dependency exists.
 | `src/domain/money` | Integer-grosze arithmetic, basis-point factors, VAT, half-up rounding |
 | `src/domain/text` | Polish plurals, comma decimals, collation, diacritic-insensitive search |
 | `src/domain/dimensions` | Size envelopes, aspect ratios, invalid input |
+| `src/domain/compatibility` | Which materials, finishes, designs and thicknesses a step actually offers |
 | `src/domain/modules` | Splitting an oversize product into aligned modules |
 | `src/domain/pricing` | The single source of truth for what a configuration costs |
 | `src/domain/personalization` | Engraving text length, lines, and real font glyph coverage |
 | `src/domain/feasibility` | Errors, warnings and notices about what can actually be made |
+| `src/domain/order-status` | Legal order status transitions, actor permission, the design-review gate |
 | `src/content/pl` | Every customer-visible Polish string |
 
 **Half of P0, the data layer** — the Prisma schema, the first migration, local
@@ -54,7 +56,7 @@ npm install
 npm run db:up
 npm run db:deploy      # applies the initial migration
 
-npm test               # 252 assertions across nine files, about a second
+npm test               # 291 assertions across eleven files, about a second
 npm run typecheck      # TypeScript strict, noUncheckedIndexedAccess, no emit
 ```
 
