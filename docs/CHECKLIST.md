@@ -11,7 +11,7 @@ TypeScript 7.0.2 / Vitest 4.1.11 / Prisma 7.9.1. P1 is complete; the P0 data lay
 
 ## P0 — Foundation
 
-- [~] Repo initialised, TypeScript `strict: true` — TS strict + `noUncheckedIndexedAccess` verified green (TS 7.0.2); **not yet a git repository**
+- [x] Repo initialised, TypeScript `strict: true` — TS strict + `noUncheckedIndexedAccess` verified green (TS 7.0.2); git repo pushed to github.com/JurassicAlbert/cnc_selling
 - [x] Vitest configured, `npm test` runs — 9 files / 252 tests green, ~1 s (verified 2026-08-23)
 - [ ] Playwright configured, desktop + mobile projects
 - [x] Docker Postgres for local dev and tests — `docker-compose.yml` running (Postgres 16, separate dev and test databases, `unaccent` in both, verified via `psql`); published on host port **5433**, not 5432 — a native Postgres install already owns 5432 on this machine
