@@ -6,6 +6,8 @@ Reviewed item by item before the project is considered finished (brief §40–41
 **Last verified: 2026-08-23** — `npm test` 298/298 green, `npm run typecheck` clean, `npm run build`
 clean, `npm run lint` clean, `npm run e2e` 2/2 green (desktop + mobile), on Node v22.15.0 / TypeScript
 7.0.2 / Vitest 4.1.11 / Prisma 7.9.1 / Next.js 16.3.2 / MUI 9.3.1 / Biome 2.5.10. **P0 is complete.**
+P2's real catalogue data is seeded (6 categories, 5 products, verified idempotent against both
+databases) — pages are the remaining P2 work.
 
 ---
 
@@ -16,7 +18,7 @@ clean, `npm run lint` clean, `npm run e2e` 2/2 green (desktop + mobile), on Node
 - [x] Playwright configured, desktop + mobile projects — `playwright.config.ts` (`desktop-chromium` + `mobile-safari`), one smoke test (`tests/e2e/shell.spec.ts`) green on both projects (verified 2026-08-23)
 - [x] Docker Postgres for local dev and tests — `docker-compose.yml` running (Postgres 16, separate dev and test databases, `unaccent` in both, verified via `psql`); published on host port **5433**, not 5432 — a native Postgres install already owns 5432 on this machine
 - [x] Prisma schema + first migration applies cleanly — 33 models; `npm run db:deploy` applied `20260823000000_init` to a live database, all 34 tables + `_prisma_migrations` confirmed via `\dt`, hand-written CHECK constraints and the `PricingSettings_single_active` partial unique index confirmed present (verified 2026-08-23)
-- [x] Seed script structure in place — `prisma/seed.ts`, `npm run db:seed`, verified against both the dev and test databases (2026-08-23). Deliberately structural only: `MachineSettings` (real 600×500×100mm), `PricingSettings` v1 (`TODO_PRICING` placeholders, append-only — reruns never touch it once created), the first `ADMIN` from `SEED_ADMIN_EMAIL`. **No catalogue content** — that's the P2 item below, and needs the owner's product/material/design decisions, not invented copy
+- [x] Seed script structure in place — `prisma/seed.ts`, `npm run db:seed`, verified against both the dev and test databases (2026-08-23). `MachineSettings` (real 600×500×100mm), `PricingSettings` v1 (`TODO_PRICING` placeholders, append-only), the first `ADMIN` from `SEED_ADMIN_EMAIL`. **Now also seeds real catalogue content** — see the P2 item below, updated the same day once the owner gave the real category list
 - [x] MUI theme implemented (palette, typography, radius, shadows, no uppercase buttons) — `src/ui/theme/theme.ts`, exact §2.1 palette/shape/shadow overrides, `plPL` locale; verified in a real browser (`#FAF8F5` background, Fraunces h1, no button uppercase transform, no elevation shadow) (verified 2026-08-23)
 - [x] CSS-variables theme so RSC pages consume brand tokens — `cssVariables: true`; `src/ui/primitives/{Container,Section,Heading,Text}.tsx` are RSC-safe and consume `--mui-palette-*`/`--mui-font-*` tokens directly, verified rendering correctly with no Emotion shipped to the Server Component tree (verified 2026-08-23)
 - [x] RSC / client-island boundary documented and enforced — `src/app/(marketing)/page.tsx` is a Server Component with no `@mui/material` import; `src/ui/islands/ThemeShowcaseButton.tsx` is the one client island, rendered as a child and confirmed working in-browser; enforcement verified with a deliberate violation (added a `@mui/material` import to the marketing page, confirmed `npm run lint` errors, reverted)
@@ -56,7 +58,7 @@ AST. Trade-off accepted knowingly: Biome has no direct equivalent of
 
 ## P2 — Catalogue
 
-- [ ] Seed data: materials, finishes, designs, 5 products, preset sizes, installation variants
+- [x] Seed data: materials, finishes, designs, 5 products, preset sizes, installation variants — real categories confirmed by the owner 2026-08-23: `loft`, `amulety-i-bransoletki`, `gres`, `panele-podlogowe`, `obrazy-drewniane` (each with one representative product), plus `inne` as an intentionally-empty catch-all. `LOFT_FURNITURE` and `JEWELRY` added to `ProductTypeCode` (migration `20260823020000_add_loft_and_jewelry_product_types`) — neither of the original five types fit. 2 materials (oak, white gres), 1 finish (oiling), 1 placeholder design, 1 installation variant (gres). Verified idempotent (reran seed twice, row counts unchanged) and checked directly via `psql`. **Still placeholder:** every price (`TODO_PRICING`, D4), every image (generated on-brand SVGs, `scripts/generate-placeholder-images.mjs` — not downloaded stock photos, see the note in `prisma/seed.ts`), the one design's artwork, and all product copy (plain/functional, not final marketing text)
 - [ ] Homepage — hero, categories, how it's made, materials, craftsmanship, details, patterns, reviews, FAQ, CTA
 - [ ] Category pages at the specified Polish slugs
 - [ ] Product pages — photos, detail shots, variants, description, material, dimensions, production time, starting price, installation info, care instructions, material notes

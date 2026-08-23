@@ -37,15 +37,19 @@ Postgres, and the Next.js 16 / MUI v9 app shell.
 |---|---|
 | `prisma/schema.prisma` | 33 models, migrated. The header comment states the unit rules the whole file obeys |
 | `docker-compose.yml` | Postgres 16, bound to localhost, with a separate test database |
-| `prisma/seed.ts` | Machine limits, one placeholder pricing version, the first admin — structural only, no catalogue content |
+| `prisma/seed.ts` | Machine limits, pricing placeholders, first admin — and the real catalogue: 6 categories, 5 products |
+| `scripts/generate-placeholder-images.mjs` | On-brand placeholder SVGs — not stock photos of unrelated products |
 | `src/server/mapping/to-domain.ts` | Prisma rows → domain inputs. Micrometres to millimetres, basis points to ratios, nullable rows to neutral values |
 | `src/app/`, `src/ui/` | App Router shell, `lang="pl"`, the warm-palette MUI theme, RSC-safe layout primitives, one client island |
 | `playwright.config.ts` | Desktop + mobile, one smoke test green on both |
 | `biome.json` | Linter + formatter (not ESLint — TypeScript 7 isn't supported by `typescript-eslint`; see `docs/HANDOVER.md` §9c) |
 | `scripts/check-polish-literals.mjs` | Catches Polish copy leaking into a component instead of `src/content/pl` |
 
-There is no seed catalogue content yet (real products need the owner's copy,
-not invented placeholders) and no configurator.
+The catalogue is real data — `loft`, `amulety-i-bransoletki`, `gres`,
+`panele-podlogowe`, `obrazy-drewniane`, plus `inne` as an empty catch-all —
+but prices, photos, and the one design's artwork are all placeholders (see
+`docs/HANDOVER.md` §9d). There are no category/product pages or a
+configurator yet.
 
 ---
 
@@ -107,11 +111,11 @@ yet, the code says so.
 
 ## What comes next
 
-P0 is done. Next:
+P0 is done. P2's catalogue data is seeded (real categories, TODO_PRICING
+placeholders). Next:
 
-- **P2** — catalogue: real seed data (materials, designs, 5 products — needs
-  the owner's content, not invented placeholders), category and product
-  pages as Server Components, SEO metadata, sitemap.
+- **P2, the rest of it** — category and product pages as Server Components,
+  `generateMetadata`, sitemap, robots.
 - **P3** — the configurator.
 
 Full phasing in `docs/ARCHITECTURE.md` §22.

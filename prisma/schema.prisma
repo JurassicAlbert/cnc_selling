@@ -36,12 +36,21 @@ datasource db {
 // Catalogue
 // ---------------------------------------------------------------------------
 
+/// LOFT_FURNITURE and JEWELRY added 2026-08-23 once the owner's real catalogue
+/// diverged from the original brief's five assumed types. Neither needed a
+/// structural rework: LOFT_FURNITURE reuses TABLE_TOP's exact step list (the
+/// steel base is a bought-in accessory, described in copy for now rather than
+/// a modelled component — see docs/HANDOVER.md for why), and JEWELRY drops
+/// THICKNESS/FINISH since a small engraved blank has neither. See §5's
+/// updated step table in docs/ARCHITECTURE.md.
 enum ProductTypeCode {
   WALL_ART
   TABLE_TOP
   KITCHEN_TILE
   FLOOR_ELEMENT
   CUSTOM
+  LOFT_FURNITURE
+  JEWELRY
 }
 
 model Category {

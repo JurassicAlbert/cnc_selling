@@ -82,16 +82,20 @@ Two of those need a closer look before you build on them, because
   stage, a customer only before their order is confirmed. If the owner wants
   a different cancellation policy, this is a small, isolated change.
 
-**P0 is complete, built across 2026-08-23** — the data layer, then the
-Next.js/MUI shell, then a linter swap after TypeScript 7 turned out to be
-incompatible with the obvious choice. Full detail, in the order it was built,
-is in §9a (seed script), §9b (the machine-thickness feasibility rule), and
-§9c (the app shell, and the ESLint → Biome switch). Headline inventory:
+**P0 is complete; P2's data layer has started** — built across 2026-08-23:
+data layer, Next.js/MUI shell, a linter swap after TypeScript 7 turned out to
+be incompatible with the obvious choice, then real catalogue content once
+the owner gave the real category list. Full detail, in the order it was
+built, is in §9a (seed script), §9b (the machine-thickness feasibility
+rule), §9c (the app shell, and the ESLint → Biome switch), and §9d (the
+catalogue — two new product types, on-brand placeholder imagery, 6
+categories, 5 products). Headline inventory:
 
 ```
 prisma/schema.prisma                    33 models, validated, MIGRATED — applied to a live database
 docker-compose.yml                      Postgres 16, dev + test databases, running on host port 5433
-prisma/seed.ts                          MachineSettings + PricingSettings v1 + first ADMIN — §9a
+prisma/seed.ts                          structural baseline + real catalogue — §9a, §9d
+scripts/generate-placeholder-images.mjs on-brand SVG placeholders, not stock photos — §9d
 src/server/mapping/to-domain.ts         Prisma rows -> domain inputs. The seam. Unit-tested.
 next.config.ts, src/app/, src/ui/       Next.js 16 App Router shell + MUI v9 theme — §9c
 playwright.config.ts, tests/e2e/        desktop + mobile, one smoke test green on both — §9c
@@ -105,8 +109,9 @@ scripts/check-polish-literals.mjs       the Polish-literal check — a script, n
 rewrite `tsconfig.json`'s `compilerOptions` in place (`jsx`, `allowJs`,
 `include`) on `dev`/`build` — expected behaviour, not a regression to revert.
 
-**Still not started:** P2 catalogue content (real Polish copy, seed data,
-product photography — D5 still open).
+**Still not started:** category and product RSC pages (§9d explains why
+that's deliberately a separate pass), `generateMetadata`, sitemap, robots —
+the rest of P2's checklist items.
 
 ## 3. Status of the first action — done, 2026-08-23
 
@@ -373,8 +378,8 @@ items rather than at the end.
 | ~~D-DB~~ | ~~Docker Desktop or a hosted Neon branch?~~ | **Resolved 2026-08-23: Docker Desktop.** `docker-compose.yml` is in the repo |
 | D2b | Launch the storefront once P7a (approve designs / confirm payment / advance status) works, or wait for the complete admin panel? | Launch on P7a |
 | D3 | Discount codes in MVP? The owner's TDD rules list "discounts" but the brief never mentions them | Out of scope; Phase 2 |
-| ~~D4~~ | ~~Real material prices per m², machine rate per minute, module surcharge, packaging tiers~~ | **Resolved 2026-08-23: seed `TODO_PRICING` placeholders**, clearly marked, swapped before launch. Not written yet — needs the seed script (P2) |
-| D5 | Product photography — available, or placeholders? | Clearly-marked placeholders, swapped before launch |
+| ~~D4~~ | ~~Real material prices per m², machine rate per minute, module surcharge, packaging tiers~~ | **Resolved 2026-08-23: seeded `TODO_PRICING` placeholders**, clearly marked, in `prisma/seed.ts` |
+| ~~D5~~ | ~~Product photography — available, or placeholders?~~ | **Resolved 2026-08-23: generated on-brand placeholder SVGs**, not downloaded stock photos (`scripts/generate-placeholder-images.mjs`) — swap for real photography before launch. See §9d |
 | D6 | Guest checkout allowed, or account required? | Guest + optional account |
 | ~~D7~~ | ~~Real machine usable area and minimum module size.~~ | **Resolved 2026-08-23 with the owner** — see below |
 | D8 | Kitchen tile default size (70 × 120 mm) and whether customers may deviate | Fixed presets matching common Polish backsplash formats |
@@ -613,6 +618,93 @@ changes.
 `npm run lint` is green: `biome lint .` clean, `check-polish-literals.mjs`
 clean, confirmed both by a normal run and by the deliberate-violation tests
 above catching real problems, not just staying quiet.
+
+## 9d. Real catalogue content — 2026-08-23
+
+The owner gave the real category list, and it diverged meaningfully from the
+five product types `ARCHITECTURE.md` originally assumed. Two categories
+didn't fit anything modelled:
+
+- **Loft** (stools/shelves/small tables — wood top we engrave + a steel
+  base) — closest existing type was `TABLE_TOP`, but that type's whole
+  premise is "Blat. Nogi nie są w zestawie" (legs explicitly NOT included).
+  Loft is the opposite. Confirmed with the owner: the frame is a simple
+  bought-in base, not something the shop welds/sources as a real
+  bill-of-materials component — so this did NOT need a new
+  `MaterialFamily.METAL` or an `Accessory` relation (which
+  `ARCHITECTURE.md` §12 already flagged as future work). It only needed a
+  new `ProductTypeCode`, `LOFT_FURNITURE`, reusing `TABLE_TOP`'s exact step
+  list. The base/leg option is described in `Product.materialNotesPl` for
+  now, not a modelled configurator step — revisit if/when P3's configurator
+  needs to actually price it as a variant.
+- **Amulety i bransoletki** (small engraved jewellery) — a completely
+  different scale (cm, not the hundreds-of-mm every dimension envelope so
+  far assumes) and laser-only. New `ProductTypeCode`, `JEWELRY`, with a
+  shorter step list than everything else: no `THICKNESS` (a small blank has
+  one fixed thickness) and no `FINISH` (nothing seeded for it — same
+  reasoning as gres below). Materials confirmed: wood, metal, and leather
+  are all wanted eventually, but **metal and leather stay hidden for now**.
+  This needed zero schema work — `Material.isAvailable: false` already does
+  exactly this, and `LEATHER` already exists as a `MaterialFamily` value.
+  Only `METAL` doesn't exist yet; deferred rather than added unused, so
+  there's nothing sitting in the schema for a material that doesn't exist.
+
+Confirmed unchanged: **gres** (kitchen backsplashes) maps directly onto the
+existing `KITCHEN_TILE` type; **panele podłogowe** (engraved floor panels)
+onto `FLOOR_ELEMENT`; **obrazy** (wall art) is confirmed still a real product
+line, not folded into the catch-all; **inne** maps onto `CUSTOM`.
+
+**What was built:**
+
+```
+prisma/migrations/20260823020000_add_loft_and_jewelry_product_types
+                                         ProductTypeCode + LOFT_FURNITURE, JEWELRY
+scripts/generate-placeholder-images.mjs on-brand SVG placeholders — not downloaded stock photos, see below
+public/images/placeholders/*.svg        6 category images + 1 design preview + 1 installation diagram
+prisma/seed.ts                          extended: 2 materials, 1 finish, 1 placeholder design,
+                                         6 categories, 5 products (one per real category; "inne" stays empty)
+```
+
+**On the placeholder images specifically.** The owner asked to "find some
+placeholders" — read literally, that could mean downloading stock photos of
+similar-looking products. That was deliberately NOT done: a stock photo of
+someone else's stool or backsplash, presented on this shop's product page,
+would misrepresent what the business actually makes — the same "nothing is
+faked" problem `ARCHITECTURE.md` §14 already applies to payments and
+production files, just in a different spot. It would also be legally murkier
+than necessary for zero benefit. Instead, `scripts/generate-placeholder-images.mjs`
+generates simple, honestly-labelled SVGs in the brand palette (each one says,
+literally, "zdjęcie w przygotowaniu" — photo in preparation) for every
+category, the one design's preview art, and the gres installation diagram.
+Anyone looking at one knows immediately it is a placeholder. Swap them for
+real photography before launch (D5, now resolved to exactly this).
+
+**On the product copy specifically.** Every product name, description and
+care instruction is a first, functional draft — accurate and plain, not
+flowery, using the owner's own words where possible (e.g. "Stołek loftowy z
+grawerem" is close to a direct translation of what the owner described, not
+an invented brand voice). It is safe to ship if forgotten, but it is NOT
+final marketing copy, and the owner should expect to rewrite it. This is a
+narrower content-invention line than photography or design artwork: generic,
+functional product naming was judged acceptable to draft; a business's
+actual creative IP (a design's artwork) and photography were not — see the
+distinction drawn in `prisma/seed.ts`'s own header comment.
+
+**`ProductImage` has no natural idempotency key.** Every other seeded model
+has a real unique constraint to upsert against (`slug`, or a composite key);
+`ProductImage` doesn't (multiple photos per product, in any order, is the
+real shape). The seed script checks existence by `(productId, url)` before
+creating — good enough for one placeholder image per product now, but a real
+multi-photo gallery will need a proper key. Flagging this so nobody assumes
+the pattern scales as-is.
+
+**Explicitly NOT done in this pass, on purpose:** actual category/product
+RSC pages. This was the data layer only — seeded, verified idempotent
+(reran twice, checked row counts via `psql`, all correct), verified against
+both databases, full suite green throughout. Building `/loft`,
+`/produkt/[slug]`, etc. is real, separate work (P2's other checklist items:
+`generateMetadata`, canonical URLs, Schema.org, sitemap) and deserves its
+own pass rather than being rushed onto the end of a schema-plus-seed change.
 
 ## 10. Working style the owner expects
 

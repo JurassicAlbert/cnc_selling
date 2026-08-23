@@ -187,15 +187,32 @@ The step vocabulary is fixed and small (code knows how to render and validate ea
 
 `DESIGN` · `MATERIAL` · `SIZE` · `THICKNESS` · `FINISH` · `INSTALLATION_VARIANT` · `PERSONALIZATION` · `CUSTOM_UPLOAD` · `SUMMARY`
 
+> **Product types updated 2026-08-23** once the owner's real catalogue diverged
+> from the five categories the original brief assumed. Real lineup: **loft**
+> (stools/shelves/small tables — wood top we engrave + a bought-in steel
+> base/leg, described in copy, not yet a modelled component — see
+> `docs/HANDOVER.md`), **amulety i bransoletki** (small engraved wood
+> jewellery — metal and leather variants exist in the schema already via
+> `MaterialFinish`/`Material.isAvailable` but stay hidden until the owner
+> unlocks them), **gres** (kitchen backsplashes — maps directly onto the
+> existing `KITCHEN_TILE` type), **panele podłogowe** (engraved wooden floor
+> panels — maps onto `FLOOR_ELEMENT`), **obrazy** (wall art — unchanged,
+> confirmed still a real product line), and **inne** as the `CUSTOM` catch-all.
+> Two new `ProductTypeCode` values were added rather than repurposing
+> `TABLE_TOP`/`CUSTOM`: `LOFT_FURNITURE` and `JEWELRY`, in
+> `prisma/migrations/20260823020000_add_loft_and_jewelry_product_types`.
+
 Per product type:
 
 | Product type | Steps |
 |---|---|
 | `WALL_ART` (Obrazy) | DESIGN, MATERIAL, SIZE, FINISH, PERSONALIZATION, SUMMARY |
 | `TABLE_TOP` (Blaty) | DESIGN, MATERIAL, SIZE, THICKNESS, FINISH, PERSONALIZATION, SUMMARY |
-| `KITCHEN_TILE` (Kafelki) | INSTALLATION_VARIANT, DESIGN, MATERIAL, SIZE, FINISH, SUMMARY |
-| `FLOOR_ELEMENT` (Elementy podłogowe) | MATERIAL, SIZE (required exact), THICKNESS, DESIGN, FINISH, SUMMARY |
-| `CUSTOM` (Na wymiar) | CUSTOM_UPLOAD, MATERIAL, SIZE, FINISH, PERSONALIZATION, SUMMARY |
+| `KITCHEN_TILE` (Kafelki / Gres) | INSTALLATION_VARIANT, DESIGN, MATERIAL, SIZE, FINISH, SUMMARY |
+| `FLOOR_ELEMENT` (Panele podłogowe) | MATERIAL, SIZE (required exact), THICKNESS, DESIGN, FINISH, SUMMARY |
+| `CUSTOM` (Inne / Na wymiar) | CUSTOM_UPLOAD, MATERIAL, SIZE, FINISH, PERSONALIZATION, SUMMARY |
+| `LOFT_FURNITURE` (Loft) | DESIGN, MATERIAL, SIZE, THICKNESS, FINISH, PERSONALIZATION, SUMMARY — identical to `TABLE_TOP`'s list; the base/leg option is product copy for now, not a step (see the note above) |
+| `JEWELRY` (Amulety i bransoletki) | DESIGN, MATERIAL, SIZE, PERSONALIZATION, SUMMARY — no THICKNESS (a small blank has one fixed thickness) and no FINISH (nothing seeded for it yet) |
 
 `CUSTOM_UPLOAD` is also injectable into any product type when the customer picks "własny projekt" at the DESIGN step.
 
@@ -1256,7 +1273,13 @@ On the numeric input specifically: MUI v9 introduced a Base UI-backed `NumberFie
 
 ## 18. SEO
 
-- Polish slugs exactly as specified: `/obrazy-drewniane`, `/blaty-drewniane`, `/kafelki-drewniane`, `/panele-drewniane`, `/elementy-podlogowe`, `/wzory/linoryt-01`.
+- Category slugs, **updated 2026-08-23** to match the real catalogue (§5):
+  `/loft`, `/amulety-i-bransoletki`, `/gres`, `/panele-podlogowe`,
+  `/obrazy-drewniane`, `/inne`. The original list here (`/blaty-drewniane`,
+  `/elementy-podlogowe` as a category distinct from `/panele-drewniane`) was a
+  speculative placeholder from before the owner confirmed the real category
+  set — `panele-podlogowe` now covers what `elementy-podlogowe` would have.
+  Product-level slugs (`/wzory/linoryt-01`) are unaffected.
 - Per-page `generateMetadata` from DB fields (`seoTitlePl`, `seoDescPl`), canonical URLs, Open Graph with real product imagery.
 - `Schema.org` `Product` + `Offer` (with `priceCurrency: PLN`, `priceValidUntil`, availability) and `FAQPage`; `BreadcrumbList` on catalogue pages.
 - `sitemap.ts` generated from the DB (products, categories, designs, content pages); `robots.ts`.
@@ -1393,7 +1416,7 @@ Your §40 checklist, plus the items this analysis added. Kept in `docs/CHECKLIST
 | R15 | `latin` Google Fonts subset silently drops ą ć ę ł ń ó ś ź ż | Broken glyphs across the whole site, usually spotted after launch | `subsets: ['latin','latin-ext']` in `next/font`; a visual test string containing every Polish diacritic in the component test suite |
 | R16 | Decorative engraving font lacks Polish glyphs | Permanently wrong text carved into a finished product — unrecoverable | Per-font cmap coverage parsed at seed time; personalization validator rejects uncovered characters; preview renders the production font file (§17.2) |
 | R11 | Withdrawal-right exemption for custom goods not properly disclosed | Legal exposure in PL consumer disputes | §17 legal pages; external legal review |
-| R12 | Photography not ready | A premium visual brand with placeholder images is not premium | Decision D5 — need real photos or a stated placeholder plan before P2 |
+| R12 | ~~Photography not ready~~ **Resolved 2026-08-23** — a stated placeholder plan now exists and is built: on-brand generated SVGs, unmistakable as placeholders, never presented as real product photos | A premium visual brand with placeholder images is not premium | Decision D5, resolved — real photography still needed before launch; the risk now is launching before that swap happens, not an unstated plan |
 | R13 | Scope creep from the "future features" list | MVP never ships | §24 is binding |
 
 ---
@@ -1416,11 +1439,11 @@ Each of these has a defined extension point in the model above; none requires a 
 | ~~D2~~ | ~~Minimal operator console~~ | **Resolved 2026-08-23** — superseded: a full admin panel is in scope (§16A) | — |
 | **D2b** | Does the storefront launch once P7a (approve designs / confirm payment / advance status) is done, or do you wait for the complete panel? | Determines whether you can take real orders in ~⅔ of the total build time or at the end | Launch on P7a. Taking real orders while the rest of the panel is built is how you find out what the panel actually needs |
 | **D3** | Discount codes in MVP? | Your project rules list "discounts" as tests-first; the brief never mentions them | Out of scope; add in Phase 2 |
-| ~~D4~~ | Real numbers for material `pricePerM2`, machine rate per minute, module surcharge, packaging tiers | The pricing engine is structurally correct but produces meaningless złoty without them | **Resolved 2026-08-23** — seed `TODO_PRICING` placeholders, clearly marked, swapped before launch. Not yet implemented; blocked only on the seed script itself (P2) |
-| **D5** | Product photography and design assets — available, or placeholders? | Brief §6 makes imagery the core of the brand | Ship P2 with clearly-marked placeholders, swap before launch |
+| ~~D4~~ | Real numbers for material `pricePerM2`, machine rate per minute, module surcharge, packaging tiers | The pricing engine is structurally correct but produces meaningless złoty without them | **Resolved 2026-08-23** — seeded `TODO_PRICING` placeholders in `prisma/seed.ts`, clearly marked, to be swapped before launch |
+| ~~D5~~ | Product photography and design assets — available, or placeholders? | Brief §6 makes imagery the core of the brand | **Resolved 2026-08-23** — generated on-brand placeholder SVGs (`scripts/generate-placeholder-images.mjs`), not downloaded stock photography of unrelated products. Swap for real photography and real design artwork before launch. Full detail in `docs/HANDOVER.md` §9d |
 | **D6** | Customer accounts required at checkout, or guest checkout too? | Affects cart, order lookup, and the auth surface | Guest checkout + optional account — fewer abandoned carts |
 | ~~D7~~ | Real machine usable area and minimum module size | §9 currently assumes 580 × 880 mm effective and 150 mm minimum | **Resolved 2026-08-23** — 600×500mm usable, 150mm min module, 100mm max Z-thickness (`MachineSettings.maxWorkpieceThicknessMm`, now enforced by `domain/feasibility` as `THICKNESS_EXCEEDS_MACHINE`). Full detail in `docs/HANDOVER.md` §9 |
-| **D8** | Confirm the `KITCHEN_TILE` default size (70 × 120 mm) and whether customers may deviate | Affects preset vs custom size logic | Fixed presets matching common Polish backsplash tile formats |
+| **D8** | Confirm the `KITCHEN_TILE` default size (70 × 120 mm) and whether customers may deviate | Affects preset vs custom size logic | Fixed presets matching common Polish backsplash tile formats — **note:** the real gres product seeded 2026-08-23 uses a size range (300–1200 × 300–700 mm), not the 70×120mm preset originally assumed; D8 is still open on whether fixed presets are wanted at all for this category |
 
 ---
 
