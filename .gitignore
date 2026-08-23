@@ -1,0 +1,25 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+coverage/
+
+.env
+.env.local
+.env.*.local
+
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+/uploads-dev/
+/playwright-report/
+/test-results/
+.vitest/
+*.tsbuildinfo
+
+# Prisma client is generated from prisma/schema.prisma by `npm run prisma:generate`
+# (also run automatically on `npm install`). Never edited, never committed.
+/src/generated/

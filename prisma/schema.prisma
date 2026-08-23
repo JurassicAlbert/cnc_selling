@@ -1,0 +1,927 @@
+// CNC Selling — data model.
+//
+// Design notes that govern this whole file (docs/ARCHITECTURE.md §6.1,
+// docs/HANDOVER.md §4). Breaking one of these is a bug, not a style choice:
+//
+//   * Money is INTEGER GROSZE. Field names end in `Grosze`. No Float, no
+//     Decimal, no złoty outside the display layer.
+//   * Multipliers are BASIS POINTS. `priceFactorBp = 11500` means x1.15.
+//     10000 leaves the amount unchanged.
+//   * Lengths are INTEGER MILLIMETRES. Field names end in `Mm`.
+//   * Sub-millimetre production tolerances are INTEGER MICROMETRES, suffix
+//     `Um`: 1200 um = 1.2 mm. See the note above `Material` for why these are
+//     not Float, which is what ARCHITECTURE.md §6.3 originally proposed.
+//   * Machining time is INTEGER THOUSANDTHS OF A MINUTE per m²
+//     (`machiningMilliMinutesPerM2`): 2500 = 2.5 min/m².
+//   * `…Pl` marks a column holding customer-visible Polish copy. Everything
+//     else — identifiers, enums, comments — is English.
+//
+// The domain layer in `src/domain` owns the rules; this file owns storage.
+// `src/server/mapping` is the only place allowed to convert between them, and
+// it is unit-tested precisely because that seam is where a schema change would
+// silently break pricing.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  // The connection string lives in prisma.config.ts (Prisma 7 no longer reads
+  // `url` from the schema).
+}
+
+// ---------------------------------------------------------------------------
+// Catalogue
+// ---------------------------------------------------------------------------
+
+enum ProductTypeCode {
+  WALL_ART
+  TABLE_TOP
+  KITCHEN_TILE
+  FLOOR_ELEMENT
+  CUSTOM
+}
+
+model Category {
+  id         String    @id @default(cuid())
+  slug       String    @unique // "obrazy-drewniane" — transliterated, never percent-encoded
+  namePl     String
+  descPl     String    @db.Text
+  seoTitlePl String
+  seoDescPl  String
+  imageUrl   String?
+  sortOrder  Int       @default(0)
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  products   Product[]
+
+  @@index([isActive, sortOrder])
+}
+
+model Product {
+  id                 String          @id @default(cuid())
+  slug               String          @unique
+  typeCode           ProductTypeCode
+  categoryId         String
+  category           Category        @relation(fields: [categoryId], references: [id])
+  namePl             String
+  shortDescPl        String
+  longDescPl         String          @db.Text
+  careInstructionsPl String          @db.Text
+  installationInfoPl String?         @db.Text
+  /// "Blat. Nogi nie są w zestawie." — rendered on the product page, in the
+  /// configurator summary AND in the order confirmation (§12).
+  materialNotesPl    String?         @db.Text
+  seoTitlePl         String
+  seoDescPl          String
+
+  /// Floor price before any component is added.
+  basePriceGrosze   Int
+  /// The clamp: never sold below this, whatever the components add up to.
+  minPriceGrosze    Int
+  productionDaysMin Int
+  productionDaysMax Int
+
+  // Dimension envelope — feeds domain/dimensions DimensionEnvelope.
+  minWidthMm        Int
+  maxWidthMm        Int
+  minHeightMm       Int
+  maxHeightMm       Int
+  /// width/height, in basis points: 2000 = 0.2, forbidding a 20x100 cm sliver.
+  /// Basis points rather than Float so the "exactly at the bound" test case
+  /// compares two integers.
+  minAspectRatioBp  Int?
+  maxAspectRatioBp  Int?
+  allowsCustomSize  Boolean @default(true)
+  /// Floor elements: the customer must state final dimensions (§11).
+  requiresExactSize Boolean @default(false)
+
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  presetSizes     ProductPresetSize[]
+  materials       ProductMaterial[]
+  designs         ProductDesign[]
+  thicknesses     ProductThickness[]
+  images          ProductImage[]
+  personalization PersonalizationSpec?
+  installVariants InstallationVariant[]
+  configurations  Configuration[]
+
+  @@index([categoryId, isActive])
+  @@index([typeCode, isActive])
+}
+
+model ProductPresetSize {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  widthMm   Int
+  heightMm  Int
+  labelPl   String // "30 × 40 cm"
+  sortOrder Int     @default(0)
+
+  @@unique([productId, widthMm, heightMm])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  /// Required: an image with no alt text fails both accessibility and SEO.
+  altPl     String
+  isPrimary Boolean @default(false)
+  sortOrder Int     @default(0)
+
+  @@index([productId, sortOrder])
+}
+
+// ---------------------------------------------------------------------------
+// Materials, thickness, finishes
+// ---------------------------------------------------------------------------
+
+enum MaterialFamily {
+  SOLID_WOOD
+  PLYWOOD
+  MDF
+  CERAMIC
+  LEATHER
+  OTHER
+}
+
+/// Solid wood with directional grain cannot have its module grid freely
+/// rotated (§9). NONE means rotation is allowed.
+enum GrainDirection {
+  NONE
+  LENGTHWISE
+}
+
+/// Production tolerances (`minLineWidthUm`, `minDetailSpacingUm`,
+/// `minTextHeightUm`) are integer micrometres, not Float millimetres.
+///
+/// The domain compares a scaled design feature against the material minimum
+/// and the boundary case ("exactly 1.2 mm on a material whose minimum is
+/// 1.2 mm") is a real test in tests/unit/feasibility.test.ts. Stored as
+/// double precision, 1.2 is not exactly 1.2 and that comparison can flip.
+/// Integer micrometres make it exact, and follow the same convention already
+/// used for `machiningMilliMinutesPerM2`.
+model Material {
+  id                String         @id @default(cuid())
+  slug              String         @unique // "dab"
+  namePl            String // "Dąb"
+  family            MaterialFamily
+  shortDescPl       String
+  characteristicsPl String         @db.Text
+  imageUrl          String
+  pricePerM2Grosze  Int
+  isAvailable       Boolean        @default(true)
+  sortOrder         Int            @default(0)
+
+  // Production envelope — limits module size independently of the machine.
+  maxSheetWidthMm    Int
+  maxSheetHeightMm   Int
+  minLineWidthUm     Int
+  minDetailSpacingUm Int
+  minTextHeightUm    Int
+  grainDirection     GrainDirection @default(NONE)
+  supportsCnc        Boolean        @default(true)
+  supportsLaser      Boolean        @default(true)
+  /// Triggers the grain/knot/colour disclaimer (NATURAL_VARIATION notice).
+  isNaturalVariable  Boolean        @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products       ProductMaterial[]
+  finishes       MaterialFinish[]
+  designs        DesignMaterial[]
+  configurations Configuration[]
+
+  @@index([isAvailable, sortOrder])
+}
+
+/// Compatibility: which materials are offered for which product, and the
+/// per-product premium for that material.
+model ProductMaterial {
+  productId     String
+  materialId    String
+  priceFactorBp Int      @default(10000)
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  material      Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@id([productId, materialId])
+  @@index([materialId])
+}
+
+model ProductThickness {
+  id            String  @id @default(cuid())
+  productId     String
+  product       Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  thicknessMm   Int
+  priceFactorBp Int     @default(10000)
+  labelPl       String // "27 mm"
+  sortOrder     Int     @default(0)
+
+  @@unique([productId, thicknessMm])
+}
+
+enum FinishKind {
+  NATURAL
+  OIL
+  HARDWAX_OIL
+  STAIN
+  VARNISH
+}
+
+model Finish {
+  id               String     @id @default(cuid())
+  slug             String     @unique
+  namePl           String // "Olejowanie"
+  kind             FinishKind
+  descPl           String
+  imageUrl         String
+  pricePerM2Grosze Int
+  setupFeeGrosze   Int        @default(0)
+  extraDaysMin     Int        @default(0)
+  extraDaysMax     Int        @default(0)
+  isAvailable      Boolean    @default(true)
+  sortOrder        Int        @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  materials      MaterialFinish[]
+  configurations Configuration[]
+
+  @@index([isAvailable, sortOrder])
+}
+
+/// Compatibility: which finish may be applied to which material.
+model MaterialFinish {
+  materialId String
+  finishId   String
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  finish     Finish   @relation(fields: [finishId], references: [id], onDelete: Cascade)
+
+  @@id([materialId, finishId])
+  @@index([finishId])
+}
+
+// ---------------------------------------------------------------------------
+// Designs, production metadata, rights
+// ---------------------------------------------------------------------------
+
+enum DesignRightsStatus {
+  APPROVED_COMMERCIAL // ours, or licensed for sale
+  REQUIRES_PERMISSION
+  PUBLIC_DOMAIN
+  CUSTOMER_SUPPLIED
+  RESTRICTED // catalogued, never offered
+}
+
+enum ProductionMethod {
+  CNC_CARVE
+  CNC_ENGRAVE
+  LASER_ENGRAVE
+  MIXED
+  MANUAL_PREP
+}
+
+model DesignCollection {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  namePl    String
+  descPl    String   @db.Text
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  designs   Design[]
+}
+
+model Design {
+  id           String            @id @default(cuid())
+  slug         String            @unique // "linoryt-01"
+  code         String            @unique // stable human ID used on the shop floor
+  namePl       String
+  descPl       String?           @db.Text
+  collectionId String?
+  collection   DesignCollection? @relation(fields: [collectionId], references: [id])
+  tags         String[]
+  thumbnailUrl String
+  previewUrl   String
+  isActive     Boolean           @default(true)
+  sortOrder    Int               @default(0)
+
+  // Production metadata.
+  /// The width at which the minimums below are declared. Producing the design
+  /// at another width scales every feature by widthMm / referenceWidthMm (§8).
+  referenceWidthMm           Int
+  minLineWidthUm             Int
+  minDetailSpacingUm         Int
+  minEngraveDepthUm          Int?
+  recommendedMethod          ProductionMethod
+  /// Below this width the design loses its character.
+  minRecommendedWidthMm      Int
+  maxRecommendedWidthMm      Int?
+  /// 1..5. 4 and above is "very detailed" and drives DESIGN_TOO_DETAILED.
+  detailLevel                Int
+  /// Thousandths of a minute per m². 2500 = 2.5 min/m². Integer on purpose:
+  /// a Float here would put floating point back into the price chain.
+  machiningMilliMinutesPerM2 Int
+
+  // Rights (brief §12). Only APPROVED_COMMERCIAL and PUBLIC_DOMAIN are ever
+  // selectable in the configurator — enforced by a query filter, not by
+  // discipline. A new design deliberately defaults to non-sellable.
+  rightsStatus    DesignRightsStatus @default(REQUIRES_PERMISSION)
+  sourceArtist    String?
+  sourceTitle     String?
+  sourceYear      Int?
+  artistDeathYear Int?
+  sourceRef       String?
+  rightsNotes     String?            @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products       ProductDesign[]
+  /// Optional narrowing. No rows means "every material the product allows".
+  materials      DesignMaterial[]
+  configurations Configuration[]
+
+  @@index([isActive, rightsStatus])
+  @@index([collectionId])
+}
+
+model ProductDesign {
+  productId       String
+  designId        String
+  surchargeGrosze Int     @default(0)
+  product         Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  design          Design  @relation(fields: [designId], references: [id], onDelete: Cascade)
+
+  @@id([productId, designId])
+  @@index([designId])
+}
+
+model DesignMaterial {
+  designId   String
+  materialId String
+  design     Design   @relation(fields: [designId], references: [id], onDelete: Cascade)
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@id([designId, materialId])
+  @@index([materialId])
+}
+
+// ---------------------------------------------------------------------------
+// Kitchen installation variants
+// ---------------------------------------------------------------------------
+
+enum InstallationVariantCode {
+  ON_TOP // mounted on/over an existing tile
+  OVERLAY // thin overlay glued to an existing tile
+  REPLACEMENT // replaces one existing backsplash tile
+}
+
+/// First-class rows because brief §4 warns that customers must never be
+/// confused about WHAT THEY ARE BUYING. The variant is the first configurator
+/// step for kitchen tiles, carries a diagram, and its "Co otrzymujesz" line
+/// goes into the summary and the order snapshot.
+model InstallationVariant {
+  id             String                  @id @default(cuid())
+  productId      String
+  product        Product                 @relation(fields: [productId], references: [id], onDelete: Cascade)
+  code           InstallationVariantCode
+  namePl         String // "Nakładka na istniejący kafelek"
+  descPl         String                  @db.Text
+  /// What the customer physically receives. Shown in the summary verbatim.
+  receivesPl     String                  @db.Text
+  diagramUrl     String
+  /// OVERLAY is thickness-constrained by definition.
+  maxThicknessMm Int?
+  priceFactorBp  Int                     @default(10000)
+  sortOrder      Int                     @default(0)
+
+  @@unique([productId, code])
+}
+
+// ---------------------------------------------------------------------------
+// Personalization
+// ---------------------------------------------------------------------------
+
+model PersonalizationSpec {
+  id                 String   @id @default(cuid())
+  productId          String   @unique
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  isEnabled          Boolean  @default(true)
+  maxCharacters      Int      @default(40)
+  maxLines           Int      @default(2)
+  /// Product-level floor. The effective minimum is the STRICTER of this and
+  /// the chosen material's `minTextHeightUm` — resolved in the mapper.
+  minTextHeightUm    Int      @default(6000)
+  pricePerCharGrosze Int      @default(0)
+  flatFeeGrosze      Int      @default(0)
+  allowedFontIds     String[]
+}
+
+/// A font used for ENGRAVED text, not for the website's typeface.
+///
+/// Decorative faces frequently ship Basic Latin only. A customer types
+/// „Michał", the preview silently substitutes a fallback glyph, and the
+/// mistake becomes permanent on a finished oak tabletop that cannot be re-run.
+/// So coverage is parsed from the font's cmap table at seed time and stored —
+/// never assumed from the font's name or its declared language support.
+model Font {
+  id                       String  @id @default(cuid())
+  slug                     String  @unique
+  namePl                   String
+  /// Storage key for the actual font file. The preview MUST render with this
+  /// same file, or the preview is a lie.
+  fileUrl                  String
+  /// Below this cap height this particular face stops being legible.
+  minHeightUm              Int
+  /// Covered code points as inclusive ranges: [[32,126],[260,263], ...].
+  /// Ranges rather than a flat array because a full face covers thousands of
+  /// code points. The mapper expands them into the Set the domain expects.
+  coveredCodePointRanges   Json
+  /// Denormalised convenience flag for admin listing ("does this face have
+  /// ą ć ę ł ń ó ś ź ż at all?"). NEVER used for validation — the ranges are.
+  supportsPolishDiacritics Boolean @default(false)
+  isActive                 Boolean @default(true)
+  sortOrder                Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  configurations Configuration[]
+}
+
+// ---------------------------------------------------------------------------
+// Pricing and machine settings
+// ---------------------------------------------------------------------------
+
+/// Rate set. NEVER edited in place: every save writes a new row with the next
+/// `version`, so an order pinned to version 3 reprices to exactly what was
+/// charged (§10.2, §16A.1 module 7).
+///
+/// The active set is the highest `version` with `publishedAt` set. A partial
+/// unique index enforcing "at most one active" is added in the migration SQL,
+/// because Prisma cannot express `WHERE is_active` on an index.
+model PricingSettings {
+  version                Int       @id
+  machineRateCncGrosze   Int
+  machineRateLaserGrosze Int
+  moduleSurchargeGrosze  Int
+  /// Packaging tiers as [{ maxAreaM2, maxModules, priceGrosze }, ...],
+  /// evaluated in order. JSON because the tier COUNT changes with the
+  /// courier, and a table of three rows read on every price call is not worth
+  /// the join.
+  packagingTiers         Json
+  vatRateBp              Int       @default(2300)
+  isActive               Boolean   @default(false)
+  publishedAt            DateTime?
+  /// Who published it and why — this table changes every price on the site.
+  publishedByEmail       String?
+  notePl                 String?   @db.Text
+  createdAt              DateTime  @default(now())
+
+  configurations Configuration[]
+
+  @@index([isActive])
+}
+
+/// True singleton: one row, id = 1. The real machine's usable area after
+/// clamping and tool clearance, plus the smallest module we will produce.
+/// These are DB values and not constants precisely because they are currently
+/// assumptions (open decision D7) and must be correctable without a deploy.
+model MachineSettings {
+  id                    Int      @id @default(1)
+  usableWidthMm         Int
+  usableHeightMm        Int
+  minModuleMm           Int
+  /// Allowance per joint, reserved for the future production pipeline.
+  jointAllowanceMm      Int      @default(0)
+  /// Weekly capacity for the admin production load view (§16A.1 module 10).
+  weeklyCapacityMinutes Int      @default(0)
+  updatedAt             DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Configuration, cart
+// ---------------------------------------------------------------------------
+
+model Configuration {
+  id           String  @id @default(cuid())
+  userId       String?
+  user         User?   @relation(fields: [userId], references: [id])
+  /// Guest ownership. Signed cookie value, never derived from the request body.
+  sessionToken String?
+  productId    String
+  product      Product @relation(fields: [productId], references: [id])
+
+  designId       String?
+  design         Design?                  @relation(fields: [designId], references: [id])
+  customDesignId String?
+  customDesign   CustomerDesign?          @relation(fields: [customDesignId], references: [id])
+  materialId     String?
+  material       Material?                @relation(fields: [materialId], references: [id])
+  finishId       String?
+  finish         Finish?                  @relation(fields: [finishId], references: [id])
+  thicknessMm    Int?
+  widthMm        Int?
+  heightMm       Int?
+  installVariant InstallationVariantCode?
+
+  personalizationText String?
+  fontId              String?
+  font                Font?   @relation(fields: [fontId], references: [id])
+
+  // Server-computed, cached for display. The client never derives these.
+  moduleCount          Int?
+  /// ModuleLayout from domain/modules: { cols, rows, modules: [...] }.
+  moduleLayout         Json?
+  /// PriceBreakdown from domain/pricing. Every component named, in grosze.
+  priceBreakdown       Json?
+  priceGrossGrosze     Int?
+  /// FeasibilityFinding[] from domain/feasibility.
+  warnings             Json?
+  /// Which acknowledgeable warnings the customer explicitly accepted.
+  acknowledgedWarnings String[]
+  pricingVersion       Int?
+  pricingSettings      PricingSettings? @relation(fields: [pricingVersion], references: [version])
+
+  isComplete Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  cartItems CartItem[]
+
+  @@index([userId])
+  @@index([sessionToken])
+  @@index([productId])
+}
+
+model Cart {
+  id           String     @id @default(cuid())
+  userId       String?    @unique
+  user         User?      @relation(fields: [userId], references: [id])
+  sessionToken String?    @unique
+  items        CartItem[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+/// Two different configurations of the same product are two CartItem rows
+/// pointing at two Configuration rows — the brief's edge case is satisfied
+/// structurally. "Duplicate" deep-copies the Configuration; it does not
+/// increment quantity.
+model CartItem {
+  id              String        @id @default(cuid())
+  cartId          String
+  cart            Cart          @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  configurationId String
+  configuration   Configuration @relation(fields: [configurationId], references: [id])
+  quantity        Int           @default(1)
+  addedAt         DateTime      @default(now())
+
+  @@index([cartId])
+}
+
+// ---------------------------------------------------------------------------
+// Orders
+// ---------------------------------------------------------------------------
+
+enum OrderStatus {
+  NEW
+  AWAITING_PAYMENT
+  DESIGN_REVIEW
+  CONFIRMED
+  IN_PRODUCTION
+  FINISHING
+  READY_TO_SHIP
+  SHIPPED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CONTACT_ARRANGED
+}
+
+enum PaymentStatus {
+  AWAITING
+  UNDERPAID
+  PAID
+  REFUNDED
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  orderNumber   String        @unique // "2026/08/0042" — from a sequence, never count()+1
+  userId        String?
+  user          User?         @relation(fields: [userId], references: [id])
+  /// Guest order lookup. 32 random bytes, compared in constant time.
+  accessToken   String        @unique
+  status        OrderStatus   @default(NEW)
+  paymentMethod PaymentMethod
+  paymentStatus PaymentStatus @default(AWAITING)
+
+  // Buyer data is CAPTURED, never re-read from the user profile: a customer
+  // who moves house must not retroactively change where an old order went.
+  email       String
+  phone       String?
+  firstName   String
+  lastName    String
+  companyName String?
+  nip         String? // validated by weighted checksum, not by length
+  street      String
+  postalCode  String // NN-NNN
+  city        String
+  countryCode String  @default("PL")
+
+  subtotalNetGrosze Int
+  vatGrosze         Int
+  shippingGrosze    Int
+  totalGrossGrosze  Int
+  currency          String @default("PLN")
+
+  // Acknowledgements, stored verbatim: a consent record is only evidence if
+  // it captures WHAT was agreed to. Custom-made goods are exempt from the
+  // 14-day withdrawal right (art. 38 pkt 3) and that must be acknowledged.
+  termsVersion              String
+  termsAcceptedAt           DateTime
+  withdrawalExemptionTextPl String   @db.Text
+  withdrawalAcknowledgedAt  DateTime
+
+  productionNotes String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  items  OrderItem[]
+  events OrderEvent[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id              String @id @default(cuid())
+  orderId         String
+  order           Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  quantity        Int
+  unitNetGrosze   Int
+  unitGrossGrosze Int
+  /// VAT is computed on the UNIT price then multiplied by quantity — not on
+  /// the line total. The two differ by up to a grosz and invoices use the
+  /// unit form.
+  vatRateBp       Int    @default(2300)
+  lineNetGrosze   Int
+  lineVatGrosze   Int
+  lineGrossGrosze Int
+
+  /// FULL immutable snapshot (§6.8). Product name, design code, material,
+  /// dimensions, finish, variant, personalization, module layout, the whole
+  /// PriceBreakdown and the pricing version. Rendering an order NEVER joins
+  /// to a live catalogue row — a test mutates every catalogue row after an
+  /// order and asserts the rendered order is unchanged.
+  snapshot        Json
+  snapshotVersion Int  @default(1)
+  /// Denormalised from the snapshot so the version can be queried and
+  /// indexed without opening the JSON.
+  pricingVersion  Int
+
+  customerDesignId String?
+  customerDesign   CustomerDesign?   @relation(fields: [customerDesignId], references: [id])
+  /// Internal. Never shown to the customer in CAM terminology.
+  productionMethod ProductionMethod?
+  moduleCount      Int?
+
+  @@index([orderId])
+  @@index([customerDesignId])
+}
+
+model OrderEvent {
+  id         String       @id @default(cuid())
+  orderId    String
+  order      Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus OrderStatus?
+  toStatus   OrderStatus
+  actorType  String // "system" | "staff" | "customer"
+  actorId    String?
+  actorEmail String? // denormalised: survives staff account deletion
+  /// Mandatory on backwards transitions.
+  notePl     String?      @db.Text
+  createdAt  DateTime     @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Uploads, customer designs, review
+// ---------------------------------------------------------------------------
+
+enum UploadKind {
+  CUSTOMER_DESIGN
+  REFERENCE_PHOTO
+}
+
+enum DesignReviewStatus {
+  PENDING_REVIEW
+  APPROVED
+  NEEDS_CHANGES
+  REJECTED
+}
+
+model UploadedFile {
+  id             String     @id @default(cuid())
+  userId         String?
+  user           User?      @relation(fields: [userId], references: [id])
+  sessionToken   String?
+  kind           UploadKind
+  /// Opaque and unguessable. NEVER derived from the original filename, never
+  /// exposed to the browser; files are streamed through an authorizing route.
+  storageKey     String     @unique
+  /// Sanitized, display only.
+  originalName   String
+  /// From magic-byte sniffing. The client's declared type is ignored for
+  /// every security decision.
+  mimeType       String
+  sizeBytes      Int
+  checksumSha256 String
+  widthPx        Int?
+  heightPx       Int?
+  pageCount      Int? // PDF
+  /// Preview is EXIF-stripped, including GPS.
+  previewKey     String?
+  createdAt      DateTime   @default(now())
+
+  design CustomerDesign?
+
+  @@index([userId])
+  @@index([sessionToken])
+}
+
+model CustomerDesign {
+  id               String             @id @default(cuid())
+  fileId           String             @unique
+  file             UploadedFile       @relation(fields: [fileId], references: [id])
+  userId           String?
+  user             User?              @relation(fields: [userId], references: [id])
+  sessionToken     String?
+  status           DesignReviewStatus @default(PENDING_REVIEW)
+  /// Decided internally during review. Not shown raw to the customer.
+  productionMethod ProductionMethod?
+  /// UploadWarning[] from the upload inspector (resolution, aspect, DPI).
+  autoWarnings     Json?
+
+  // IP consent record (brief §12). The exact text is stored, not just a
+  // boolean — a consent record is only evidence if it captures what was
+  // agreed to, and the wording will change over time.
+  ipConfirmedAt        DateTime?
+  ipDeclarationVersion String?
+  ipDeclarationTextPl  String?   @db.Text
+  ipConfirmedIp        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reviewComments DesignReviewComment[]
+  orderItems     OrderItem[]
+  configurations Configuration[]
+
+  @@index([status])
+  @@index([userId])
+  @@index([sessionToken])
+}
+
+model DesignReviewComment {
+  id         String         @id @default(cuid())
+  designId   String
+  design     CustomerDesign @relation(fields: [designId], references: [id], onDelete: Cascade)
+  authorType String // "staff" | "customer"
+  authorId   String?
+  bodyPl     String         @db.Text
+  createdAt  DateTime       @default(now())
+
+  @@index([designId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Users (Auth.js v5 + Prisma adapter) and roles
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  CUSTOMER
+  STAFF
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  /// There is no self-service path to STAFF or ADMIN. The first ADMIN is
+  /// created by the seed script; further staff are invited from the panel.
+  role          UserRole  @default(CUSTOMER)
+  phone         String?
+  /// RODO deletion anonymises the user and preserves order records, which
+  /// Polish accounting law requires be retained.
+  anonymizedAt  DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts       Account[]
+  sessions       Session[]
+  configurations Configuration[]
+  carts          Cart[]
+  orders         Order[]
+  files          UploadedFile[]
+  customDesigns  CustomerDesign[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---------------------------------------------------------------------------
+// Audit and analytics
+// ---------------------------------------------------------------------------
+
+/// Every admin mutation writes one of these (§16A.2 invariant 4).
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  /// Denormalised: survives staff account deletion.
+  actorEmail String
+  entity     String // "Product" | "PricingSettings" | "Order" | ...
+  entityId   String?
+  action     String // "create" | "update" | "delete" | "transition" | "publish"
+  diff       Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@index([actorId])
+}
+
+/// First-party analytics. The configurator funnel cannot be built from GA4
+/// without a reporting-API integration, and "where do people abandon the
+/// configurator?" deserves data you own.
+///
+/// Written ONLY for sessions that granted consent. Rows older than 12 months
+/// are pruned.
+model AnalyticsEvent {
+  id           String   @id @default(cuid())
+  name         String // configurator_step_completed, add_to_cart, ...
+  sessionToken String?
+  userId       String?
+  productId    String?
+  step         String?
+  payload      Json?
+  createdAt    DateTime @default(now())
+
+  @@index([name, createdAt])
+  @@index([sessionToken])
+}
