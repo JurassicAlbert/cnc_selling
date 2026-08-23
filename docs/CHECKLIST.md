@@ -3,13 +3,17 @@
 Reviewed item by item before the project is considered finished (brief §40–41).
 `[ ]` not started · `[~]` in progress · `[x]` done and verified by a passing test or manual check.
 
-**Last verified: 2026-08-23** — `npm test` 298/298 green, `npm run typecheck` clean, `npm run build`
+**Last verified: 2026-08-23** — `npm test` 345/345 green, `npm run typecheck` clean, `npm run build`
 clean, `npm run lint` clean, `npm run e2e` 4/4 green (desktop + mobile), Lighthouse SEO 100/100, on
 Node v22.15.0 / TypeScript 7.0.2 / Vitest 4.1.11 / Prisma 7.9.1 / Next.js 16.3.2 / MUI 9.3.1 / Biome
 2.5.10. **P0 is complete. P2 is functionally complete** — real catalogue seeded, category/product
 pages live and server-rendered, SEO metadata/Schema.org/sitemap/robots all verified against real
 data. Still open: the homepage's content-heavy sections (hero, craftsmanship, reviews, FAQ — needs
 the owner's words, reviews needs real customers), and LCP on mobile (see the P2 Lighthouse note).
+**P3 (the configurator) is under way** — the step machine, compatibility/pricing/feasibility server
+wiring, and the first real MUI client island are built and browser-verified across three product
+types. Preview, personalization, cart persistence, and several other P3 items are honestly still
+open — see the P3 section below and `docs/HANDOVER.md` §9f for exactly what and why.
 
 ---
 
@@ -54,7 +58,7 @@ AST. Trade-off accepted knowingly: Biome has no direct equivalent of
 - [x] `domain/pricing` — every component isolated, rounding at .5, min-price clamp, quantity, version pinning
 - [x] `domain/personalization` — length, lines, glyph coverage, Polish diacritics, empty, whitespace-only, emoji
 - [x] `domain/feasibility` — thin line at scale, detail level vs size, min text height, boundary equality, notices, machine thickness limit (`THICKNESS_EXCEEDS_MACHINE`, added 2026-08-23 using D7's real 100mm Z-clearance, boundary mutation-tested)
-- [ ] `domain/configuration` — step machine, invalid step order, unknown option, incomplete config
+- [x] `domain/configuration` — step machine, invalid step order, unknown option, incomplete config — `src/domain/configuration/steps.ts`, 30 assertions (`tests/unit/configuration.test.ts`); step lists are §5's table verbatim for all 7 product types, `isStepEnterable`/`checkStepEntry` enforce "every prior step satisfied, not just the immediately preceding one", `checkStepAppliesToProductType` rejects e.g. a THICKNESS selection on WALL_ART. Pure — resolves step order only, not which options are valid (`domain/compatibility` still owns that)
 - [x] `domain/order-status` — legal and illegal transitions, design-review gate, actor permission — 22 assertions (`src/domain/order-status/transitions.ts`); the transition graph is this project's own design (ARCHITECTURE.md didn't fully specify one), documented in the module's header comment
 - [x] Full unit suite green with no DB and no framework imports — 298 assertions, no Next/Prisma/I/O imports (verified 2026-08-23)
 
@@ -113,32 +117,39 @@ for the first real interactive island (P3).
 
 ## P3 — Configurator
 
-- [ ] Step machine renders the correct steps per product type
-- [ ] Design selection works (ready-made, collections, custom)
-- [ ] Only sellable designs offered (rights status filter)
-- [ ] Material selection works, unavailable options disabled with a Polish reason
-- [ ] Size selection — presets and custom dimensions
-- [ ] Thickness step for tabletops and floor elements
-- [ ] Finish selection filtered by material
-- [ ] Personalization with font selection and live text preview
-- [ ] Preview updates immediately on every change
-- [ ] Preview shows module seams when modular
-- [ ] Kitchen installation variants selectable, with diagrams, as the first step
-- [ ] Summary states plainly what the customer receives per variant
-- [ ] Floor/panel products require exact dimensions and the matching acknowledgement
-- [ ] "Blat. Nogi nie są w zestawie." shown on product page, summary and confirmation
-- [ ] Price updates correctly on every change
-- [ ] Price computed server-side only; client never derives it
-- [ ] Price breakdown available and stored
-- [ ] Large products correctly represented as modules with a layout diagram
-- [ ] Modular build framed as a feature, not a limitation
-- [ ] Feasibility warnings shown, with acknowledgement where required
-- [ ] Incompatible selections cleared explicitly with an explanation, never silently swapped
-- [ ] All configuration combinations validated server-side
-- [ ] Configuration persists across page refresh
-- [ ] Browser back/forward behaves correctly
-- [ ] Sticky price summary on desktop and mobile
-- [ ] Configurator usable on mobile
+Started 2026-08-23. The foundation (step machine, compatibility resolution,
+server-authoritative pricing/feasibility, the first real MUI client island)
+is built and browser-verified end to end across three structurally different
+product types (WALL_ART, KITCHEN_TILE, LOFT_FURNITURE). Several items below
+are genuinely unbuilt still — marked `[ ]`, not glossed over. Full detail in
+`docs/HANDOVER.md` §9f.
+
+- [x] Step machine renders the correct steps per product type — `src/domain/configuration/steps.ts` (30 unit assertions) + `src/server/actions/configurator.ts`; browser-verified for WALL_ART (6 steps), KITCHEN_TILE (INSTALLATION_VARIANT first, 6 steps), LOFT_FURNITURE (THICKNESS included, 7 steps)
+- [~] Design selection works (ready-made, collections, custom) — ready-made selection works and is browser-verified; no `DesignCollection` is seeded to exercise collections; `CUSTOM_UPLOAD` (the CUSTOM product type's equivalent) is not built — P4's upload pipeline
+- [x] Only sellable designs offered (rights status filter) — `availableDesigns` already filtered `rightsStatus` (P1); confirmed live, only the one `APPROVED_COMMERCIAL` design appears
+- [~] Material selection works, unavailable options disabled with a Polish reason — selection works and is filtered correctly, but unavailable options are **hidden**, not shown disabled with a reason as §7.2 specifies. A real, deliberate simplification for this pass, not an oversight — needs a follow-up pass
+- [~] Size selection — presets and custom dimensions — custom dimensions work, browser-verified, with a real bug caught and fixed live (see `docs/HANDOVER.md` §9f). No `ProductPresetSize` rows are seeded, so preset-size selection has nothing to render yet
+- [x] Thickness step for tabletops and floor elements — browser-verified on the loft product (`stolek-loftowy-z-grawerem`, shares `TABLE_TOP`'s step list): "27 mm" / "40 mm" render from real `ProductThickness` rows
+- [x] Finish selection filtered by material — browser-verified: oak (`dab`) offers "Olejowanie"; gres (`gres-bialy`) honestly shows "not available for this configuration yet" rather than a fake option, matching the real gap the seed script already flagged
+- [ ] Personalization with font selection and live text preview — not built. No `Font` row is seeded — real cmap-parsed glyph coverage is a safety property (`domain/personalization`'s own header), not something to fabricate placeholder data for. The step shows an honest "coming soon, skippable" notice instead
+- [ ] Preview updates immediately on every change — the 2D preview (§7.3) is not built this pass at all
+- [ ] Preview shows module seams when modular — depends on the preview above
+- [x] Kitchen installation variants selectable, as the first step — browser-verified; diagrams (`diagramUrl`) are fetched but not yet rendered in the UI, so "with diagrams" is not yet true
+- [ ] Summary states plainly what the customer receives per variant — the summary shows price and feasibility, but does not yet surface `InstallationVariant.receivesPl` or `Product.materialNotesPl` verbatim
+- [ ] Floor/panel products require exact dimensions and the matching acknowledgement — `requiresExactSize` exists on `Product` but the SIZE step does not yet branch on it or show §11's mandatory acknowledgement text
+- [ ] "Blat. Nogi nie są w zestawie." shown on product page, summary and confirmation — shown on the product page (P2); not yet wired into the configurator summary
+- [x] Price updates correctly on every change — browser-verified live (343,90 zł for the WALL_ART configuration built during testing)
+- [x] Price computed server-side only; client never derives it — true by construction: `src/server/actions/configurator.ts` is a `'use server'` Server Action: the client only ever renders what it returns
+- [~] Price breakdown available and stored — available (returned in every snapshot, and rendered); NOT stored — no `Configuration` DB row is written yet. That is cart integration (P5), not this pass
+- [~] Large products correctly represented as modules — module *count* is computed correctly (`domain/modules`, unit-tested) and shown as a number; no layout *diagram* is rendered
+- [x] Modular build framed as a feature, not a limitation — the existing `MODULAR_BUILD` Polish copy (P1) renders as an info alert, unchanged
+- [x] Feasibility warnings shown, with acknowledgement where required — unit-tested (17 assertions in `tests/unit/configurator-server.test.ts`) and wired into the UI with a checkbox per warning; not yet exercised live against a product whose real data actually triggers one
+- [~] Incompatible selections cleared explicitly with an explanation, never silently swapped — selections ARE cleared (e.g. finish clears when material changes) but with no Polish explanation shown to the customer when it happens — a real gap against §7.1's explicit requirement
+- [x] All configuration combinations validated server-side — every check (dimensions, feasibility, modules, pricing) runs inside the Server Action against real rows
+- [x] Configuration persists across page refresh — browser-verified: the full selection round-trips through the URL, and a refresh resumes at the furthest step the restored selections actually reach (a real bug — always resetting to step 1 — was caught and fixed live)
+- [ ] Browser back/forward behaves correctly — the URL updates on every change, but there is no `popstate` listener re-syncing `selections` state, so the Back button changes the address bar without changing what's rendered. Known, not yet fixed
+- [ ] Sticky price summary on desktop and mobile — not built; the summary is inline, not positioned
+- [ ] Configurator usable on mobile — not verified this pass (no mobile-viewport check was run)
 
 ## P4 — Upload, design review, IP
 

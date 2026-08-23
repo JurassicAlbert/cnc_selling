@@ -4,11 +4,14 @@ import { notFound } from 'next/navigation';
 import { formatPln } from '@/domain/money/money';
 import { formatMmAsCentimetres } from '@/domain/text/numeric-input';
 import { getActiveProductBySlug, listAllActiveProductSlugs } from '@/server/repositories/products';
+import { getConfiguratorProductData } from '@/server/repositories/configurator';
 import { Breadcrumbs } from '@/ui/primitives/Breadcrumbs';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
 import { Section } from '@/ui/primitives/Section';
 import { Text } from '@/ui/primitives/Text';
+import { Configurator } from '@/ui/islands/configurator/Configurator';
+import { ThemeRegistry } from '@/ui/theme/ThemeRegistry';
 import { toSafeJsonLd } from '@/ui/seo/json-ld';
 import { SITE } from '@/content/pl/site';
 
@@ -23,6 +26,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   if (product === null) {
     notFound();
   }
+  const configuratorData = await getConfiguratorProductData(slug);
 
   const dimensionsPl =
     `${formatMmAsCentimetres(product.minWidthMm)}–${formatMmAsCentimetres(product.maxWidthMm)} × ` +
@@ -73,6 +77,24 @@ export default async function ProductPage({ params }: ProductPageProps) {
         </Text>
 
         <Text>{product.longDescPl}</Text>
+
+        {configuratorData !== null && (
+          <>
+            <Heading level={2}>{SITE.configuratorHeadingPl}</Heading>
+            <ThemeRegistry>
+              <Configurator
+                productSlug={product.slug}
+                options={configuratorData.options}
+                dimensionEnvelope={{
+                  minWidthMm: product.minWidthMm,
+                  maxWidthMm: product.maxWidthMm,
+                  minHeightMm: product.minHeightMm,
+                  maxHeightMm: product.maxHeightMm,
+                }}
+              />
+            </ThemeRegistry>
+          </>
+        )}
 
         {product.materialNotesPl !== null && (
           <>

@@ -1,0 +1,289 @@
+import { describe, expect, it } from 'vitest';
+
+import { EMPTY_SELECTIONS, type Selections } from '@/domain/configuration/steps';
+import { resolveOptions } from '@/server/configurator/resolve-options';
+import type { ConfiguratorOptionData } from '@/server/configurator/resolve-options';
+import { priceConfiguration } from '@/server/configurator/price-configuration';
+import type { ConfiguratorPricingData } from '@/server/configurator/price-configuration';
+
+/**
+ * The server-side glue between `domain/compatibility` / `domain/pricing` /
+ * `domain/feasibility` / `domain/modules` and a real product's rows —
+ * ARCHITECTURE.md §7.1's `derived` state and §7.2's option resolution.
+ * Fixture-driven, exactly like `tests/unit/mapping.test.ts`: no database, a
+ * mistake here does not throw, it produces a plausible wrong price or option
+ * list.
+ */
+
+function selections(overrides: Partial<Selections>): Selections {
+  return { ...EMPTY_SELECTIONS, ...overrides };
+}
+
+// ---------------------------------------------------------------------------
+// resolveOptions
+// ---------------------------------------------------------------------------
+
+const optionData: ConfiguratorOptionData = {
+  materials: [
+    {
+      id: 'dab',
+      namePl: 'Dąb',
+      isAvailable: true,
+      finishes: [{ id: 'olejowanie', namePl: 'Olejowanie', isAvailable: true }],
+    },
+    {
+      id: 'gres-bialy',
+      namePl: 'Gres biały',
+      isAvailable: true,
+      finishes: [], // matches the seed script's real gap: gres has no finish rows yet
+    },
+    {
+      id: 'unavailable-material',
+      namePl: 'Materiał niedostępny',
+      isAvailable: false,
+      finishes: [{ id: 'olejowanie', namePl: 'Olejowanie', isAvailable: true }],
+    },
+  ],
+  designs: [
+    {
+      id: 'wzor-podstawowy',
+      namePl: 'Wzór podstawowy',
+      isActive: true,
+      rightsStatus: 'APPROVED_COMMERCIAL',
+      allowedMaterialIds: [], // unrestricted
+    },
+    {
+      id: 'wzor-tylko-dab',
+      namePl: 'Wzór tylko na dąb',
+      isActive: true,
+      rightsStatus: 'APPROVED_COMMERCIAL',
+      allowedMaterialIds: ['dab'],
+    },
+    {
+      id: 'wzor-nieaktywny',
+      namePl: 'Wzór wycofany',
+      isActive: false,
+      rightsStatus: 'APPROVED_COMMERCIAL',
+      allowedMaterialIds: [],
+    },
+  ],
+  thicknesses: [
+    { thicknessMm: 18, labelPl: '18 mm' },
+    { thicknessMm: 27, labelPl: '27 mm' },
+  ],
+  installVariants: [
+    {
+      code: 'ON_TOP',
+      namePl: 'Na istniejący kafelek',
+      descPl: '',
+      receivesPl: '',
+      diagramUrl: '/diagrams/on-top.svg',
+      maxThicknessMm: null,
+    },
+    {
+      code: 'OVERLAY',
+      namePl: 'Nakładka cienka',
+      descPl: '',
+      receivesPl: '',
+      diagramUrl: '/diagrams/overlay.svg',
+      maxThicknessMm: 18,
+    },
+  ],
+};
+
+describe('resolveOptions', () => {
+  it('offers every available material when no design narrows them', () => {
+    const result = resolveOptions(optionData, EMPTY_SELECTIONS);
+    expect(result.materialIds).toEqual(['dab', 'gres-bialy']); // unavailable-material excluded
+  });
+
+  it('narrows materials to a design that restricts them', () => {
+    const result = resolveOptions(optionData, selections({ designId: 'wzor-tylko-dab' }));
+    expect(result.materialIds).toEqual(['dab']);
+  });
+
+  it('offers every active, sellable design when no material narrows them', () => {
+    const result = resolveOptions(optionData, EMPTY_SELECTIONS);
+    expect(result.designIds).toEqual(['wzor-podstawowy', 'wzor-tylko-dab']); // inactive excluded
+  });
+
+  it('narrows designs once a material that some designs exclude is chosen', () => {
+    const result = resolveOptions(optionData, selections({ materialId: 'gres-bialy' }));
+    expect(result.designIds).toEqual(['wzor-podstawowy']); // wzor-tylko-dab excluded
+  });
+
+  it('offers no finish before a material is chosen', () => {
+    const result = resolveOptions(optionData, EMPTY_SELECTIONS);
+    expect(result.finishIds).toEqual([]);
+  });
+
+  it("offers the chosen material's finishes", () => {
+    const result = resolveOptions(optionData, selections({ materialId: 'dab' }));
+    expect(result.finishIds).toEqual(['olejowanie']);
+  });
+
+  it('offers no finish for a material with no MaterialFinish rows (gres today)', () => {
+    const result = resolveOptions(optionData, selections({ materialId: 'gres-bialy' }));
+    expect(result.finishIds).toEqual([]);
+  });
+
+  it('offers every thickness when no installation variant caps it', () => {
+    const result = resolveOptions(optionData, EMPTY_SELECTIONS);
+    expect(result.thicknessesMm).toEqual([18, 27]);
+  });
+
+  it('caps thickness options to the chosen installation variant', () => {
+    const result = resolveOptions(optionData, selections({ installationVariant: 'OVERLAY' }));
+    expect(result.thicknessesMm).toEqual([18]);
+  });
+
+  it('lists every installation variant, unfiltered', () => {
+    const result = resolveOptions(optionData, EMPTY_SELECTIONS);
+    expect(result.installVariantCodes).toEqual(['ON_TOP', 'OVERLAY']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// priceConfiguration
+// ---------------------------------------------------------------------------
+
+const pricingData: ConfiguratorPricingData = {
+  product: {
+    basePriceGrosze: 12_000,
+    minPriceGrosze: 15_000,
+    minWidthMm: 200,
+    maxWidthMm: 1200,
+    minHeightMm: 200,
+    maxHeightMm: 1200,
+    minAspectRatioBp: null,
+    maxAspectRatioBp: null,
+    isFloorElement: false,
+  },
+  material: {
+    priceFactorBp: 10_000,
+    pricePerM2Grosze: 18_000,
+    maxSheetWidthMm: 1200,
+    maxSheetHeightMm: 2400,
+    minLineWidthUm: 1200,
+    minDetailSpacingUm: 800,
+    minTextHeightUm: 6000,
+    isNaturalVariable: true,
+  },
+  design: {
+    surchargeGrosze: 0,
+    referenceWidthMm: 600,
+    minLineWidthUm: 1500,
+    minDetailSpacingUm: 1000,
+    detailLevel: 3,
+    minRecommendedWidthMm: 300,
+    machiningMilliMinutesPerM2: 2500,
+    recommendedMethod: 'CNC_CARVE',
+  },
+  finish: { pricePerM2Grosze: 4_000, setupFeeGrosze: 1_000 },
+  thickness: null,
+  installationVariant: null,
+  personalizationSpec: null,
+  machine: {
+    usableWidthMm: 600,
+    usableHeightMm: 500,
+    minModuleMm: 150,
+    maxWorkpieceThicknessMm: 100,
+  },
+  pricing: {
+    version: 1,
+    machineRateCncGrosze: 200,
+    machineRateLaserGrosze: 150,
+    moduleSurchargeGrosze: 5_000,
+    vatRateBp: 2300,
+    packagingTiers: [{ maxAreaM2: null, maxModules: null, priceGrosze: 2_500 }],
+  },
+};
+
+describe('priceConfiguration', () => {
+  it('is incomplete before a size is chosen', () => {
+    const result = priceConfiguration(pricingData, EMPTY_SELECTIONS, 1);
+    expect(result.status).toBe('incomplete');
+  });
+
+  it('rejects a size outside the product envelope', () => {
+    const result = priceConfiguration(
+      pricingData,
+      selections({ widthMm: 50, heightMm: 400 }),
+      1,
+    );
+    expect(result.status).toBe('dimension_invalid');
+    if (result.status === 'dimension_invalid') {
+      expect(result.issues.some((issue) => issue.code === 'WIDTH_BELOW_MIN')).toBe(true);
+    }
+  });
+
+  it('prices a valid single-module configuration', () => {
+    const result = priceConfiguration(
+      pricingData,
+      selections({ widthMm: 600, heightMm: 400 }),
+      1,
+    );
+    expect(result.status).toBe('priced');
+    if (result.status === 'priced') {
+      expect(result.moduleLayout.totalModules).toBe(1);
+      expect(result.blockingError).toBe(false);
+      expect(result.priceBreakdown.quantity).toBe(1);
+      expect(result.priceBreakdown.unitGrossGrosze).toBeGreaterThan(0);
+    }
+  });
+
+  it('splits into modules and prices the module surcharge when oversize', () => {
+    const result = priceConfiguration(
+      pricingData,
+      selections({ widthMm: 1200, heightMm: 400 }),
+      1,
+    );
+    expect(result.status).toBe('priced');
+    if (result.status === 'priced') {
+      expect(result.moduleLayout.totalModules).toBe(2);
+      expect(result.feasibility.some((f) => f.code === 'MODULAR_BUILD')).toBe(true);
+    }
+  });
+
+  it('flags a blocking feasibility error but still returns a price for the summary', () => {
+    const thinLineData: ConfiguratorPricingData = {
+      ...pricingData,
+      // The material demands a much wider line than this design ever produces.
+      material: { ...pricingData.material, minLineWidthUm: 50_000 }, // 50 mm
+    };
+    const result = priceConfiguration(
+      thinLineData,
+      selections({ widthMm: 600, heightMm: 400 }),
+      1,
+    );
+    expect(result.status).toBe('priced');
+    if (result.status === 'priced') {
+      expect(result.blockingError).toBe(true);
+      expect(result.feasibility.some((f) => f.code === 'LINE_TOO_THIN')).toBe(true);
+      expect(result.priceBreakdown).toBeDefined();
+    }
+  });
+
+  it('rejects a thickness the machine cannot fit, as a feasibility error not a crash', () => {
+    const result = priceConfiguration(
+      pricingData,
+      selections({ widthMm: 600, heightMm: 400, thicknessMm: 150 }),
+      1,
+    );
+    expect(result.status).toBe('priced');
+    if (result.status === 'priced') {
+      expect(result.blockingError).toBe(true);
+      expect(result.feasibility.some((f) => f.code === 'THICKNESS_EXCEEDS_MACHINE')).toBe(true);
+    }
+  });
+
+  it('multiplies the line total by quantity', () => {
+    const one = priceConfiguration(pricingData, selections({ widthMm: 600, heightMm: 400 }), 1);
+    const three = priceConfiguration(pricingData, selections({ widthMm: 600, heightMm: 400 }), 3);
+    if (one.status === 'priced' && three.status === 'priced') {
+      expect(three.priceBreakdown.lineGrossGrosze).toBe(one.priceBreakdown.unitGrossGrosze * 3);
+    } else {
+      throw new Error('expected both to price');
+    }
+  });
+});

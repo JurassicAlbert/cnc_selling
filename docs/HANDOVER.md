@@ -60,8 +60,9 @@ src/domain/pricing/calculate.ts            the single source of truth for price
 src/domain/personalization/validate.ts     text length, lines, real font glyph coverage
 src/domain/feasibility/rules.ts            errors / warnings / notices about manufacturability
 src/domain/order-status/transitions.ts     order status graph — legal moves, actor permission, the design-review gate
+src/domain/configuration/steps.ts          the configurator's step machine — §5's step lists, §7.1's entry gating (added 2026-08-23, P3)
 src/content/pl/messages.ts                 every customer-visible Polish string
-tests/unit/*.test.ts                       11 files, 298 assertions
+tests/unit/*.test.ts                       13 files, 345 assertions
 ```
 
 Two of those need a closer look before you build on them, because
@@ -118,7 +119,13 @@ rewrite `tsconfig.json`'s `compilerOptions` in place (`jsx`, `allowJs`,
 **Still not started:** the homepage's content-heavy sections (hero,
 craftsmanship, reviews, FAQ — needs the owner's words; reviews needs real
 customers, full stop, see §9e), Schema.org FAQPage (nothing to attach it to
-yet), and everything in P3 (the configurator).
+yet). **P3 (the configurator) is under way, not finished** — its foundation
+(step machine, server-side compatibility/pricing/feasibility, the first real
+MUI client island) is built and browser-verified; the 2D preview,
+font-backed personalization, cart persistence, and several other pieces are
+honestly still open. Full detail in §9f — read it before touching
+`src/ui/islands/configurator/`, `src/server/configurator/`, or
+`src/server/actions/configurator.ts`.
 
 ## 3. Status of the first action — done, 2026-08-23
 
@@ -821,6 +828,137 @@ anyway, which will need its own Lighthouse pass regardless.
 **SEO: 100/100**, desktop and mobile, both a category and a product page —
 this is the number the checklist's "≥ 95" threshold was actually about, and
 it's clean.
+
+## 9f. P3's foundation — the configurator, started 2026-08-23
+
+The first work on P3. Built bottom-up, in the order the codebase's own
+convention demands: pure domain first, then the server-side seam, then the
+first real UI — each layer test-first, and the UI layer verified in a real
+browser against real seeded products, not just by `tsc`/`next build`
+succeeding (§9c's lesson about the difference between the two still holds).
+
+```
+src/domain/configuration/steps.ts       the step machine — §5's per-product-type step lists, §7.1's
+                                         "enterable only if every prior step is satisfied" rule.
+                                         30 assertions (tests/unit/configuration.test.ts)
+src/server/configurator/resolve-options.ts  §7.2's option resolution, reshaped for real row field names —
+                                         thin, the actual filtering is domain/compatibility (P1)
+src/server/configurator/price-configuration.ts  module layout + feasibility + price for one selection state —
+                                         17 assertions together with the file above
+                                         (tests/unit/configurator-server.test.ts)
+src/server/repositories/configurator.ts  the one Prisma query for a product's full configurator data
+src/server/actions/configurator.ts      'use server' — the one dispatch target every selection change calls.
+                                         Never computes a price itself; wires the three files above together
+src/ui/islands/configurator/Configurator.tsx  the first real MUI client island. Renders inside ThemeRegistry,
+                                         which is now doing exactly what §9e reserved it for
+src/content/pl/site.ts                  configurator* keys — step labels, button labels, honest "not built yet" copy
+src/content/pl/messages.ts              configurationErrorMessage() — the fifth exhaustive-switch translation table
+```
+
+**Scope, stated plainly.** `domain/configuration` was P1's one remaining
+unchecked item — `stepsForProductType` reproduces §5's table for all seven
+product types verbatim, and `checkStepEntry`/`isStepEnterable` enforce that a
+step is reachable only once every step before it (not just the immediately
+preceding one) is satisfied. It resolves step **order**, nothing about which
+*options* are valid — that boundary with `domain/compatibility` is
+deliberate, not a gap.
+
+`priceConfiguration` only reaches `'priced'` when both a `materialId` and a
+`designId` are chosen. That is why `CUSTOM` (the one product type with no
+`DESIGN` step, only `CUSTOM_UPLOAD`) never prices in this pass: there is no
+seeded `Design` row to read a machining rate or surcharge from for an
+arbitrary customer upload, and inventing one would be exactly the kind of
+fabricated number D4 was resolved by clearly labelling, not by pretending.
+Pricing a `CUSTOM_UPLOAD` configuration is a design-review-era decision (P4),
+not something to solve by guessing here.
+
+**Personalization is real, honest, and deliberately incomplete.** No `Font`
+row exists in the seed data — not an oversight. `domain/personalization`'s
+own header comment explains why real cmap-parsed glyph coverage matters: a
+decorative face missing `ł` makes „Michał" permanently wrong on a finished
+oak tabletop. That is a safety property, not a monetary placeholder like
+`TODO_PRICING` — fabricating a plausible-looking coverage set would be worse
+than not building the step at all. The PERSONALIZATION step (already
+optional in the state machine — a customer may buy a piece with no engraved
+text) shows an honest Polish notice instead: personalization is coming once
+a real font with confirmed coverage exists, and this step can be skipped
+meanwhile. `CUSTOM_UPLOAD`'s step content is the same kind of honest
+placeholder, for the same reason — P4 is unbuilt.
+
+**A real bug, caught only by actually using the SIZE step in a browser.**
+The first version committed both width AND height on either field's `blur`
+event. Tabbing from width to height blurred width while height was still
+empty, which force-set `heightMm: null` and a spurious "Podaj wymiar."
+error on a field the customer had not typed into yet — every subsequent
+keystroke in height left that stale error on screen until height was ALSO
+blurred. `tsc` and the unit tests were both silent, because the bug is in
+event-handler composition, not in a type or a pure function. Fixed by
+splitting into `commitWidth`/`commitHeight`, each committing only its own
+field. This is the same category of lesson §9c already drew about
+`Heading`/`Text` (type-check green ≠ renders correctly) — recorded again
+because it happened again, this time in interaction rather than layout.
+
+**A second real gap, also only visible by actually refreshing the page.**
+The URL correctly round-trips every selection (`?d=...&m=...&w=600&h=405&f=...`),
+so a refresh never loses data — but the first version always reset
+`stepIndex` to 0 on load, so a customer who refreshed mid-configuration saw
+their answers intact but was dropped back to step 1 regardless of how far
+they'd gotten. Fixed: the first snapshot response after a URL-restored
+mount now resolves `stepIndex` to the furthest step the restored selections
+actually reach, via the same `isStepEnterable` the rest of the machine uses.
+Browser-verified: configured a WALL_ART product through to SUMMARY, copied
+the resulting URL, reloaded, landed directly back on SUMMARY with the same
+343,90 zł price and the same `NATURAL_VARIATION` notice.
+
+**What was verified live, not assumed** — three structurally different
+product types, each exercising a different part of §5's step table:
+
+- **WALL_ART** (`obraz-drewniany-z-grawerem`) — the plain 6-step case
+  (DESIGN → MATERIAL → SIZE → FINISH → PERSONALIZATION → SUMMARY). Full
+  click-through to a priced summary (343,90 zł), the `NATURAL_VARIATION`
+  notice rendering correctly for oak, comma-decimal size entry (`40,5` → 405
+  mm) working end to end, zero console errors.
+- **KITCHEN_TILE** (`fartuch-kuchenny-z-grawerem`) — confirms
+  INSTALLATION_VARIANT really is the *first* step, ahead of DESIGN, per §5's
+  ordering (not just present somewhere). Also the honest negative case: gres
+  has no seeded `MaterialFinish` row (flagged in `prisma/seed.ts`'s own
+  comment as a P3 gap to close), and the FINISH step shows "not available for
+  this configuration yet" rather than crashing, silently passing, or
+  fabricating an option — and correctly keeps "Dalej" disabled, blocking
+  completion honestly rather than letting the customer proceed with no
+  finish selected.
+- **LOFT_FURNITURE** (`stolek-loftowy-z-grawerem`) — confirms the 7-step
+  list with THICKNESS included (shares `TABLE_TOP`'s list exactly, per
+  §9d). Real seeded thicknesses ("27 mm", "40 mm") render as selectable
+  options from actual `ProductThickness` rows.
+
+**What is honestly not built or not verified this pass** — every item is
+also reflected in `docs/CHECKLIST.md`'s P3 section, marked `[~]` or `[ ]`,
+not silently checked off:
+
+- The 2D preview (§7.3) — not started.
+- Unavailable materials/designs are *hidden* rather than *shown disabled
+  with a Polish reason*, which is what §7.2 actually specifies. A
+  simplification for this pass, not a design decision — worth a follow-up.
+- No `Configuration` DB row is written — selections live in React state and
+  the URL only. "Price breakdown... stored" (a P3 checklist line) needs this,
+  and it's naturally cart-adjacent (P5) rather than configurator-only work.
+- Clearing a selection (e.g. finish, when material changes) happens
+  correctly but silently — no Polish message tells the customer it happened
+  or why, which §7.1 explicitly calls for.
+- No `popstate` listener: the URL updates on every change, but the
+  **browser** Back/Forward buttons change the address bar without
+  re-syncing component state. Refresh-persistence works; back/forward
+  navigation does not yet.
+- No sticky price summary, no mobile-viewport check, no preset sizes (none
+  are seeded yet either), no installation-variant diagrams rendered (the
+  `diagramUrl` is fetched, just not displayed), no `requiresExactSize`
+  branch for floor/panel products, and the configurator summary does not yet
+  restate `materialNotesPl` or `InstallationVariant.receivesPl` verbatim.
+
+None of these are silent gaps — each one is a specific, findable line in
+`docs/CHECKLIST.md`'s P3 section. The next pass on P3 should treat that list
+as the actual work order, not re-derive it from scratch.
 
 ## 10. Working style the owner expects
 

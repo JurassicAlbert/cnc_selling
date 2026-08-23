@@ -23,6 +23,7 @@ test-driven before a single framework dependency exists.
 | `src/domain/text` | Polish plurals, comma decimals, collation, diacritic-insensitive search |
 | `src/domain/dimensions` | Size envelopes, aspect ratios, invalid input |
 | `src/domain/compatibility` | Which materials, finishes, designs and thicknesses a step actually offers |
+| `src/domain/configuration` | The configurator's step machine — which steps exist per product type, and when each is enterable |
 | `src/domain/modules` | Splitting an oversize product into aligned modules |
 | `src/domain/pricing` | The single source of truth for what a configuration costs |
 | `src/domain/personalization` | Engraving text length, lines, and real font glyph coverage |
@@ -46,6 +47,17 @@ Postgres, and the Next.js 16 / MUI v9 app shell.
 | `biome.json` | Linter + formatter (not ESLint — TypeScript 7 isn't supported by `typescript-eslint`; see `docs/HANDOVER.md` §9c) |
 | `scripts/check-polish-literals.mjs` | Catches Polish copy leaking into a component instead of `src/content/pl` |
 
+**P3, the configurator — under way.** The step machine, server-side option
+resolution, and server-computed price/feasibility, plus the first real MUI
+client island wired to real catalogue data.
+
+| File | What it is |
+|---|---|
+| `src/domain/configuration/steps.ts` | The step machine — per-product-type step lists (§5), step-entry gating (§7.1) |
+| `src/server/configurator/` | Option resolution (§7.2) and pricing/feasibility (§10) glue, fixture-tested |
+| `src/server/actions/configurator.ts` | The one Server Action every selection change calls — prices are never computed client-side |
+| `src/ui/islands/configurator/Configurator.tsx` | The first real MUI client island — renders inside `ThemeRegistry`, exactly what §9e reserved it for |
+
 The catalogue is real data — `loft`, `amulety-i-bransoletki`, `gres`,
 `panele-podlogowe`, `obrazy-drewniane`, plus `inne` as an empty catch-all —
 with real category and product pages, SEO metadata, JSON-LD, a sitemap and
@@ -53,7 +65,11 @@ robots.txt, all generated from the DB. Prices, photos, and the one design's
 artwork are all placeholders (`docs/HANDOVER.md` §9d). The homepage's
 content-heavy sections (hero, craftsmanship, reviews, FAQ) aren't built —
 they need the owner's actual words, and reviews specifically need real
-customers, not invented ones (§9e). There is no configurator yet.
+customers, not invented ones (§9e). A working configurator exists on every
+product page now — step machine, real material/design/finish/thickness
+options, server-computed price and feasibility — but it is a foundation, not
+finished: no 2D preview, no font-backed personalization yet, and nothing is
+persisted to a cart. See `docs/HANDOVER.md` §9f.
 
 A Lighthouse audit while building this caught a real bug: the MUI theme
 provider was wrapping every page from the root layout, shipping ~154KB of
@@ -74,7 +90,7 @@ npm install
 npm run db:up
 npm run db:deploy      # applies the initial migration
 
-npm test               # 298 assertions across eleven files, about a second
+npm test               # 345 assertions across thirteen files, about a second
 npm run typecheck      # TypeScript strict, noUncheckedIndexedAccess, no emit
 npm run lint             # Biome + the Polish-literal check
 npm run build           # Next.js production build
@@ -121,10 +137,17 @@ yet, the code says so.
 ## What comes next
 
 P0 is done. P2 is functionally complete — real catalogue seeded, category
-and product pages live, SEO/Schema.org/sitemap/robots all real. Next:
+and product pages live, SEO/Schema.org/sitemap/robots all real. **P3, the
+configurator, is under way** — its foundation (the step machine, server-side
+compatibility/pricing/feasibility, and the first real MUI client island) is
+built and browser-verified across three product types; see
+`docs/HANDOVER.md` §9f and `docs/CHECKLIST.md`'s P3 section for exactly
+what's done and what's still open (the 2D preview, font-backed
+personalization, cart/`Configuration`-row persistence, and several smaller
+items). Next:
 
+- **P3's remaining pieces** — see the P3 checklist for the itemised list.
 - **P2's remaining piece** — the homepage's hero/craftsmanship/reviews/FAQ
   sections, once real content exists for them.
-- **P3** — the configurator, and the first real MUI client island.
 
 Full phasing in `docs/ARCHITECTURE.md` §22.

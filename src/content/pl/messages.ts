@@ -10,6 +10,7 @@
  * reason to render an enum name at a customer.
  */
 
+import type { ConfigurationErrorCode } from '@/domain/configuration/steps';
 import type { DimensionIssue } from '@/domain/dimensions/dimensions';
 import type { FeasibilityFinding } from '@/domain/feasibility/rules';
 import type { PersonalizationIssue } from '@/domain/personalization/validate';
@@ -84,6 +85,19 @@ export function personalizationMessage(issue: PersonalizationIssue): string {
       return `Ten tekst może być zbyt drobny do precyzyjnego wykonania w wybranym kroju. Minimalna wysokość to ${mm(issue.limit ?? 0)}.`;
     case 'TEXT_TOO_SMALL_FOR_MATERIAL':
       return `Ten tekst może być zbyt drobny dla wybranego materiału. Minimalna wysokość to ${mm(issue.limit ?? 0)}.`;
+  }
+}
+
+export function configurationErrorMessage(code: ConfigurationErrorCode): string {
+  switch (code) {
+    case 'STEP_INDEX_OUT_OF_RANGE':
+      return 'Ten krok konfiguracji nie istnieje. Wróć do początku konfiguratora.';
+    case 'STEP_NOT_YET_ENTERABLE':
+      return 'Uzupełnij poprzednie kroki, zanim przejdziesz dalej.';
+    case 'STEP_NOT_IN_PRODUCT_TYPE':
+      return 'Ta opcja nie dotyczy wybranego produktu.';
+    case 'CONFIGURATION_INCOMPLETE':
+      return 'Konfiguracja nie jest jeszcze kompletna. Uzupełnij wszystkie wymagane kroki.';
   }
 }
 
