@@ -1,0 +1,63 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.10/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": false
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 90
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "always",
+      "trailingCommas": "all"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended"
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["src/app/(marketing)/**", "src/app/(shop)/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@mui/material": "No @mui/material in (marketing)/(shop) server components (ARCHITECTURE.md §2.1). Put the interactive part in src/ui/islands and render it as a child."
+                },
+                "patterns": [
+                  {
+                    "group": ["@mui/material/*"],
+                    "message": "No @mui/material in (marketing)/(shop) server components (ARCHITECTURE.md §2.1). Put the interactive part in src/ui/islands and render it as a child."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

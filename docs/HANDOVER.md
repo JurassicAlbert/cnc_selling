@@ -82,11 +82,11 @@ Two of those need a closer look before you build on them, because
   stage, a customer only before their order is confirmed. If the owner wants
   a different cancellation policy, this is a small, isolated change.
 
-**P0 is now functionally complete, built across 2026-08-23** — the data
-layer, then the Next.js/MUI shell. Full detail, in the order it was built, is
-in §9a (seed script), §9b (the machine-thickness feasibility rule), and §9c
-(the app shell + a real ESLint/TypeScript-7 blocker that needs the owner's
-call). Headline inventory:
+**P0 is complete, built across 2026-08-23** — the data layer, then the
+Next.js/MUI shell, then a linter swap after TypeScript 7 turned out to be
+incompatible with the obvious choice. Full detail, in the order it was built,
+is in §9a (seed script), §9b (the machine-thickness feasibility rule), and
+§9c (the app shell, and the ESLint → Biome switch). Headline inventory:
 
 ```
 prisma/schema.prisma                    33 models, validated, MIGRATED — applied to a live database
@@ -95,7 +95,8 @@ prisma/seed.ts                          MachineSettings + PricingSettings v1 + f
 src/server/mapping/to-domain.ts         Prisma rows -> domain inputs. The seam. Unit-tested.
 next.config.ts, src/app/, src/ui/       Next.js 16 App Router shell + MUI v9 theme — §9c
 playwright.config.ts, tests/e2e/        desktop + mobile, one smoke test green on both — §9c
-eslint.config.mjs, eslint-rules/        written, CANNOT CURRENTLY RUN — see §9c's blocker
+biome.json                              linter + formatter; the @mui/material restriction lives here — §9c
+scripts/check-polish-literals.mjs       the Polish-literal check — a script, not a Biome rule, on purpose — §9c
 ```
 
 `src/generated/prisma` is the generated Prisma client. Gitignored, rebuilt by
@@ -104,9 +105,8 @@ eslint.config.mjs, eslint-rules/        written, CANNOT CURRENTLY RUN — see §
 rewrite `tsconfig.json`'s `compilerOptions` in place (`jsx`, `allowJs`,
 `include`) on `dev`/`build` — expected behaviour, not a regression to revert.
 
-**Still not started:** the RSC/island lint rules cannot be verified until the
-ESLint blocker (§9c) is resolved; P2 catalogue content (real Polish copy,
-seed data, product photography — D5 still open).
+**Still not started:** P2 catalogue content (real Polish copy, seed data,
+product photography — D5 still open).
 
 ## 3. Status of the first action — done, 2026-08-23
 
@@ -537,57 +537,82 @@ transform and no elevation shadow; every font request resolves to
 confirming the self-hosting requirement actually holds and isn't just
 configured correctly on paper.
 
-### The ESLint / TypeScript 7 blocker — needs the owner's call
+### The ESLint / TypeScript 7 blocker — resolved 2026-08-23: switched to Biome
 
-`npm run lint` throws immediately:
+`npm run lint` used to throw immediately:
 
 ```
 typescript-eslint does not support TS 7.0.
 ```
 
-This is **not a config mistake** — it is a hardcoded version guard inside
+Not a config mistake — a hardcoded version guard inside
 `@typescript-eslint/parser` itself (`if (versionMajor >= 7) throw ...`),
 confirmed by reading the installed package source, not just the error
 message. Tracked upstream:
 [typescript-eslint#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940),
-unresolved as of 2026-08-23. `eslint-config-next` (Next's own recommended
-config, which this project uses) depends on the `typescript-eslint`
-meta-package internally, so this blocks **all** ESLint linting — not just the
-two rules this session wrote, everything Next's config would otherwise catch
-(accessibility, react-hooks correctness, etc.).
+unresolved. `eslint-config-next` depends on the `typescript-eslint`
+meta-package internally, so it blocked **all** ESLint linting, not just the
+two project-specific rules.
 
-**What it does NOT block**, confirmed by actually running each: `next dev`,
-`next build` (Next 16 does not run ESLint during build by default — this
-was checked, not assumed), `tsc --noEmit`, `vitest`, `playwright test`. The
-app is fully usable; only `npm run lint` itself is broken.
+Three ways forward were presented to the owner (downgrade TypeScript, wait for
+upstream, switch to Biome). **The owner chose Biome**, on the reasoning that
+"ignore the lint failure with a TODO" doesn't apply here — there is no
+specific rule violation to suppress with a comment; the tool crashes before
+it reads a single file, so a per-line disable comment has nothing to attach
+to. A different linter was the only option that actually unblocks `npm run
+lint` without reversing the earlier TS7 migration.
 
-Three ways forward. This session did not pick one, because each is a real
-trade-off the owner should weigh, not a routine implementation detail:
+**What changed:**
 
-1. **Downgrade `typescript` to 6.x.** Restores linting immediately. Reverses
-   this session's own earlier move TO TypeScript 7 (the `baseUrl` removal
-   fix, §3) — undoing a deliberate choice to work around a different
-   session's problem feels like the wrong direction, but it is the fastest
-   fix if linting matters more than staying current.
-2. **Wait for upstream support**, wired up already, just not runnable yet.
-   Zero work now; `npm run lint` starts working the moment
-   `typescript-eslint` ships a compatible release — no way to predict when.
-3. **Switch to [Biome](https://biomejs.dev/)** (`@biomejs/biome`, confirmed
-   available on the registry, 2.5.10 latest as of this session). Its own
-   Rust-based parser is unrelated to `typescript-eslint`, so it is entirely
-   unaffected by this gap. Trade-off: no direct equivalent of
-   `@next/eslint-plugin-next`'s Next.js-specific rules (e.g. catching
-   `<img>` where `next/image` belongs) — Biome's rule set is generic
-   JS/TS/React, not framework-aware. The two custom rules this session wrote
-   (`eslint-rules/no-polish-literal.mjs`, the `@mui/material` import
-   restriction) would need reimplementing in Biome's own rule format; the
-   *logic* transfers directly, only the syntax doesn't.
+```
+eslint.config.mjs, eslint-rules/     REMOVED
+eslint, eslint-config-next,
+  @next/eslint-plugin-next            UNINSTALLED
+@biomejs/biome                        INSTALLED — 2.5.10, own Rust parser, unaffected by the TS7 gap
+biome.json                            linter (recommended preset) + formatter + the MUI-import restriction
+scripts/check-polish-literals.mjs     the Polish-literal check, NOT reimplemented as a Biome rule — see below
+fast-glob                             INSTALLED — used only by the script above
+```
 
-Recommendation, if one is wanted: **option 2 for now** — the tooling is
-written and correct, the app itself is fully functional and verified, and
-nothing in P2/P3 actually needs `npm run lint` to pass. Revisit if the wait
-drags past a few weeks or a specific PR review process starts depending on
-it.
+**The `@mui/material` restriction ported directly.** Biome's
+`noRestrictedImports` rule plus a `biome.json` `overrides` block scoped to
+`src/app/(marketing)/**` and `src/app/(shop)/**` does exactly what the ESLint
+version did. Verified with a deliberate violation: added a `@mui/material`
+import to the marketing page, confirmed `biome lint` reports it as an
+**error** (not a warning) with the same explanatory message, reverted.
+
+**The Polish-literal check did NOT port directly — deliberately.** Biome 2.x
+has a GritQL plugin system that could in principle express "flag any string
+containing these nine characters", but it's a newer feature and GritQL's
+pattern language is built for structural AST matching, not simple text
+scanning. Fighting its syntax for a check this simple wasn't worth it: the
+rule needs no AST, only "does this file contain Polish text outside an
+allowed spot", and reading the file as text answers that directly. So it's a
+standalone Node script (`scripts/check-polish-literals.mjs`), wired into
+`npm run lint` as a second command (`biome lint . && node
+scripts/check-polish-literals.mjs`). Same diacritic-heuristic logic as the
+ESLint version (documented in the script's own header, including the same
+precision-over-recall trade-off), same exclusions (`src/content/pl` itself,
+`*.test.ts`/`*.spec.ts`). Verified the same way: a deliberate Polish string
+in the marketing page was caught and reported with file/line/text, reverted.
+
+**One cleanup, unrelated to the switch but done while lint was running for
+the first time:** `biome lint --write --unsafe .` fixed four pre-existing
+files (`to-domain.ts`, `mapping.test.ts`, `prisma.config.ts`,
+`playwright.config.ts`) — all `tier['x']` → `tier.x` style simplifications for
+valid identifier keys, zero behaviour change, confirmed by rerunning the full
+suite (298/298) and the build afterward. Nothing else was touched; `biome.json`
+uses the default `recommended` preset with no rules disabled to make the
+codebase pass.
+
+**Known, accepted trade-off:** Biome has no equivalent of
+`@next/eslint-plugin-next`'s Next.js-specific rules (catching `<img>` where
+`next/image` belongs, etc.). Nothing today depends on those; revisit if that
+changes.
+
+`npm run lint` is green: `biome lint .` clean, `check-polish-literals.mjs`
+clean, confirmed both by a normal run and by the deliberate-violation tests
+above catching real problems, not just staying quiet.
 
 ## 10. Working style the owner expects
 

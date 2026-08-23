@@ -7,10 +7,11 @@ import { SITE } from '@/content/pl/site';
 
 /**
  * A Server Component. No `@mui/material` import — the lint rule in
- * `eslint.config.mjs` enforces that for every file under `(marketing)` and
- * `(shop)`, and this page is the thing that rule exists to protect. The one
- * piece of MUI on this page (`ThemeShowcaseButton`) is a client island
- * rendered as a child, not imported into this file's own render tree.
+ * `biome.json`'s `overrides` enforces that for every file under
+ * `(marketing)` and `(shop)`, and this page is the thing that rule exists to
+ * protect. The one piece of MUI on this page (`ThemeShowcaseButton`) is a
+ * client island rendered as a child, not imported into this file's own
+ * render tree.
  *
  * Placeholder content, not real marketing copy — see `src/content/pl/site.ts`.
  */

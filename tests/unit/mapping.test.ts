@@ -224,8 +224,8 @@ describe('toDesignConstraints and toMaterialConstraints', () => {
 
     const line = findings.find((f) => f.code === 'LINE_TOO_THIN');
     expect(line?.severity).toBe('error');
-    expect(line?.params['effectiveLineWidthMm']).toBe(0.75);
-    expect(line?.params['requiredMm']).toBe(1.2);
+    expect(line?.params.effectiveLineWidthMm).toBe(0.75);
+    expect(line?.params.requiredMm).toBe(1.2);
   });
 });
 

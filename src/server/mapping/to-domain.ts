@@ -326,8 +326,7 @@ export function toPricingInput(rows: PricingRows): PricingInput {
 
   const { personalizationSpec } = rows;
   const characterCount =
-    personalizationSpec !== null &&
-    personalizationSpec.isEnabled &&
+    personalizationSpec?.isEnabled &&
     rows.personalizationText !== null
       ? countPersonalizationCharacters(rows.personalizationText)
       : 0;
@@ -500,16 +499,16 @@ function parsePackagingTiers(value: unknown): PackagingTier[] {
       );
     }
     const tier = entry as Record<string, unknown>;
-    const priceGrosze = tier['priceGrosze'];
+    const priceGrosze = tier.priceGrosze;
     if (typeof priceGrosze !== 'number' || !Number.isSafeInteger(priceGrosze)) {
       throw new MappingError(
         `pricing.packagingTiers[${index}].priceGrosze must be an integer number of grosze, received ${describe(priceGrosze)}`,
       );
     }
     return {
-      maxAreaM2: optionalNumber(tier['maxAreaM2'], `packagingTiers[${index}].maxAreaM2`),
+      maxAreaM2: optionalNumber(tier.maxAreaM2, `packagingTiers[${index}].maxAreaM2`),
       maxModules: optionalNumber(
-        tier['maxModules'],
+        tier.maxModules,
         `packagingTiers[${index}].maxModules`,
       ),
       priceGrosze,

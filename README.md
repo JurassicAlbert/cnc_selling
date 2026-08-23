@@ -41,10 +41,8 @@ Postgres, and the Next.js 16 / MUI v9 app shell.
 | `src/server/mapping/to-domain.ts` | Prisma rows → domain inputs. Micrometres to millimetres, basis points to ratios, nullable rows to neutral values |
 | `src/app/`, `src/ui/` | App Router shell, `lang="pl"`, the warm-palette MUI theme, RSC-safe layout primitives, one client island |
 | `playwright.config.ts` | Desktop + mobile, one smoke test green on both |
-
-`npm run lint` does not currently work — TypeScript 7 isn't yet supported by
-`typescript-eslint`. Doesn't affect `dev`/`build`/`test`/`e2e`. See
-`docs/HANDOVER.md` §9c for the detail and the options.
+| `biome.json` | Linter + formatter (not ESLint — TypeScript 7 isn't supported by `typescript-eslint`; see `docs/HANDOVER.md` §9c) |
+| `scripts/check-polish-literals.mjs` | Catches Polish copy leaking into a component instead of `src/content/pl` |
 
 There is no seed catalogue content yet (real products need the owner's copy,
 not invented placeholders) and no configurator.
@@ -65,6 +63,7 @@ npm run db:deploy      # applies the initial migration
 
 npm test               # 298 assertions across eleven files, about a second
 npm run typecheck      # TypeScript strict, noUncheckedIndexedAccess, no emit
+npm run lint             # Biome + the Polish-literal check
 npm run build           # Next.js production build
 npm run dev             # http://localhost:3000
 ```
@@ -108,9 +107,8 @@ yet, the code says so.
 
 ## What comes next
 
-- **P0's one loose end** — get `npm run lint` running again (blocked on
-  TypeScript 7 vs. `typescript-eslint`; see `docs/HANDOVER.md` §9c for the
-  three options).
+P0 is done. Next:
+
 - **P2** — catalogue: real seed data (materials, designs, 5 products — needs
   the owner's content, not invented placeholders), category and product
   pages as Server Components, SEO metadata, sitemap.

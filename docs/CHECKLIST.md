@@ -4,11 +4,8 @@ Reviewed item by item before the project is considered finished (brief §40–41
 `[ ]` not started · `[~]` in progress · `[x]` done and verified by a passing test or manual check.
 
 **Last verified: 2026-08-23** — `npm test` 298/298 green, `npm run typecheck` clean, `npm run build`
-clean, `npm run e2e` 2/2 green (desktop + mobile), on Node v22.15.0 / TypeScript 7.0.2 / Vitest 4.1.11 /
-Prisma 7.9.1 / Next.js 16.3.2 / MUI 9.3.1. P1 is complete. P0 is functionally complete — data layer
-running, Next.js/MUI shell rendering correctly in a real browser — **except that `npm run lint` cannot
-run at all** (TypeScript 7 vs. `typescript-eslint`, detail below); the two RSC/Polish-content lint rules
-are written but unverified.
+clean, `npm run lint` clean, `npm run e2e` 2/2 green (desktop + mobile), on Node v22.15.0 / TypeScript
+7.0.2 / Vitest 4.1.11 / Prisma 7.9.1 / Next.js 16.3.2 / MUI 9.3.1 / Biome 2.5.10. **P0 is complete.**
 
 ---
 
@@ -22,23 +19,26 @@ are written but unverified.
 - [x] Seed script structure in place — `prisma/seed.ts`, `npm run db:seed`, verified against both the dev and test databases (2026-08-23). Deliberately structural only: `MachineSettings` (real 600×500×100mm), `PricingSettings` v1 (`TODO_PRICING` placeholders, append-only — reruns never touch it once created), the first `ADMIN` from `SEED_ADMIN_EMAIL`. **No catalogue content** — that's the P2 item below, and needs the owner's product/material/design decisions, not invented copy
 - [x] MUI theme implemented (palette, typography, radius, shadows, no uppercase buttons) — `src/ui/theme/theme.ts`, exact §2.1 palette/shape/shadow overrides, `plPL` locale; verified in a real browser (`#FAF8F5` background, Fraunces h1, no button uppercase transform, no elevation shadow) (verified 2026-08-23)
 - [x] CSS-variables theme so RSC pages consume brand tokens — `cssVariables: true`; `src/ui/primitives/{Container,Section,Heading,Text}.tsx` are RSC-safe and consume `--mui-palette-*`/`--mui-font-*` tokens directly, verified rendering correctly with no Emotion shipped to the Server Component tree (verified 2026-08-23)
-- [x] RSC / client-island boundary documented and enforced *(enforcement currently unverifiable — see the ESLint/TypeScript 7 note below)* — `src/app/(marketing)/page.tsx` is a Server Component with no `@mui/material` import; `src/ui/islands/ThemeShowcaseButton.tsx` is the one client island, rendered as a child and confirmed working in-browser
-- [~] Lint rule: no Polish string literals inside components — written (`eslint-rules/no-polish-literal.mjs`) but **cannot currently run**: see the ESLint/TypeScript 7 blocker below
-- [~] Lint rule: no `@mui/material` imports in `(marketing)` / `(shop)` server components — written (`eslint.config.mjs`, `no-restricted-imports`) but **cannot currently run**, same blocker
+- [x] RSC / client-island boundary documented and enforced — `src/app/(marketing)/page.tsx` is a Server Component with no `@mui/material` import; `src/ui/islands/ThemeShowcaseButton.tsx` is the one client island, rendered as a child and confirmed working in-browser; enforcement verified with a deliberate violation (added a `@mui/material` import to the marketing page, confirmed `npm run lint` errors, reverted)
+- [x] Lint rule: no Polish string literals inside components — `scripts/check-polish-literals.mjs`, verified with a deliberate violation (caught and reported correctly, reverted) (verified 2026-08-23)
+- [x] Lint rule: no `@mui/material` imports in `(marketing)` / `(shop)` server components — `biome.json`'s `overrides` + `noRestrictedImports`, verified with a deliberate violation (verified 2026-08-23)
 - [x] Prisma row → domain mapper (`src/server/mapping/to-domain.ts`) with unit tests — 35 assertions including an end-to-end priced derivation; a renamed column breaks compilation instead of changing a price
 - [x] `src/content/pl/` module wired up — `messages.ts` used by the domain tests; `site.ts` (new) is consumed by the marketing placeholder page, proving a real Server Component reads Polish copy from `src/content/pl` rather than inlining it
 
-**Blocker, found 2026-08-23: `typescript-eslint` does not support TypeScript 7.0.**
-`npm run lint` throws immediately — not a config bug, a hardcoded version guard in
-`@typescript-eslint/parser` itself (`versionMajor >= 7` → throw), tracked upstream at
-[typescript-eslint#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940), unresolved
-as of this session. `eslint-config-next` (Next's own recommended config) depends on it, so this blocks
-**any** ESLint-based linting, not just the two custom rules above. It does **not** block `next dev` /
-`next build` / typecheck / tests — Next 16 doesn't run ESLint during build by default, confirmed by a
-successful `npm run build`. Three ways forward, presented to the owner rather than picked unilaterally:
-downgrade `typescript` to 6.x (reverses this session's earlier TS7 migration), wait for upstream support,
-or switch the project to Biome (its own parser, unaffected by this specific gap, but no Next.js-specific
-rule set). See `docs/HANDOVER.md` §9c.
+**Resolved 2026-08-23: switched from ESLint to Biome.** `typescript-eslint` (a
+hard dependency of `eslint-config-next`) does not support TypeScript 7 — a
+version guard baked into `@typescript-eslint/parser` itself, tracked upstream
+at [typescript-eslint#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940),
+unresolved. Rather than downgrading TypeScript or waiting on an unscheduled
+upstream fix, the owner chose Biome: its own Rust-based parser is unrelated to
+`typescript-eslint`, so the incompatibility doesn't apply. `biome.json`
+reimplements the `@mui/material` import restriction natively via `overrides`
++ `noRestrictedImports`; the Polish-literal check became a small standalone
+script (`scripts/check-polish-literals.mjs`) rather than a Biome GritQL
+plugin, since that plugin system is still new and the check itself needs no
+AST. Trade-off accepted knowingly: Biome has no direct equivalent of
+`@next/eslint-plugin-next`'s Next.js-specific rules. Full detail in
+`docs/HANDOVER.md` §9c.
 
 ## P1 — Domain core (pure, tests first)
 
