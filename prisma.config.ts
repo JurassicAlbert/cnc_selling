@@ -7,9 +7,7 @@ export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
     path: 'prisma/migrations',
-    // `seed` is deliberately absent: there is no seed script yet, and pointing
-    // at a file that does not exist would fail confusingly. It arrives in P2,
-    // together with the catalogue data it inserts.
+    seed: 'tsx prisma/seed.ts',
   },
   datasource: {
     url: process.env['DATABASE_URL'],

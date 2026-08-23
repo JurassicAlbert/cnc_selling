@@ -418,14 +418,43 @@ retelling of it. Two things from the same page, neither acted on:
 
 **D4, resolved 2026-08-23: seed `TODO_PRICING` placeholders**, invented
 plausible round numbers, never shown to a customer, swapped before launch.
-Not implemented yet — no seed script exists (P2, "Seed data: materials,
-finishes, designs, 5 products…" in `docs/ARCHITECTURE.md` §22), and writing
-one is a bigger task than resolving the pricing question. What it unblocks:
-`prisma/seed.ts` can now be written without waiting on real numbers.
+`prisma/seed.ts` now exists and does exactly this — see §9a below.
 
 D7 and D4 were the two that made the difference between a structurally
-correct engine and one that produces meaningful złoty; both are now resolved,
-and P2 seed work is unblocked.
+correct engine and one that produces meaningful złoty; both are now resolved.
+
+## 9a. The seed script — structural only, 2026-08-23
+
+`prisma/seed.ts` exists, is wired to `npm run db:seed` (`prisma db seed` via
+`prisma.config.ts`'s `migrations.seed`), and has been run against both the
+dev and test databases. It seeds exactly three things:
+
+- `MachineSettings` — the real D7 numbers, upserted (safe to rerun; this
+  table is operational config, not versioned).
+- `PricingSettings` version 1 — `TODO_PRICING` placeholders (D4). **Only
+  created if no `PricingSettings` row exists at all.** This table is
+  append-only per §10.2 — nothing is ever edited in place — so the seed
+  script respects that invariant rather than fighting it: reruns log "already
+  exists, leaving it alone" and touch nothing.
+- The first `ADMIN` user, from `SEED_ADMIN_EMAIL` in `.env` (not hardcoded —
+  this file is committed to a public repo, a personal email doesn't belong in
+  source). Upserted with role forced to `ADMIN` every run, which is
+  deliberate: if you demote this account through the panel later, rerunning
+  the seed will re-promote it. Rerun it on purpose, not out of habit.
+
+**It deliberately seeds no catalogue content** — no categories, products,
+materials, finishes, or designs. `docs/ARCHITECTURE.md` §22's P2 line ("Seed
+data: materials, finishes, designs, 5 products, preset sizes, installation
+variants") is real business content: Polish product copy, what the shop
+actually sells, and product photography (D5, still open — placeholders vs.
+real). That is the owner's decision to make, not something to invent. When
+you build it, the mapper (`src/server/mapping/to-domain.ts`) and its test
+file are the contract the seed rows must satisfy — the end-to-end priced
+derivation in `tests/unit/mapping.test.ts` is a good template for what a real
+product's numbers should look like once seeded.
+
+Idempotency was verified by running `npm run db:seed` twice in a row: the
+second run left `PricingSettings` untouched and reported so explicitly.
 
 ## 10. Working style the owner expects
 

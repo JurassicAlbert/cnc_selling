@@ -19,7 +19,7 @@ Postgres up, migration applied). The Next.js app shell is not started.
 - [ ] Playwright configured, desktop + mobile projects
 - [x] Docker Postgres for local dev and tests — `docker-compose.yml` running (Postgres 16, separate dev and test databases, `unaccent` in both, verified via `psql`); published on host port **5433**, not 5432 — a native Postgres install already owns 5432 on this machine
 - [x] Prisma schema + first migration applies cleanly — 33 models; `npm run db:deploy` applied `20260823000000_init` to a live database, all 34 tables + `_prisma_migrations` confirmed via `\dt`, hand-written CHECK constraints and the `PricingSettings_single_active` partial unique index confirmed present (verified 2026-08-23)
-- [ ] Seed script structure in place — **unblocked 2026-08-23**: D4 resolved (seed `TODO_PRICING` placeholders) and D7 resolved (machine 600×500mm usable, 150mm min module, 100mm max Z-thickness — `MachineSettings.maxWorkpieceThicknessMm` added in `20260823010000_add_machine_thickness_limit`); script itself not yet written
+- [x] Seed script structure in place — `prisma/seed.ts`, `npm run db:seed`, verified against both the dev and test databases (2026-08-23). Deliberately structural only: `MachineSettings` (real 600×500×100mm), `PricingSettings` v1 (`TODO_PRICING` placeholders, append-only — reruns never touch it once created), the first `ADMIN` from `SEED_ADMIN_EMAIL`. **No catalogue content** — that's the P2 item below, and needs the owner's product/material/design decisions, not invented copy
 - [ ] MUI theme implemented (palette, typography, radius, shadows, no uppercase buttons)
 - [ ] CSS-variables theme so RSC pages consume brand tokens
 - [ ] RSC / client-island boundary documented and enforced
