@@ -271,7 +271,8 @@ export function Configurator({
       : (options.installVariants.find((v) => v.code === selections.installationVariant) ?? null);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 72 }}>
       <Stepper nonLinear activeStep={stepIndex} alternativeLabel>
         {steps.map((step, index) => (
           <Step key={step} completed={isStepEnterable(steps, index + 1, selections)}>
@@ -431,6 +432,71 @@ export function Configurator({
             {SITE.configuratorNextPl}
           </Button>
         )}
+      </div>
+    </div>
+    <StickyPriceBar snapshot={snapshot} loading={loading} />
+    </>
+  );
+}
+
+/**
+ * Pinned to the viewport bottom on every step, not just the summary — so the
+ * running price is always visible while configuring, the same pattern
+ * Bazaar/NextMerce use for their PDP add-to-cart bar (this session's
+ * redesign reference, `docs/HANDOVER.md` §9g). `position: fixed` rather than
+ * `sticky`: the configurator's own content height varies a lot between
+ * steps, and `sticky` only pins once the element would otherwise scroll past
+ * its normal flow position — `fixed` is unconditional on both mobile and
+ * desktop. The outer `<div>`'s `paddingBottom: 72` above keeps this from
+ * covering the Wstecz/Dalej buttons.
+ */
+function StickyPriceBar({
+  snapshot,
+  loading,
+}: {
+  readonly snapshot: ConfiguratorSnapshot | null;
+  readonly loading: boolean;
+}) {
+  let valueText: string;
+  if (loading || snapshot === null) {
+    valueText = SITE.configuratorPriceCalculatingPl;
+  } else if (snapshot.pricing.status === 'priced') {
+    valueText = formatPln(snapshot.pricing.priceBreakdown.unitGrossGrosze);
+  } else if (snapshot.pricing.status === 'incomplete') {
+    valueText = SITE.configuratorPriceUnavailablePl;
+  } else {
+    valueText = SITE.configuratorPriceUnavailableGenericPl;
+  }
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 10,
+        background: 'var(--mui-palette-background-paper)',
+        borderTop: '1px solid var(--mui-palette-divider)',
+        boxShadow: '0 -2px 12px rgba(0, 0, 0, 0.06)',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 1200,
+          marginInline: 'auto',
+          paddingInline: 24,
+          paddingBlock: 12,
+          display: 'flex',
+          alignItems: 'baseline',
+          justifyContent: 'space-between',
+          gap: 16,
+        }}
+      >
+        <span style={{ font: 'var(--mui-font-body2)', color: 'var(--mui-palette-text-secondary)' }}>
+          {SITE.configuratorPriceLabelPl}
+        </span>
+        <span style={{ font: 'var(--mui-font-h5)' }}>{valueText}</span>
       </div>
     </div>
   );

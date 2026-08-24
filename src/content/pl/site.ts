@@ -56,6 +56,7 @@ export const SITE = {
   configuratorPriceLabelPl: 'Cena',
   configuratorPriceCalculatingPl: 'Obliczanie ceny…',
   configuratorPriceUnavailablePl: 'Podaj wymiary, aby zobaczyć cenę.',
+  configuratorPriceUnavailableGenericPl: 'Cena niedostępna dla tej konfiguracji.',
   configuratorModuleCountLabelPl: 'Liczba elementów',
   configuratorAcknowledgeRequiredPl: 'Potwierdzam, że rozumiem powyższą informację.',
   configuratorBlockedPl: 'Ta konfiguracja nie może zostać wykonana. Zmień wybór powyżej.',

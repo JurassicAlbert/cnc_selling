@@ -1282,6 +1282,44 @@ correct on its own terms, independent of this specific bug — e2e tests exist
 to verify what ships, and `next dev` was never that; the old config just
 happened not to expose the gap until a route became dynamic.
 
+## 9i. Sticky price bar — 2026-08-24, same day as the redesign
+
+Closed the one remaining P3 mobile/desktop-UX gap the redesign pass left
+open: the price was only ever visible on the Summary step, inline. Added
+`StickyPriceBar` to `src/ui/islands/configurator/Configurator.tsx` —
+`position: fixed` to the viewport bottom, rendered unconditionally once the
+step machine has resolved (every step, not just Summary), reusing two
+Polish strings that had been sitting in `src/content/pl/site.ts` unwired
+since P3 started (`configuratorPriceCalculatingPl` for the in-flight
+Server Action fetch, `configuratorPriceUnavailablePl` for `'incomplete'`)
+plus one new one, `configuratorPriceUnavailableGenericPl`, for the
+`'dimension_invalid'`/`'infeasible'` states where the old "incomplete"
+copy ("Podaj wymiary…") would have been actively wrong — dimensions
+*were* given, they just don't work.
+
+`position: fixed` over `sticky` deliberately: the configurator's content
+height varies a lot per step (the Design step is short, Summary can be
+long with feasibility alerts), and `sticky` only pins once the element
+would otherwise scroll past its flow position — not guaranteed on a short
+step. `fixed` is unconditional. Added `paddingBottom: 72` to the
+component's own root so the bar never covers the Wstecz/Dalej buttons.
+
+Browser-verified end to end on the loft product (`stolek-loftowy-z-grawerem`):
+watched the bar go "Podaj wymiary, aby zobaczyć cenę." → "Obliczanie
+ceny…" (visible mid-fetch, confirming the loading state actually wires up,
+not just theoretically reachable) → "264,39 zł" as design → material →
+30×30cm dimensions were selected, price recomputed server-side each time.
+Confirmed pinned-to-bottom positioning at both a 1280px desktop width and
+the mobile preset via `getBoundingClientRect`/`window.innerWidth`/
+`innerHeight` (not just a screenshot — the mobile screenshot itself was
+misleading, clipped by a devicePixelRatio/viewport-scale mismatch in the
+browser tool unrelated to the page; the JS-measured rect confirmed the bar
+sits exactly at `bottom: innerHeight` with zero horizontal overflow).
+`npm test` (354/354), `npm run typecheck`, `npm run lint`, `npm run build`,
+and `npm run e2e` (4/4, desktop + mobile-safari) all pass with no changes
+needed to the existing e2e spec — `shell.spec.ts` never interacts with the
+configurator today.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous
