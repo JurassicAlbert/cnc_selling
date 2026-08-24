@@ -55,6 +55,10 @@ export const SITE = {
   configuratorPersonalizationLabelPl: 'Tekst do wygrawerowania',
   configuratorFontLabelPl: 'Krój pisma',
   configuratorFontRequiredPl: 'Wybierz krój pisma, aby sprawdzić, czy wpisany tekst może zostać wykonany.',
+  configuratorPreviewHeadingPl: 'Podgląd',
+  configuratorPreviewEmptyPl: 'Wybierz materiał, aby zobaczyć podgląd.',
+  configuratorPreviewCaptionPl:
+    'Wizualizacja poglądowa złożona z rzeczywistych zdjęć materiału i wzoru zastępczego — ostateczny wygląd produktu może się różnić.',
   configuratorPriceLabelPl: 'Cena',
   configuratorPriceCalculatingPl: 'Obliczanie ceny…',
   configuratorPriceUnavailablePl: 'Podaj wymiary, aby zobaczyć cenę.',

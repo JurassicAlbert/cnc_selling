@@ -20,6 +20,8 @@ export type MaterialOptionRow = {
   readonly id: string;
   readonly namePl: string;
   readonly isAvailable: boolean;
+  /** Real, sourced material photography (§9g) — the 2D preview's background swatch, never invented. */
+  readonly imageUrl: string;
 };
 
 export type FinishOptionRow = {
@@ -35,6 +37,8 @@ export type DesignOptionRow = {
   readonly rightsStatus: string;
   /** This design's own DesignMaterial rows. Empty means every material the product allows. */
   readonly allowedMaterialIds: readonly string[];
+  /** The 2D preview's overlay artwork — the same placeholder SVG shown everywhere else this design appears. */
+  readonly previewUrl: string;
 };
 
 export type ThicknessOptionRow = {
@@ -51,10 +55,17 @@ export type InstallationVariantOptionRow = {
   readonly maxThicknessMm: number | null;
 };
 
-/** Just enough for the option list — pricing/validation reads the full `FontRow` via `fontsById`. */
 export type FontOptionRow = {
   readonly id: string;
   readonly namePl: string;
+  /**
+   * The exact same file `seedFont` parsed the coverage from — the 2D
+   * preview loads this via the Font Loading API so the glyphs it draws are
+   * never a stand-in for what validation actually checked (the `Font`
+   * model's own header: "the preview MUST render with this same file, or
+   * the preview is a lie").
+   */
+  readonly fileUrl: string;
 };
 
 export type ConfiguratorOptionData = {

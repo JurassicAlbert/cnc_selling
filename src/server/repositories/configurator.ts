@@ -99,6 +99,7 @@ export async function getConfiguratorProductData(
                 id: true,
                 namePl: true,
                 isAvailable: true,
+                imageUrl: true,
                 pricePerM2Grosze: true,
                 maxSheetWidthMm: true,
                 maxSheetHeightMm: true,
@@ -132,6 +133,7 @@ export async function getConfiguratorProductData(
                 namePl: true,
                 isActive: true,
                 rightsStatus: true,
+                previewUrl: true,
                 referenceWidthMm: true,
                 minLineWidthUm: true,
                 minDetailSpacingUm: true,
@@ -178,7 +180,13 @@ export async function getConfiguratorProductData(
       ? []
       : await prisma.font.findMany({
           where: { id: { in: product.personalization.allowedFontIds }, isActive: true },
-          select: { id: true, namePl: true, minHeightUm: true, coveredCodePointRanges: true },
+          select: {
+            id: true,
+            namePl: true,
+            fileUrl: true,
+            minHeightUm: true,
+            coveredCodePointRanges: true,
+          },
           orderBy: { sortOrder: 'asc' },
         });
 
@@ -265,6 +273,7 @@ export async function getConfiguratorProductData(
       id: material.id,
       namePl: material.namePl,
       isAvailable: material.isAvailable,
+      imageUrl: material.imageUrl,
       finishes: material.finishes.map(({ finish }) => ({
         id: finish.id,
         namePl: finish.namePl,
@@ -277,6 +286,7 @@ export async function getConfiguratorProductData(
       isActive: design.isActive,
       rightsStatus: design.rightsStatus,
       allowedMaterialIds: design.materials.map((m) => m.materialId),
+      previewUrl: design.previewUrl,
     })),
     thicknesses: product.thicknesses.map((thickness) => ({
       thicknessMm: thickness.thicknessMm,
@@ -290,7 +300,7 @@ export async function getConfiguratorProductData(
       diagramUrl: variant.diagramUrl,
       maxThicknessMm: variant.maxThicknessMm,
     })),
-    fonts: fonts.map((font) => ({ id: font.id, namePl: font.namePl })),
+    fonts: fonts.map((font) => ({ id: font.id, namePl: font.namePl, fileUrl: font.fileUrl })),
   };
 
   return {

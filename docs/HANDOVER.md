@@ -1433,6 +1433,92 @@ pass; `opentype.js` added zero new `npm audit` findings (the three
 pre-existing high-severity warnings are `@prisma/config`'s `deepmerge-ts`,
 unrelated).
 
+## 9k. The 2D preview — 2026-08-24
+
+Closed §7.3, the last big open P3 item. Unlike the redesign pass (§9g),
+this one started from a set of genuinely open questions rather than a
+research-then-plan cycle — there was no reference template to check, only
+real forks in what a "live preview" could honestly show given the current
+data: no real design artwork exists yet (the one seeded `Design` is
+explicitly a placeholder), and material representation is real photos, not
+swatches. Put three specific questions to the owner rather than guessing:
+
+1. **What should it render**, given those constraints — a schematic
+   dimensions/seams-only diagram, a full composited mockup built now with
+   placeholder assets and swapped later, or no visual at all yet (just the
+   existing text summary)? **Answered: full composited mockup.**
+2. **Should the customer's personalization text render in the real chosen
+   font**, now that one exists (§9j)? **Answered: yes** — explicitly framed
+   as the one part of this feature that could be 100% real today, not a
+   placeholder, and the owner agreed.
+3. **Where in the flow** — persistent across every step (parity with the
+   sticky price bar), or Summary-only? **Answered: persistent.**
+
+**What it composites, and the honesty line drawn around each piece**
+(all stated in the component's own header comment,
+`src/ui/islands/configurator/ConfiguratorPreview.tsx`, not just here):
+
+- **Background**: the chosen material's real `imageUrl` (the same sourced
+  photography from the 2026-08-24 redesign, §9g) — a genuine photo of that
+  material, not a generic stand-in, though not literally the exact plank/
+  tile the customer will receive.
+- **Design overlay**: the chosen design's real `previewUrl`, composited
+  with `mix-blend-mode: multiply` so it reads as "into" the material rather
+  than pasted on top. Today that file is still the one seeded placeholder
+  SVG ("wzór podstawowy — do zastąpienia") — browser-verified this actually
+  looks like something (corner registration marks + a "Wzór" label,
+  legible against the wood grain on a large product; nearly invisible on
+  the tiny bracelet, since the placeholder's white background contributes
+  nothing under a multiply blend). The code makes zero assumption about
+  what the artwork looks like — the day a real design's SVG is seeded, this
+  composites it identically, no code change.
+- **Engraved text — the one fully real piece**: rendered via the CSS Font
+  Loading API (`new FontFace(name, url(...)).load()` +
+  `document.fonts.add`), loading the *exact* file at the selected font's
+  `fileUrl` — never a system font standing in, never the site's own
+  `next/font/google` Inter (a different fetch, a different subset, and
+  critically a different literal file than the one `seedFont` parsed
+  coverage from — reusing it would have silently violated the `Font`
+  model's own header comment: "the preview MUST render with this same
+  file, or the preview is a lie"). Browser-verified: typed "Michał" and
+  watched a correctly-shaped `ł` composite live onto the real oak photo,
+  confirmed via `read_network_requests` that `/fonts/Inter-Variable.ttf`
+  was the literal file fetched for it.
+- **Module seams**: drawn as dashed rectangles directly from
+  `ModuleLayout.modules`' real per-module `xMm`/`yMm`/`widthMm`/`heightMm`
+  (`domain/modules/split.ts`) — the identical numbers already driving price
+  and the production plan, never re-derived. Browser-verified on the
+  wall-art product at 1200×400 mm: a real seam line appears exactly at the
+  true 2-module split, matching the "2 moduły" notice shown alongside it.
+- **The on-page caption says all of this in one sentence**
+  (`configuratorPreviewCaptionPl`: "Wizualizacja poglądowa złożona z
+  rzeczywistych zdjęć materiału i wzoru zastępczego — ostateczny wygląd
+  produktu może się różnić.") rather than leaving a customer to assume this
+  is a photo of their actual finished piece — the same "nothing is faked"
+  discipline as everywhere else in this project, applied to a picture
+  instead of a sentence this time.
+
+**Data plumbing, following the exact existing pattern once more**: added
+`imageUrl` to `MaterialOptionRow`, `previewUrl` to `DesignOptionRow`, and
+`fileUrl` to `FontOptionRow` (`resolve-options.ts`), threaded through the
+same Prisma selects in `src/server/repositories/configurator.ts` that
+already fetch everything else `ConfiguratorOptionData` carries. No new
+Server Action, no new round trip — `Configurator.tsx` already receives the
+full `ConfiguratorOptionData` as a prop from the product page (server-
+rendered once), so the preview reads material/design/font image URLs
+directly off `options`, the same object every other option list already
+uses.
+
+**Verified**: `npm test` (361/361, unchanged — this pass added no new
+domain logic, only data plumbing and a client rendering component, so no
+new fixture tests were needed beyond what §9j already added), `npm run
+typecheck`, `npm run lint`, `npm run build`, `npm run e2e` (4/4) all pass.
+Browser-verified end to end across three products at different scales
+(40 mm bracelet, 350 mm stool, 1200 mm wall art) — empty state before a
+material is chosen, live compositing as material/design/text/font are
+picked, correct aspect ratio at every real product's real dimension
+envelope, and the module-seam case specifically.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

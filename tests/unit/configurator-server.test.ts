@@ -30,6 +30,7 @@ const optionData: ConfiguratorOptionData = {
       id: 'dab',
       namePl: 'Dąb',
       isAvailable: true,
+      imageUrl: '/images/photos/material-dab.jpg',
       finishes: [
         { id: 'olejowanie', namePl: 'Olejowanie', isAvailable: true },
         { id: 'lakierowanie', namePl: 'Lakierowanie', isAvailable: false },
@@ -39,12 +40,14 @@ const optionData: ConfiguratorOptionData = {
       id: 'gres-bialy',
       namePl: 'Gres biały',
       isAvailable: true,
+      imageUrl: '/images/photos/gres.jpg',
       finishes: [], // matches the seed script's real gap: gres has no finish rows yet
     },
     {
       id: 'unavailable-material',
       namePl: 'Materiał niedostępny',
       isAvailable: false,
+      imageUrl: '/images/photos/material-dab.jpg',
       finishes: [{ id: 'olejowanie', namePl: 'Olejowanie', isAvailable: true }],
     },
   ],
@@ -55,6 +58,7 @@ const optionData: ConfiguratorOptionData = {
       isActive: true,
       rightsStatus: 'APPROVED_COMMERCIAL',
       allowedMaterialIds: [], // unrestricted
+      previewUrl: '/images/placeholders/wzor-podstawowy.svg',
     },
     {
       id: 'wzor-tylko-dab',
@@ -62,6 +66,7 @@ const optionData: ConfiguratorOptionData = {
       isActive: true,
       rightsStatus: 'APPROVED_COMMERCIAL',
       allowedMaterialIds: ['dab'],
+      previewUrl: '/images/placeholders/wzor-podstawowy.svg',
     },
     {
       id: 'wzor-nieaktywny',
@@ -69,6 +74,7 @@ const optionData: ConfiguratorOptionData = {
       isActive: false,
       rightsStatus: 'APPROVED_COMMERCIAL',
       allowedMaterialIds: [],
+      previewUrl: '/images/placeholders/wzor-podstawowy.svg',
     },
   ],
   thicknesses: [
@@ -93,7 +99,7 @@ const optionData: ConfiguratorOptionData = {
       maxThicknessMm: 18,
     },
   ],
-  fonts: [{ id: 'inter', namePl: 'Inter' }],
+  fonts: [{ id: 'inter', namePl: 'Inter', fileUrl: '/fonts/Inter-Variable.ttf' }],
 };
 
 describe('resolveOptions', () => {

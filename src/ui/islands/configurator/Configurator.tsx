@@ -67,6 +67,7 @@ import type {
 } from '@/server/configurator/resolve-options';
 import { getConfiguratorSnapshot } from '@/server/actions/configurator';
 import type { ConfiguratorSnapshot } from '@/server/actions/configurator';
+import { ConfiguratorPreview } from './ConfiguratorPreview';
 
 const STEP_LABEL: Record<StepCode, string> = {
   DESIGN: SITE.configuratorStepDesignPl,
@@ -288,6 +289,13 @@ export function Configurator({
           </Step>
         ))}
       </Stepper>
+
+      <ConfiguratorPreview
+        selections={selections}
+        options={options}
+        dimensionEnvelope={dimensionEnvelope}
+        moduleLayout={snapshot?.pricing.status === 'priced' ? snapshot.pricing.moduleLayout : null}
+      />
 
       {clearedNotice !== null && (
         <Alert severity="info" onClose={() => setClearedNotice(null)}>

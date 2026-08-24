@@ -58,6 +58,7 @@ client island wired to real catalogue data.
 | `src/server/configurator/` | Option resolution (§7.2) and pricing/feasibility (§10) glue, fixture-tested |
 | `src/server/actions/configurator.ts` | The one Server Action every selection change calls — prices are never computed client-side |
 | `src/ui/islands/configurator/Configurator.tsx` | The first real MUI client island — renders inside `ThemeRegistry`, exactly what §9e reserved it for |
+| `src/ui/islands/configurator/ConfiguratorPreview.tsx` | The 2D preview (§7.3) — real material photo + design artwork composited, personalization text rendered in the exact chosen font file via the Font Loading API, real module seams |
 
 The catalogue is real data — `loft`, `amulety-i-bransoletki`, `gres`,
 `panele-podlogowe`, `obrazy-drewniane`, plus `inne` as an empty catch-all —
@@ -80,8 +81,12 @@ real material/design/finish/thickness options, server-computed price and
 feasibility. Personalization is real too, as of 2026-08-24: a genuine font
 (Inter, self-hosted, real cmap-parsed Polish glyph coverage — never assumed)
 backs a live text field with real validation, not a placeholder notice — see
-`docs/HANDOVER.md` §9j. Still a foundation, not finished: no 2D preview, and
-nothing is persisted to a cart yet. See `docs/HANDOVER.md` §9f.
+`docs/HANDOVER.md` §9j. A persistent 2D preview is also live, same day: a
+real material photo, the seeded design's real artwork, the personalization
+text rendered in the exact chosen font file, and real module seam lines —
+composited from real data throughout, with an honest on-page caption about
+what is and isn't final — see `docs/HANDOVER.md` §9k. Still a foundation,
+not finished: nothing is persisted to a cart yet. See `docs/HANDOVER.md` §9f.
 
 A Lighthouse audit while building this caught a real bug: the MUI theme
 provider was wrapping every page from the root layout, shipping ~154KB of
@@ -154,9 +159,9 @@ configurator, is under way** — its foundation (the step machine, server-side
 compatibility/pricing/feasibility, and the first real MUI client island) is
 built and browser-verified across three product types; see
 `docs/HANDOVER.md` §9f and `docs/CHECKLIST.md`'s P3 section for exactly
-what's done and what's still open (the 2D preview, cart/`Configuration`-row
-persistence, and several smaller items — font-backed personalization itself
-is done as of 2026-08-24, see §9j). Next:
+what's done and what's still open (cart/`Configuration`-row persistence and
+a few smaller items — font-backed personalization and the 2D preview are
+both done as of 2026-08-24, see §9j and §9k). Next:
 
 - **P3's remaining pieces** — see the P3 checklist for the itemised list.
 - **P2's remaining piece** — the homepage's hero/craftsmanship/reviews/FAQ
