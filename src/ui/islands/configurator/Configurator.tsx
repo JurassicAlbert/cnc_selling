@@ -67,7 +67,9 @@ import type {
 } from '@/server/configurator/resolve-options';
 import { getConfiguratorSnapshot } from '@/server/actions/configurator';
 import type { ConfiguratorSnapshot } from '@/server/actions/configurator';
+import { addToCart, updateCartItemConfiguration } from '@/server/actions/cart';
 import { ConfiguratorPreview } from './ConfiguratorPreview';
+import { readSelectionsFromSearch, writeSelectionsToSearch } from './selections-url';
 
 const STEP_LABEL: Record<StepCode, string> = {
   DESIGN: SITE.configuratorStepDesignPl,
@@ -118,6 +120,9 @@ export function Configurator({
   const [heightInput, setHeightInput] = useState('');
   const [widthError, setWidthError] = useState<string | null>(null);
   const [heightError, setHeightError] = useState<string | null>(null);
+  const [editConfigurationId, setEditConfigurationId] = useState<string | null>(null);
+  const [addToCartPending, setAddToCartPending] = useState(false);
+  const [addToCartError, setAddToCartError] = useState(false);
   const hydrated = useRef(false);
   const initialStepResolved = useRef(false);
   const stepsRef = useRef<readonly StepCode[]>([]);
@@ -138,6 +143,10 @@ export function Configurator({
     if (hydrated.current) return;
     hydrated.current = true;
     applyUrlSelections(window.location.search);
+    // A cart item's own "Edytuj" link sets this — see src/app/(shop)/koszyk.
+    // Read once, at mount: switching cart items to edit is always a fresh
+    // page load, never something that changes mid-session.
+    setEditConfigurationId(new URLSearchParams(window.location.search).get('edit'));
   }, [applyUrlSelections]);
 
   // The browser's own Back/Forward buttons change the URL without any of
@@ -256,6 +265,25 @@ export function Configurator({
     },
     [options, selections.thicknessMm],
   );
+
+  // Re-validates and re-prices server-side either way — §10.2 applies to
+  // the cart exactly as it applies to every price shown during
+  // configuration. `editConfigurationId` decides which of the two real Server
+  // Actions runs; the UI difference is just the button label.
+  const handleAddToCart = useCallback(async () => {
+    setAddToCartPending(true);
+    setAddToCartError(false);
+    const result =
+      editConfigurationId === null
+        ? await addToCart(productSlug, selections, [...acknowledged], QUANTITY)
+        : await updateCartItemConfiguration(editConfigurationId, productSlug, selections, [...acknowledged]);
+    if (result.ok) {
+      router.push('/koszyk');
+      return;
+    }
+    setAddToCartPending(false);
+    setAddToCartError(true);
+  }, [editConfigurationId, productSlug, selections, acknowledged, router]);
 
   if (steps.length === 0) {
     return loading ? (
@@ -443,6 +471,10 @@ export function Configurator({
             exactSizeAcknowledged={exactSizeAcknowledged}
             onAcknowledgeExactSize={setExactSizeAcknowledged}
             isComplete={checkConfigurationComplete(steps, selections).ok}
+            isEditMode={editConfigurationId !== null}
+            onAddToCart={handleAddToCart}
+            addToCartPending={addToCartPending}
+            addToCartError={addToCartError}
           />
         )}
       </div>
@@ -653,6 +685,10 @@ function SummaryStep({
   exactSizeAcknowledged,
   onAcknowledgeExactSize,
   isComplete,
+  isEditMode,
+  onAddToCart,
+  addToCartPending,
+  addToCartError,
 }: {
   readonly snapshot: ConfiguratorSnapshot | null;
   readonly selections: Selections;
@@ -664,6 +700,10 @@ function SummaryStep({
   readonly exactSizeAcknowledged: boolean;
   readonly onAcknowledgeExactSize: (value: boolean) => void;
   readonly isComplete: boolean;
+  readonly isEditMode: boolean;
+  readonly onAddToCart: () => void;
+  readonly addToCartPending: boolean;
+  readonly addToCartError: boolean;
 }) {
   if (snapshot === null) {
     return <CircularProgress size={24} />;
@@ -768,8 +808,10 @@ function SummaryStep({
 
       {!isComplete && <Alert severity="warning">{SITE.configuratorBlockedPl}</Alert>}
 
-      <Button variant="contained" disabled={!canProceed} title={SITE.configuratorCartNotBuiltPl}>
-        {SITE.configuratorCartNotBuiltPl}
+      {addToCartError && <Alert severity="error">{SITE.configuratorAddToCartErrorPl}</Alert>}
+
+      <Button variant="contained" disabled={!canProceed || addToCartPending} onClick={onAddToCart}>
+        {isEditMode ? SITE.configuratorSaveChangesPl : SITE.configuratorAddToCartPl}
       </Button>
     </div>
   );
@@ -778,49 +820,6 @@ function SummaryStep({
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function intOrNull(value: string | null): number | null {
-  if (value === null) return null;
-  const parsed = Number(value);
-  return Number.isSafeInteger(parsed) ? parsed : null;
-}
-
-/**
- * The two halves of the URL <-> Selections mapping, kept next to each other
- * on purpose: a field added to one and not the other is exactly how a
- * refresh silently drops data.
- */
-function readSelectionsFromSearch(search: string): Selections {
-  const params = new URLSearchParams(search);
-  return {
-    designId: params.get('d'),
-    customUploadId: null,
-    materialId: params.get('m'),
-    widthMm: intOrNull(params.get('w')),
-    heightMm: intOrNull(params.get('h')),
-    thicknessMm: intOrNull(params.get('t')),
-    finishId: params.get('f'),
-    installationVariant: params.get('i'),
-    personalizationText: params.get('p'),
-    fontId: params.get('ft'),
-  };
-}
-
-function writeSelectionsToSearch(selections: Selections): string {
-  const params = new URLSearchParams();
-  if (selections.designId !== null) params.set('d', selections.designId);
-  if (selections.materialId !== null) params.set('m', selections.materialId);
-  if (selections.widthMm !== null) params.set('w', String(selections.widthMm));
-  if (selections.heightMm !== null) params.set('h', String(selections.heightMm));
-  if (selections.thicknessMm !== null) params.set('t', String(selections.thicknessMm));
-  if (selections.finishId !== null) params.set('f', selections.finishId);
-  if (selections.installationVariant !== null) params.set('i', selections.installationVariant);
-  if (selections.personalizationText !== null && selections.personalizationText !== '') {
-    params.set('p', selections.personalizationText);
-  }
-  if (selections.fontId !== null) params.set('ft', selections.fontId);
-  return params.toString();
-}
 
 function furthestEnterable(steps: readonly StepCode[], selections: Selections): number {
   let furthest = 0;

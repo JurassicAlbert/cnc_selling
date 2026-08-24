@@ -127,6 +127,56 @@ export function unavailabilityReasonMessage(reason: UnavailabilityReason): strin
   }
 }
 
+export type CheckoutFieldIssueCode =
+  | 'EMAIL_REQUIRED'
+  | 'EMAIL_INVALID'
+  | 'FIRST_NAME_REQUIRED'
+  | 'LAST_NAME_REQUIRED'
+  | 'PHONE_INVALID'
+  | 'NIP_INVALID'
+  | 'STREET_REQUIRED'
+  | 'POSTAL_CODE_INVALID'
+  | 'CITY_REQUIRED'
+  | 'PAYMENT_METHOD_REQUIRED'
+  | 'TERMS_NOT_ACCEPTED'
+  | 'WITHDRAWAL_NOT_ACKNOWLEDGED';
+
+/**
+ * Checkout field validation — not a P1 domain code (`validateNip`/
+ * `validatePostalCode`/`validatePhone` in `domain/checkout/validate.ts`
+ * return plain booleans, correctly, since a checksum either holds or it
+ * doesn't), but exactly the kind of customer-visible translation this file
+ * exists for, same as `unavailabilityReasonMessage`.
+ */
+export function checkoutIssueMessage(code: CheckoutFieldIssueCode): string {
+  switch (code) {
+    case 'EMAIL_REQUIRED':
+      return 'Podaj adres e-mail.';
+    case 'EMAIL_INVALID':
+      return 'Podaj poprawny adres e-mail.';
+    case 'FIRST_NAME_REQUIRED':
+      return 'Podaj imię.';
+    case 'LAST_NAME_REQUIRED':
+      return 'Podaj nazwisko.';
+    case 'PHONE_INVALID':
+      return 'Podaj poprawny numer telefonu.';
+    case 'NIP_INVALID':
+      return 'Podaj poprawny NIP.';
+    case 'STREET_REQUIRED':
+      return 'Podaj ulicę i numer.';
+    case 'POSTAL_CODE_INVALID':
+      return 'Podaj kod pocztowy w formacie NN-NNN.';
+    case 'CITY_REQUIRED':
+      return 'Podaj miejscowość.';
+    case 'PAYMENT_METHOD_REQUIRED':
+      return 'Wybierz sposób płatności.';
+    case 'TERMS_NOT_ACCEPTED':
+      return 'Musisz zaakceptować regulamin, aby złożyć zamówienie.';
+    case 'WITHDRAWAL_NOT_ACKNOWLEDGED':
+      return 'Musisz potwierdzić informację o braku prawa odstąpienia od umowy.';
+  }
+}
+
 export function numericInputMessage(code: ParseErrorCode): string {
   switch (code) {
     case 'EMPTY':
