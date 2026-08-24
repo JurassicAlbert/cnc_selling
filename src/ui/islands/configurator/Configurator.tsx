@@ -48,12 +48,15 @@ import {
 } from '@/domain/configuration/steps';
 import type { FeasibilityCode } from '@/domain/feasibility/rules';
 import { formatPln } from '@/domain/money/money';
+import { countPersonalizationCharacters } from '@/domain/personalization/validate';
+import type { PersonalizationIssue } from '@/domain/personalization/validate';
 import { formatMmAsCentimetres, parseCentimetresToMm } from '@/domain/text/numeric-input';
 import {
   COPY,
   dimensionMessage,
   feasibilityMessage,
   numericInputMessage,
+  personalizationMessage,
   unavailabilityReasonMessage,
 } from '@/content/pl/messages';
 import { SITE } from '@/content/pl/site';
@@ -393,7 +396,20 @@ export function Configurator({
         )}
 
         {currentStep === 'PERSONALIZATION' && (
-          <Alert severity="info">{SITE.configuratorPersonalizationUnavailablePl}</Alert>
+          <PersonalizationStep
+            personalization={snapshot?.personalization ?? null}
+            fonts={snapshot?.availability.fonts ?? []}
+            text={selections.personalizationText ?? ''}
+            fontId={selections.fontId}
+            issues={snapshot?.pricing.status === 'priced' ? snapshot.pricing.personalizationIssues : []}
+            fontRequired={
+              snapshot?.pricing.status === 'priced' ? snapshot.pricing.personalizationFontRequired : false
+            }
+            onTextChange={(text) =>
+              setSelections((prev) => ({ ...prev, personalizationText: text === '' ? null : text }))
+            }
+            onFontChange={(fontId) => setSelections((prev) => ({ ...prev, fontId }))}
+          />
         )}
 
         {currentStep === 'CUSTOM_UPLOAD' && (
@@ -550,6 +566,74 @@ function OptionStep({
   );
 }
 
+/**
+ * `personalization === null` covers three cases the same way, deliberately:
+ * no `PersonalizationSpec` row at all (loft furniture, today), a spec with
+ * `isEnabled: false`, and a spec with no fonts assigned yet — every one of
+ * them means there is nothing real to offer, so all three fall back to the
+ * same honest "not available yet, skippable" notice rather than a half-built
+ * form. `docs/HANDOVER.md` documents which products actually have one.
+ */
+function PersonalizationStep({
+  personalization,
+  fonts,
+  text,
+  fontId,
+  issues,
+  fontRequired,
+  onTextChange,
+  onFontChange,
+}: {
+  readonly personalization: { readonly maxCharacters: number; readonly maxLines: number } | null;
+  readonly fonts: readonly OptionAvailability[];
+  readonly text: string;
+  readonly fontId: string | null;
+  readonly issues: readonly PersonalizationIssue[];
+  readonly fontRequired: boolean;
+  readonly onTextChange: (text: string) => void;
+  readonly onFontChange: (fontId: string) => void;
+}) {
+  if (personalization === null) {
+    return <Alert severity="info">{SITE.configuratorPersonalizationUnavailablePl}</Alert>;
+  }
+
+  const characterCount = countPersonalizationCharacters(text);
+  const multiline = personalization.maxLines > 1;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 480 }}>
+      <TextField
+        label={SITE.configuratorPersonalizationLabelPl}
+        value={text}
+        onChange={(e) => onTextChange(e.target.value)}
+        multiline={multiline}
+        minRows={multiline ? 2 : 1}
+        maxRows={multiline ? personalization.maxLines : 1}
+        error={characterCount > personalization.maxCharacters}
+        helperText={`${characterCount}/${personalization.maxCharacters}`}
+        size="small"
+      />
+      <div>
+        <Text muted>{SITE.configuratorFontLabelPl}</Text>
+        <div style={{ marginTop: 4 }}>
+          <OptionStep
+            title={SITE.configuratorFontLabelPl}
+            entries={fonts}
+            selectedId={fontId}
+            onSelect={onFontChange}
+          />
+        </div>
+      </div>
+      {fontRequired && <Alert severity="warning">{SITE.configuratorFontRequiredPl}</Alert>}
+      {issues.map((issue) => (
+        <Alert severity="error" key={issue.code}>
+          {personalizationMessage(issue)}
+        </Alert>
+      ))}
+    </div>
+  );
+}
+
 function SummaryStep({
   snapshot,
   selections,
@@ -661,6 +745,15 @@ function SummaryStep({
         </div>
       )}
 
+      {pricing.personalizationFontRequired && (
+        <Alert severity="warning">{SITE.configuratorFontRequiredPl}</Alert>
+      )}
+      {pricing.personalizationIssues.map((issue) => (
+        <Alert severity="error" key={issue.code}>
+          {personalizationMessage(issue)}
+        </Alert>
+      ))}
+
       <div style={{ font: 'var(--mui-font-h4)' }}>
         {SITE.configuratorPriceLabelPl}: {formatPln(pricing.priceBreakdown.unitGrossGrosze)}
       </div>
@@ -701,7 +794,7 @@ function readSelectionsFromSearch(search: string): Selections {
     finishId: params.get('f'),
     installationVariant: params.get('i'),
     personalizationText: params.get('p'),
-    fontId: null,
+    fontId: params.get('ft'),
   };
 }
 
@@ -717,6 +810,7 @@ function writeSelectionsToSearch(selections: Selections): string {
   if (selections.personalizationText !== null && selections.personalizationText !== '') {
     params.set('p', selections.personalizationText);
   }
+  if (selections.fontId !== null) params.set('ft', selections.fontId);
   return params.toString();
 }
 

@@ -51,8 +51,10 @@ export const SITE = {
   configuratorHeightLabelPl: 'Wysokość (cm)',
   configuratorNoOptionsPl: 'Ta opcja nie jest jeszcze dostępna dla wybranej konfiguracji.',
   configuratorPersonalizationUnavailablePl:
-    'Personalizacja tekstem będzie dostępna po dodaniu kroju pisma z potwierdzonym pokryciem polskich znaków. Ten krok można na razie pominąć.',
+    'Ten produkt nie oferuje jeszcze personalizacji tekstem. Ten krok można pominąć.',
   configuratorPersonalizationLabelPl: 'Tekst do wygrawerowania',
+  configuratorFontLabelPl: 'Krój pisma',
+  configuratorFontRequiredPl: 'Wybierz krój pisma, aby sprawdzić, czy wpisany tekst może zostać wykonany.',
   configuratorPriceLabelPl: 'Cena',
   configuratorPriceCalculatingPl: 'Obliczanie ceny…',
   configuratorPriceUnavailablePl: 'Podaj wymiary, aby zobaczyć cenę.',

@@ -3,6 +3,7 @@ import type { ProductTypeCode } from '@/domain/configuration/steps';
 import type { ProductionMethod } from '@/domain/pricing/types';
 import type { ConfiguratorOptionData } from '@/server/configurator/resolve-options';
 import type {
+  FontRow,
   MachineSettingsRow,
   PersonalizationSpecRow,
   PricingSettingsRow,
@@ -55,6 +56,8 @@ export type ConfiguratorProductData = {
   readonly thicknessesByMm: ReadonlyMap<number, { readonly priceFactorBp: number }>;
   readonly installVariantsByCode: ReadonlyMap<string, { readonly priceFactorBp: number }>;
   readonly personalizationSpec: PersonalizationSpecRow | null;
+  /** Only the fonts this product's `PersonalizationSpec.allowedFontIds` actually lists. */
+  readonly fontsById: ReadonlyMap<string, FontRow>;
   readonly machine: MachineSettingsRow;
   readonly pricing: PricingSettingsRow;
 };
@@ -85,6 +88,7 @@ export async function getConfiguratorProductData(
             minTextHeightUm: true,
             flatFeeGrosze: true,
             pricePerCharGrosze: true,
+            allowedFontIds: true,
           },
         },
         materials: {
@@ -164,6 +168,20 @@ export async function getConfiguratorProductData(
     return null;
   }
 
+  // A second round trip, deliberately: `allowedFontIds` only exists once we
+  // have `product.personalization`, so this cannot join into the query
+  // above. `PersonalizationSpec.allowedFontIds` is a plain string array, not
+  // a relation (see the schema's own comment on that field), so there is no
+  // Prisma `include` that would fetch it in one shot either.
+  const fonts =
+    product.personalization === null || product.personalization.allowedFontIds.length === 0
+      ? []
+      : await prisma.font.findMany({
+          where: { id: { in: product.personalization.allowedFontIds }, isActive: true },
+          select: { id: true, namePl: true, minHeightUm: true, coveredCodePointRanges: true },
+          orderBy: { sortOrder: 'asc' },
+        });
+
   const materialsById = new Map(
     product.materials.map(({ material, priceFactorBp }) => [
       material.id,
@@ -219,6 +237,17 @@ export async function getConfiguratorProductData(
     ]),
   );
 
+  const fontsById = new Map(
+    fonts.map((font) => [
+      font.id,
+      {
+        id: font.id,
+        minHeightUm: font.minHeightUm,
+        coveredCodePointRanges: font.coveredCodePointRanges,
+      },
+    ]),
+  );
+
   const productRow: ProductRow & { isFloorElement: boolean } = {
     basePriceGrosze: product.basePriceGrosze,
     minPriceGrosze: product.minPriceGrosze,
@@ -261,6 +290,7 @@ export async function getConfiguratorProductData(
       diagramUrl: variant.diagramUrl,
       maxThicknessMm: variant.maxThicknessMm,
     })),
+    fonts: fonts.map((font) => ({ id: font.id, namePl: font.namePl })),
   };
 
   return {
@@ -275,6 +305,7 @@ export async function getConfiguratorProductData(
     thicknessesByMm,
     installVariantsByCode,
     personalizationSpec: product.personalization,
+    fontsById,
     machine,
     pricing,
   };

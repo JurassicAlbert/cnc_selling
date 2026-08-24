@@ -51,6 +51,12 @@ export type InstallationVariantOptionRow = {
   readonly maxThicknessMm: number | null;
 };
 
+/** Just enough for the option list — pricing/validation reads the full `FontRow` via `fontsById`. */
+export type FontOptionRow = {
+  readonly id: string;
+  readonly namePl: string;
+};
+
 export type ConfiguratorOptionData = {
   readonly materials: readonly (MaterialOptionRow & {
     readonly finishes: readonly FinishOptionRow[];
@@ -58,6 +64,8 @@ export type ConfiguratorOptionData = {
   readonly designs: readonly DesignOptionRow[];
   readonly thicknesses: readonly ThicknessOptionRow[];
   readonly installVariants: readonly InstallationVariantOptionRow[];
+  /** Already scoped to this product's `PersonalizationSpec.allowedFontIds` — never every Font row. */
+  readonly fonts: readonly FontOptionRow[];
 };
 
 export type ResolvedOptions = {
@@ -68,6 +76,8 @@ export type ResolvedOptions = {
   readonly thicknessesMm: readonly number[];
   /** Unfiltered — nothing narrows which installation variants exist. */
   readonly installVariantCodes: readonly string[];
+  /** Unfiltered — no compatibility rule narrows which font applies, unlike material/design. */
+  readonly fontIds: readonly string[];
 };
 
 export function resolveOptions(
@@ -117,8 +127,9 @@ export function resolveOptions(
   );
 
   const installVariantCodes = data.installVariants.map((variant) => variant.code);
+  const fontIds = data.fonts.map((font) => font.id);
 
-  return { materialIds, designIds, finishIds, thicknessesMm, installVariantCodes };
+  return { materialIds, designIds, finishIds, thicknessesMm, installVariantCodes, fontIds };
 }
 
 function designAllowedMaterialIds(
@@ -164,6 +175,8 @@ export type ResolvedOptionAvailability = {
   /** Empty before a material is chosen — there is nothing to enumerate yet. */
   readonly finishes: readonly OptionAvailability[];
   readonly thicknesses: readonly OptionAvailability[];
+  /** Every font always available — no compatibility rule narrows it, same as installation variants. */
+  readonly fonts: readonly OptionAvailability[];
 };
 
 export function resolveOptionAvailability(
@@ -238,5 +251,12 @@ export function resolveOptionAvailability(
     };
   });
 
-  return { materials, designs, finishes, thicknesses };
+  const fonts: OptionAvailability[] = data.fonts.map((font) => ({
+    id: font.id,
+    namePl: font.namePl,
+    isAvailable: true,
+    reason: null,
+  }));
+
+  return { materials, designs, finishes, thicknesses, fonts };
 }

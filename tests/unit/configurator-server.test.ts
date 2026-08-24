@@ -5,6 +5,7 @@ import { resolveOptionAvailability, resolveOptions } from '@/server/configurator
 import type { ConfiguratorOptionData } from '@/server/configurator/resolve-options';
 import { priceConfiguration } from '@/server/configurator/price-configuration';
 import type { ConfiguratorPricingData } from '@/server/configurator/price-configuration';
+import type { FontRow, PersonalizationSpecRow } from '@/server/mapping/to-domain';
 
 /**
  * The server-side glue between `domain/compatibility` / `domain/pricing` /
@@ -92,6 +93,7 @@ const optionData: ConfiguratorOptionData = {
       maxThicknessMm: 18,
     },
   ],
+  fonts: [{ id: 'inter', namePl: 'Inter' }],
 };
 
 describe('resolveOptions', () => {
@@ -143,6 +145,11 @@ describe('resolveOptions', () => {
   it('lists every installation variant, unfiltered', () => {
     const result = resolveOptions(optionData, EMPTY_SELECTIONS);
     expect(result.installVariantCodes).toEqual(['ON_TOP', 'OVERLAY']);
+  });
+
+  it('lists every font, unfiltered — no compatibility rule narrows font choice', () => {
+    const result = resolveOptions(optionData, EMPTY_SELECTIONS);
+    expect(result.fontIds).toEqual(['inter']);
   });
 });
 
@@ -239,6 +246,13 @@ describe('resolveOptionAvailability — every option, annotated, never hidden (�
       reason: 'THICKNESS_EXCEEDS_INSTALLATION_VARIANT',
     });
   });
+
+  it('marks every font as always available, with a null reason', () => {
+    const result = resolveOptionAvailability(optionData, EMPTY_SELECTIONS);
+    expect(result.fonts).toEqual([
+      { id: 'inter', namePl: 'Inter', isAvailable: true, reason: null },
+    ]);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -281,6 +295,7 @@ const pricingData: ConfiguratorPricingData = {
   thickness: null,
   installationVariant: null,
   personalizationSpec: null,
+  font: null,
   machine: {
     usableWidthMm: 600,
     usableHeightMm: 500,
@@ -382,6 +397,106 @@ describe('priceConfiguration', () => {
       expect(three.priceBreakdown.lineGrossGrosze).toBe(one.priceBreakdown.unitGrossGrosze * 3);
     } else {
       throw new Error('expected both to price');
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// priceConfiguration — personalization (§7.1, domain/personalization)
+// ---------------------------------------------------------------------------
+
+const personalizationSpecFixture: PersonalizationSpecRow = {
+  isEnabled: true,
+  maxCharacters: 20,
+  maxLines: 1,
+  minTextHeightUm: 3_000,
+  flatFeeGrosze: 1_000,
+  pricePerCharGrosze: 50,
+};
+
+// Basic Latin + Latin-1 Supplement + Latin Extended-A — covers every Polish
+// diacritic (ó sits in Latin-1 Supplement, the rest in Latin Extended-A) but
+// nothing outside those three blocks, so an em dash is a real gap to test.
+const fontFixture: FontRow = {
+  id: 'inter',
+  minHeightUm: 3_000,
+  coveredCodePointRanges: [
+    [32, 126],
+    [160, 255],
+    [256, 383],
+  ],
+};
+
+describe('priceConfiguration — personalization', () => {
+  const base: ConfiguratorPricingData = {
+    ...pricingData,
+    personalizationSpec: personalizationSpecFixture,
+  };
+
+  it('has no personalization issues when no text is entered — it is optional', () => {
+    const result = priceConfiguration(base, selections({ widthMm: 600, heightMm: 400 }), 1);
+    expect(result.status).toBe('priced');
+    if (result.status === 'priced') {
+      expect(result.personalizationIssues).toEqual([]);
+      expect(result.personalizationFontRequired).toBe(false);
+      expect(result.blockingError).toBe(false);
+    }
+  });
+
+  it('requires a font once text is entered, before any coverage check can run', () => {
+    const result = priceConfiguration(
+      base,
+      selections({ widthMm: 600, heightMm: 400, personalizationText: 'Michał' }),
+      1,
+    );
+    expect(result.status).toBe('priced');
+    if (result.status === 'priced') {
+      expect(result.personalizationFontRequired).toBe(true);
+      expect(result.personalizationIssues).toEqual([]);
+      expect(result.blockingError).toBe(true);
+    }
+  });
+
+  it('accepts text made only of characters the chosen font actually covers', () => {
+    const result = priceConfiguration(
+      { ...base, font: fontFixture },
+      selections({ widthMm: 600, heightMm: 400, personalizationText: 'Michał' }),
+      1,
+    );
+    expect(result.status).toBe('priced');
+    if (result.status === 'priced') {
+      expect(result.personalizationFontRequired).toBe(false);
+      expect(result.personalizationIssues).toEqual([]);
+      expect(result.blockingError).toBe(false);
+    }
+  });
+
+  it('reports a character genuinely outside the font\'s cmap as a blocking issue — the mistake an engraving cannot undo', () => {
+    const result = priceConfiguration(
+      { ...base, font: fontFixture },
+      selections({ widthMm: 600, heightMm: 400, personalizationText: 'Ala—Ola' }),
+      1,
+    );
+    expect(result.status).toBe('priced');
+    if (result.status === 'priced') {
+      expect(result.personalizationIssues).toEqual([
+        { code: 'UNSUPPORTED_CHARACTER', character: '—' },
+      ]);
+      expect(result.blockingError).toBe(true);
+    }
+  });
+
+  it('does not evaluate personalization for a product that does not offer it', () => {
+    const result = priceConfiguration(
+      { ...pricingData, font: fontFixture }, // personalizationSpec stays null
+      selections({ widthMm: 600, heightMm: 400, personalizationText: 'Ola' }),
+      1,
+    );
+    expect(result.status).toBe('priced');
+    if (result.status === 'priced') {
+      expect(result.personalizationIssues).toEqual([]);
+      expect(result.personalizationFontRequired).toBe(false);
+      expect(result.blockingError).toBe(false);
     }
   });
 });

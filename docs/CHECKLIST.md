@@ -3,19 +3,21 @@
 Reviewed item by item before the project is considered finished (brief §40–41).
 `[ ]` not started · `[~]` in progress · `[x]` done and verified by a passing test or manual check.
 
-**Last verified: 2026-08-24** — `npm test` 354/354 green, `npm run typecheck` clean, `npm run build`
-clean, `npm run lint` clean, `npm run e2e` 4/4 green twice in a row against a production build
+**Last verified: 2026-08-24** — `npm test` 361/361 green, `npm run typecheck` clean, `npm run build`
+clean, `npm run lint` clean, `npm run e2e` 4/4 green against a production build
 (desktop + mobile — `playwright.config.ts` no longer runs `next dev`, see the P2 note on why),
 Lighthouse SEO 100/100, on Node v22.15.0 / TypeScript 7.0.2 / Vitest 4.1.11 / Prisma 7.9.1 /
-Next.js 16.3.2 / MUI 9.3.1 / Biome 2.5.10. **P0 is complete. P2 is functionally complete and its
-storefront was redesigned 2026-08-24** to match the owner's actual intent for "minimalistic"
-(restraint in style, not content — see `docs/HANDOVER.md` §9g) — real category/product/material
-photography, a hero animation, trust badges, filters, and search all now live. Still open: the
-homepage's narrative sections (hero *copy*, craftsmanship, reviews, FAQ — needs the owner's words,
-reviews needs real customers), and LCP on mobile (see the P2 Lighthouse note further down).
-**P3 (the configurator) is under way** — the step machine, compatibility/pricing/feasibility server
-wiring, and the first real MUI client island are built and browser-verified across three product
-types. Preview, personalization, cart persistence, and several other P3 items are honestly still
+Next.js 16.3.2 / MUI 9.3.1 / Biome 2.5.10 / opentype.js 2.0.0. **P0 is complete. P2 is functionally
+complete and its storefront was redesigned 2026-08-24** to match the owner's actual intent for
+"minimalistic" (restraint in style, not content — see `docs/HANDOVER.md` §9g) — real
+category/product/material photography, a hero animation, trust badges, filters, and search all now
+live. Still open: the homepage's narrative sections (hero *copy*, craftsmanship, reviews, FAQ —
+needs the owner's words, reviews needs real customers), and LCP on mobile (see the P2 Lighthouse
+note further down). **P3 (the configurator) is under way** — the step machine,
+compatibility/pricing/feasibility server wiring, the first real MUI client island, a sticky
+always-visible price bar, and now font-backed personalization (a real seeded font, real
+cmap-parsed Polish glyph coverage, real validation — `docs/HANDOVER.md` §9j) are all built and
+browser-verified. The 2D preview, cart persistence, and a few smaller P3 items are honestly still
 open — see the P3 section below and `docs/HANDOVER.md` §9f for exactly what and why.
 
 ---
@@ -167,7 +169,7 @@ are genuinely unbuilt still — marked `[ ]`, not glossed over. Full detail in
 - [~] Size selection — presets and custom dimensions — custom dimensions work, browser-verified, with a real bug caught and fixed live (see `docs/HANDOVER.md` §9f). No `ProductPresetSize` rows are seeded, so preset-size selection has nothing to render yet
 - [x] Thickness step for tabletops and floor elements — browser-verified on the loft product (`stolek-loftowy-z-grawerem`, shares `TABLE_TOP`'s step list): "27 mm" / "40 mm" render from real `ProductThickness` rows
 - [x] Finish selection filtered by material — browser-verified: oak (`dab`) offers "Olejowanie"; gres (`gres-bialy`) honestly shows "not available for this configuration yet" rather than a fake option, matching the real gap the seed script already flagged
-- [ ] Personalization with font selection and live text preview — not built. No `Font` row is seeded — real cmap-parsed glyph coverage is a safety property (`domain/personalization`'s own header), not something to fabricate placeholder data for. The step shows an honest "coming soon, skippable" notice instead
+- [~] Personalization with font selection — 2026-08-24: font selection and real cmap-parsed glyph-coverage validation are built and browser-verified end to end (`src/ui/islands/configurator/Configurator.tsx`'s new `PersonalizationStep`, `src/server/configurator/price-configuration.ts`'s `evaluatePersonalization`). A real `Font` row (Inter, `public/fonts/Inter-Variable.ttf`, Google's own OFL repository) is seeded with coverage parsed live from the actual file's cmap table every seed run (`prisma/seed.ts`'s `seedFont`), never a hardcoded JSON blob — matching the domain header's own "parsed from its cmap table at seed time" requirement. All three products whose step list includes PERSONALIZATION (loft, bracelet, wall art) now have a real, enabled `PersonalizationSpec` with this font allowed. Browser-verified: a Polish name with `ł` validates cleanly once the font is chosen; a too-long text and a genuine emoji both correctly block with the real Polish message from `personalizationMessage`; the "choose a font first" gate blocks validation (not silently skips it) until a font is picked. **Still not built:** live text *preview* — no 2D rendering exists yet (that's §7.3's preview, tracked separately below), so this closes the font/validation half of this checklist line, not the whole line
 - [ ] Preview updates immediately on every change — the 2D preview (§7.3) is not built this pass at all
 - [ ] Preview shows module seams when modular — depends on the preview above
 - [x] Kitchen installation variants selectable, with diagrams, as the first step — browser-verified including the diagram: selecting a variant now renders its `descPl` and `diagramUrl` (a real, honestly-labelled placeholder SVG, same convention as product photography — see `prisma/seed.ts`'s header)
@@ -185,7 +187,7 @@ are genuinely unbuilt still — marked `[ ]`, not glossed over. Full detail in
 - [x] Configuration persists across page refresh — browser-verified: the full selection round-trips through the URL, and a refresh resumes at the furthest step the restored selections actually reach (a real bug — always resetting to step 1 — was caught and fixed live)
 - [x] Browser back/forward behaves correctly — a `popstate` listener now re-syncs `selections` and re-resolves the furthest reachable step whenever the URL changes outside the component's own control. Browser-verified by simulating a real back/forward URL change (`history.pushState` + a dispatched `popstate` event, exactly what the browser fires): price and module count recomputed correctly (343,90 zł → 701,84 zł, 1 → 4 modules) with no reload and zero console errors
 - [x] Sticky price summary on desktop and mobile — 2026-08-24: `StickyPriceBar` in `src/ui/islands/configurator/Configurator.tsx`, `position: fixed` to the viewport bottom, visible on every step (not just Summary), reusing the previously-unwired `configuratorPriceCalculatingPl` copy for the in-flight-fetch state and a new `configuratorPriceUnavailableGenericPl` for the dimension-invalid/infeasible states. Browser-verified: price updates live from "Podaj wymiary…" → "Obliczanie ceny…" → a real server-computed amount as selections are made, confirmed via DOM `getBoundingClientRect` at both desktop and mobile viewport sizes that it stays pinned to the viewport bottom with no horizontal overflow
-- [~] Configurator usable on mobile — a real, sitewide bug was found and fixed this pass: `h1`/`h2`/`h3` had no responsive sizing at all (a leftover gap from extracting static theme tokens, §9e), so a 96px heading overflowed a 375px viewport on every page, not just the configurator. Fixed with a `clamp()` fluid scale in `theme-vars.css`, verified at both 375px (no overflow) and 1280px (exactly the original 96px, zero regression). Layout and CSS are verified; full touch-interaction click-through was not — the browser tool's click action consistently timed out under mobile touch-emulation in this session (no console errors, so likely a tooling artifact, not an app bug, but genuinely unconfirmed) — worth a retry next session
+- [~] Configurator usable on mobile — a real, sitewide bug was found and fixed in an earlier pass: `h1`/`h2`/`h3` had no responsive sizing at all (a leftover gap from extracting static theme tokens, §9e), so a 96px heading overflowed a 375px viewport on every page, not just the configurator. Fixed with a `clamp()` fluid scale in `theme-vars.css`, verified at both 375px (no overflow) and 1280px (exactly the original 96px, zero regression). **Retried 2026-08-24 as flagged:** layout is further confirmed clean at mobile width (no horizontal overflow — `document.documentElement.scrollWidth === window.innerWidth`, checked via JS, not just a screenshot; the sticky price bar from §9i also confirmed pinned correctly at mobile width the same way). Touch-interaction click-through is still unconfirmed, but now for a specific, isolated reason, not a vague "worth a retry": the browser tool's `left_click` on an option toggle hangs for the full 30s timeout under mobile-preset touch emulation, reproduced twice across two separate sessions, both times with zero console/network errors tied to the click and the click provably never landing (target stayed unselected). Same interaction works instantly under desktop-width clicks in the same tool, same session. This isolates it to the automation tool's mouse-to-touch translation specifically, not the app — nothing here should block considering the app itself mobile-ready, but real device/manual QA before launch is still worth doing since no tool in this environment can currently drive a touch click against this page
 
 ## P4 — Upload, design review, IP
 

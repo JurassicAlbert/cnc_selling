@@ -1320,6 +1320,119 @@ and `npm run e2e` (4/4, desktop + mobile-safari) all pass with no changes
 needed to the existing e2e spec — `shell.spec.ts` never interacts with the
 configurator today.
 
+## 9j. Font-backed personalization — 2026-08-24
+
+Closed the biggest remaining P3 gap: personalization was fully priced by the
+domain layer (`domain/personalization/validate.ts`, `domain/pricing`) and
+fully scaffolded server-side (`PersonalizationSpec` seeded for two products,
+`data.personalizationSpec` already threaded into `priceConfiguration`) since
+the P3 foundation pass, but the actual glyph-coverage check never ran —
+there was no `Font` row, so the configurator's PERSONALIZATION step was a
+static "coming soon" notice on every product, regardless of what the domain
+layer could already prove.
+
+**The font.** Real, not a placeholder in the D5 sense: Inter, the site's
+own self-hosted body face (`src/ui/theme/fonts.ts`), SIL Open Font
+Licensed, downloaded fresh from Google's own font repository
+(`github.com/google/fonts`, `ofl/inter`) into `public/fonts/Inter-Variable.ttf`
+(876 KB, verified `TrueType Font data` via `file`), license text saved
+alongside it (`public/fonts/Inter-OFL.txt`) for redistribution compliance. A
+clean sans-serif offered alongside decorative faces is completely ordinary
+for real laser engraving — this is a legitimate first offering, not a
+stand-in. `minHeightUm` (3 mm) is this pass's one invented number, same
+`TODO_PRICING`-style discipline as everywhere else — a real legibility
+floor needs an actual test cut on the machine, not a guess.
+
+**The coverage data is real, every time.** `prisma/seed.ts`'s new
+`seedFont()` reads the actual `.ttf` file with `opentype.js` (new
+dependency, MIT-licensed, sanity-checked with a throwaway script before
+adding it: 2849 glyphs, all nine Polish-specific letters present) and
+parses its cmap table live on every seed run — never a JSON blob typed in
+once and left to rot. Confirmed via `psql`: `supportsPolishDiacritics: true`,
+206 compressed code-point ranges stored. `seedFont()` throws if a
+Polish-specific glyph is ever missing, so a bad font file fails the seed
+loudly instead of shipping a font that silently mangles a customer's name —
+exactly the failure mode `domain/personalization`'s own header comment
+exists to prevent.
+
+**All three eligible products got a real spec.** Two (`bransoletka`,
+`obraz`) already had a `PersonalizationSpec` with `allowedFontIds: []` — an
+explicit "P3 concern" placeholder since the P3 foundation pass — now
+pointed at the real font. The third, `stolek-loftowy-z-grawerem`
+(LOFT_FURNITURE), had no spec at all despite its step list including
+PERSONALIZATION; added one (30 chars, 2 lines, 8 mm floor — a bigger
+surface than the bracelet, larger text is legible) rather than leave a
+silent gap now that the infrastructure exists to back it for real.
+`seedPersonalizationSpec`'s `allowedFontIds` update also changed from
+`update: {}` (never touch an existing row) to re-asserting the real font
+list on every run — the same precedent as the first-admin seed's
+`update: { role: 'ADMIN' }` — because the old value was never something a
+human edited through an admin panel, it was an unconditional "not done
+yet" placeholder that a `git pull` + re-seed needs to actually repair.
+
+**Server wiring, following the exact existing pattern for every other
+option category** (material, design, finish, thickness, installation
+variant): `src/server/repositories/configurator.ts` fetches the allowed
+`Font` rows (a second query — `allowedFontIds` is a plain string array on
+`PersonalizationSpec`, not a relation, so there is no single-query `include`
+for it); `resolve-options.ts` adds `fonts`/`fontIds` to
+`ConfiguratorOptionData`/`ResolvedOptions`/`ResolvedOptionAvailability`,
+always available since no compatibility rule narrows font choice, same as
+installation variants; `price-configuration.ts`'s new
+`evaluatePersonalization` calls the domain's own `validatePersonalization`
+using `toPersonalizationSpec`/`toFontSpec` (both already existed, unit-tested,
+unused until now) and folds the result into `blockingError` alongside
+feasibility, exactly like every other "can't add to cart yet" reason.
+
+**One honest interim approximation, documented where it lives:** the
+domain validator needs a concrete `textHeightMm` — the height text will
+actually be engraved at — and no 2D layout exists yet (§7.3) to produce a
+real one. `evaluatePersonalization` passes the *effective minimum*
+(`toPersonalizationSpec`'s already-existing stricter-of-spec-and-material
+floor) instead. That makes the two height-specific issue codes
+(`TEXT_TOO_SMALL_FOR_FONT`/`_MATERIAL`) a worst-case approximation until a
+real preview exists — but the check that actually matters, the one an
+engraving mistake can never be undone from
+(`UNSUPPORTED_CHARACTER`/`EMOJI_NOT_SUPPORTED`), runs exactly, against the
+font's real parsed glyphs, no approximation at all.
+
+**UI**: a new `PersonalizationStep` in `Configurator.tsx` replaces the
+static notice with a real `TextField` (multiline when `maxLines > 1`, live
+`count/max` counter, local `error` state the moment the count is
+exceeded) and reuses the existing `OptionStep` component for font choice —
+no bespoke picker needed, fonts are just another annotated option list.
+`personalizationMessage` (`src/content/pl/messages.ts`) already existed,
+fully implemented, entirely unused until this pass — every Polish string
+this step needed was already written and reviewed, just never wired to
+anything that could produce a `PersonalizationIssue`. Two small additions
+only: `configuratorFontLabelPl` and `configuratorFontRequiredPl` (the
+"choose a font before this can be checked" gate — a UI/server precondition,
+not a domain rule, so it deliberately is not a `PersonalizationIssueCode`).
+`fontId` was already a field on `Selections` (present since the P3
+foundation, unused) but never round-tripped through the URL; added `ft=`
+alongside the existing `d`/`m`/`w`/`h`/`t`/`f`/`i`/`p` params.
+
+**Browser-verified end to end**, production build, on two different
+products: typed "Michał" on the bracelet (JEWELRY, single-line, 20-char
+cap) — the font-required warning appeared before a font was chosen, and
+cleared the instant Inter was selected, since `ł` is genuinely in Inter's
+cmap; a 65-character string correctly reported "Maksymalna długość to 20
+znaków. Wpisano 65."; typing a real ♥ emoji correctly triggered "Emoji nie
+mogą zostać wykonane" — both real domain validation paths, not asserted in
+isolation, observed live against the actual price/pricing round trip
+(110,09 zł with the flat fee + per-character surcharge included). Then the
+loft stool (LOFT_FURNITURE, two-line, 30-char cap, brand new spec this
+pass): confirmed via a direct query-string URL that the full
+seven-selection round trip (`d`, `m`, `w`, `h`, `t`, `f` — everything
+except personalization) restores correctly on a cold load, and that the
+multiline field renders two rows with a correct 27/30 count for a two-line
+string. `npm test` (361/361, +7 new — resolve-options/price-configuration
+fixtures for the font list and every personalization branch), `npm run
+typecheck`, `npm run lint`, `npm run build`, and `npm run e2e` (4/4) all
+pass; `opentype.js` added zero new `npm audit` findings (the three
+pre-existing high-severity warnings are `@prisma/config`'s `deepmerge-ts`,
+unrelated).
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

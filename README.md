@@ -77,9 +77,11 @@ craftsmanship, reviews, FAQ) still aren't built — they need the owner's
 actual words, and reviews specifically need real customers, not invented
 ones. A working configurator exists on every product page — step machine,
 real material/design/finish/thickness options, server-computed price and
-feasibility — but it is a foundation, not finished: no 2D preview, no
-font-backed personalization yet, and nothing is persisted to a cart. See
-`docs/HANDOVER.md` §9f.
+feasibility. Personalization is real too, as of 2026-08-24: a genuine font
+(Inter, self-hosted, real cmap-parsed Polish glyph coverage — never assumed)
+backs a live text field with real validation, not a placeholder notice — see
+`docs/HANDOVER.md` §9j. Still a foundation, not finished: no 2D preview, and
+nothing is persisted to a cart yet. See `docs/HANDOVER.md` §9f.
 
 A Lighthouse audit while building this caught a real bug: the MUI theme
 provider was wrapping every page from the root layout, shipping ~154KB of
@@ -152,9 +154,9 @@ configurator, is under way** — its foundation (the step machine, server-side
 compatibility/pricing/feasibility, and the first real MUI client island) is
 built and browser-verified across three product types; see
 `docs/HANDOVER.md` §9f and `docs/CHECKLIST.md`'s P3 section for exactly
-what's done and what's still open (the 2D preview, font-backed
-personalization, cart/`Configuration`-row persistence, and several smaller
-items). Next:
+what's done and what's still open (the 2D preview, cart/`Configuration`-row
+persistence, and several smaller items — font-backed personalization itself
+is done as of 2026-08-24, see §9j). Next:
 
 - **P3's remaining pieces** — see the P3 checklist for the itemised list.
 - **P2's remaining piece** — the homepage's hero/craftsmanship/reviews/FAQ

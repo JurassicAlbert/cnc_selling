@@ -45,15 +45,28 @@
  *     photos: a design's artwork is the business's actual creative IP,
  *     not something to invent.
  *
+ * What IS fully real, added 2026-08-24: the `Font` row (`seedFont`) — a
+ * genuine, freely-licensed font file (`public/fonts/Inter-Variable.ttf`,
+ * Google's own OFL repository) with its Polish-diacritic glyph coverage
+ * parsed live from the actual cmap table every time this script runs, never
+ * a hardcoded JSON blob. `minHeightUm` (the legibility floor) is this one's
+ * placeholder number — a real value needs an actual test cut.
+ *
  * Idempotent throughout: every row is upserted (or existence-checked first,
  * for models without a natural unique key — see `seedProductImage`).
  * Re-running this script must never duplicate or silently overwrite
  * something a human already edited through the future admin panel.
  */
 
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { PrismaPg } from '@prisma/adapter-pg';
+import opentype from 'opentype.js';
 
 import { PrismaClient } from '../src/generated/prisma/client';
+import { POLISH_SPECIFIC_LETTERS } from '../src/domain/personalization/validate';
 
 const adapter = new PrismaPg({ connectionString: requireEnv('DATABASE_URL') });
 const prisma = new PrismaClient({ adapter });
@@ -82,9 +95,10 @@ async function main(): Promise<void> {
   const finishes = await seedFinishes();
   await seedMaterialFinishCompatibility(materials, finishes);
   const design = await seedDesign();
+  const font = await seedFont();
 
   const categories = await seedCategories();
-  await seedProducts(categories, materials, design);
+  await seedProducts(categories, materials, design, font);
 }
 
 // ---------------------------------------------------------------------------
@@ -328,6 +342,92 @@ async function seedDesign(): Promise<SeededDesign> {
   return design;
 }
 
+/**
+ * The first real engraving font — the `Font` model's own header comment
+ * (`prisma/schema.prisma`) says coverage is "parsed from the font's cmap
+ * table at seed time and stored — never assumed from the font's name or its
+ * declared language support." This function is that parse, run for real
+ * against a real file every time the seed runs, not a JSON blob copied in
+ * once and left to go stale.
+ *
+ * Inter, not a placeholder pick: it is the site's own self-hosted body face
+ * (`src/ui/theme/fonts.ts`), already relied on for real Polish body copy
+ * sitewide, SIL Open Font License (`public/fonts/Inter-OFL.txt`, MIT-compatible
+ * for this purpose), and a genuinely plausible real-world choice for
+ * laser-engraved text — a clean sans-serif alongside decorative faces is
+ * common in real engraving shops. `public/fonts/Inter-Variable.ttf` was
+ * downloaded from Google's own OFL font repository
+ * (github.com/google/fonts, ofl/inter) — the exact file this function reads.
+ * `minHeightUm` (3mm) is this pass's one invented number here, same
+ * TODO_PRICING-style placeholder discipline as everywhere else — a real
+ * legibility floor needs an actual test cut, not a guess.
+ */
+async function seedFont(): Promise<{ readonly id: string }> {
+  const fontPath = join(
+    dirname(fileURLToPath(import.meta.url)),
+    '../public/fonts/Inter-Variable.ttf',
+  );
+  const buffer = readFileSync(fontPath);
+  const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+  const parsed = opentype.parse(arrayBuffer);
+  const cmap = parsed.tables.cmap as { glyphIndexMap: Record<string, number> };
+  const codePoints = Object.keys(cmap.glyphIndexMap).map(Number);
+  const codePointSet = new Set(codePoints);
+  const ranges = compressToRanges(codePoints);
+
+  const supportsPolishDiacritics = [...POLISH_SPECIFIC_LETTERS].every((letter) => {
+    const codePoint = letter.codePointAt(0);
+    return codePoint !== undefined && codePointSet.has(codePoint);
+  });
+  if (!supportsPolishDiacritics) {
+    throw new Error(
+      'seedFont: Inter-Variable.ttf is missing a Polish-specific glyph — re-check the downloaded file, do not seed a font that fails this.',
+    );
+  }
+
+  const font = await prisma.font.upsert({
+    where: { slug: 'inter' },
+    create: {
+      slug: 'inter',
+      namePl: 'Inter',
+      fileUrl: '/fonts/Inter-Variable.ttf',
+      minHeightUm: 3_000,
+      coveredCodePointRanges: ranges,
+      supportsPolishDiacritics: true,
+      isActive: true,
+      sortOrder: 0,
+    },
+    update: {
+      coveredCodePointRanges: ranges,
+      supportsPolishDiacritics: true,
+    },
+  });
+  console.log(
+    `Font: ${font.namePl} (${codePoints.length} glyphs, ${ranges.length} ranges, parsed live from ${fontPath})`,
+  );
+  return font;
+}
+
+/**
+ * A cmap's covered code points as inclusive [start, end] pairs — a real
+ * face covers thousands of individual code points, and most of them are
+ * already contiguous Unicode blocks, so this keeps the stored JSON small
+ * without losing anything `toFontSpec` needs to reconstruct the exact set.
+ */
+function compressToRanges(codePoints: readonly number[]): Array<[number, number]> {
+  const sorted = [...codePoints].sort((a, b) => a - b);
+  const ranges: Array<[number, number]> = [];
+  for (const codePoint of sorted) {
+    const last = ranges[ranges.length - 1];
+    if (last !== undefined && codePoint === last[1] + 1) {
+      last[1] = codePoint;
+    } else {
+      ranges.push([codePoint, codePoint]);
+    }
+  }
+  return ranges;
+}
+
 // ---------------------------------------------------------------------------
 // 3. Catalogue — categories and products
 // ---------------------------------------------------------------------------
@@ -426,6 +526,7 @@ async function seedProducts(
   categories: Record<string, { readonly id: string }>,
   materials: SeededMaterials,
   design: SeededDesign,
+  font: { readonly id: string },
 ): Promise<void> {
   const loft = categories.loft;
   const amulety = categories['amulety-i-bransoletki'];
@@ -470,6 +571,12 @@ async function seedProducts(
   await seedProductMaterial(loftStool.id, materials.dab.id);
   await seedProductDesign(loftStool.id, design.id);
   await seedProductImage(loftStool.id, STOCK_PHOTO('loft'), 'Stołek loftowy z grawerem — stal i drewno w stylu loft');
+  await seedPersonalizationSpec(loftStool.id, {
+    maxCharacters: 30,
+    maxLines: 2,
+    minTextHeightUm: 8_000,
+    allowedFontIds: [font.id],
+  });
 
   const bransoletka = await upsertProduct({
     slug: 'bransoletka-z-grawerem',
@@ -498,7 +605,12 @@ async function seedProducts(
     STOCK_PHOTO('amulety-i-bransoletki'),
     'Drewniana bransoletka z grawerem',
   );
-  await seedPersonalizationSpec(bransoletka.id, { maxCharacters: 20, maxLines: 1, minTextHeightUm: 3_000 });
+  await seedPersonalizationSpec(bransoletka.id, {
+    maxCharacters: 20,
+    maxLines: 1,
+    minTextHeightUm: 3_000,
+    allowedFontIds: [font.id],
+  });
 
   const fartuch = await upsertProduct({
     slug: 'fartuch-kuchenny-z-grawerem',
@@ -592,7 +704,12 @@ async function seedProducts(
     STOCK_PHOTO('obrazy-drewniane'),
     'Obraz drewniany z grawerem',
   );
-  await seedPersonalizationSpec(obraz.id, { maxCharacters: 40, maxLines: 2, minTextHeightUm: 6_000 });
+  await seedPersonalizationSpec(obraz.id, {
+    maxCharacters: 40,
+    maxLines: 2,
+    minTextHeightUm: 6_000,
+    allowedFontIds: [font.id],
+  });
 
   console.log('Products: 5 seeded (loft, amulety, gres, panele, obrazy) — "inne" left empty by design');
 }
@@ -702,7 +819,12 @@ async function seedProductImage(productId: string, url: string, altPl: string): 
 
 async function seedPersonalizationSpec(
   productId: string,
-  spec: { readonly maxCharacters: number; readonly maxLines: number; readonly minTextHeightUm: number },
+  spec: {
+    readonly maxCharacters: number;
+    readonly maxLines: number;
+    readonly minTextHeightUm: number;
+    readonly allowedFontIds: readonly string[];
+  },
 ): Promise<void> {
   await prisma.personalizationSpec.upsert({
     where: { productId },
@@ -714,9 +836,14 @@ async function seedPersonalizationSpec(
       minTextHeightUm: spec.minTextHeightUm,
       pricePerCharGrosze: 50, // TODO_PRICING
       flatFeeGrosze: 1_000, // TODO_PRICING
-      allowedFontIds: [], // no Font rows seeded yet — P3 concern
+      allowedFontIds: [...spec.allowedFontIds],
     },
-    update: {},
+    // Re-asserted on every run, same as the first-admin `role: 'ADMIN'`
+    // update above: `allowedFontIds` used to be an unconditional `[]`
+    // placeholder ("no Font rows seeded yet"), so an existing dev database
+    // seeded before this pass needs it repaired on the next `db:seed`, not
+    // left stuck at the old placeholder forever.
+    update: { allowedFontIds: [...spec.allowedFontIds] },
   });
 }
 

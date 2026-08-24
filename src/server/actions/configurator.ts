@@ -24,6 +24,13 @@ export type ConfiguratorSnapshot = {
   readonly availability: ResolvedOptionAvailability;
   readonly pricing: ConfiguratorPricingResult;
   readonly isComplete: boolean;
+  /**
+   * Null when this product offers no real personalization yet — no
+   * `PersonalizationSpec` row, disabled, or no fonts assigned to it
+   * (`availability.fonts` would be empty too). The UI's own gate for
+   * "render the real step vs. the honest 'not offered yet' notice."
+   */
+  readonly personalization: { readonly maxCharacters: number; readonly maxLines: number } | null;
 };
 
 export type ConfiguratorSnapshotResult =
@@ -58,6 +65,7 @@ export async function getConfiguratorSnapshot(
     selections.installationVariant === null
       ? null
       : (data.installVariantsByCode.get(selections.installationVariant) ?? null);
+  const font = selections.fontId === null ? null : (data.fontsById.get(selections.fontId) ?? null);
 
   // priceConfiguration requires a concrete material and design row — a
   // product type with no DESIGN step (CUSTOM) or a customer who has not
@@ -75,12 +83,21 @@ export async function getConfiguratorSnapshot(
             thickness,
             installationVariant,
             personalizationSpec: data.personalizationSpec,
+            font,
             machine: data.machine,
             pricing: data.pricing,
           },
           selections,
           quantity,
         );
+
+  const personalization =
+    data.personalizationSpec?.isEnabled === true && options.fontIds.length > 0
+      ? {
+          maxCharacters: data.personalizationSpec.maxCharacters,
+          maxLines: data.personalizationSpec.maxLines,
+        }
+      : null;
 
   return {
     ok: true,
@@ -90,6 +107,7 @@ export async function getConfiguratorSnapshot(
       availability,
       pricing,
       isComplete: checkConfigurationComplete(steps, selections).ok,
+      personalization,
     },
   };
 }
