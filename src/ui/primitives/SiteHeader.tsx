@@ -2,6 +2,8 @@ import Link from 'next/link';
 
 import { listActiveCategories } from '@/server/repositories/categories';
 import { Container } from '@/ui/primitives/Container';
+import { SearchIcon } from '@/ui/icons';
+import { SITE } from '@/content/pl/site';
 
 /**
  * RSC — reads categories directly from the DB on every request. Fine at this
@@ -43,6 +45,42 @@ export async function SiteHeader() {
               {category.namePl}
             </Link>
           ))}
+
+          <form
+            action="/szukaj"
+            method="get"
+            style={{ display: 'flex', alignItems: 'center', marginInlineStart: 'auto', gap: 4 }}
+          >
+            <input
+              type="search"
+              name="q"
+              placeholder={SITE.searchPlaceholderPl}
+              style={{
+                font: 'var(--mui-font-body2)',
+                padding: '6px 10px',
+                border: '1px solid var(--mui-palette-divider)',
+                borderRadius: 2,
+                backgroundColor: 'var(--mui-palette-background-default)',
+                color: 'var(--mui-palette-text-primary)',
+                width: 160,
+              }}
+            />
+            <button
+              type="submit"
+              aria-label={SITE.searchButtonLabelPl}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                border: 'none',
+                background: 'none',
+                cursor: 'pointer',
+                padding: 4,
+                color: 'var(--mui-palette-text-primary)',
+              }}
+            >
+              <SearchIcon size={20} />
+            </button>
+          </form>
         </nav>
       </Container>
     </header>

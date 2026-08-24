@@ -116,16 +116,22 @@ scripts/check-polish-literals.mjs       the Polish-literal check — a script, n
 rewrite `tsconfig.json`'s `compilerOptions` in place (`jsx`, `allowJs`,
 `include`) on `dev`/`build` — expected behaviour, not a regression to revert.
 
-**Still not started:** the homepage's content-heavy sections (hero,
-craftsmanship, reviews, FAQ — needs the owner's words; reviews needs real
-customers, full stop, see §9e), Schema.org FAQPage (nothing to attach it to
+**The storefront (homepage/category/product pages) was redesigned
+2026-08-24** — read §9g before assuming P2's earlier "deliberately sparse"
+framing still holds; it doesn't. Real category/product/material photography,
+a hero section, trust badges, a filter/sort sidebar, and real search all
+exist now. **Still not started:** the homepage's *narrative* sections (hero
+copy, craftsmanship, reviews, FAQ — needs the owner's words; reviews needs
+real customers, full stop), Schema.org FAQPage (nothing to attach it to
 yet). **P3 (the configurator) is under way, not finished** — its foundation
 (step machine, server-side compatibility/pricing/feasibility, the first real
 MUI client island) is built and browser-verified; the 2D preview,
 font-backed personalization, cart persistence, and several other pieces are
 honestly still open. Full detail in §9f — read it before touching
 `src/ui/islands/configurator/`, `src/server/configurator/`, or
-`src/server/actions/configurator.ts`.
+`src/server/actions/configurator.ts`. §9g/§9h cover the redesign and four
+more real bugs it found — read those before touching `src/ui/primitives/`,
+`src/ui/icons/`, `next.config.ts`, or `playwright.config.ts`.
 
 ## 3. Status of the first action — done, 2026-08-23
 
@@ -1084,6 +1090,197 @@ desktop width, across three different products, earlier the same day — but
 this is genuinely unconfirmed, not silently assumed fine. Worth a clean
 retry in a fresh session before checking off "Configurator usable on
 mobile" for real.
+
+## 9g. The storefront redesign — 2026-08-24
+
+**What actually happened.** P2's homepage/category/product pages were built
+deliberately sparse — a categories grid, plain text blocks — on the
+understanding that "minimalistic" meant fewer sections. The owner corrected
+that directly: *"you got me wrong by what i mean about minimalistic"*, and
+named a concrete reference — Bazaar's `fashion-2` template
+(`template.getbazaar.io/fashion-2`) — as what the storefront should actually
+look like. "Minimalistic" meant restraint in *style* (whitespace, a
+disciplined palette, no visual noise), not restraint in *content*. Bazaar's
+own homepage is a hero, a trust-badge strip, category tiles, product grids
+with real photography, a sidebar-filtered listing page, and a gallery-style
+product page — dense with real content, not sparse.
+
+**Research done before touching any code**, all browser-verified live, not
+assumed from memory:
+
+- **Bazaar `fashion-2`** (primary reference, the owner's stated preference)
+  — the pattern above, confirmed by actually clicking through its homepage,
+  PLP, and PDP.
+- **CozyCommerce-lite** (`github.com/CozyCommerce/cozycommerce-lite`) — the
+  owner also linked this repo. Checked it directly: it's Tailwind CSS, and
+  its free tier is *only* a landing-page shell — its own README says "does
+  not include... product management or payment processing." Not usable as a
+  code reference for an MUI codebase; visual inspiration only, secondary to
+  Bazaar.
+- **NextMerce** (`demo.nextmerce.com`) — same genre as Bazaar, confirmed the
+  pattern rather than adding a new one.
+- **Materio** — the owner's admin-panel reference. MUI-based, MIT-licensed,
+  genuinely portable. Recorded as a documented direction for P7 in
+  `docs/ARCHITECTURE.md` §16A, **not built this pass** — P7 hasn't started,
+  and building an admin panel now would jump the roadmap with nothing behind
+  it (no orders/products CRUD to populate it). This was an explicit scope
+  decision the owner confirmed, not an oversight.
+- **opensaas.sh** — the owner wanted "animation on the main page instead of
+  an image... with our topic icons," and pointed at a specific element by
+  xpath. Inspected that element's DOM directly: it's pure CSS — concentric
+  `conic-gradient` rings, plus icons on a rotating wrapper
+  (`animation: orbit-spin`) with a fixed radial `translateX` offset, each
+  icon counter-rotated (`orbit-counter-spin`, same duration) so it stays
+  upright while it orbits. No JS, no animation library.
+
+**A plan was written and approved before any file changed** — given the
+size (rebuilding several already-shipped, already-tested pages) and that it
+partially reverses a previous session's design decisions, this went through
+`EnterPlanMode`/`ExitPlanMode` rather than straight to code. Two decisions
+were the owner's to make and were asked directly (not guessed): scope
+("storefront only, document the admin direction for later" — confirmed),
+and how to handle the fact that Bazaar's layout leans on real photography
+while this project only had "zdjęcie w przygotowaniu" placeholder SVGs
+("build with placeholders now — download real images matching our topic, or
+write relevant placeholder text" — confirmed, see the note on `STOCK_PHOTO`
+below).
+
+**What was built, all new files unless noted:**
+
+```
+public/images/photos/*.jpg              7 real, freely-licensed stock photos (Unsplash), one per
+                                         category + one material close-up — see the header note below
+src/ui/icons/index.tsx                  plain inline SVG icons — see §9h item 1 for why this exists
+                                         instead of @mui/icons-material
+src/ui/primitives/OrbitIconHero.tsx     the opensaas.sh-pattern hero graphic, our own category icons
+src/ui/primitives/TrustBadgeStrip.tsx   4 real claims about this business, not generic retail badges
+src/ui/primitives/CategoryTile.tsx      next/image-based category tile, real photo + name overlay
+src/ui/primitives/ProductCard.tsx       v2 product card — image, category label, name, price. No
+                                         rating — see the note below
+src/ui/primitives/CategoryFilterForm.tsx  zero-client-JS filter/sort sidebar — see §9h item 2's neighbour,
+                                         the native <form method="get"> pattern this uses
+src/app/(shop)/szukaj/page.tsx          real search results page, built on matchesPl (P1, unused
+                                         until now)
+src/app/(marketing)/page.tsx            REBUILT — hero + OrbitIconHero, TrustBadgeStrip, CategoryTile
+                                         grid, one honest "Nasze produkty" ProductCard grid
+src/app/(shop)/[category]/page.tsx      REBUILT — CategoryFilterForm + sort + ProductCard grid
+src/app/(shop)/produkt/[slug]/page.tsx  intro restructured to image-left/info-right; configurator
+                                         and everything below it untouched
+src/ui/primitives/SiteHeader.tsx        added a real search form (native GET, → /szukaj)
+prisma/seed.ts                          STOCK_PHOTO() alongside PLACEHOLDER_IMAGE() — see below
+src/server/repositories/products.ts     filter/sort params, listAllActiveProducts, searchActiveProducts
+```
+
+**On the photography, specifically — this is a real, deliberate exception
+to how every other placeholder in this project has worked, not an
+inconsistency.** Every earlier placeholder (D4's `TODO_PRICING`, D5's
+original SVG images, the seeded product copy) was built to be *unmistakably*
+a placeholder — the SVGs literally say "zdjęcie w przygotowaniu." This pass
+does the opposite for photography specifically, on the owner's direct
+instruction: real, freely-licensed stock photos (Unsplash License — free for
+commercial and noncommercial use, no permission required), one per category,
+picked to actually match the subject (industrial steel-and-wood furniture
+for loft, wood/laser-cut jewellery for amulety, a plain white ceramic tile
+for gres, wood plank flooring for panele, a wood-cut art piece for obrazy, a
+real CNC router mid-cut for inne), reused for that category's one seeded
+product since the catalogue is that small. Source URLs are recorded in a
+comment next to `STOCK_PHOTO` in `prisma/seed.ts` for traceability. **The
+"must swap before launch" discipline is unchanged** — these are not this
+shop's own product photos, and the code says so in the same place it always
+has; only the *interim fidelity* changed, from an obvious placeholder to a
+presentable one, because that's what was asked for this time. The design's
+own artwork and the installation diagram were deliberately NOT
+photo-sourced — see `prisma/seed.ts`'s header for why those two specifically
+stay honest SVG placeholders (one is the business's actual creative IP, the
+other is specific technical instruction; a stock stand-in for either would
+be actively wrong, not just generic).
+
+**No star ratings, no fabricated review counts, anywhere in the redesign.**
+Bazaar's product cards have both; brief §16A.1 module 9 forbids inventing
+customer reviews, and a rating is the same category of fabrication. Checked
+this explicitly against the plan's own "what does NOT change" section before
+calling the pass done, not just at the point each component was written.
+
+**The DB had to be reset to pick up the new image URLs.** `prisma/seed.ts`
+upserts with `update: {}` — "if it exists, don't touch it" — which is
+correct for protecting rows a human might have edited through the future
+admin panel, but means simply re-running the seed does NOT update an
+existing row's `imageUrl`. Used the already-documented reset path:
+`docker compose down -v && npm run db:up && npm run db:deploy && npm run
+db:seed`. Not a new gotcha, just the first time this session actually needed
+it.
+
+## 9h. Four real bugs the redesign found
+
+Each one caught by actually running the thing — browser console, a second
+Playwright run, a production-build comparison — not by inspection. None
+were guessed at or left half-fixed.
+
+**1. `@mui/icons-material` cannot be used in a Server Component — full
+stop.** Added it for the trust-badge/orbit-hero/search icons, and got a real
+React hydration error on first render: "Hydration failed because the server
+rendered HTML didn't match the client," pointing at a `<style
+data-emotion="...">` tag. Read the installed package source to find why:
+every icon file in `@mui/icons-material` carries its own `"use client"`
+directive and wraps its path in `SvgIcon`, an Emotion-`styled` component —
+it needs `ThemeRegistry`'s `AppRouterCacheProvider` above it to own Emotion's
+style cache, and none of these three components have one (nor should they —
+`SiteHeader` renders on every page via the root layout, so wrapping it in
+`ThemeRegistry` would ship the full MUI+Emotion+React client runtime
+sitewide again, exactly the §9e regression already fixed once). Fix:
+`src/ui/icons/index.tsx` — the exact same path data, copied verbatim from
+the `@mui/icons-material` source files (real Material Design artwork, only
+the Emotion wrapper dropped), rendered through a plain `<svg>`. Zero
+dependency on the package; it was uninstalled afterward.
+
+**2. Inline `style` always wins the CSS cascade over any stylesheet rule,
+media queries included — no exceptions.** Three "responsive" layouts (the
+homepage hero, the category page's filter sidebar, the PDP intro) each set
+`gridTemplateColumns: '1fr'` as an inline style and expected a `<style>`
+block's `@media (min-width: 900px) { .foo { grid-template-columns: 1fr 1fr
+} }` to override it at wider viewports. It never did, at any width — an
+inline style cannot be beaten by a stylesheet selector short of `!important`,
+which nothing here used. Not caught by typecheck or lint (it's a runtime CSS
+fact, not a type error), only by actually measuring
+`getComputedStyle(el).gridTemplateColumns` in a live browser at 1280px and
+finding it still `"1152px"` (one column) instead of two. Fixed by moving the
+base rule into the `<style>` block alongside its override, so the cascade
+has only one place to resolve from.
+
+**3. `CategoryTile`/`ProductCard` gave screen readers a duplicated
+accessible name.** Both set an `alt` on the image AND a separate visible
+text label inside the same `<Link>` — the link's accessible name became
+"Loft Loft" (image alt + visible span, concatenated). Found by a Playwright
+locator, not an accessibility audit tool: `getByRole('link', { name: 'Loft'
+})` started matching *two* elements after the redesign — the category tile
+(now announcing "Loft Loft") and, coincidentally, the homepage's own
+"Stołek loftowy z grawerem" product card, since Playwright's non-exact name
+matching is substring-based and "loftowy" contains "loft". Fixing the real
+accessibility bug (image `alt=""` — decorative, since the visible label
+already does the job) and adding `exact: true` to the test's locator (the
+substring-match ambiguity between "Loft" and "Stołek **loft**owy..." is real
+regardless of the alt-text fix, and would recur any time a product name
+happens to contain a category name) both mattered; neither alone fully
+explained what Playwright caught.
+
+**4. A Turbopack dev-mode-only client-navigation race, not an application
+bug.** Once `/[category]` started reading `searchParams` (for the new
+filter/sort feature) and became dynamically rendered, clicking a product
+link *from* the category page intermittently never completed under `next
+dev`: the destination's RSC fetch logged a real `200 OK`, but
+`window.location.href` never updated — no console error on either side, and
+retrying the same click sometimes worked. Reproduced repeatedly under `next
+dev` (including through a full Playwright run with a freshly-cleared
+`.next`), then tested the same click ten times by hand against a genuine
+production build (`next build && next start`) — clean, first-try, every
+time. That isolates it precisely: a Turbopack first-compile race on a newly-
+dynamic dev route, not a bug in this codebase, and not something a real
+visitor — who only ever sees the production build — could ever hit. Fixed
+the actual problem, not the symptom: `playwright.config.ts`'s `webServer`
+now runs `next build && next start` instead of `next dev`. This is also
+correct on its own terms, independent of this specific bug — e2e tests exist
+to verify what ships, and `next dev` was never that; the old config just
+happened not to expose the gap until a route became dynamic.
 
 ## 10. Working style the owner expects
 

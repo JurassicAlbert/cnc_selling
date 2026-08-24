@@ -1,3 +1,4 @@
+import { matchesPl } from '@/domain/text/collation';
 import { prisma } from '@/server/db/client';
 
 export type ProductCardData = {
@@ -6,20 +7,40 @@ export type ProductCardData = {
   readonly shortDescPl: string;
   readonly minPriceGrosze: number;
   readonly primaryImageUrl: string | null;
+  readonly categoryNamePl: string;
+};
+
+export type ProductSort = 'price_asc' | 'price_desc' | null;
+
+export type CategoryProductFilter = {
+  /** `null` (no material param) shows every product; a slug narrows to that material. */
+  readonly materialSlug?: string | null;
+  readonly sort?: ProductSort;
 };
 
 /** For a category's product grid. Only active products, cheapest-first image already picked. */
 export async function listActiveProductsByCategorySlug(
   categorySlug: string,
+  filter: CategoryProductFilter = {},
 ): Promise<ProductCardData[]> {
+  const { materialSlug, sort } = filter;
   const products = await prisma.product.findMany({
-    where: { isActive: true, category: { slug: categorySlug, isActive: true } },
-    orderBy: { sortOrder: 'asc' },
+    where: {
+      isActive: true,
+      category: { slug: categorySlug, isActive: true },
+      ...(materialSlug ? { materials: { some: { material: { slug: materialSlug } } } } : {}),
+    },
+    orderBy: sort === 'price_asc'
+      ? { minPriceGrosze: 'asc' }
+      : sort === 'price_desc'
+        ? { minPriceGrosze: 'desc' }
+        : { sortOrder: 'asc' },
     select: {
       slug: true,
       namePl: true,
       shortDescPl: true,
       minPriceGrosze: true,
+      category: { select: { namePl: true } },
       images: {
         where: { isPrimary: true },
         take: 1,
@@ -34,7 +55,70 @@ export async function listActiveProductsByCategorySlug(
     shortDescPl: product.shortDescPl,
     minPriceGrosze: product.minPriceGrosze,
     primaryImageUrl: product.images[0]?.url ?? null,
+    categoryNamePl: product.category.namePl,
   }));
+}
+
+/** The distinct materials offered across a category's active products, for the filter sidebar. */
+export async function listCategoryFilterMaterials(
+  categorySlug: string,
+): Promise<{ readonly slug: string; readonly namePl: string }[]> {
+  const rows = await prisma.productMaterial.findMany({
+    where: {
+      product: { isActive: true, category: { slug: categorySlug, isActive: true } },
+      material: { isAvailable: true },
+    },
+    select: { material: { select: { slug: true, namePl: true } } },
+    distinct: ['materialId'],
+  });
+  return rows.map((row) => row.material);
+}
+
+/** Every active product, for the homepage's single honest "Nasze produkty" grid — no fake curation. */
+export async function listAllActiveProducts(): Promise<ProductCardData[]> {
+  const products = await prisma.product.findMany({
+    where: { isActive: true },
+    orderBy: { sortOrder: 'asc' },
+    select: {
+      slug: true,
+      namePl: true,
+      shortDescPl: true,
+      minPriceGrosze: true,
+      category: { select: { namePl: true } },
+      images: {
+        where: { isPrimary: true },
+        take: 1,
+        select: { url: true },
+      },
+    },
+  });
+
+  return products.map((product) => ({
+    slug: product.slug,
+    namePl: product.namePl,
+    shortDescPl: product.shortDescPl,
+    minPriceGrosze: product.minPriceGrosze,
+    primaryImageUrl: product.images[0]?.url ?? null,
+    categoryNamePl: product.category.namePl,
+  }));
+}
+
+/**
+ * A real search, not decoration: diacritic-insensitive matching
+ * (`matchesPl`, already built in P1) against name and short description.
+ * Filtered in memory rather than a DB `LIKE` — reasonable at today's scale
+ * (a handful of products); revisit if the catalogue ever grows enough for
+ * that to matter.
+ */
+export async function searchActiveProducts(query: string): Promise<ProductCardData[]> {
+  const trimmed = query.trim();
+  if (trimmed.length === 0) {
+    return [];
+  }
+  const all = await listAllActiveProducts();
+  return all.filter(
+    (product) => matchesPl(product.namePl, trimmed) || matchesPl(product.shortDescPl, trimmed),
+  );
 }
 
 export type ProductDetail = {

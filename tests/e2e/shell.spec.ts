@@ -12,6 +12,10 @@ import { expect, test } from '@playwright/test';
  * Locators are scoped to `main` throughout: the site header repeats every
  * category name as a nav link, so an unscoped `getByRole('link', { name:
  * 'Loft' })` would match twice and fail Playwright's strict-mode check.
+ * `exact: true` on 'Loft' specifically because the homepage's product grid
+ * (added in the 2026-08-24 redesign) includes "Stołek loftowy z grawerem",
+ * which contains "loft" as a case-insensitive substring — Playwright's
+ * default (non-exact) name matching would match that too.
  */
 test('renders the real homepage in Polish with the theme applied', async ({ page }) => {
   await page.goto('/');
@@ -24,14 +28,14 @@ test('renders the real homepage in Polish with the theme applied', async ({ page
   // The category grid, seeded from the real catalogue — proves the page is
   // actually server-rendering DB content, not a static shell.
   const main = page.getByRole('main');
-  await expect(main.getByRole('link', { name: 'Loft' })).toBeVisible();
-  await expect(main.getByRole('link', { name: 'Gres' })).toBeVisible();
+  await expect(main.getByRole('link', { name: 'Loft', exact: true })).toBeVisible();
+  await expect(main.getByRole('link', { name: 'Gres', exact: true })).toBeVisible();
 });
 
 test('navigates from the homepage into a category and a product', async ({ page }) => {
   await page.goto('/');
 
-  await page.getByRole('main').getByRole('link', { name: 'Loft' }).click();
+  await page.getByRole('main').getByRole('link', { name: 'Loft', exact: true }).click();
   await expect(page).toHaveURL('/loft');
   await expect(page.getByRole('heading', { name: 'Loft', exact: true })).toBeVisible();
 

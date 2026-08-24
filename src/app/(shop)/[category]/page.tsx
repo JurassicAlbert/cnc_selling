@@ -1,31 +1,52 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { formatPln } from '@/domain/money/money';
 import { getActiveCategoryBySlug, listActiveCategories } from '@/server/repositories/categories';
-import { listActiveProductsByCategorySlug } from '@/server/repositories/products';
+import {
+  listActiveProductsByCategorySlug,
+  listCategoryFilterMaterials,
+  type ProductSort,
+} from '@/server/repositories/products';
 import { Breadcrumbs } from '@/ui/primitives/Breadcrumbs';
-import { Card } from '@/ui/primitives/Card';
+import { CategoryFilterForm } from '@/ui/primitives/CategoryFilterForm';
 import { Container } from '@/ui/primitives/Container';
-import { Grid } from '@/ui/primitives/Grid';
 import { Heading } from '@/ui/primitives/Heading';
+import { ProductCard } from '@/ui/primitives/ProductCard';
 import { Section } from '@/ui/primitives/Section';
 import { Text } from '@/ui/primitives/Text';
 import { SITE } from '@/content/pl/site';
 
 type CategoryPageProps = {
   readonly params: Promise<{ readonly category: string }>;
+  readonly searchParams: Promise<{ readonly material?: string; readonly sort?: string }>;
 };
 
-/** Server-rendered from the DB (ARCHITECTURE.md §18) — no client-side fetch for content. */
-export default async function CategoryPage({ params }: CategoryPageProps) {
+function parseSort(value: string | undefined): ProductSort {
+  return value === 'price_asc' || value === 'price_desc' ? value : null;
+}
+
+/**
+ * Server-rendered from the DB (ARCHITECTURE.md §18) — no client-side fetch
+ * for content. The filter sidebar (`CategoryFilterForm`) is a native GET
+ * form: submitting it re-navigates with new query params, which this page
+ * reads server-side. Zero client JS for filtering — see that component's
+ * header comment for why that's a deliberate choice, not an oversight.
+ */
+export default async function CategoryPage({ params, searchParams }: CategoryPageProps) {
   const { category: slug } = await params;
+  const { material, sort: sortParam } = await searchParams;
   const category = await getActiveCategoryBySlug(slug);
   if (category === null) {
     notFound();
   }
 
-  const products = await listActiveProductsByCategorySlug(slug);
+  const selectedMaterialSlug = material !== undefined && material.length > 0 ? material : null;
+  const sort = parseSort(sortParam);
+
+  const [products, filterMaterials] = await Promise.all([
+    listActiveProductsByCategorySlug(slug, { materialSlug: selectedMaterialSlug, sort }),
+    listCategoryFilterMaterials(slug),
+  ]);
 
   return (
     <Section>
@@ -34,26 +55,53 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         <Heading level={1}>{category.namePl}</Heading>
         <Text muted>{category.descPl}</Text>
 
-        {products.length === 0 ? (
-          <Text muted>{SITE.catalogueEmptyCategoryPl}</Text>
-        ) : (
-          <Grid>
-            {products.map((product) => (
-              <Card
-                key={product.slug}
-                href={`/produkt/${product.slug}`}
-                imageUrl={product.primaryImageUrl}
-                imageAlt={product.namePl}
+        <div
+          style={{ marginBlockStart: 32, display: 'grid', gap: 32 }}
+          className="category-layout"
+        >
+          {/* grid-template-columns lives here, not inline: an inline style always
+              wins the cascade over a stylesheet rule, media query included. */}
+          <style>{`
+            .category-layout { grid-template-columns: 1fr; }
+            @media (min-width: 900px) {
+              .category-layout { grid-template-columns: 220px 1fr; }
+            }
+          `}</style>
+
+          {filterMaterials.length > 0 && (
+            <CategoryFilterForm
+              actionPath={`/${category.slug}`}
+              materials={filterMaterials}
+              selectedMaterialSlug={selectedMaterialSlug}
+              sort={sort}
+            />
+          )}
+
+          <div>
+            {products.length === 0 ? (
+              <Text muted>{SITE.catalogueEmptyCategoryPl}</Text>
+            ) : (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                  gap: 24,
+                }}
               >
-                <Heading level={3}>{product.namePl}</Heading>
-                <Text muted>{product.shortDescPl}</Text>
-                <Text>
-                  {SITE.catalogueStartingPricePrefixPl} {formatPln(product.minPriceGrosze)}
-                </Text>
-              </Card>
-            ))}
-          </Grid>
-        )}
+                {products.map((product) => (
+                  <ProductCard
+                    key={product.slug}
+                    href={`/produkt/${product.slug}`}
+                    namePl={product.namePl}
+                    categoryNamePl={product.categoryNamePl}
+                    imageUrl={product.primaryImageUrl}
+                    minPriceGrosze={product.minPriceGrosze}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </Container>
     </Section>
   );

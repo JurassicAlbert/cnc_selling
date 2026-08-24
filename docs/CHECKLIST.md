@@ -3,13 +3,16 @@
 Reviewed item by item before the project is considered finished (brief §40–41).
 `[ ]` not started · `[~]` in progress · `[x]` done and verified by a passing test or manual check.
 
-**Last verified: 2026-08-23** — `npm test` 354/354 green, `npm run typecheck` clean, `npm run build`
-clean, `npm run lint` clean, `npm run e2e` 4/4 green (desktop + mobile), Lighthouse SEO 100/100, on
-Node v22.15.0 / TypeScript 7.0.2 / Vitest 4.1.11 / Prisma 7.9.1 / Next.js 16.3.2 / MUI 9.3.1 / Biome
-2.5.10. **P0 is complete. P2 is functionally complete** — real catalogue seeded, category/product
-pages live and server-rendered, SEO metadata/Schema.org/sitemap/robots all verified against real
-data. Still open: the homepage's content-heavy sections (hero, craftsmanship, reviews, FAQ — needs
-the owner's words, reviews needs real customers), and LCP on mobile (see the P2 Lighthouse note).
+**Last verified: 2026-08-24** — `npm test` 354/354 green, `npm run typecheck` clean, `npm run build`
+clean, `npm run lint` clean, `npm run e2e` 4/4 green twice in a row against a production build
+(desktop + mobile — `playwright.config.ts` no longer runs `next dev`, see the P2 note on why),
+Lighthouse SEO 100/100, on Node v22.15.0 / TypeScript 7.0.2 / Vitest 4.1.11 / Prisma 7.9.1 /
+Next.js 16.3.2 / MUI 9.3.1 / Biome 2.5.10. **P0 is complete. P2 is functionally complete and its
+storefront was redesigned 2026-08-24** to match the owner's actual intent for "minimalistic"
+(restraint in style, not content — see `docs/HANDOVER.md` §9g) — real category/product/material
+photography, a hero animation, trust badges, filters, and search all now live. Still open: the
+homepage's narrative sections (hero *copy*, craftsmanship, reviews, FAQ — needs the owner's words,
+reviews needs real customers), and LCP on mobile (see the P2 Lighthouse note further down).
 **P3 (the configurator) is under way** — the step machine, compatibility/pricing/feasibility server
 wiring, and the first real MUI client island are built and browser-verified across three product
 types. Preview, personalization, cart persistence, and several other P3 items are honestly still
@@ -64,10 +67,11 @@ AST. Trade-off accepted knowingly: Biome has no direct equivalent of
 
 ## P2 — Catalogue
 
-- [x] Seed data: materials, finishes, designs, 5 products, preset sizes, installation variants — real categories confirmed by the owner 2026-08-23: `loft`, `amulety-i-bransoletki`, `gres`, `panele-podlogowe`, `obrazy-drewniane` (each with one representative product), plus `inne` as an intentionally-empty catch-all. `LOFT_FURNITURE` and `JEWELRY` added to `ProductTypeCode` (migration `20260823020000_add_loft_and_jewelry_product_types`) — neither of the original five types fit. 2 materials (oak, white gres), 1 finish (oiling), 1 placeholder design, 1 installation variant (gres). Verified idempotent (reran seed twice, row counts unchanged) and checked directly via `psql`. **Still placeholder:** every price (`TODO_PRICING`, D4), every image (generated on-brand SVGs, `scripts/generate-placeholder-images.mjs` — not downloaded stock photos, see the note in `prisma/seed.ts`), the one design's artwork, and all product copy (plain/functional, not final marketing text)
-- [~] Homepage — hero, categories, how it's made, materials, craftsmanship, details, patterns, reviews, FAQ, CTA — **only the categories grid is built**, from real seeded data (`src/app/(marketing)/page.tsx`). Hero copy, "how it's made", craftsmanship narrative, and FAQ are deliberately unbuilt — they need the owner's actual words. Reviews are deliberately unbuilt for a stronger reason: brief/§16A.1 module 9 explicitly forbids authoring a testimonial in a customer's name, and there are no real customer submissions yet to display
-- [x] Category pages at the specified Polish slugs — `src/app/(shop)/[category]/page.tsx`, all 6 real category slugs verified live (`/loft`, `/amulety-i-bransoletki`, `/gres`, `/panele-podlogowe`, `/obrazy-drewniane`, `/inne`), `generateStaticParams` from the DB, empty-category state verified on `/inne`, Polish 404 for an unknown slug
-- [x] Product pages — photos, detail shots, variants, description, material, dimensions, production time, starting price, installation info, care instructions, material notes — `src/app/(shop)/produkt/[slug]/page.tsx`, all fields verified live including the gres product's installation variant (added after noticing the seeded copy referenced "warianty montażu" with nothing actually displaying them); "detail shots" is one photo per product today since that's all that's seeded, not a built gallery limit
+- [x] Seed data: materials, finishes, designs, 5 products, preset sizes, installation variants — real categories confirmed by the owner 2026-08-23: `loft`, `amulety-i-bransoletki`, `gres`, `panele-podlogowe`, `obrazy-drewniane` (each with one representative product), plus `inne` as an intentionally-empty catch-all. `LOFT_FURNITURE` and `JEWELRY` added to `ProductTypeCode` (migration `20260823020000_add_loft_and_jewelry_product_types`) — neither of the original five types fit. 2 materials (oak, white gres), 1 finish (oiling), 1 placeholder design, 1 installation variant (gres). Verified idempotent (reran seed twice, row counts unchanged) and checked directly via `psql`. **Still placeholder:** every price (`TODO_PRICING`, D4) and the one design's artwork/installation diagram (still on-brand SVGs — see `prisma/seed.ts`'s header on why those two specifically stay that way). **Updated 2026-08-24:** every category/material/product photo is now real, freely-licensed stock photography (Unsplash), sourced per category subject rather than a generic SVG placeholder — an explicit owner decision for the redesign pass, still swapped for real photography before launch, source URLs recorded in `prisma/seed.ts`
+- [x] Homepage — hero, categories, how it's made, materials, craftsmanship, details, patterns, reviews, FAQ, CTA — **redesigned 2026-08-24** (`src/app/(marketing)/page.tsx`): hero (headline/subcopy/CTA + `OrbitIconHero`, a pure-CSS orbiting-icon animation replacing a photo per the owner's request), a real `TrustBadgeStrip` (4 true claims about this business, not generic retail badges), a `CategoryTile` grid with real photos, and one honest "Nasze produkty" grid (all 5 real products — not the reference template's four parallel "curated" carousels, which would imply catalogue depth that doesn't exist at 5 SKUs). "How it's made", craftsmanship narrative, and FAQ are still deliberately unbuilt — they need the owner's actual words. Reviews are still deliberately unbuilt for a stronger reason: brief/§16A.1 module 9 explicitly forbids authoring a testimonial in a customer's name, and no real customer submissions exist — no star ratings anywhere in the redesign either, same reasoning
+- [x] Category pages at the specified Polish slugs — `src/app/(shop)/[category]/page.tsx`, all 6 real category slugs verified live (`/loft`, `/amulety-i-bransoletki`, `/gres`, `/panele-podlogowe`, `/obrazy-drewniane`, `/inne`), `generateStaticParams` from the DB, empty-category state verified on `/inne`, Polish 404 for an unknown slug. **Redesigned 2026-08-24:** added a real material-filter + sort sidebar (`CategoryFilterForm`, a native zero-client-JS `<form method="get">` — no MUI, no hydration cost on an otherwise-static page) and switched the product grid to the new `ProductCard`. Honestly scoped: with 0-1 products per category today there's little to actually filter, but it's real and correctly wired, not decoration
+- [x] Product pages — photos, detail shots, variants, description, material, dimensions, production time, starting price, installation info, care instructions, material notes — `src/app/(shop)/produkt/[slug]/page.tsx`, all fields verified live including the gres product's installation variant (added after noticing the seeded copy referenced "warianty montażu" with nothing actually displaying them); "detail shots" is one photo per product today since that's all that's seeded, not a built gallery limit. **Redesigned 2026-08-24:** intro restructured to an image-left/info-right layout (quick-fact chips, price, a CTA anchor scrolling to the configurator) — the configurator itself and everything below it (materials/dimensions/care/installation sections) is untouched, verified by re-running the same browser click-throughs P3 already established
+- [x] Real product search — new, 2026-08-24: `src/app/(shop)/szukaj/page.tsx` + `searchActiveProducts` (`src/server/repositories/products.ts`), built on `matchesPl`/`foldPl` (P1's diacritic-insensitive matching, unused by any page until now). A real search box in `SiteHeader`, not a decorative icon — browser-verified end to end: typed "bransoletka" in the header, submitted, got the real bracelet product back; a query with no matches ("dąb", which doesn't diacritic-fold-match "Dębowy") correctly shows the honest no-results state instead of nothing or an error
 - [x] All navigation works, no broken links — `SiteHeader` (real category links, every page) + homepage category cards + product cards + breadcrumbs; verified end-to-end with a real Playwright click-through (home → category → product), not just visual inspection
 - [x] `generateMetadata` per page from DB fields — category and product pages pull `seoTitlePl`/`seoDescPl` from the DB; homepage metadata is static since there's no site-settings record to pull from
 - [x] Canonical URLs — homepage, category, and product pages all set `alternates.canonical`; confirmed absolute and correct after fixing a missing `metadataBase` (Next warned about it on the first build)
@@ -114,6 +118,38 @@ remaining LCP number is a font-payload and lab-methodology question, not
 solved, and worth revisiting once real product photography (D5) changes the
 page weight anyway.** `ThemeRegistry` still exists, still correct, reserved
 for the first real interactive island (P3).
+
+**The 2026-08-24 storefront redesign found four more real bugs**, none of
+them guessed — full detail in `docs/HANDOVER.md` §9h:
+
+1. `@mui/icons-material` icons are `"use client"` and Emotion-styled
+   internally; using one in a plain Server Component (no `ThemeRegistry`
+   above it) produced a genuine React hydration mismatch. `SiteHeader`
+   renders on every page, so the fix couldn't be "wrap it in
+   `ThemeRegistry`" — that reintroduces the exact §9e regression. Replaced
+   with `src/ui/icons/` — plain inline SVGs using the same path data,
+   zero Emotion dependency, still real Material Design icons.
+2. An inline `style={{ gridTemplateColumns: '1fr' }}` cannot be overridden
+   by any stylesheet rule, media queries included — inline styles always
+   win the CSS cascade. Three "responsive" two-column layouts (homepage
+   hero, category sidebar, PDP intro) silently never became two columns at
+   any viewport width until the base rule was moved into the `<style>`
+   block alongside its override.
+3. `CategoryTile`/`ProductCard` set both an `alt` on the image and a
+   separate visible text label inside the same link, giving screen readers
+   a duplicated accessible name ("Loft Loft") — caught by a Playwright
+   locator that, not coincidentally, matched it for the same reason a
+   screen reader would find it redundant. Fixed by making the image `alt`
+   decorative (`alt=""`) since the visible label already does the job.
+4. Client-side navigation away from `/[category]` (now dynamically
+   rendered — it reads `searchParams` for the filter/sort feature)
+   intermittently never completed under `next dev`: the destination's RSC
+   fetch returned 200, but the router never committed the URL change, with
+   zero console errors. Reproduced repeatedly under `next dev`, never once
+   under a production build (`next build && next start`, clicked the same
+   link ten times) — a Turbopack dev-mode first-compile race, not an
+   application bug, and not something a real visitor ever hits.
+   `playwright.config.ts`'s `webServer` now runs the production build.
 
 ## P3 — Configurator
 

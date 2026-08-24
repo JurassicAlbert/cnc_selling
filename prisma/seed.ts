@@ -16,14 +16,26 @@
  *
  *   - Every price (`TODO_PRICING`, D4) — invented round numbers, never to
  *     reach a customer before being replaced.
- *   - Every product photo, the design's preview art, and the installation
- *     diagram — generated on-brand placeholder SVGs
- *     (`scripts/generate-placeholder-images.mjs`), not downloaded stock
- *     photography. A stock photo of someone else's product, presented as if
- *     it depicted this shop's work, would misrepresent what the business
- *     actually sells — a form of "faking it" this project's own rules
- *     forbid, not a harmless stand-in. An honest placeholder is the correct
- *     kind of fake: unmistakable as one.
+ *   - Every product/category/material photo — as of 2026-08-24, real,
+ *     freely-licensed stock photography (Unsplash; source URLs are recorded
+ *     next to each `STOCK_PHOTO` usage below), sourced specifically to
+ *     match each category's actual subject (loft furniture, wood/laser
+ *     jewellery, ceramic tile, engraved floor panels, engraved wall art),
+ *     not generic filler. This is an explicit owner decision (2026-08-24),
+ *     superseding the original "generated SVG placeholder" approach for
+ *     photos specifically — see `docs/HANDOVER.md` for the redesign pass
+ *     this belongs to. It is STILL a placeholder in the sense that matters:
+ *     it is not a photo of this shop's own work, and must be swapped for
+ *     real photography before launch, same as before — only the interim
+ *     fidelity changed, not the "must swap" discipline.
+ *   - The design's preview art and the installation diagram — still
+ *     generated on-brand placeholder SVGs
+ *     (`scripts/generate-placeholder-images.mjs`), NOT stock photos. Those
+ *     two are a different kind of placeholder than "here is what a wooden
+ *     stool looks like": one is the business's actual creative IP (a
+ *     design's artwork), the other is specific technical instruction (an
+ *     installation diagram) — a stock stand-in for either would be actively
+ *     wrong, not just generic, so both keep the honestly-labelled SVG.
  *   - Every description below is a first, functional draft — plain and
  *     accurate rather than flowery, so it is serviceable if it accidentally
  *     ships unreviewed, but it is NOT final marketing copy and the owner
@@ -47,6 +59,19 @@ const adapter = new PrismaPg({ connectionString: requireEnv('DATABASE_URL') });
 const prisma = new PrismaClient({ adapter });
 
 const PLACEHOLDER_IMAGE = (slug: string) => `/images/placeholders/${slug}.svg`;
+/**
+ * Real, freely-licensed stock photos (Unsplash License — free for
+ * commercial/noncommercial use). Source URLs, for traceability when these
+ * get replaced by real photography:
+ *   loft.jpg                  unsplash.com/photos/photo-1604115556773-97387d5985b3
+ *   amulety-i-bransoletki.jpg unsplash.com/photos/photo-1634833132196-fcbb1594e665
+ *   gres.jpg                  unsplash.com/photos/photo-1614598632980-35ee54daa5b9
+ *   panele-podlogowe.jpg      unsplash.com/photos/photo-1573869908170-64b53a60d8da
+ *   obrazy-drewniane.jpg      unsplash.com/photos/photo-1744369618870-9d9f530faa3d
+ *   inne.jpg                  unsplash.com/photos/photo-1781032040825-04240013c228
+ *   material-dab.jpg          unsplash.com/photos/photo-1611072337226-1140ab367200
+ */
+const STOCK_PHOTO = (slug: string) => `/images/photos/${slug}.jpg`;
 
 async function main(): Promise<void> {
   await seedMachineSettings();
@@ -180,7 +205,7 @@ async function seedMaterials(): Promise<SeededMaterials> {
       shortDescPl: 'Lite drewno dębowe, ciepły ton i wyraźny rysunek słojów.',
       characteristicsPl:
         'Drewno naturalne — usłojenie, odcień i ewentualne sęki różnią się w każdym egzemplarzu.',
-      imageUrl: PLACEHOLDER_IMAGE('loft'),
+      imageUrl: STOCK_PHOTO('material-dab'),
       pricePerM2Grosze: 18_000, // TODO_PRICING
       maxSheetWidthMm: 1200,
       maxSheetHeightMm: 2400,
@@ -204,7 +229,7 @@ async function seedMaterials(): Promise<SeededMaterials> {
       family: 'CERAMIC',
       shortDescPl: 'Gres wielkoformatowy, jednolita biała powierzchnia pod grawer.',
       characteristicsPl: 'Materiał produkowany — bez naturalnych odchyleń koloru między sztukami.',
-      imageUrl: PLACEHOLDER_IMAGE('gres'),
+      imageUrl: STOCK_PHOTO('gres'),
       pricePerM2Grosze: 22_000, // TODO_PRICING
       maxSheetWidthMm: 600,
       maxSheetHeightMm: 1200,
@@ -234,7 +259,7 @@ async function seedFinishes(): Promise<SeededFinishes> {
       namePl: 'Olejowanie',
       kind: 'OIL',
       descPl: 'Naturalny olej podkreślający usłojenie drewna, chroni powierzchnię.',
-      imageUrl: PLACEHOLDER_IMAGE('loft'),
+      imageUrl: STOCK_PHOTO('material-dab'),
       pricePerM2Grosze: 4_000, // TODO_PRICING
       setupFeeGrosze: 0,
       extraDaysMin: 1,
@@ -386,7 +411,7 @@ async function seedCategories(): Promise<Record<string, { readonly id: string }>
         descPl: seed.descPl,
         seoTitlePl: seed.seoTitlePl,
         seoDescPl: seed.seoDescPl,
-        imageUrl: PLACEHOLDER_IMAGE(seed.slug),
+        imageUrl: STOCK_PHOTO(seed.slug),
         sortOrder: seed.sortOrder,
       },
       update: {},
@@ -444,7 +469,7 @@ async function seedProducts(
   ]);
   await seedProductMaterial(loftStool.id, materials.dab.id);
   await seedProductDesign(loftStool.id, design.id);
-  await seedProductImage(loftStool.id, PLACEHOLDER_IMAGE('loft'), 'Stołek loftowy z grawerem — zdjęcie w przygotowaniu');
+  await seedProductImage(loftStool.id, STOCK_PHOTO('loft'), 'Stołek loftowy z grawerem — stal i drewno w stylu loft');
 
   const bransoletka = await upsertProduct({
     slug: 'bransoletka-z-grawerem',
@@ -470,8 +495,8 @@ async function seedProducts(
   await seedProductDesign(bransoletka.id, design.id);
   await seedProductImage(
     bransoletka.id,
-    PLACEHOLDER_IMAGE('amulety-i-bransoletki'),
-    'Bransoletka z grawerem — zdjęcie w przygotowaniu',
+    STOCK_PHOTO('amulety-i-bransoletki'),
+    'Drewniana bransoletka z grawerem',
   );
   await seedPersonalizationSpec(bransoletka.id, { maxCharacters: 20, maxLines: 1, minTextHeightUm: 3_000 });
 
@@ -498,7 +523,7 @@ async function seedProducts(
   });
   await seedProductMaterial(fartuch.id, materials.gres.id);
   await seedProductDesign(fartuch.id, design.id);
-  await seedProductImage(fartuch.id, PLACEHOLDER_IMAGE('gres'), 'Fartuch kuchenny z grawerem — zdjęcie w przygotowaniu');
+  await seedProductImage(fartuch.id, STOCK_PHOTO('gres'), 'Biały gres z grawerowanym wzorem');
   await seedInstallationVariant(fartuch.id, {
     code: 'ON_TOP',
     namePl: 'Montaż na istniejącym fartuchu',
@@ -536,8 +561,8 @@ async function seedProducts(
   await seedProductDesign(panel.id, design.id);
   await seedProductImage(
     panel.id,
-    PLACEHOLDER_IMAGE('panele-podlogowe'),
-    'Panel podłogowy z grawerem — zdjęcie w przygotowaniu',
+    STOCK_PHOTO('panele-podlogowe'),
+    'Dębowy panel podłogowy z grawerem',
   );
 
   const obraz = await upsertProduct({
@@ -564,8 +589,8 @@ async function seedProducts(
   await seedProductDesign(obraz.id, design.id);
   await seedProductImage(
     obraz.id,
-    PLACEHOLDER_IMAGE('obrazy-drewniane'),
-    'Obraz drewniany z grawerem — zdjęcie w przygotowaniu',
+    STOCK_PHOTO('obrazy-drewniane'),
+    'Obraz drewniany z grawerem',
   );
   await seedPersonalizationSpec(obraz.id, { maxCharacters: 40, maxLines: 2, minTextHeightUm: 6_000 });
 

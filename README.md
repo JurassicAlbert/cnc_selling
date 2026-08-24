@@ -39,11 +39,12 @@ Postgres, and the Next.js 16 / MUI v9 app shell.
 | `prisma/schema.prisma` | 33 models, migrated. The header comment states the unit rules the whole file obeys |
 | `docker-compose.yml` | Postgres 16, bound to localhost, with a separate test database |
 | `prisma/seed.ts` | Machine limits, pricing placeholders, first admin — and the real catalogue: 6 categories, 5 products |
-| `scripts/generate-placeholder-images.mjs` | On-brand placeholder SVGs — not stock photos of unrelated products |
+| `scripts/generate-placeholder-images.mjs` | On-brand placeholder SVGs — the design's artwork and the installation diagram only; category/product photos are real sourced stock now, see below |
 | `src/server/mapping/to-domain.ts` | Prisma rows → domain inputs. Micrometres to millimetres, basis points to ratios, nullable rows to neutral values |
 | `src/app/(shop)/`, `src/app/(marketing)/` | Real category/product pages + homepage, server-rendered from the DB |
 | `src/app/theme-vars.css` | The theme as plain CSS custom properties — **not** MUI's client provider; see `docs/HANDOVER.md` §9e before changing `src/app/layout.tsx` |
-| `playwright.config.ts` | Desktop + mobile, real click-through navigation test (home → category → product) |
+| `src/ui/icons/` | Plain inline SVG icons — not `@mui/icons-material`, which is client-only and breaks in a Server Component; see `docs/HANDOVER.md` §9h |
+| `playwright.config.ts` | Desktop + mobile, against a **production build** (`next build && next start`) — see `docs/HANDOVER.md` §9h for the dev-mode-only navigation race that made this necessary |
 | `biome.json` | Linter + formatter (not ESLint — TypeScript 7 isn't supported by `typescript-eslint`; see `docs/HANDOVER.md` §9c) |
 | `scripts/check-polish-literals.mjs` | Catches Polish copy leaking into a component instead of `src/content/pl` |
 
@@ -61,15 +62,24 @@ client island wired to real catalogue data.
 The catalogue is real data — `loft`, `amulety-i-bransoletki`, `gres`,
 `panele-podlogowe`, `obrazy-drewniane`, plus `inne` as an empty catch-all —
 with real category and product pages, SEO metadata, JSON-LD, a sitemap and
-robots.txt, all generated from the DB. Prices, photos, and the one design's
-artwork are all placeholders (`docs/HANDOVER.md` §9d). The homepage's
-content-heavy sections (hero, craftsmanship, reviews, FAQ) aren't built —
-they need the owner's actual words, and reviews specifically need real
-customers, not invented ones (§9e). A working configurator exists on every
-product page now — step machine, real material/design/finish/thickness
-options, server-computed price and feasibility — but it is a foundation, not
-finished: no 2D preview, no font-backed personalization yet, and nothing is
-persisted to a cart. See `docs/HANDOVER.md` §9f.
+robots.txt, all generated from the DB. Prices and the one design's artwork
+are still placeholders (`docs/HANDOVER.md` §9d); category/product/material
+photos are real, freely-licensed stock photography as of 2026-08-24, still
+swapped for real photography before launch (§9g). **The storefront was
+redesigned 2026-08-24** to match the owner's actual "minimalistic" intent —
+restraint in style, not content: a hero (with a pure-CSS orbiting-icon
+animation in place of a photo), real trust badges, category tiles, a
+filter/sort sidebar, real diacritic-insensitive search, and one honest
+product grid, no fabricated reviews or ratings anywhere. See
+`docs/HANDOVER.md` §9g/§9h — the latter for four more real bugs the redesign
+found and fixed. The homepage's *narrative* sections (hero copy,
+craftsmanship, reviews, FAQ) still aren't built — they need the owner's
+actual words, and reviews specifically need real customers, not invented
+ones. A working configurator exists on every product page — step machine,
+real material/design/finish/thickness options, server-computed price and
+feasibility — but it is a foundation, not finished: no 2D preview, no
+font-backed personalization yet, and nothing is persisted to a cart. See
+`docs/HANDOVER.md` §9f.
 
 A Lighthouse audit while building this caught a real bug: the MUI theme
 provider was wrapping every page from the root layout, shipping ~154KB of

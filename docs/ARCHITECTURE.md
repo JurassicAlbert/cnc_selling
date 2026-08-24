@@ -1061,6 +1061,20 @@ There is no self-service path to `STAFF`/`ADMIN`. The first admin is created by 
 
 Route group `src/app/(admin)/panel/`, gated by middleware on role. Full MUI, `@mui/x-data-grid` for tables, `@mui/x-charts` for statistics. This is a separate visual world from the storefront — standard Material, dense layout, no brand theming investment.
 
+> **Visual reference, recorded 2026-08-24, not yet built.** The owner named
+> [Materio](https://github.com/themeselection/materio-mui-nextjs-admin-template-free)
+> (MIT-licensed, MUI-based — [live demo](https://demos.themeselection.com/materio-mui-nextjs-admin-template-free/demo))
+> as the admin panel's visual direction: a grouped, icon+label sidebar nav
+> (Dashboards / Apps & Pages / User Interface / Forms & Tables / Charts /
+> Others — map to this section's modules 1-11), a bento-grid dashboard of
+> soft-shadow, rounded, colour-accented stat cards, `@mui/x-data-grid` for
+> every table. Adopt the **structure and visual language only**, reimplemented
+> in plain MUI `sx`/theme, not Materio's Tailwind utility classes (it ships
+> both; this project stays MUI-only per §1). No code from this pass — P7
+> hasn't started, and this section's own module list, invariants, and models
+> below are unaffected. This note exists so whoever builds P7 doesn't have to
+> re-ask what "modern admin dashboard" means.
+
 ### 16A.1 Modules
 
 **1. Dashboard**

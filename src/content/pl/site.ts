@@ -66,4 +66,38 @@ export const SITE = {
     'Wybrane wykończenie zostało wyczyszczone, ponieważ nie jest dostępne dla nowo wybranego materiału.',
   configuratorClearedThicknessPl:
     'Wybrana grubość została wyczyszczona, ponieważ nie mieści się w wybranym sposobie montażu.',
+
+  // Homepage hero — real claims about how this business actually operates,
+  // not generic retail trust-badge copy. No "free shipping"/"money-back
+  // guarantee" claims: nothing has confirmed either exists yet.
+  heroHeadlinePl: 'Meble i dodatki z grawerem, wykonane na wymiar',
+  heroSubcopyPl:
+    'Projektujemy i wykonujemy unikalne przedmioty z drewna i gresu — od stołków loftowych po biżuterię — z precyzyjnym grawerem CNC i laserowym.',
+  heroCtaPl: 'Zobacz kategorie',
+
+  trustMadeToOrderTitlePl: 'Wykonanie na zamówienie',
+  trustMadeToOrderDescPl: 'Każdy produkt wykonujemy indywidualnie',
+  trustEngravingTitlePl: 'Personalizacja grawerem',
+  trustEngravingDescPl: 'Twój wzór, Twój tekst',
+  trustPaymentTitlePl: 'Płatność przelewem',
+  trustPaymentDescPl: 'Bezpieczne rozliczenie bankowe',
+  trustContactTitlePl: 'Kontakt bezpośredni',
+  trustContactDescPl: 'Pytania? Napisz do nas',
+
+  homeProductsHeadingPl: 'Nasze produkty',
+
+  filterMaterialLabelPl: 'Materiał',
+  filterAllMaterialsPl: 'Wszystkie materiały',
+  filterApplyPl: 'Filtruj',
+  sortLabelPl: 'Sortuj',
+  sortRelevancePl: 'Domyślnie',
+  sortPriceAscPl: 'Cena: od najniższej',
+  sortPriceDescPl: 'Cena: od najwyższej',
+
+  searchPlaceholderPl: 'Szukaj produktów…',
+  searchButtonLabelPl: 'Szukaj',
+  searchResultsHeadingPl: 'Wyniki wyszukiwania',
+  searchResultsForPl: 'Wyniki dla',
+  searchNoResultsPl: 'Nie znaleziono produktów pasujących do wyszukiwania.',
+  searchEmptyQueryPl: 'Wpisz szukaną frazę.',
 } as const;
