@@ -12,7 +12,7 @@ import {
   ViewColumnIcon,
 } from '@/ui/icons';
 
-type IconComponent = ComponentType<{ readonly size?: number; readonly style?: CSSProperties }>;
+export type IconComponent = ComponentType<{ readonly size?: number; readonly style?: CSSProperties }>;
 export type IconPair = readonly [IconComponent, IconComponent];
 
 /**
@@ -20,15 +20,19 @@ export type IconPair = readonly [IconComponent, IconComponent];
  * hexagons repeated the same few icons too much). 8 real icons already
  * built for other UI (header, cards, `OrbitIconHero`), each used exactly
  * once across the whole site so no two visible sections repeat an icon.
+ * `blog` intentionally reuses `produkty`'s pair — 8 icons across 5
+ * placements means one repeat is unavoidable; the two are far enough
+ * apart on the page that it doesn't read as repetitive.
  */
 export const ICON_PAIRS = {
   heroLeft: [ChairIcon, EngineeringIcon] as IconPair,
   heroRight: [DiamondIcon, PrecisionManufacturingIcon] as IconPair,
   kategorie: [GridViewIcon, ImagePlaceholderIcon] as IconPair,
   produkty: [ViewColumnIcon, DrawIcon] as IconPair,
+  blog: [ViewColumnIcon, DrawIcon] as IconPair,
 };
 
-type HexSpec = {
+export type HexSpec = {
   readonly cx: number;
   readonly cy: number;
   readonly r: number;
@@ -38,7 +42,7 @@ type HexSpec = {
 const CLUSTER_WIDTH = 420;
 
 /** Pointy-top hexagon vertices, center (cx, cy), center-to-vertex radius r. */
-function hexPoints(cx: number, cy: number, r: number): string {
+export function hexPoints(cx: number, cy: number, r: number): string {
   const points: string[] = [];
   for (let i = 0; i < 6; i += 1) {
     const angleRad = ((-90 + i * 60) * Math.PI) / 180;
@@ -64,7 +68,11 @@ const CORE_HEXAGONS: readonly HexSpec[] = [
   { cx: 320, cy: 550, r: 15 },
 ];
 
-/** Fixed outline hexagons shared by every placement — only the 2 icon slots vary per `IconPair`. */
+/**
+ * Fixed outline hexagons shared by every placement — only the 2 icon
+ * slots vary per `IconPair`. Densified 2026-08-26 (the owner asked for
+ * more hexes overall) with 3 more small ones filling the gaps.
+ */
 const EXTRA_OUTLINE: readonly HexSpec[] = [
   { cx: 395, cy: 40, r: 24 },
   { cx: 270, cy: 155, r: 18 },
@@ -73,6 +81,9 @@ const EXTRA_OUTLINE: readonly HexSpec[] = [
   { cx: 360, cy: 465, r: 24 },
   { cx: 400, cy: 565, r: 22 },
   { cx: 340, cy: 610, r: 26 },
+  { cx: 235, cy: 75, r: 13 },
+  { cx: 235, cy: 270, r: 14 },
+  { cx: 240, cy: 500, r: 13 },
 ];
 
 function extraHexagonsFor(icons: IconPair): readonly HexSpec[] {
@@ -83,7 +94,7 @@ function extraHexagonsFor(icons: IconPair): readonly HexSpec[] {
   ];
 }
 
-function Hexagon({ cx, cy, r, icon: Icon }: HexSpec) {
+export function Hexagon({ cx, cy, r, icon: Icon }: HexSpec) {
   if (Icon) {
     const iconSize = r * 1.15;
     return (
@@ -120,10 +131,28 @@ function Hexagon({ cx, cy, r, icon: Icon }: HexSpec) {
  * counter-mirrors (`scaleX(-1)`) when the parent cluster is mirrored for
  * `side="left"`, so the photo itself is never shown flipped.
  */
-function HexPhoto({ src, cx, cy, size, mirrored }: { readonly src: string; readonly cx: number; readonly cy: number; readonly size: number; readonly mirrored: boolean }) {
+export function HexPhoto({
+  src,
+  cx,
+  cy,
+  size,
+  mirrored = false,
+  opacity = 0.4,
+  grayscale = 35,
+  className,
+}: {
+  readonly src: string;
+  readonly cx: number;
+  readonly cy: number;
+  readonly size: number;
+  readonly mirrored?: boolean;
+  readonly opacity?: number;
+  readonly grayscale?: number;
+  readonly className?: string;
+}) {
   return (
     <div
-      className="hex-extra"
+      className={className}
       style={{
         position: 'absolute',
         left: cx - size / 2,
@@ -132,7 +161,7 @@ function HexPhoto({ src, cx, cy, size, mirrored }: { readonly src: string; reado
         height: size,
         clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
         overflow: 'hidden',
-        opacity: 0.4,
+        opacity,
       }}
     >
       <Image
@@ -142,7 +171,7 @@ function HexPhoto({ src, cx, cy, size, mirrored }: { readonly src: string; reado
         sizes={`${size}px`}
         style={{
           objectFit: 'cover',
-          filter: 'grayscale(35%)',
+          filter: grayscale > 0 ? `grayscale(${grayscale}%)` : undefined,
           transform: mirrored ? 'scaleX(-1)' : undefined,
         }}
       />
@@ -205,7 +234,7 @@ export function SectionDecoration({ side = 'right', icons, photo }: SectionDecor
             ))}
           </g>
         </svg>
-        {photo && <HexPhoto src={photo} cx={330} cy={300} size={160} mirrored={mirrored} />}
+        {photo && <HexPhoto src={photo} cx={330} cy={300} size={160} mirrored={mirrored} className="hex-extra" />}
       </div>
     </div>
   );

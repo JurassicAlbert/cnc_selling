@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { Container } from '@/ui/primitives/Container';
+import { OrbitIconHero } from '@/ui/primitives/OrbitIconHero';
 import { Text } from '@/ui/primitives/Text';
 import { SITE } from '@/content/pl/site';
 
@@ -70,6 +71,12 @@ export function Footer({ categories }: FooterProps) {
             </div>
             <div style={{ marginBlockStart: 'var(--space-3)', maxWidth: 360 }}>
               <Text muted>{SITE.homeSeoDescPl}</Text>
+            </div>
+            {/* The orbiting-icon graphic, moved here from the hero (2026-08-26,
+                owner's request) — sized down for the footer rather than
+                re-tuning its internal geometry twice. */}
+            <div style={{ marginBlockStart: 'var(--space-6)' }}>
+              <OrbitIconHero size={180} />
             </div>
           </div>
 

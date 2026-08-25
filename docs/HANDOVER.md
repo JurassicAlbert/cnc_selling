@@ -2048,6 +2048,69 @@ visibly extends further into the page without touching real text, the
 photo hexagon (not just the small icon tiles) correctly disappears at
 tablet width, and all 3 blog surfaces show the right image per post.
 
+## 9r. Orbit animation moved to the footer, real multi-orbit rings, a hero hex mosaic — 2026-08-26
+
+Same-day follow-up to §9q: the owner pointed at the hero's orbiting-icon
+graphic by its exact DOM path and asked to move it under the footer, said
+all the icons were animating on one single orbit (just spread around it)
+and wanted real separate orbits, asked for hexes with real, on-brand
+images in the hero instead of the animation ("engraved drawings... match
+the design style"), and asked for more hexes generally.
+
+**Real multi-orbit rings.** `OrbitIconHero.tsx`'s `ORBITERS` all shared
+one hardcoded `RADIUS_PX`, spread only by angle — genuinely one orbit,
+not several. Rewritten with `RING_RADII = [90, 130, 170]` and each
+orbiter assigned a ring (2–3 per ring, 8 icons total now, all 8 real
+icons from `SectionDecoration.tsx`'s set), with the static decorative
+circles resized to match those exact radii — previously the drawn rings
+and the orbit radius were unrelated numbers (130 vs 120/160/200), so
+icons never actually traveled on the drawn paths. Inner rings spin
+faster than outer ones. The whole layout is authored once at 360px and
+uniformly scaled via a new `size` prop, so the footer's smaller instance
+didn't need every radius re-tuned by hand.
+
+**Moved to the footer.** `Footer.tsx`'s first column now renders
+`<OrbitIconHero size={180} />` below the tagline/description — placed
+inside the existing column rather than restructuring the footer's grid,
+verified at desktop/tablet/mobile with no overflow.
+
+**Hero hex mosaic, replacing the animation in the hero.** New
+`HeroHexMosaic.tsx` — 3 real photos clipped to hexagons via CSS
+`clip-path`, chosen specifically because they show actual visible
+engraving/carving rather than a generic material or machine shot:
+`obrazy-drewniane.jpg` (a real carved wood-art piece, the centerpiece),
+`loft.jpg` (the stool's engraved top), `amulety-i-bransoletki.jpg` (an
+engraved wood bracelet) — all three already used elsewhere on the site,
+no new sourcing. Considered using the generated `wzor-podstawowy.svg`
+design placeholder too, but opened the file first and found it's a
+literal "podgląd wzoru w przygotowaniu" (preview in preparation) text
+graphic, not actual engraved artwork — using it would have shown
+placeholder text inside a decorative hex, so it was left out. Much
+higher opacity (0.92–0.96) and far less grayscale (0–5%) than the
+subtle edge-decoration hexagons, since this is the hero's primary visual
+now, not a background accent. `Hexagon`/`HexPhoto`/`hexPoints` exported
+from `SectionDecoration.tsx` for reuse rather than duplicated.
+
+**More hexes overall.** 3 more outline hexagons added to
+`SectionDecoration.tsx`'s shared set, and the homepage's blog section
+(previously left undecorated for restraint) now carries its own edge
+accent too (`ICON_PAIRS.blog`, reusing `produkty`'s icon pair — 8 icons
+across 5 placements means one repeat is unavoidable, spaced far enough
+apart on the page not to read as repetitive).
+
+### Verified
+
+`npm test` (373/373, unchanged), `npm run typecheck`, `npm run lint`,
+`npm run build`, `npm run e2e` (6/6, both browser projects — the first
+attempt hit the same stale-port `webServer` timeout as §9o; a bare retry
+passed clean, no code investigation needed, matching the documented
+pattern) all pass. Browser-verified at desktop, tablet (700px), and
+mobile (400px): the hero shows the 3 engraved-photo hexagons plus icon/
+outline accents instead of the animation, the footer's first column
+shows the orbit graphic (rings + 8 icons across 3 visibly different
+radii) correctly sized with no overflow at any width, and the blog
+section's new edge accent renders without crowding the post cards.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

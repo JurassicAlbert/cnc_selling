@@ -8,7 +8,7 @@ import { listAllActiveProducts } from '@/server/repositories/products';
 import { CategoryTile } from '@/ui/primitives/CategoryTile';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
-import { OrbitIconHero } from '@/ui/primitives/OrbitIconHero';
+import { HeroHexMosaic } from '@/ui/primitives/HeroHexMosaic';
 import { ProductCard } from '@/ui/primitives/ProductCard';
 import { Section } from '@/ui/primitives/Section';
 import { ICON_PAIRS } from '@/ui/primitives/SectionDecoration';
@@ -84,7 +84,7 @@ export default async function MarketingHomePage() {
                 </Link>
               </div>
             </div>
-            <OrbitIconHero />
+            <HeroHexMosaic />
           </div>
         </Container>
       </Section>
@@ -156,7 +156,7 @@ export default async function MarketingHomePage() {
       </Section>
 
       {blogPosts.length > 0 && (
-        <Section>
+        <Section decorative={{ side: 'right', icons: ICON_PAIRS.blog }}>
           <Container>
             <Heading level={2}>{SITE.homeBlogHeadingPl}</Heading>
             <div
