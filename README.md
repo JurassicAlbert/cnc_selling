@@ -85,13 +85,40 @@ backs a live text field with real validation, not a placeholder notice — see
 real material photo, the seeded design's real artwork, the personalization
 text rendered in the exact chosen font file, and real module seam lines —
 composited from real data throughout, with an honest on-page caption about
-what is and isn't final — see `docs/HANDOVER.md` §9k. Still a foundation,
-not finished: nothing is persisted to a cart yet. See `docs/HANDOVER.md` §9f.
+what is and isn't final — see `docs/HANDOVER.md` §9k.
 
 A Lighthouse audit while building this caught a real bug: the MUI theme
 provider was wrapping every page from the root layout, shipping ~154KB of
 client JS to pages with zero interactive MUI components. Fixed — see
 `docs/HANDOVER.md` §9e before reintroducing `ThemeRegistry` at the root.
+
+**P5, cart/checkout/order — built 2026-08-24/25.** A customer can actually
+buy something now: a real signed guest session (the first cookie-writing
+code in this codebase), a real cart with edit/duplicate/remove/quantity, a
+real checkout with NIP-checksum/postal-code validation and the real
+custom-goods withdrawal-right disclosure, a real atomic order-creation
+transaction with a race-free per-year-month order number, real immutable
+order snapshots (verified by mutating a live catalogue row and confirming
+an existing order's display didn't change), and real guest order
+lookup/confirmation. See `docs/HANDOVER.md` §9l for the full account,
+including two real bugs an e2e test caught (a `Secure` cookie silently
+dropped by Safari/WebKit over plain HTTP, and a validation-error form
+losing everything the customer had already typed) and what's honestly
+still deferred: real shipping rates and a real bank account number (both
+need P7's admin panel to exist first — no such data exists anywhere in
+this system, and a fabricated bank account number specifically would be a
+real-world harm, not just an ordinary placeholder) and guest-cart-merge-
+on-login (needs P6's auth to exist first).
+
+| File | What it is |
+|---|---|
+| `src/server/session/` | The signed guest session cookie — HMAC, not just random bytes (§9l on why) |
+| `src/server/repositories/cart.ts`, `src/server/actions/cart.ts` | Cart reads and mutations — every price/module-layout cached on `Configuration`, never re-derived on view |
+| `src/server/orders/create-order.ts` | The one atomic order-creation transaction — re-price, compare, snapshot, insert, clear the cart |
+| `src/server/actions/checkout.ts`, `src/ui/islands/checkout/CheckoutForm.tsx` | The checkout form — real Polish field validation, `useActionState`, no client JS beyond that one island |
+| `src/domain/checkout/validate.ts` | Real NIP checksum, postal code, phone — pure, unit-tested |
+| `src/server/mail/mailer.ts` | The real `Mailer` interface, honestly unconfigured — never fakes a sent email |
+| `tests/e2e/checkout.spec.ts` | Add-to-cart → cart → checkout → confirmation, end to end, both browser projects |
 
 ---
 
@@ -107,7 +134,7 @@ npm install
 npm run db:up
 npm run db:deploy      # applies the initial migration
 
-npm test               # 354 assertions across thirteen files, about a second
+npm test               # 369 assertions across fourteen files, about a second
 npm run typecheck      # TypeScript strict, noUncheckedIndexedAccess, no emit
 npm run lint             # Biome + the Polish-literal check
 npm run build           # Next.js production build
@@ -155,15 +182,25 @@ yet, the code says so.
 
 P0 is done. P2 is functionally complete — real catalogue seeded, category
 and product pages live, SEO/Schema.org/sitemap/robots all real. **P3, the
-configurator, is under way** — its foundation (the step machine, server-side
-compatibility/pricing/feasibility, and the first real MUI client island) is
-built and browser-verified across three product types; see
-`docs/HANDOVER.md` §9f and `docs/CHECKLIST.md`'s P3 section for exactly
-what's done and what's still open (cart/`Configuration`-row persistence and
-a few smaller items — font-backed personalization and the 2D preview are
-both done as of 2026-08-24, see §9j and §9k). Next:
+configurator, is functionally complete** — step machine, server-side
+compatibility/pricing/feasibility, the first real MUI client island, font-
+backed personalization, and the 2D preview are all built and browser-
+verified; see `docs/HANDOVER.md` §9f/§9j/§9k. **P5, cart/checkout/order, is
+built** (§9l) — a customer can genuinely place an order today, guest
+checkout only. See `docs/CHECKLIST.md` for the itemised state of every
+phase. Next:
 
-- **P3's remaining pieces** — see the P3 checklist for the itemised list.
+- **P4, upload & design review** — not started. The one real infrastructure
+  decision it needs first: where uploaded files actually live (local disk
+  vs. an object store), since nothing about the review workflow can be
+  built without a real storage adapter behind it.
+- **P6, accounts** — not started. Needed before "guest cart merges into
+  user cart on login" (a real P5 checklist item, currently blocked on
+  exactly this) can be closed.
+- **P7, admin panel** — not started. Needed before shipping rates and a
+  real bank account number can be anything but the placeholders P5 uses
+  today; see `docs/ARCHITECTURE.md`'s note near §16A for the Materio
+  direction already recorded for when this starts.
 - **P2's remaining piece** — the homepage's hero/craftsmanship/reviews/FAQ
   sections, once real content exists for them.
 

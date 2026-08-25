@@ -37,6 +37,12 @@ export type CartItemView = {
   readonly acknowledgedWarnings: readonly string[];
   /** The raw ids behind the display names above — rebuilds the configurator's own URL-encoded state for the "Edytuj" link, never re-derived by hand. */
   readonly selections: Selections;
+  /** The `Design.code` (§6.8's order snapshot wants a stable code, not just a display name that can be edited later). */
+  readonly designCode: string | null;
+  readonly pricingVersion: number | null;
+  /** Both null until P4's upload pipeline exists — read now so `createOrder`'s automatic DESIGN_REVIEW routing is correct the day it does. */
+  readonly customDesignId: string | null;
+  readonly customDesignStatus: 'PENDING_REVIEW' | 'APPROVED' | 'NEEDS_CHANGES' | 'REJECTED' | null;
 };
 
 export type CartView = {
@@ -83,11 +89,14 @@ export async function findCartForRequest(params: {
               moduleLayout: true,
               warnings: true,
               acknowledgedWarnings: true,
+              pricingVersion: true,
+              customDesignId: true,
               product: { select: { slug: true, namePl: true, images: { where: { isPrimary: true }, select: { url: true }, take: 1 } } },
-              design: { select: { namePl: true } },
+              design: { select: { namePl: true, code: true } },
               material: { select: { namePl: true } },
               finish: { select: { namePl: true } },
               font: { select: { namePl: true } },
+              customDesign: { select: { status: true } },
             },
           },
         },
@@ -120,6 +129,10 @@ export async function findCartForRequest(params: {
     moduleLayout: (configuration.moduleLayout as ModuleLayout | null) ?? null,
     warnings: (configuration.warnings as FeasibilityFinding[] | null) ?? [],
     acknowledgedWarnings: configuration.acknowledgedWarnings,
+    designCode: configuration.design?.code ?? null,
+    pricingVersion: configuration.pricingVersion,
+    customDesignId: configuration.customDesignId,
+    customDesignStatus: configuration.customDesign?.status ?? null,
     selections: {
       designId: configuration.designId,
       customUploadId: null,

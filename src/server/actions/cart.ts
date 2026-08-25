@@ -16,14 +16,11 @@
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 
-import { checkConfigurationComplete } from '@/domain/configuration/steps';
 import type { Selections } from '@/domain/configuration/steps';
 import { prisma } from '@/server/db/client';
 import type { Prisma } from '@/generated/prisma/client';
 import type { InstallationVariantCode } from '@/generated/prisma/enums';
-import { getConfiguratorProductData } from '@/server/repositories/configurator';
-import { priceConfiguration } from '@/server/configurator/price-configuration';
-import { stepsForProductType } from '@/domain/configuration/steps';
+import { priceAndValidateSelections } from '@/server/configurator/validate-and-price';
 import {
   isValidSignedSessionValue,
   mintSignedSessionValue,
@@ -32,6 +29,22 @@ import {
 import { GUEST_SESSION_COOKIE_NAME } from '@/server/session/read-guest-session';
 
 const GUEST_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 90;
+
+/**
+ * `NODE_ENV === 'production'` is the BUILD mode, not the request's actual
+ * protocol — a real bug caught by this session's own e2e suite: this
+ * project's Playwright config deliberately runs a production build over
+ * plain `http://localhost` (§9h/§9i's Turbopack-dev-mode fix), and a
+ * `Secure` cookie set over plain HTTP is silently dropped by a
+ * spec-compliant browser. Chromium happens to special-case `localhost` as
+ * an implicitly secure context, which is why this only ever failed under
+ * WebKit (`mobile-safari` in the e2e matrix) — the guest session cookie
+ * never got stored, so the very next request saw an empty cart. Deriving
+ * `secure` from `NEXT_PUBLIC_SITE_URL` instead — the same env var already
+ * used for canonical/OG URLs — ties it to whether this deployment is
+ * actually HTTPS, not to how it was built.
+ */
+const SITE_IS_HTTPS = (process.env.NEXT_PUBLIC_SITE_URL ?? '').startsWith('https://');
 
 /**
  * Prisma's JSON input type isn't structurally compatible with the plain
@@ -56,7 +69,7 @@ async function ensureGuestSessionToken(): Promise<string> {
   const fresh = mintSignedSessionValue(secret);
   store.set(GUEST_SESSION_COOKIE_NAME, fresh, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: SITE_IS_HTTPS,
     sameSite: 'lax',
     path: '/',
     maxAge: GUEST_COOKIE_MAX_AGE_SECONDS,
@@ -68,81 +81,14 @@ export type AddToCartResult =
   | { readonly ok: true }
   | { readonly ok: false; readonly code: 'CONFIGURATION_INVALID' };
 
-/**
- * Re-runs the exact same server-side validation `getConfiguratorSnapshot`
- * does — this function never trusts that a customer's browser only ever
- * submitted a valid, priced, acknowledged configuration.
- */
-async function priceAndValidate(
-  productSlug: string,
-  selections: Selections,
-): Promise<
-  | { readonly ok: false }
-  | {
-      readonly ok: true;
-      readonly data: NonNullable<Awaited<ReturnType<typeof getConfiguratorProductData>>>;
-      readonly pricing: Extract<
-        Awaited<ReturnType<typeof priceConfiguration>>,
-        { status: 'priced' }
-      >;
-    }
-> {
-  const data = await getConfiguratorProductData(productSlug);
-  if (data === null) {
-    return { ok: false };
-  }
-  const steps = stepsForProductType(data.typeCode);
-  if (!checkConfigurationComplete(steps, selections).ok) {
-    return { ok: false };
-  }
-
-  const material = selections.materialId === null ? null : (data.materialsById.get(selections.materialId) ?? null);
-  const design = selections.designId === null ? null : (data.designsById.get(selections.designId) ?? null);
-  const finish = selections.finishId === null ? null : (data.finishesById.get(selections.finishId) ?? null);
-  const thickness =
-    selections.thicknessMm === null ? null : (data.thicknessesByMm.get(selections.thicknessMm) ?? null);
-  const installationVariant =
-    selections.installationVariant === null
-      ? null
-      : (data.installVariantsByCode.get(selections.installationVariant) ?? null);
-  const font = selections.fontId === null ? null : (data.fontsById.get(selections.fontId) ?? null);
-
-  if (material === null || design === null) {
-    return { ok: false };
-  }
-
-  const pricing = priceConfiguration(
-    {
-      product: data.product,
-      material,
-      design,
-      finish,
-      thickness,
-      installationVariant,
-      personalizationSpec: data.personalizationSpec,
-      font,
-      machine: data.machine,
-      pricing: data.pricing,
-    },
-    selections,
-    1,
-  );
-
-  if (pricing.status !== 'priced' || pricing.blockingError) {
-    return { ok: false };
-  }
-
-  return { ok: true, data, pricing };
-}
-
 export async function addToCart(
   productSlug: string,
   selections: Selections,
   acknowledgedWarnings: readonly string[],
   quantity: number,
 ): Promise<AddToCartResult> {
-  const validated = await priceAndValidate(productSlug, selections);
-  if (!validated.ok) {
+  const validated = await priceAndValidateSelections(productSlug, selections);
+  if (validated === null) {
     return { ok: false, code: 'CONFIGURATION_INVALID' };
   }
   const { data, pricing } = validated;
@@ -296,8 +242,8 @@ export async function updateCartItemConfiguration(
   if (!owned) {
     return { ok: false, code: 'CONFIGURATION_INVALID' };
   }
-  const validated = await priceAndValidate(productSlug, selections);
-  if (!validated.ok) {
+  const validated = await priceAndValidateSelections(productSlug, selections);
+  if (validated === null) {
     return { ok: false, code: 'CONFIGURATION_INVALID' };
   }
   const { pricing } = validated;

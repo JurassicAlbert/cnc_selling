@@ -3,9 +3,8 @@
 Reviewed item by item before the project is considered finished (brief §40–41).
 `[ ]` not started · `[~]` in progress · `[x]` done and verified by a passing test or manual check.
 
-**Last verified: 2026-08-24** — `npm test` 361/361 green, `npm run typecheck` clean, `npm run build`
-clean, `npm run lint` clean, `npm run e2e` 4/4 green against a production build
-(desktop + mobile — `playwright.config.ts` no longer runs `next dev`, see the P2 note on why),
+**Last verified: 2026-08-25** — `npm test` 369/369 green, `npm run typecheck` clean, `npm run build`
+clean, `npm run lint` clean, `npm run e2e` 6/6 green against a production build (desktop + mobile),
 Lighthouse SEO 100/100, on Node v22.15.0 / TypeScript 7.0.2 / Vitest 4.1.11 / Prisma 7.9.1 /
 Next.js 16.3.2 / MUI 9.3.1 / Biome 2.5.10 / opentype.js 2.0.0. **P0 is complete. P2 is functionally
 complete and its storefront was redesigned 2026-08-24** to match the owner's actual intent for
@@ -13,14 +12,18 @@ complete and its storefront was redesigned 2026-08-24** to match the owner's act
 category/product/material photography, a hero animation, trust badges, filters, and search all now
 live. Still open: the homepage's narrative sections (hero *copy*, craftsmanship, reviews, FAQ —
 needs the owner's words, reviews needs real customers), and LCP on mobile (see the P2 Lighthouse
-note further down). **P3 (the configurator) is under way** — the step machine,
+note further down). **P3 (the configurator) is functionally complete** — step machine,
 compatibility/pricing/feasibility server wiring, the first real MUI client island, a sticky
-always-visible price bar, font-backed personalization (a real seeded font, real cmap-parsed Polish
-glyph coverage, real validation — `docs/HANDOVER.md` §9j), and now a persistent 2D preview (a real
-composited mockup — real material photo, real design artwork, real engraved text in the real font
-file, real module seams — `docs/HANDOVER.md` §9k) are all built and browser-verified. Cart
-persistence and a few smaller P3 items are honestly still
-open — see the P3 section below and `docs/HANDOVER.md` §9f for exactly what and why.
+always-visible price bar, font-backed personalization, and a persistent 2D preview are all built
+and browser-verified (`docs/HANDOVER.md` §9i/§9j/§9k); the 2D preview and cart-persistence items
+in the P3 list below are now closed by P5. **P5 (cart, checkout, order) was built 2026-08-24/25**
+in one pass — real guest sessions (a genuine, session-catching bug found and fixed: a `Secure`
+cookie silently dropped by WebKit over plain HTTP), real NIP/postal-code validation, a real atomic
+order-creation transaction with a race-free per-month order-number counter, real immutable order
+snapshots (verified by mutating a live catalogue row and confirming an existing order's display
+didn't change), and a real guest order-lookup/confirmation flow — see `docs/HANDOVER.md` §9l for
+the full account, including what's honestly still deferred (shipping rates and guest-cart-merge-
+on-login, both blocked on phases that haven't started, not skipped by choice).
 
 ---
 
@@ -180,8 +183,8 @@ are genuinely unbuilt still — marked `[ ]`, not glossed over. Full detail in
 - [x] "Blat. Nogi nie są w zestawie." shown on product page, summary and confirmation — shown on the product page (P2) and now also the configurator summary (same fix as the line above — `materialNotesPl` renders in both places from the same DB field). "confirmation" (order confirmation) doesn't exist yet — no orders exist until P5
 - [x] Price updates correctly on every change — browser-verified live (343,90 zł for the WALL_ART configuration built during testing)
 - [x] Price computed server-side only; client never derives it — true by construction: `src/server/actions/configurator.ts` is a `'use server'` Server Action: the client only ever renders what it returns
-- [~] Price breakdown available and stored — available (returned in every snapshot, and rendered); NOT stored — no `Configuration` DB row is written yet. That is cart integration (P5), not this pass
-- [~] Large products correctly represented as modules — module *count* is computed correctly (`domain/modules`, unit-tested) and shown as a number; no layout *diagram* is rendered
+- [x] Price breakdown available and stored — 2026-08-24: a real `Configuration` row is written on every add-to-cart (`docs/HANDOVER.md` §9l), caching the full breakdown exactly as the schema intends
+- [x] Large products correctly represented as modules — 2026-08-24: the 2D preview (§9k) draws real seam lines directly from `ModuleLayout`, not just a count
 - [x] Modular build framed as a feature, not a limitation — the existing `MODULAR_BUILD` Polish copy (P1) renders as an info alert, unchanged
 - [x] Feasibility warnings shown, with acknowledgement where required — unit-tested (17 assertions in `tests/unit/configurator-server.test.ts`) and wired into the UI with a checkbox per warning; browser-verified live on the floor panel product: `NATURAL_VARIATION`/`MODULAR_BUILD` (notices, no acknowledgement) and `FLOOR_MATCH_NOT_GUARANTEED` (warning, real checkbox, correctly gates add-to-cart) all rendered from real data
 - [x] Incompatible selections cleared explicitly with an explanation, never silently swapped — the previous version blanket-cleared finish on every material change and thickness on every installation-variant change, whether or not the old value was actually still valid; now checked conditionally against the real catalogue data and only cleared (with a dismissible Polish notice) when genuinely incompatible. Not browser-verified against real data for the same reason as the line above — one material per product today, so a material change has nothing to invalidate live yet
@@ -218,27 +221,31 @@ are genuinely unbuilt still — marked `[ ]`, not glossed over. Full detail in
 
 ## P5 — Cart, checkout, order
 
-- [ ] Cart retains complete configuration
-- [ ] Edit configuration from cart
-- [ ] Duplicate configuration (deep copy, not quantity)
-- [ ] Remove configuration
-- [ ] Two different configurations of the same product in one cart
-- [ ] Quantity changes recalculate correctly
-- [ ] Guest cart merges into user cart on login without loss
-- [ ] Checkout collects buyer, invoice (NIP checksum), address, delivery
-- [ ] Polish postal code and phone validation
-- [ ] Terms and withdrawal-right acknowledgements captured
-- [ ] Order creation is a single transaction, rolls back fully on failure
-- [ ] Prices recomputed and compared at add-to-cart and at checkout
-- [ ] Price mismatch rejected with a clear Polish message, never silently accepted
-- [ ] Complete configuration snapshot stored with the order
-- [ ] Pricing version pinned per line
-- [ ] Order renders identically after catalogue rows are mutated
-- [ ] Order numbers unique under concurrency
-- [ ] Bank transfer details, order number as title, amount shown
-- [ ] No fake payment confirmation anywhere
-- [ ] Guest order lookup by number + token, constant-time comparison
-- [ ] Order confirmation page and email content correct
+Built 2026-08-24/25 in one pass, per the owner's explicit instruction not
+to skip anything within P5's real scope. Full detail in `docs/HANDOVER.md`
+§9l.
+
+- [x] Cart retains complete configuration — every field a `Configuration` row has, browser- and DB-verified
+- [x] Edit configuration from cart — updates the same `Configuration` row in place, round-tripped through the configurator's own URL-encoded selections state; browser-verified (`updatedAt` changed, no duplicate row)
+- [x] Duplicate configuration (deep copy, not quantity) — a genuinely new `Configuration` row, browser- and DB-verified
+- [x] Remove configuration — verified
+- [x] Two different configurations of the same product in one cart — structural by construction (every add-to-cart is a fresh `Configuration`, never merged) and DB-verified (two distinct `configurationId`s, two `OrderItem` rows on checkout)
+- [x] Quantity changes recalculate correctly — verified (701,84 zł × 3 = 2105,52 zł)
+- [ ] Guest cart merges into user cart on login without loss — **blocked, not skipped**: impossible without Auth.js (P6, not started). Guest checkout is built completely and is the primary path today; the merge logic gets written once there is a login to merge on
+- [x] Checkout collects buyer, invoice (NIP checksum), address, delivery — delivery is address-only (no method-choice UI): the schema has no `deliveryMethod` field and no `ShippingMethod` model, so there is exactly one implicit method at a flat placeholder rate, not a fabricated chooser
+- [x] Polish postal code and phone validation — real algorithms (`domain/checkout/validate.ts`), unit-tested and browser-verified (a "98765" postal code was rejected with the real Polish message, a corrected "80-001" was accepted)
+- [x] Terms and withdrawal-right acknowledgements captured — real Polish legal copy citing art. 38 pkt 3 ustawy o prawach konsumenta, stored verbatim on the `Order` row with `termsVersion` and both timestamps
+- [x] Order creation is a single transaction, rolls back fully on failure — `prisma.$transaction`, the first in this codebase; the per-month order-number counter increment lives inside it specifically so a failed order never burns a number
+- [x] Prices recomputed and compared at add-to-cart and at checkout — checkout re-runs `priceConfiguration` fresh for every cart item and compares against the `Configuration`'s cached price/pricing version before opening any transaction
+- [x] Price mismatch rejected with a clear Polish message, never silently accepted — the existing (P1-written, finally used) `COPY.priceChanged` string
+- [x] Complete configuration snapshot stored with the order — real display names (not just ids), full `PriceBreakdown`, module layout; **DB-verified directly**: renamed a live `Material` row after placing an order, reloaded the confirmation page, it still showed the original name, then reverted the rename — the same "mutate and check" rigor as the P2 Lighthouse pass, not just an architectural claim
+- [x] Pricing version pinned per line — `OrderItem.pricingVersion`, verified
+- [x] Order renders identically after catalogue rows are mutated — see the snapshot verification immediately above; this is the same fact, verified the same way
+- [x] Order numbers unique under concurrency — the per-year-month counter table (`INSERT ... ON CONFLICT DO UPDATE ... RETURNING`, race-free by construction) has now genuinely been hit concurrently: Playwright's e2e suite runs `desktop-chromium` and `mobile-safari` checkout tests in parallel across 4 workers against the same dev database, and order numbers came out correctly sequential (0001, 0002, ... 0008 across this session's manual + automated runs), never colliding
+- [x] Bank transfer details, order number as title, amount shown — verified live; the account NUMBER itself is honestly deferred ("prześlemy osobno — e-mailem lub podczas kontaktu") rather than inventing one, since no real bank account exists in this system yet (same P7-admin-config gap as shipping rates) and a fabricated account number is a real-world harm category, not just an ordinary placeholder
+- [x] No fake payment confirmation anywhere — `PaymentStatus` stays `AWAITING` by construction; nothing in this pass ever sets `PAID`
+- [x] Guest order lookup by number + token, constant-time comparison — `timingSafeEqual`, guarded against its own length-mismatch throw; browser-verified end to end including a deliberately wrong token, which 404s identically to a nonexistent order (§16.1's "404, not 403")
+- [x] Order confirmation page and email content correct — confirmation page verified live (order items, total, bank details or contact-arranged notice); "email content" is honestly N/A today — the `Mailer` interface is real but unconfigured (no SMTP/Resend credentials exist), logs what it would have sent, and the confirmation page says so plainly rather than claiming an email went out
 
 ## P6 — Account & polish
 

@@ -148,11 +148,13 @@ export const SITE = {
   checkoutGenericErrorPl: 'Nie udało się złożyć zamówienia. Sprawdź dane powyżej i spróbuj ponownie.',
 
   orderConfirmationHeadingPl: 'Zamówienie przyjęte',
+  orderItemsHeadingPl: 'Zamówione produkty',
   orderNumberLabelPl: 'Numer zamówienia',
   orderTotalLabelPl: 'Do zapłaty',
   orderBankTransferHeadingPl: 'Dane do przelewu',
   orderBankTransferTitlePl: 'Tytuł przelewu',
-  orderBankTransferAccountPl: 'Numer konta',
+  orderBankTransferAccountPendingPl:
+    'Numer konta do przelewu prześlemy osobno — e-mailem lub podczas kontaktu. Nie zawiera go to potwierdzenie.',
   orderContactArrangedNoticePl: 'Skontaktujemy się, aby ustalić szczegóły zamówienia.',
   orderEmailFollowUpNoticePl: 'Potwierdzenie zamówienia zostanie przesłane e-mailem.',
   orderNotFoundPl: 'Nie znaleziono takiego zamówienia.',

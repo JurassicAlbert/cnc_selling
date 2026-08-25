@@ -1519,6 +1519,172 @@ material is chosen, live compositing as material/design/text/font are
 picked, correct aspect ratio at every real product's real dimension
 envelope, and the module-seam case specifically.
 
+## 9l. P5 — cart, checkout, order creation — 2026-08-24/25
+
+The biggest single pass this session, built after the owner's explicit
+"don't skip anything or any detail" — full plan-mode cycle (context
+gathered directly, then a Plan sub-agent stress-tested the design before
+any code, per this session's established discipline for large changes).
+Two things came out of that stress-test that corrected my own first
+instinct, both verified against `docs/ARCHITECTURE.md` before writing
+anything: the guest session cookie must be **signed** (HMAC, not just
+random bytes — `Configuration.sessionToken`'s own schema comment says so
+explicitly, and it's a different mechanism from `Order.accessToken` for a
+different job), and `orderNumber` must be collision-safe **per year-month**
+(§15's own words), not a single global counter.
+
+### What's real, end to end
+
+- **Guest sessions** (`src/server/session/`) — the first cookie-writing
+  code in this codebase. HMAC-SHA256 signed, a new `SESSION_SECRET` env var
+  (`.env.example`, same style as `SEED_ADMIN_EMAIL`). Read-only helper
+  (`readGuestSessionToken`) safe for Server Components; minting only
+  happens inside a Server Action (`ensureGuestSessionToken` in
+  `actions/cart.ts`), since only Server Actions/Route Handlers may write
+  cookies.
+- **Order numbers**, race-free under real concurrency — a counter table
+  (`OrderNumberCounter`, one raw migration, no Prisma model — accessed only
+  via `tx.$queryRaw` inside the order transaction) incremented with
+  `INSERT ... ON CONFLICT DO UPDATE ... RETURNING`, which takes its row
+  lock as part of one atomic statement. This has now genuinely been hit
+  concurrently — Playwright's e2e suite runs the new checkout spec on
+  `desktop-chromium` and `mobile-safari` in parallel, and order numbers
+  came out correctly sequential every time, never colliding, across this
+  session's manual and automated runs (0001 through 0008+).
+- **Cart** (`src/server/repositories/cart.ts`, `src/server/actions/cart.ts`)
+  — `addToCart`/`updateCartItemConfiguration` re-fetch the real catalogue
+  and re-run `priceConfiguration` exactly like `getConfiguratorSnapshot`
+  does (extracted the shared logic into
+  `src/server/configurator/validate-and-price.ts` so the two call sites
+  can't drift), then cache the computed price/module layout/warnings
+  directly on the `Configuration` row — reading the cart never re-prices,
+  matching the schema's own "Server-computed, cached for display" comment.
+  Every add-to-cart is a fresh `Configuration`, never merged, which is
+  exactly how "two configurations of one product in the cart" is satisfied
+  with no dedup logic at all. "Edit" reuses the configurator's *existing*
+  URL-encoded selections state (`writeSelectionsToSearch`/
+  `readSelectionsFromSearch`, now extracted to `selections-url.ts`) to
+  restore the form, then updates the *same* `Configuration` row in place.
+- **Order creation** (`src/server/orders/create-order.ts`) — the shape
+  `docs/ARCHITECTURE.md` §15.3 specifies almost verbatim: outside any
+  transaction, re-price every cart item fresh and compare against the
+  cached value (reject with the P1-written, finally-used
+  `COPY.priceChanged` before ever opening a transaction); inside
+  `prisma.$transaction` — the first in this codebase — the counter
+  increment, `Order` + `OrderItem[]` (a real immutable snapshot: resolved
+  display names, not ids, plus the full `PriceBreakdown` and pricing
+  version — shared type `src/server/orders/snapshot.ts` so the write side
+  and the confirmation page's read side can't drift) + initial `OrderEvent`
+  (reusing the already-tested `checkOrderStatusTransition` from
+  `domain/order-status/transitions.ts`, including its automatic
+  `DESIGN_REVIEW` routing for an unapproved custom design — inert today,
+  no seeded product has one, but wired through the real state machine, not
+  a bespoke check), then deleting exactly the `CartItem` ids that were
+  priced (never "whatever's in the cart at commit time" — a second tab
+  could have added something since the read). The `Cart` row itself and
+  the `Configuration` rows both survive checkout deliberately — no FK from
+  `OrderItem` to `Configuration` (it's a JSON snapshot, not a reference),
+  so leaving them is a plausible foundation for a future reorder feature,
+  not litter.
+- **Checkout form** (`src/ui/islands/checkout/CheckoutForm.tsx`,
+  `src/server/actions/checkout.ts`) — the first `<form action={...}>` +
+  `useActionState` pattern in this codebase, chosen over a controlled form
+  since checkout needs real server validation, not the configurator's kind
+  of live reactivity. Real NIP checksum (`domain/checkout/validate.ts`,
+  hand-verified against a known-valid NIP before writing the test), real
+  Polish postal-code format, lenient phone validation. Real Polish
+  withdrawal-exemption text citing art. 38 pkt 3 ustawy o prawach
+  konsumenta, stored verbatim on the order with a version string.
+- **Confirmation & guest lookup**
+  (`src/app/(shop)/zamowienie/[orderNumber]`,
+  `.../zamowienie/sprawdz`) — bank-transfer details (order number as
+  transfer title, real amount) or the contact-arranged notice; guest
+  lookup by order number + access token, constant-time comparison
+  (`timingSafeEqual`, guarded against its own length-mismatch throw), a
+  wrong token 404s identically to a nonexistent order (§16.1's "404, not
+  403" — an order's existence is never probeable).
+- **Mailer** (`src/server/mail/mailer.ts`) — the real interface
+  §14 specifies, one implementation (`UnconfiguredMailer`) that logs and
+  reports `{ sent: false }`. Order creation calls it regardless and never
+  lets a mailer failure undo an already-successful order; the confirmation
+  page says "confirmation will follow," never that an email was sent.
+
+### What's deliberately NOT built, and why — not oversights
+
+- **Guest-cart-merge-on-login** — impossible without Auth.js (P6, not
+  started). Guest checkout is the complete, primary path today, exactly as
+  `docs/ARCHITECTURE.md` frames it ("guest checkout supported separately").
+- **Real shipping rates** — no `ShippingMethod` model exists;
+  `docs/ARCHITECTURE.md` puts "shipping methods and rates" under P7 (admin
+  panel) configuration. One flat placeholder
+  (`SHIPPING_FLAT_GROSZE`, `TODO_PRICING`-tagged, exported from
+  `create-order.ts` so the checkout page displays the *exact* number that
+  will be charged, never a second guess) stands in — the same discipline
+  as every other invented number in this codebase.
+- **A real bank account number on the confirmation page** — deliberately
+  refused, not just deferred. No real account exists anywhere in this
+  system (same P7-admin-config gap as shipping), and inventing one would
+  be actively dangerous — a customer could wire real money to a fabricated
+  account. The page says plainly that the number will follow separately.
+- **Delivery method choice** — the schema has no `deliveryMethod` field and
+  no `ShippingMethod` model to choose between, so checkout collects the
+  address only. One implicit method at the flat rate, not a fabricated
+  chooser with nothing behind it.
+
+### Two real bugs found by browser- and e2e-testing this, both fixed
+
+1. **A `'use client'` file's exports can't be imported into a Server
+   Component — not even a plain function.** `writeSelectionsToSearch` lived
+   in `Configurator.tsx` (a client file); the cart page's "Edytuj" link
+   needed it too, and the build failed with "Attempted to call
+   `writeSelectionsToSearch()` from the server but it's on the client."
+   Extracted both URL-mapping functions into a plain module with no
+   directive at all (`selections-url.ts`) so both sides can import it
+   safely — the same fix shape as the earlier `@mui/icons-material`
+   hydration bug (§9h): the client/server boundary in this framework is
+   per-*file*, not per-export.
+2. **`secure: NODE_ENV === 'production'` on the guest cookie was wrong —
+   caught only by adding a real e2e test and running it on WebKit.** Build
+   mode isn't the same fact as "is this request actually HTTPS," and this
+   project's own Playwright config deliberately runs a *production build*
+   over plain `http://localhost` (§9h's Turbopack-dev-mode fix). A
+   `Secure` cookie over plain HTTP is silently dropped by a spec-compliant
+   browser. Chromium happens to treat `localhost` as an implicitly secure
+   context, which is exactly why `desktop-chromium` passed and
+   `mobile-safari` failed with an empty cart right after a successful
+   add-to-cart — the guest session cookie was never actually stored.
+   Fixed by deriving `secure` from `NEXT_PUBLIC_SITE_URL` (the same env var
+   already used for canonical/OG URLs) instead of build mode — this is
+   the kind of bug that would have shipped silently and broken every real
+   Safari/iOS guest's cart in production, and it only surfaced because
+   `tests/e2e/checkout.spec.ts` (a new spec, written specifically because
+   the plan's own verification section called for one) runs on WebKit.
+
+### Verified
+
+`npm test` (369/369, +8 for `domain/checkout/validate.ts`), `npm run
+typecheck`, `npm run lint`, `npm run build`, `npm run e2e` (6/6 — the new
+`checkout.spec.ts` on top of the existing `shell.spec.ts`, both browser
+projects) all pass. Beyond the automated suite, verified by hand against
+real DB state, not just the rendered page: two full checkout runs
+(`BANK_TRANSFER` and a second attempt that exercised `CONTACT_ARRANGED`'s
+radio before a validation retry reset it to the default — real Polish NIP
+`5260250274` accepted, a deliberately invalid postal code `98765` rejected
+with the exact right message *and* every other field's value preserved
+across the retry — a third real bug found and fixed: `useActionState`
+re-renders the same form instance, and every input was uncontrolled, so a
+single field's validation error was silently erasing everything else the
+customer had typed; fixed by echoing submitted values back in the action's
+return state and forcing a remount via a render-counter `key` on the
+form); order numbers `2026/08/0001` then `2026/08/0002` confirming the
+per-month counter increments correctly within the same month; a wrong
+`?token=` 404ing exactly like a nonexistent order; the guest lookup form
+redirecting correctly to a real confirmation page; and — matching the
+rigor of the P2 Lighthouse pass, not just asserting the snapshot mechanism
+works — renamed a live `Material` row to a nonsense string after placing
+an order, reloaded that order's confirmation page, confirmed it still
+rendered the *original* material name, then reverted the rename.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous
