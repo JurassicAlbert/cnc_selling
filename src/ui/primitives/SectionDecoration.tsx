@@ -1,5 +1,4 @@
 import type { ComponentType, CSSProperties } from 'react';
-import Image from 'next/image';
 
 import {
   ChairIcon,
@@ -14,6 +13,7 @@ import {
 
 export type IconComponent = ComponentType<{ readonly size?: number; readonly style?: CSSProperties }>;
 export type IconPair = readonly [IconComponent, IconComponent];
+export type EngravingComponent = ComponentType<{ readonly style?: CSSProperties }>;
 
 /**
  * One pair per real placement on the site (2026-08-26 — the owner said the
@@ -50,6 +50,9 @@ export function hexPoints(cx: number, cy: number, r: number): string {
   }
   return points.join(' ');
 }
+
+/** The hex clip shape (pointy-top) as a CSS `clip-path` polygon — used by the large engraving tile below. */
+export const HEX_CLIP_PATH = 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)';
 
 /**
  * Authored in a `CLUSTER_WIDTH`-wide box where HIGH x is the true page
@@ -120,34 +123,30 @@ export function Hexagon({ cx, cy, r, icon: Icon }: HexSpec) {
 }
 
 /**
- * A large photographic hex "tile" — added 2026-08-26 at the owner's
- * request for "some CNC images so the page looks more pro." A real photo
- * (already used elsewhere on the site — no new sourcing), clipped to the
- * same pointy-top hexagon shape as the icon tiles via `clip-path`, muted
- * with opacity + a grayscale filter so it stays a background accent
- * rather than competing with real content photography. Positioned in the
- * same authored coordinate space as the hex data (`left`/`top` here are
- * local-box pixels, high-x/toward-edge convention); its own `<Image>`
- * counter-mirrors (`scaleX(-1)`) when the parent cluster is mirrored for
- * `side="left"`, so the photo itself is never shown flipped.
+ * A large "material tile" hex showing one of the original engraved-line-art
+ * illustrations (`engravings.tsx`) — rewritten 2026-08-26 to replace the
+ * real-photo version. A real photo here would always duplicate one already
+ * shown on a category tile, product card, or blog post (all 7 sourced
+ * photos are already spread across those three surfaces), which is exactly
+ * the repetition the owner flagged. An original illustration is guaranteed
+ * distinct, and — since the owner separately asked for hex content to
+ * "look engraved" — is a better fit than a photo either way. Pure inline
+ * SVG (the engraving components render their own `<svg>`), no
+ * `next/image`, no new network request.
  */
-export function HexPhoto({
-  src,
+export function HexEngravingTile({
+  engraving: Engraving,
   cx,
   cy,
   size,
-  mirrored = false,
-  opacity = 0.4,
-  grayscale = 35,
+  opacity = 0.5,
   className,
 }: {
-  readonly src: string;
+  readonly engraving: EngravingComponent;
   readonly cx: number;
   readonly cy: number;
   readonly size: number;
-  readonly mirrored?: boolean;
   readonly opacity?: number;
-  readonly grayscale?: number;
   readonly className?: string;
 }) {
   return (
@@ -159,22 +158,13 @@ export function HexPhoto({
         top: cy - size / 2,
         width: size,
         height: size,
-        clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+        clipPath: HEX_CLIP_PATH,
         overflow: 'hidden',
         opacity,
+        color: 'var(--mui-palette-secondary-main)',
       }}
     >
-      <Image
-        src={src}
-        alt=""
-        fill
-        sizes={`${size}px`}
-        style={{
-          objectFit: 'cover',
-          filter: grayscale > 0 ? `grayscale(${grayscale}%)` : undefined,
-          transform: mirrored ? 'scaleX(-1)' : undefined,
-        }}
-      />
+      <Engraving style={{ width: '100%', height: '100%' }} />
     </div>
   );
 }
@@ -182,21 +172,22 @@ export function HexPhoto({
 type SectionDecorationProps = {
   readonly side?: 'left' | 'right';
   readonly icons: IconPair;
-  /** A real photo path (e.g. `/images/photos/inne.jpg`) for one large accent hex — optional, used sparingly (1-2 placements sitewide). */
-  readonly photo?: string;
+  /** One original engraved illustration for one large accent hex — optional, used sparingly (a few placements sitewide). */
+  readonly engraving?: EngravingComponent;
 };
 
 /**
- * A honeycomb accent for a `Section`. Pure inline-SVG (+ one optional
- * `next/image` for the photo tile) RSC primitive: `aria-hidden`,
- * `pointer-events: none`, zero client JS.
+ * A honeycomb accent for a `Section`. Pure inline-SVG RSC primitive:
+ * `aria-hidden`, `pointer-events: none`, zero client JS.
  *
  * The cluster is authored once with its dense side at HIGH local x; for
  * `side="right"` that's flush against the section's right edge as-is, and
- * for `side="left"` the inner wrapper (svg + photo) is mirrored
- * (`scaleX(-1)`) rather than duplicating hand-placed coordinates.
+ * for `side="left"` the inner wrapper (svg + engraving tile) is mirrored
+ * (`scaleX(-1)`) rather than duplicating hand-placed coordinates — safe
+ * here even for the engraving tile, since these are abstract/near-
+ * symmetric illustrations, not real photos where a flip would look wrong.
  */
-export function SectionDecoration({ side = 'right', icons, photo }: SectionDecorationProps) {
+export function SectionDecoration({ side = 'right', icons, engraving }: SectionDecorationProps) {
   const fadeToward = side === 'right' ? 'left' : 'right';
   // Pushed further into the page (2026-08-26) — opaque through most of the
   // hex content (which now extends to local x ~270) and a longer, more
@@ -234,7 +225,9 @@ export function SectionDecoration({ side = 'right', icons, photo }: SectionDecor
             ))}
           </g>
         </svg>
-        {photo && <HexPhoto src={photo} cx={330} cy={300} size={160} mirrored={mirrored} className="hex-extra" />}
+        {engraving && (
+          <HexEngravingTile engraving={engraving} cx={330} cy={300} size={160} className="hex-extra" />
+        )}
       </div>
     </div>
   );

@@ -159,6 +159,16 @@ homepage blog section that was missing, and seeded 4 real placeholder
 posts (wood care, the CNC/laser process, materials, personalization) so
 both it and `/blog` show real content instead of the empty state. Two
 real CSS bugs were found and fixed along the way — full account in §9p.
+**A fifth pass** (`docs/HANDOVER.md` §9q, 2026-08-26) replaced every
+photo used in hex decoration with 5 original engraved-line-art
+illustrations (`src/ui/primitives/engravings.tsx`) so decoration never
+duplicates the real photos already on categories/products/blog; rebuilt
+the hero's hex visual as one real honeycomb tessellation revealing a
+single illustration; reworked `OrbitIconHero` into 3 genuinely distinct
+orbits and moved it into its own footer column. Still deferred, on
+purpose: the mosaic's illustration becoming a real photo with genuine
+scroll-linked parallax — real client-side work this codebase doesn't
+have yet, needs its own design pass (§9q's "explicitly NOT done" note).
 
 ---
 

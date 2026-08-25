@@ -49,7 +49,10 @@ export function Footer({ categories }: FooterProps) {
           <style>{`
             .footer-grid { grid-template-columns: 1fr; }
             @media (min-width: 700px) {
-              .footer-grid { grid-template-columns: 1.5fr 1fr 1fr; }
+              .footer-grid { grid-template-columns: 1.3fr 1fr 1fr; }
+            }
+            @media (min-width: 980px) {
+              .footer-grid { grid-template-columns: 1.3fr 1fr 1fr auto; }
             }
           `}</style>
 
@@ -71,12 +74,6 @@ export function Footer({ categories }: FooterProps) {
             </div>
             <div style={{ marginBlockStart: 'var(--space-3)', maxWidth: 360 }}>
               <Text muted>{SITE.homeSeoDescPl}</Text>
-            </div>
-            {/* The orbiting-icon graphic, moved here from the hero (2026-08-26,
-                owner's request) — sized down for the footer rather than
-                re-tuning its internal geometry twice. */}
-            <div style={{ marginBlockStart: 'var(--space-6)' }}>
-              <OrbitIconHero size={180} />
             </div>
           </div>
 
@@ -132,6 +129,27 @@ export function Footer({ categories }: FooterProps) {
                 {SITE.footerPrivacyLinkPl}
               </Link>
             </div>
+          </div>
+
+          {/* Its own grid column (2026-08-26, owner's request) — not nested
+              inside the brand column with the tagline/description. Hidden
+              below 980px (see the `.footer-grid` media queries above) so it
+              never competes for space with the 3 real content columns on
+              narrower viewports; the animation is decorative, the links
+              above it aren't. */}
+          {/* `display` deliberately lives only in the class below, not here —
+              an inline style always wins the cascade over a stylesheet rule
+              (same reasoning as `.hero-grid`/`.footer-grid` above), so
+              setting `display: flex` inline would defeat the `display: none`
+              default and show this column under 980px regardless. */}
+          <div style={{ alignItems: 'center' }} className="footer-orbit-column">
+            <style>{`
+              .footer-orbit-column { display: none; }
+              @media (min-width: 980px) {
+                .footer-orbit-column { display: flex; }
+              }
+            `}</style>
+            <OrbitIconHero size={170} />
           </div>
         </div>
 

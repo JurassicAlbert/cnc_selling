@@ -8,6 +8,7 @@ import { listAllActiveProducts } from '@/server/repositories/products';
 import { CategoryTile } from '@/ui/primitives/CategoryTile';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
+import { CompassEngraving, GeometricEngraving, LeafSprigEngraving, WaveGrainEngraving } from '@/ui/primitives/engravings';
 import { HeroHexMosaic } from '@/ui/primitives/HeroHexMosaic';
 import { ProductCard } from '@/ui/primitives/ProductCard';
 import { Section } from '@/ui/primitives/Section';
@@ -46,7 +47,7 @@ export default async function MarketingHomePage() {
         className="hero-surface"
         decorative={[
           { side: 'left', icons: ICON_PAIRS.heroLeft },
-          { side: 'right', icons: ICON_PAIRS.heroRight, photo: '/images/photos/inne.jpg' },
+          { side: 'right', icons: ICON_PAIRS.heroRight, engraving: GeometricEngraving },
         ]}
       >
         <Container>
@@ -95,7 +96,7 @@ export default async function MarketingHomePage() {
         </Container>
       </Section>
 
-      <Section decorative={{ side: 'right', icons: ICON_PAIRS.kategorie, photo: '/images/photos/material-dab.jpg' }}>
+      <Section decorative={{ side: 'right', icons: ICON_PAIRS.kategorie, engraving: WaveGrainEngraving }}>
         <Container>
           <div id="kategorie" style={{ scrollMarginTop: 96 }}>
             <Heading level={2}>{SITE.catalogueCategoriesHeadingPl}</Heading>
@@ -122,7 +123,7 @@ export default async function MarketingHomePage() {
         </Container>
       </Section>
 
-      <Section surface="paper" decorative={{ side: 'left', icons: ICON_PAIRS.produkty }}>
+      <Section surface="paper" decorative={{ side: 'left', icons: ICON_PAIRS.produkty, engraving: CompassEngraving }}>
         <Container>
           <Heading level={2}>{SITE.homeProductsHeadingPl}</Heading>
           <div
@@ -156,7 +157,7 @@ export default async function MarketingHomePage() {
       </Section>
 
       {blogPosts.length > 0 && (
-        <Section decorative={{ side: 'right', icons: ICON_PAIRS.blog }}>
+        <Section decorative={{ side: 'right', icons: ICON_PAIRS.blog, engraving: LeafSprigEngraving }}>
           <Container>
             <Heading level={2}>{SITE.homeBlogHeadingPl}</Heading>
             <div

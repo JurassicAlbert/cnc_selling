@@ -1,14 +1,14 @@
 import type { ReactNode } from 'react';
 
 import { SectionDecoration } from '@/ui/primitives/SectionDecoration';
-import type { IconPair } from '@/ui/primitives/SectionDecoration';
+import type { EngravingComponent, IconPair } from '@/ui/primitives/SectionDecoration';
 
 export type DecorativeSide = {
   readonly side: 'left' | 'right';
   /** Which 2 material-tile icons this cluster uses — required so different sections don't repeat the same icons (2026-08-26). */
   readonly icons: IconPair;
-  /** A real photo path for one large accent hex — optional, used sparingly. */
-  readonly photo?: string;
+  /** One of the original engraved-line-art illustrations (`engravings.tsx`) for one large accent hex — optional, used sparingly. Never a real photo — those are reserved for categories/products/blog so decoration never duplicates them (2026-08-26). */
+  readonly engraving?: EngravingComponent;
 };
 
 type SectionProps = {
@@ -20,7 +20,7 @@ type SectionProps = {
   /**
    * Adds a hexagon corner accent (`SectionDecoration`) on top of the
    * section's own gradient wash — reserved for a few real accent points
-   * (the hero on both sides, the homepage's Kategorie/Nasze produkty
+   * (the hero on both sides, the homepage's Kategorie/Nasze produkty/blog
    * sections, a category page header), not every section on every page.
    * Pass a single `DecorativeSide` for one side, or a tuple of two for
    * both (the hero).
@@ -51,6 +51,13 @@ export function Section({ children, surface = 'default', className, decorative =
         // making it invisible. A real bug, caught by actually looking in
         // the browser rather than trusting the CSS to "just work."
         zIndex: decorative ? 0 : undefined,
+        // A same-day attempt to add `overflowY: 'visible'` here (to let the
+        // hero mosaic bleed past the section edge) turned out to be a real
+        // bug — it collapsed the whole page to a narrow column at some
+        // viewport heights (reproduced at 1401x1000, fine at 1401x800).
+        // Reverted to the single, safe `overflow: hidden` rather than ship
+        // that; a real scroll-linked bleed effect is separate, not-yet-
+        // built work (see `HeroHexMosaic.tsx`'s header).
         overflow: decorative ? 'hidden' : undefined,
         paddingBlock: 96,
         backgroundColor:
@@ -65,7 +72,7 @@ export function Section({ children, surface = 'default', className, decorative =
       }}
     >
       {sides.map((config) => (
-        <SectionDecoration key={config.side} side={config.side} icons={config.icons} photo={config.photo} />
+        <SectionDecoration key={config.side} side={config.side} icons={config.icons} engraving={config.engraving} />
       ))}
       {children}
     </section>

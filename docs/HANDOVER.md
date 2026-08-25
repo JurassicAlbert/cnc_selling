@@ -2111,6 +2111,98 @@ shows the orbit graphic (rings + 8 icons across 3 visibly different
 radii) correctly sized with no overflow at any width, and the blog
 section's new edge accent renders without crowding the post cards.
 
+## 9q. Fifth design pass: diverse engraved-art hexes, honeycomb hero mosaic, footer orbit column — 2026-08-26
+
+Same thread, next round. Three asks: (1) the hex decorations repeated the
+same 4 icons everywhere — needed real variety; (2) a bigger, more
+prominent hex visual "so the page looks more pro"; (3) hex/blog imagery
+shouldn't duplicate the real photos already used for categories/products.
+
+**Original engraved-line-art illustrations** — new
+`src/ui/primitives/engravings.tsx`, 5 hand-authored inline-SVG motifs
+(`BotanicalEngraving`, `GeometricEngraving`, `WaveGrainEngraving`,
+`CompassEngraving`, `LeafSprigEngraving`), `stroke="currentColor"` so
+they tint via the parent's CSS `color`, same convention as
+`src/ui/icons`. These fully replace real photos in every hex decoration
+— a photo here would always duplicate one already on a category tile,
+product card, or blog post (all 7 sourced stock photos are already
+spread across those three surfaces), which is exactly the repetition
+the owner flagged. `SectionDecoration.tsx`'s `photo?: string` prop
+became `engraving?: EngravingComponent`; `ICON_PAIRS` extended to 5
+placements (added `blog`), each section now gets its own icon pair +
+engraving so nothing repeats within one viewport.
+
+**`HeroHexMosaic.tsx` rewritten** — not several independent small hex
+tiles (each with its own image) but one real honeycomb tessellation: 10
+adjacent pointy-top hex cells (SVG `<clipPath>` = the union of all 10
+polygons) with visible gaps between them, collectively revealing ONE
+illustration (`BotanicalEngraving`) — the "look like one big hex made of
+many small hexes, margins between hexes are fine" the owner asked for,
+confirmed correct via `AskUserQuestion` before building it.
+
+**`OrbitIconHero.tsx` reworked** — the owner said every icon was
+animating on one single orbit; now 3 genuinely distinct rings
+(`RING_RADII = [90, 130, 170]`, inner spinning faster than outer), 8
+icons distributed across them, radii lined up with the static decorative
+rings so icons visibly travel ON the drawn paths. Moved out of the hero
+entirely into the footer, per the owner's explicit request — replaced in
+the hero by `HeroHexMosaic`.
+
+**Footer restructured** — the orbit animation is its own 4th grid column
+(`.footer-orbit-column`, hidden below 980px so it never competes with
+the 3 real content columns on narrower viewports), not nested inside the
+brand column as a first pass had it — the owner explicitly asked for
+this to be "a separate div... like the [other] divs," confirmed via
+`AskUserQuestion` before moving it.
+
+### A real bug found, chased down the wrong path first, then found the real one
+
+An attempt to let `HeroHexMosaic` bleed past the hero section's bottom
+edge (`Section.tsx`'s `overflow: hidden` split into `overflowX: hidden` /
+`overflowY: visible`, plus an oversized absolutely-positioned SVG)
+reproduced a real, serious bug: the entire page collapsed to a narrow
+column at some viewport heights (1401×1000 broken, 1401×800 fine) — and,
+misleadingly, reproduced identically on `/blog`, a page using none of the
+new code, which briefly pointed at a viewport-height threshold in the
+browser tool rather than the actual cause. Reverted the overflow-bleed
+attempt (back to the original safe `overflow: hidden`) and simplified
+`HeroHexMosaic` to a normal, fully-contained block element — and only
+then, with `read_console_messages`, found the *real* bug: the reverted
+mosaic still had a stray `height="auto"` XML attribute on an `<svg>` —
+valid for CSS `height`, **not** valid for the SVG presentation attribute,
+which threw `Error: <svg> attribute height: Expected length, "auto"` on
+every render. Removing the attribute (an `<svg>` with a `viewBox` and
+only `width` set already sizes its height from the aspect ratio — no
+attribute needed) fixed it outright; the earlier "page collapses at tall
+viewports" symptom was very likely React error-boundary/hydration
+fallout from that one bad attribute, not a CSS layout bug at all. Real
+lesson: read the console before trusting a screenshot-only diagnosis,
+especially when a symptom "reproduces" somewhere it structurally
+shouldn't be able to.
+
+### Explicitly NOT done yet — real, deferred work
+
+The owner separately asked for the mosaic's illustration to be a **real
+photo** (not the generated SVG art) that **moves independently behind
+the hexes on scroll** — genuine scroll-linked parallax. Not built:
+real parallax needs either `background-attachment: fixed` (rejected
+project-wide already, see `theme-vars.css` — mobile-Safari scroll-jank,
+and this project tests on mobile-safari in e2e) or a scroll-position
+listener, which would be this codebase's first client-side JS for a
+purely decorative element — a real architectural decision, not a quick
+addition, and not the version the owner already reviewed via
+`AskUserQuestion` (a static honeycomb of one engraved illustration).
+Needs its own design pass before implementation.
+
+### Verified
+
+`npm test` (373/373), `npm run typecheck`, `npm run lint`, `npm run
+build` all pass. Browser-verified at several realistic desktop
+viewports — the honeycomb mosaic, diverse icons per section, the
+footer's 4th orbit column, and the wave-grain/compass/leaf-sprig
+engravings on kategorie/produkty/blog all render correctly with no
+console errors.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous
