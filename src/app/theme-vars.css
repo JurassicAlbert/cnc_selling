@@ -67,10 +67,115 @@
   --mui-font-subtitle2: 500 0.875rem/1.57 var(--font-body);
   --mui-font-caption: 400 0.75rem/1.66 var(--font-body);
   --mui-font-overline: 400 0.75rem/2.66 var(--font-body);
+
+  /* Spacing scale — shared rhythm for the header/footer/card redesign
+     (2026-08-25), so new components stop scattering literal pixel values. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Warm-tinted shadows (built from the primary ink color at low alpha,
+     not pure black) and a real card radius — the previous `borderRadius: 2`
+     literal was 2px, not a design unit, which is a real part of why cards
+     and the header read as flat/unstyled. */
+  --shadow-sm: 0 1px 2px rgba(46, 42, 38, 0.06), 0 1px 3px rgba(46, 42, 38, 0.08);
+  --shadow-md: 0 4px 10px rgba(46, 42, 38, 0.08), 0 8px 24px rgba(46, 42, 38, 0.1);
+  --radius-card: 12px;
 }
 
 body {
   background-color: var(--mui-palette-background-default);
   color: var(--mui-palette-text-primary);
   margin: 0;
+}
+
+/*
+ * Global utility classes — the only way to express real `:hover`/
+ * `:focus-visible` states from a Server Component, since every primitive
+ * here is RSC-only inline `style={}` with no client JS. Added 2026-08-25
+ * alongside the header/footer/card depth pass.
+ */
+.nav-link {
+  color: var(--mui-palette-text-primary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.nav-link:hover,
+.nav-link:focus-visible {
+  color: var(--mui-palette-secondary-main);
+}
+
+.cart-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--mui-palette-text-primary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.cart-link:hover,
+.cart-link:focus-visible {
+  color: var(--mui-palette-secondary-main);
+}
+
+.category-tile {
+  display: block;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.category-tile:hover,
+.category-tile:focus-visible {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+.category-tile img {
+  transition: transform 0.3s ease;
+}
+.category-tile:hover img {
+  transform: scale(1.04);
+}
+
+.product-card {
+  display: block;
+}
+.product-card .product-card-media {
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.product-card:hover .product-card-media,
+.product-card:focus-visible .product-card-media {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+.product-card .product-card-media img {
+  transition: transform 0.3s ease;
+}
+.product-card:hover .product-card-media img {
+  transform: scale(1.04);
+}
+
+.footer-link {
+  color: var(--mui-palette-text-secondary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.footer-link:hover,
+.footer-link:focus-visible {
+  color: var(--mui-palette-secondary-main);
+}
+
+/* Scoped to the homepage hero only — not a sitewide texture, just enough
+   depth behind the headline that the top of the page doesn't read as a
+   flat rectangle. */
+.hero-surface {
+  background-image: radial-gradient(
+    ellipse 900px 500px at 15% 15%,
+    rgba(169, 123, 79, 0.1),
+    transparent 60%
+  );
 }

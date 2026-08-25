@@ -29,6 +29,7 @@ test-driven before a single framework dependency exists.
 | `src/domain/personalization` | Engraving text length, lines, and real font glyph coverage |
 | `src/domain/feasibility` | Errors, warnings and notices about what can actually be made |
 | `src/domain/order-status` | Legal order status transitions, actor permission, the design-review gate |
+| `src/domain/joinery` | The Yato-yane panel-joining technique — prepared, not yet enabled; see below |
 | `src/content/pl` | Every customer-visible Polish string |
 
 **P0, the foundation** — Prisma schema and migration applied to a running
@@ -119,6 +120,26 @@ on-login (needs P6's auth to exist first).
 | `src/domain/checkout/validate.ts` | Real NIP checksum, postal code, phone — pure, unit-tested |
 | `src/server/mail/mailer.ts` | The real `Mailer` interface, honestly unconfigured — never fakes a sent email |
 | `tests/e2e/checkout.spec.ts` | Add-to-cart → cart → checkout → confirmation, end to end, both browser projects |
+
+**A second design pass — 2026-08-25.** The owner's follow-up feedback that
+the storefront still looked "too minimalistic" turned out to mean four
+concrete things at once: no real weight in the nav, search buried in the
+nav row instead of its own section, a flat page background, and cards
+with no shadow or hover state — plus there was no footer anywhere. All
+four are fixed: a real spacing/shadow/radius token set in
+`theme-vars.css`, a header with an icon mark and a working cart link, a
+`SearchBar` as its own section, real shadow/hover/radius on every
+product/category card, and a real `Footer` — category links, search, and
+two honest "in preparation" stub pages (`/regulamin`,
+`/polityka-prywatnosci`) rather than invented legal text or dead links.
+Separately, `src/domain/joinery` prepares (but does not enable) a larger
+loft-table format joined from multiple panels via a real Japanese joint
+(Yato-yane, a grooved-edge spline) — schema fields, domain logic and
+customer-facing copy all exist and are tested, but nothing in the app
+calls any of it yet; `Product.supportsPanelJoinery` is `false` on every
+seeded product. See `docs/HANDOVER.md` §9m for the full account,
+including a real inline-style-beats-media-query bug the mobile footer
+caught.
 
 ---
 

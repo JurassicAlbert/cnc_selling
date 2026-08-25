@@ -1685,6 +1685,99 @@ works — renamed a live `Material` row to a nonsense string after placing
 an order, reloaded that order's confirmation page, confirmed it still
 rendered the *original* material name, then reverted the rename.
 
+## 9m. Frontend depth pass + Yato-yane joinery (prepared, disabled) — 2026-08-25
+
+The owner's second round of "too minimalistic" feedback, this time
+specific: the nav read as raw text with no icons, search sat awkwardly
+inside the nav row, the page background was flat, cards had no shadow or
+hover state, and there was no footer anywhere. Confirmed via
+`AskUserQuestion` that all four were real gaps at once, and that the
+footer must contain only real content — no invented email/phone/social.
+Separately, the owner wants to prepare (but not yet enable) a larger
+loft-table format joined from multiple panels via a real Japanese joint.
+
+**Frontend**: `src/app/theme-vars.css` gained a spacing scale, warm-tinted
+shadow tokens (`--shadow-sm`/`--shadow-md`), a real `--radius-card`
+(replacing the old literal `2`, which was 2px, not a design unit — a real
+part of why everything looked flat), and global `:hover`/`:focus-visible`
+utility classes (`.nav-link`, `.cart-link`, `.product-card`,
+`.category-tile`, `.footer-link`) — the only way to express real hover
+states from RSC-only inline-`style` components with zero client JS.
+`SiteHeader` gained a craft-icon logo mark and a real cart link
+(`CartIcon`, new, same `makeIcon` pattern as the other 11 icons in
+`src/ui/icons/index.tsx`); search moved out into its own new
+`SearchBar.tsx`, a banded section below the header exactly as the owner
+asked. New `Footer.tsx` renders real category links (shared `categories`
+prop, fetched once in `layout.tsx` and passed to both `SiteHeader` and
+`Footer` instead of querying twice), a search link, and links to two new
+honest stub pages, `/regulamin` and `/polityka-prywatnosci` — real pages
+stating the document is in preparation, not dead links or invented legal
+text (`docs/ARCHITECTURE.md` §17 already requires a real lawyer review
+before launch). `ProductCard`/`CategoryTile` now use `--radius-card` +
+shadow + hover-lift + image zoom.
+
+One real bug found and fixed during browser verification: the footer's
+responsive grid had `gridTemplateColumns` set **both** inline and in the
+`.footer-grid` CSS class's media query — the inline value always wins the
+cascade, so the class's `@media (min-width: 700px)` override never took
+effect and the footer stayed 3-column (columns clipped off-screen) all
+the way down to a 375px phone. This is the exact failure mode
+`(marketing)/page.tsx`'s own `.hero-grid` comment already warned about;
+fixed by removing `gridTemplateColumns` from the inline style entirely and
+letting the class own it, same as `.hero-grid` does. Caught only by
+actually resizing to mobile width and looking, not by the type-checker or
+any test — the same discipline this handover has needed before (§9h).
+
+**Yato-yane joinery — prepared, disabled**: of the owner's three real
+candidate techniques (Yato-yane spline, Suri-tsugi hand-planed rubbed
+joint, Hashibami breadboard-end batten), Yato-yane is the one actually
+built here — it's the technique that joins two separate flat panels
+edge-to-edge into one larger surface and is CNC-millable; the other two
+solve different problems (Suri-tsugi needs hand-tool glue-fitting,
+Hashibami stabilizes one existing panel rather than joining two). No new
+splitting math was needed: `domain/modules/split.ts`'s existing
+`splitIntoModules` already produces the right layout for a joined size
+(1200×1000mm against the seeded 600×500mm machine limits already yields a
+2×2 grid of four panels — confirmed by a new test,
+`tests/unit/joinery.test.ts`). What's new: a `JoineryTechniqueCode` enum
+and four nullable/defaulted columns on `Product`
+(`supportsPanelJoinery`, `joineryTechniqueCode`, `joinedMaxWidthMm`,
+`joinedMaxHeightMm` — migration
+`20260825000000_add_product_panel_joinery`, additive only); a new pure
+domain module `src/domain/joinery/yato-yane.ts` with
+`buildJoineryFinding(moduleCount)`; a new `JOINED_PANEL_YATO_YANE` member
+on `FeasibilityCode` (`domain/feasibility/rules.ts`) that
+`evaluateFeasibility` itself never produces; and real customer-facing
+Polish copy in `src/content/pl/joinery.ts` (plus the now-mandatory
+`feasibilityMessage` case for the new code, since that switch must stay
+exhaustive over `FeasibilityCode`).
+
+**Deliberately not done** — this is prepared, not enabled: no server
+action, resolver, or pricing/feasibility call site references
+`domain/joinery` outside its own test; `prisma/seed.ts` was not touched,
+so `supportsPanelJoinery` is `false` on every product, confirmed directly
+against the running DB after `npm run db:deploy`; no configurator step or
+UI surfaces any of this to a customer. Enabling it later needs three
+things, in this order: flip `supportsPanelJoinery` true (and set
+`joineryTechniqueCode`/`joinedMaxWidthMm`/`joinedMaxHeightMm`) on `loft`'s
+seed row, add a configurator step or summary-panel toggle that lets a
+customer opt into the larger joined size, and wire `buildJoineryFinding`
+into whatever call site computes feasibility for that selection.
+
+### Verified
+
+`npm test` (373/373, +4 for `domain/joinery`), `npm run typecheck`,
+`npm run lint`, `npm run build`, `npm run e2e` (6/6, both browser
+projects, unchanged) all pass. `npm run db:deploy` applied the new
+migration cleanly; queried the live DB directly afterward and confirmed
+`supportsPanelJoinery` is `false` on all five seeded products. Browser-
+verified at both mobile (375px) and desktop (1400px) widths: header icon
+mark and cart link, the search section rendering below the header,
+category/product card shadows and rounded corners, the footer's three
+real columns and correct current-year copyright, and both legal stub
+pages — including re-verifying mobile after the `gridTemplateColumns` fix
+above, this time confirming the footer genuinely stacks to one column.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

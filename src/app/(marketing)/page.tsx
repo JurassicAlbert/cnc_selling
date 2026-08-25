@@ -36,7 +36,7 @@ export default async function MarketingHomePage() {
 
   return (
     <>
-      <Section>
+      <Section className="hero-surface">
         <Container>
           <div style={{ display: 'grid', gap: 48, alignItems: 'center' }} className="hero-grid">
             {/* grid-template-columns lives here, not inline: an inline style always
@@ -61,10 +61,11 @@ export default async function MarketingHomePage() {
                     font: 'var(--mui-font-button)',
                     textTransform: 'none',
                     padding: '12px 28px',
-                    borderRadius: 2,
+                    borderRadius: 'var(--radius-card)',
                     backgroundColor: 'var(--mui-palette-primary-main)',
                     color: 'var(--mui-palette-background-paper)',
                     textDecoration: 'none',
+                    boxShadow: 'var(--shadow-sm)',
                   }}
                 >
                   {SITE.heroCtaPl}

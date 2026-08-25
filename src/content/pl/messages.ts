@@ -19,6 +19,7 @@ import type { UnavailabilityReason } from '@/server/configurator/resolve-options
 import { formatMmAsCentimetres } from '@/domain/text/numeric-input';
 import { countPl } from '@/domain/text/plural';
 import { NOUNS } from '@/domain/text/nouns';
+import { JOINERY } from '@/content/pl/joinery';
 
 function cm(mm: number): string {
   return `${formatMmAsCentimetres(mm)} cm`;
@@ -67,6 +68,11 @@ export function feasibilityMessage(finding: FeasibilityFinding): string {
       return 'Dokładne dopasowanie odcienia do istniejącej podłogi może nie być możliwe. Drewno naturalne różni się partiami, a kolor zmienia się z czasem.';
     case 'THICKNESS_EXCEEDS_MACHINE':
       return `Wybrana grubość (${mm(Number(finding.params.thicknessMm))}) przekracza możliwości naszej maszyny — maksymalnie ${mm(Number(finding.params.maxThicknessMm))}. Wybierz mniejszą grubość.`;
+    // Prepared but disabled — see src/domain/joinery/yato-yane.ts. Nothing
+    // in evaluateFeasibility produces this code today; this case exists
+    // only so the switch stays exhaustive over FeasibilityCode.
+    case 'JOINED_PANEL_YATO_YANE':
+      return `Ten blat zostanie złożony z ${countPl(Number(finding.params.moduleCount), NOUNS.module)} połączonych techniką „${JOINERY.yatoYaneNamePl}". ${JOINERY.yatoYaneShortDescPl}`;
   }
 }
 

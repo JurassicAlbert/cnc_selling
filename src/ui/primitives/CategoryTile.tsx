@@ -20,11 +20,11 @@ export function CategoryTile({ href, namePl, imageUrl, priority = false }: Categ
   return (
     <Link
       href={href}
+      className="category-tile"
       style={{
         position: 'relative',
-        display: 'block',
         aspectRatio: '4 / 5',
-        borderRadius: 2,
+        borderRadius: 'var(--radius-card)',
         overflow: 'hidden',
       }}
     >

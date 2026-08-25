@@ -30,12 +30,17 @@ export function ProductCard({
   priority = false,
 }: ProductCardProps) {
   return (
-    <Link href={href} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+    <Link
+      href={href}
+      className="product-card"
+      style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+    >
       <div
+        className="product-card-media"
         style={{
           position: 'relative',
           aspectRatio: '1 / 1',
-          borderRadius: 2,
+          borderRadius: 'var(--radius-card)',
           overflow: 'hidden',
           backgroundColor: 'var(--mui-palette-background-paper)',
           border: '1px solid var(--mui-palette-divider)',
@@ -55,7 +60,7 @@ export function ProductCard({
           />
         )}
       </div>
-      <div style={{ paddingTop: 12 }}>
+      <div style={{ paddingTop: 'var(--space-3)' }}>
         <div
           style={{
             font: 'var(--mui-font-caption)',

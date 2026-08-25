@@ -53,6 +53,18 @@ enum ProductTypeCode {
   JEWELRY
 }
 
+/// Real joinery techniques for the "joined panel" large-format tier
+/// (`Product.supportsPanelJoinery`) — see that field's comment. Only one
+/// member today: Yato-yane (a grooved-edge spline/loose-tongue joint), the
+/// one of the owner's three candidate techniques that actually joins two
+/// separate flat panels edge-to-edge into one larger surface and is
+/// CNC-millable, unlike the other two (Suri-tsugi is a hand-planed glue-fit
+/// technique; Hashibami stabilizes one existing panel rather than joining
+/// two).
+enum JoineryTechniqueCode {
+  YATO_YANE_SPLINE
+}
+
 model Category {
   id         String    @id @default(cuid())
   slug       String    @unique // "obrazy-drewniane" — transliterated, never percent-encoded
@@ -107,6 +119,19 @@ model Product {
   allowsCustomSize  Boolean @default(true)
   /// Floor elements: the customer must state final dimensions (§11).
   requiresExactSize Boolean @default(false)
+
+  /// Large-format tier: whether two-or-more of this product's normal-size
+  /// panels can be joined into one larger piece. Real but inert today — no
+  /// server action, resolver, or UI reads this field yet (see
+  /// `src/domain/joinery`). Default false on every product, same
+  /// "modelled, not yet enforced" precedent as
+  /// MachineSettings.jointAllowanceMm and THICKNESS_EXCEEDS_MACHINE.
+  supportsPanelJoinery Boolean               @default(false)
+  joineryTechniqueCode JoineryTechniqueCode?
+  /// The larger envelope that applies once panels are joined — distinct
+  /// from maxWidthMm/maxHeightMm above, which stay the single-panel limit.
+  joinedMaxWidthMm     Int?
+  joinedMaxHeightMm    Int?
 
   isActive  Boolean  @default(true)
   sortOrder Int      @default(0)

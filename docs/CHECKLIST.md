@@ -158,6 +158,45 @@ them guessed — full detail in `docs/HANDOVER.md` §9h:
    application bug, and not something a real visitor ever hits.
    `playwright.config.ts`'s `webServer` now runs the production build.
 
+**A second design pass, 2026-08-25** — the owner's follow-up feedback that
+the storefront still looked "too minimalistic" (clarified via
+`AskUserQuestion` into four concrete gaps at once, not guessed): real
+weight in the nav (icon mark + a working cart link), search moved out of
+the nav row into its own `SearchBar` section, real shadow/hover/radius on
+every product/category card (a spacing/shadow/radius token set added to
+`theme-vars.css`), and a real `Footer` — category links, search, and two
+honest "in preparation" legal stub pages (`/regulamin`,
+`/polityka-prywatnosci`), no invented contact info. Full detail in
+`docs/HANDOVER.md` §9m, including **the exact same inline-style-beats-
+media-query bug as item 2 above**, self-inflicted this time in the new
+`Footer.tsx` and caught the same way: by actually resizing to mobile
+width and looking, not by any type-check.
+
+- [x] Header redesigned — icon mark, real cart link, `.nav-link` hover states
+- [x] Search extracted into its own section (`SearchBar.tsx`) below the header
+- [x] Product/category cards — real shadow, hover lift, image zoom, real border-radius
+- [x] Real site footer (`Footer.tsx`) — category links, search link, legal stub links, computed copyright year
+- [x] `/regulamin`, `/polityka-prywatnosci` — honest "in preparation" stub pages, not dead links or invented legal text
+
+**Yato-yane panel joinery — prepared, not enabled, 2026-08-25.** A new
+business capability the owner wants ready but not customer-facing yet: a
+larger loft-table format joined from multiple panels via a real Japanese
+grooved-edge spline joint. `src/domain/joinery/yato-yane.ts`,
+`JoineryTechniqueCode` + four new `Product` columns (all defaulted/
+nullable, migration `20260825000000_add_product_panel_joinery`), and real
+Polish copy in `src/content/pl/joinery.ts` all exist and are tested — see
+`docs/HANDOVER.md` §9m for why no new module-splitting math was needed
+(the existing `splitIntoModules` already produces the right layout).
+`prisma/seed.ts` was deliberately not touched: `supportsPanelJoinery` is
+`false` on every product, confirmed against the live DB, and nothing in
+any server action, resolver, or UI references this module outside its own
+test — genuinely inert until someone wires it up.
+
+- [x] `Product.supportsPanelJoinery` + joinery fields — schema + migration, additive, disabled by default
+- [x] `domain/joinery/yato-yane.ts` — `buildJoineryFinding`, unit-tested, reuses existing `splitIntoModules`
+- [x] Real Yato-yane customer copy (`src/content/pl/joinery.ts`) — not imported by any component yet
+- [ ] Configurator step / summary toggle to let a customer actually select this — not started, deliberately deferred
+
 ## P3 — Configurator
 
 Started 2026-08-23. The foundation (step machine, compatibility resolution,

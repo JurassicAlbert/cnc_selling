@@ -21,7 +21,14 @@ export type FeasibilityCode =
   | 'MODULAR_BUILD'
   | 'NATURAL_VARIATION'
   | 'FLOOR_MATCH_NOT_GUARANTEED'
-  | 'THICKNESS_EXCEEDS_MACHINE';
+  | 'THICKNESS_EXCEEDS_MACHINE'
+  /**
+   * Constructed by `domain/joinery`'s `buildJoineryFinding`, not by
+   * `evaluateFeasibility` below — that function never produces this code,
+   * so it stays inert until something calls `buildJoineryFinding`
+   * directly, which nothing does yet (prepared but disabled).
+   */
+  | 'JOINED_PANEL_YATO_YANE';
 
 export type FeasibilityFinding = {
   readonly code: FeasibilityCode;

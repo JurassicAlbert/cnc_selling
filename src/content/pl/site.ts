@@ -162,4 +162,16 @@ export const SITE = {
   orderLookupOrderNumberLabelPl: 'Numer zamówienia',
   orderLookupTokenLabelPl: 'Kod dostępu (z potwierdzenia zamówienia)',
   orderLookupSubmitPl: 'Sprawdź',
+
+  footerCategoriesHeadingPl: 'Kategorie',
+  footerInfoHeadingPl: 'Informacje',
+  footerSearchLinkPl: 'Szukaj produktów',
+  footerTermsLinkPl: 'Regulamin',
+  footerPrivacyLinkPl: 'Polityka prywatności',
+  footerCopyrightPl: 'CNC Selling',
+
+  legalComingSoonNoticePl:
+    'Ten dokument jest w przygotowaniu i zostanie opublikowany przed uruchomieniem sklepu.',
+  legalTermsHeadingPl: 'Regulamin',
+  legalPrivacyHeadingPl: 'Polityka prywatności',
 } as const;
