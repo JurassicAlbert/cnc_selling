@@ -1,10 +1,13 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
+import { getCategoryIcon } from '@/ui/primitives/category-icon';
+
 type CategoryTileProps = {
   readonly href: string;
   readonly namePl: string;
   readonly imageUrl: string | null;
+  readonly categorySlug: string;
   /** Set on the first tile only — Next.js flagged it as the LCP element (real Playwright output, not guessed). */
   readonly priority?: boolean;
 };
@@ -16,7 +19,9 @@ type CategoryTileProps = {
  * (responsive sizing, lazy loading, format negotiation) is a genuine win
  * here rather than dead weight.
  */
-export function CategoryTile({ href, namePl, imageUrl, priority = false }: CategoryTileProps) {
+export function CategoryTile({ href, namePl, imageUrl, categorySlug, priority = false }: CategoryTileProps) {
+  const Icon = getCategoryIcon(categorySlug);
+
   return (
     <Link
       href={href}
@@ -49,6 +54,9 @@ export function CategoryTile({ href, namePl, imageUrl, priority = false }: Categ
           background: 'linear-gradient(to top, rgba(31,29,27,0.65), rgba(31,29,27,0) 55%)',
         }}
       />
+      <span className="card-icon-badge" aria-hidden="true">
+        <Icon size={18} />
+      </span>
       <span
         style={{
           position: 'absolute',

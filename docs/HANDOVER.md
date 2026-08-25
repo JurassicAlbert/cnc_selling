@@ -1778,6 +1778,56 @@ real columns and correct current-year copyright, and both legal stub
 pages — including re-verifying mobile after the `gridTemplateColumns` fix
 above, this time confirming the footer genuinely stacks to one column.
 
+## 9n. Card badges, a sitewide grain texture, and a footer tagline — 2026-08-25
+
+Immediate follow-up to §9m: the owner still wanted the cards "beautified"
+with icons/badges, the background still read as flat color, and asked for
+a short tagline beside the footer's description "to look more
+professional."
+
+**Card badges, real data only.** `ChairIcon`/`DiamondIcon`/`GridViewIcon`/
+`ViewColumnIcon`/`ImagePlaceholderIcon` were added during the §9h redesign
+and never used anywhere — a strong signal they were built for exactly
+this. New `src/ui/primitives/category-icon.tsx` maps each category slug to
+one of them (`EngineeringIcon` as the `inne` catch-all), used by both
+`CategoryTile` (a circular badge, top-left) and `ProductCard` (same badge,
+plus a second one). The second badge — a "Grawer" pill with `DrawIcon` —
+only renders when `PersonalizationSpec.isEnabled` is genuinely true for
+that product, which required extending `ProductCardData` (and both
+`select` blocks that build it) with `categorySlug` and `hasPersonalization`
+rather than inventing display-only data. Verified live: only `loft`,
+`amulety-i-bransoletki`, and `obrazy-drewniane` show the pill — `gres` and
+`panele-podlogowe` correctly don't, matching `prisma/seed.ts`'s three
+`seedPersonalizationSpec` calls exactly.
+
+**Background depth.** `body` now carries a very faint `feTurbulence` grain
+(~3.5% opacity, `--mui-palette-background-default` reasoning documented
+inline in `theme-vars.css`) instead of a flat single color, on top of the
+existing per-`Section` paper/default alternation. Deliberately no
+`background-attachment: fixed` — a known mobile-Safari scroll-jank
+pattern, and `mobile-safari` is one of the two e2e browser projects this
+project actually tests.
+
+**Footer tagline.** `SITE.footerTaglinePl` ("Precyzja CNC. Ciepło
+rzemiosła.") renders in `Footer.tsx` between the brand name and the
+existing description, styled as a small italicized accent line with a
+left border — the same category of authored brand copy as the homepage's
+existing hero headline/subcopy and trust badges (all already
+owner-accepted), not a new category of fabricated content — still no
+invented reviews, contact details, or company registration data anywhere.
+
+### Verified
+
+`npm test` (373/373, unchanged — no new domain logic, just data plumbing
+and presentation), `npm run typecheck`, `npm run lint`, `npm run build`,
+`npm run e2e` (6/6, both browser projects) all pass. Browser-verified at
+desktop (1400px) and mobile (375px): category tiles and product cards show
+the correct icon per category, the "Grawer" pill appears only on the three
+products that actually have it enabled, the footer tagline renders with
+its accent border, and the mobile grid still stacks correctly (this pass
+didn't touch the `.footer-grid`/`.hero-grid` responsive rules from §9m,
+so no repeat of that bug).
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

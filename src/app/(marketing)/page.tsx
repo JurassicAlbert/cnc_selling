@@ -102,6 +102,7 @@ export default async function MarketingHomePage() {
                 href={`/${category.slug}`}
                 namePl={category.namePl}
                 imageUrl={category.imageUrl}
+                categorySlug={category.slug}
                 priority={index === 0}
               />
             ))}
@@ -126,8 +127,10 @@ export default async function MarketingHomePage() {
                 href={`/produkt/${product.slug}`}
                 namePl={product.namePl}
                 categoryNamePl={product.categoryNamePl}
+                categorySlug={product.categorySlug}
                 imageUrl={product.primaryImageUrl}
                 minPriceGrosze={product.minPriceGrosze}
+                hasPersonalization={product.hasPersonalization}
                 priority={index === 0}
               />
             ))}

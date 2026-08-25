@@ -55,8 +55,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                     href={`/produkt/${product.slug}`}
                     namePl={product.namePl}
                     categoryNamePl={product.categoryNamePl}
+                    categorySlug={product.categorySlug}
                     imageUrl={product.primaryImageUrl}
                     minPriceGrosze={product.minPriceGrosze}
+                    hasPersonalization={product.hasPersonalization}
                   />
                 ))}
               </div>

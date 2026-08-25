@@ -90,6 +90,14 @@
 
 body {
   background-color: var(--mui-palette-background-default);
+  /* A very faint grain (feTurbulence, ~3.5% opacity) so the page reads as a
+     crafted surface rather than a flat digital rectangle — added 2026-08-25
+     after the owner's feedback that the background was "still flat, just
+     the color." Deliberately no `background-attachment: fixed` — that's a
+     known mobile-Safari scroll-jank trap, and this project tests on
+     mobile-safari in e2e. */
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='180'%20height='180'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.85'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23n)'%20opacity='0.035'/%3E%3C/svg%3E");
+  background-repeat: repeat;
   color: var(--mui-palette-text-primary);
   margin: 0;
 }
@@ -167,6 +175,41 @@ body {
 .footer-link:hover,
 .footer-link:focus-visible {
   color: var(--mui-palette-secondary-main);
+}
+
+/* Card badges — the category-icon chip (top-left) and the personalization
+   pill (top-right), added 2026-08-25 alongside the noise texture above, in
+   response to the owner wanting the cards "beautified" with icons/badges. */
+.card-icon-badge {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: var(--mui-palette-background-paper);
+  color: var(--mui-palette-secondary-main);
+  box-shadow: var(--shadow-sm);
+}
+
+.card-personalization-badge {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 5px 10px 5px 8px;
+  border-radius: 999px;
+  background-color: var(--mui-palette-primary-main);
+  color: var(--mui-palette-background-paper);
+  font: var(--mui-font-caption);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Scoped to the homepage hero only — not a sitewide texture, just enough

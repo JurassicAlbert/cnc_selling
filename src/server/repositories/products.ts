@@ -8,6 +8,9 @@ export type ProductCardData = {
   readonly minPriceGrosze: number;
   readonly primaryImageUrl: string | null;
   readonly categoryNamePl: string;
+  readonly categorySlug: string;
+  /** Real, from `PersonalizationSpec.isEnabled` — not every product offers it. */
+  readonly hasPersonalization: boolean;
 };
 
 export type ProductSort = 'price_asc' | 'price_desc' | null;
@@ -40,12 +43,13 @@ export async function listActiveProductsByCategorySlug(
       namePl: true,
       shortDescPl: true,
       minPriceGrosze: true,
-      category: { select: { namePl: true } },
+      category: { select: { namePl: true, slug: true } },
       images: {
         where: { isPrimary: true },
         take: 1,
         select: { url: true },
       },
+      personalization: { select: { isEnabled: true } },
     },
   });
 
@@ -56,6 +60,8 @@ export async function listActiveProductsByCategorySlug(
     minPriceGrosze: product.minPriceGrosze,
     primaryImageUrl: product.images[0]?.url ?? null,
     categoryNamePl: product.category.namePl,
+    categorySlug: product.category.slug,
+    hasPersonalization: product.personalization?.isEnabled ?? false,
   }));
 }
 
@@ -84,12 +90,13 @@ export async function listAllActiveProducts(): Promise<ProductCardData[]> {
       namePl: true,
       shortDescPl: true,
       minPriceGrosze: true,
-      category: { select: { namePl: true } },
+      category: { select: { namePl: true, slug: true } },
       images: {
         where: { isPrimary: true },
         take: 1,
         select: { url: true },
       },
+      personalization: { select: { isEnabled: true } },
     },
   });
 
@@ -100,6 +107,8 @@ export async function listAllActiveProducts(): Promise<ProductCardData[]> {
     minPriceGrosze: product.minPriceGrosze,
     primaryImageUrl: product.images[0]?.url ?? null,
     categoryNamePl: product.category.namePl,
+    categorySlug: product.category.slug,
+    hasPersonalization: product.personalization?.isEnabled ?? false,
   }));
 }
 

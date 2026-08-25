@@ -94,8 +94,10 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
                     href={`/produkt/${product.slug}`}
                     namePl={product.namePl}
                     categoryNamePl={product.categoryNamePl}
+                    categorySlug={product.categorySlug}
                     imageUrl={product.primaryImageUrl}
                     minPriceGrosze={product.minPriceGrosze}
+                    hasPersonalization={product.hasPersonalization}
                   />
                 ))}
               </div>

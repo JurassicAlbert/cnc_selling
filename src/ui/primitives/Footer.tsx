@@ -56,6 +56,18 @@ export function Footer({ categories }: FooterProps) {
             <div style={{ font: 'var(--mui-font-h6)', color: 'var(--mui-palette-text-primary)' }}>
               CNC Selling
             </div>
+            <div
+              style={{
+                marginBlockStart: 'var(--space-1)',
+                paddingInlineStart: 'var(--space-2)',
+                borderInlineStart: '2px solid var(--mui-palette-secondary-main)',
+                font: 'var(--mui-font-subtitle2)',
+                fontStyle: 'italic',
+                color: 'var(--mui-palette-secondary-main)',
+              }}
+            >
+              {SITE.footerTaglinePl}
+            </div>
             <div style={{ marginBlockStart: 'var(--space-3)', maxWidth: 360 }}>
               <Text muted>{SITE.homeSeoDescPl}</Text>
             </div>

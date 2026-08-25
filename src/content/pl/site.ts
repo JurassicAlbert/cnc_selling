@@ -34,6 +34,7 @@ export const SITE = {
   catalogueProductNotFoundPl: 'Nie znaleziono takiego produktu.',
   catalogueViewProductPl: 'Zobacz produkt',
   catalogueCategoriesHeadingPl: 'Kategorie',
+  cardPersonalizationBadgePl: 'Grawer',
 
   configuratorHeadingPl: 'Skonfiguruj produkt',
   configuratorStepDesignPl: 'Wzór',
@@ -169,6 +170,7 @@ export const SITE = {
   footerTermsLinkPl: 'Regulamin',
   footerPrivacyLinkPl: 'Polityka prywatności',
   footerCopyrightPl: 'CNC Selling',
+  footerTaglinePl: 'Precyzja CNC. Ciepło rzemiosła.',
 
   legalComingSoonNoticePl:
     'Ten dokument jest w przygotowaniu i zostanie opublikowany przed uruchomieniem sklepu.',

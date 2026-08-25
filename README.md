@@ -139,7 +139,12 @@ customer-facing copy all exist and are tested, but nothing in the app
 calls any of it yet; `Product.supportsPanelJoinery` is `false` on every
 seeded product. See `docs/HANDOVER.md` §9m for the full account,
 including a real inline-style-beats-media-query bug the mobile footer
-caught.
+caught. A same-day follow-up (`docs/HANDOVER.md` §9n) beautified the cards
+further — a real category-icon badge on every card, and a "Grawer" pill
+that appears only on the three products that genuinely have personalization
+enabled, not every card — added a faint sitewide grain texture so the
+background isn't a flat single color, and gave the footer a short authored
+tagline beside its description.
 
 ---
 
