@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 
 import { listPublishedBlogPosts } from '@/server/repositories/blog';
@@ -10,6 +11,7 @@ import { Heading } from '@/ui/primitives/Heading';
 import { OrbitIconHero } from '@/ui/primitives/OrbitIconHero';
 import { ProductCard } from '@/ui/primitives/ProductCard';
 import { Section } from '@/ui/primitives/Section';
+import { ICON_PAIRS } from '@/ui/primitives/SectionDecoration';
 import { Text } from '@/ui/primitives/Text';
 import { TrustBadgeStrip } from '@/ui/primitives/TrustBadgeStrip';
 import { SITE } from '@/content/pl/site';
@@ -40,7 +42,13 @@ export default async function MarketingHomePage() {
 
   return (
     <>
-      <Section className="hero-surface" decorative="both">
+      <Section
+        className="hero-surface"
+        decorative={[
+          { side: 'left', icons: ICON_PAIRS.heroLeft },
+          { side: 'right', icons: ICON_PAIRS.heroRight, photo: '/images/photos/inne.jpg' },
+        ]}
+      >
         <Container>
           <div style={{ display: 'grid', gap: 48, alignItems: 'center' }} className="hero-grid">
             {/* grid-template-columns lives here, not inline: an inline style always
@@ -87,7 +95,7 @@ export default async function MarketingHomePage() {
         </Container>
       </Section>
 
-      <Section decorative="right">
+      <Section decorative={{ side: 'right', icons: ICON_PAIRS.kategorie, photo: '/images/photos/material-dab.jpg' }}>
         <Container>
           <div id="kategorie" style={{ scrollMarginTop: 96 }}>
             <Heading level={2}>{SITE.catalogueCategoriesHeadingPl}</Heading>
@@ -114,7 +122,7 @@ export default async function MarketingHomePage() {
         </Container>
       </Section>
 
-      <Section surface="paper" decorative="left">
+      <Section surface="paper" decorative={{ side: 'left', icons: ICON_PAIRS.produkty }}>
         <Container>
           <Heading level={2}>{SITE.homeProductsHeadingPl}</Heading>
           <div
@@ -165,6 +173,26 @@ export default async function MarketingHomePage() {
                   href={`/blog/${post.slug}`}
                   style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
                 >
+                  {post.imageUrl !== null && (
+                    <div
+                      style={{
+                        position: 'relative',
+                        aspectRatio: '16 / 9',
+                        borderRadius: 'var(--radius-card)',
+                        overflow: 'hidden',
+                        marginBlockEnd: 'var(--space-3)',
+                        boxShadow: 'var(--shadow-sm)',
+                      }}
+                    >
+                      <Image
+                        src={post.imageUrl}
+                        alt=""
+                        fill
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                        style={{ objectFit: 'cover' }}
+                      />
+                    </div>
+                  )}
                   <div style={{ font: 'var(--mui-font-h6)', color: 'var(--mui-palette-text-primary)' }}>
                     {post.titlePl}
                   </div>

@@ -50,7 +50,9 @@
  *     claims, numbers, or customer voices. A first draft, same
  *     "must be reviewed before launch" discipline as everything above —
  *     see `seedBlogPosts()`'s own comment for why this doesn't conflict
- *     with the no-fabricated-reviews rule.
+ *     with the no-fabricated-reviews rule. Each reuses an already-sourced
+ *     category/material photo (2026-08-26, owner's follow-up request) —
+ *     no new image sourcing for placeholder posts.
  *
  * What IS fully real, added 2026-08-24: the `Font` row (`seedFont`) — a
  * genuine, freely-licensed font file (`public/fonts/Inter-Variable.ttf`,
@@ -542,6 +544,8 @@ type BlogPostSeed = {
   readonly seoTitlePl: string;
   readonly seoDescPl: string;
   readonly publishedAt: Date;
+  /** Reuses an already-sourced category/material photo (`STOCK_PHOTO`) — no new image sourcing for placeholder posts. */
+  readonly imageUrl: string;
 };
 
 /**
@@ -567,6 +571,7 @@ const BLOG_POST_SEEDS: readonly BlogPostSeed[] = [
     seoTitlePl: 'Jak dbać o drewniane produkty z grawerem — CNC Selling',
     seoDescPl: 'Proste zasady pielęgnacji drewnianych produktów z grawerem, aby służyły przez lata.',
     publishedAt: new Date('2026-08-01T09:00:00Z'),
+    imageUrl: STOCK_PHOTO('material-dab'),
   },
   {
     slug: 'jak-powstaje-grawer-cnc-i-laserowy',
@@ -577,6 +582,7 @@ const BLOG_POST_SEEDS: readonly BlogPostSeed[] = [
     seoTitlePl: 'Jak powstaje grawer CNC i laserowy — CNC Selling',
     seoDescPl: 'Czym różni się frezowanie CNC od grawerowania laserowego i kiedy stosujemy każdą z technik.',
     publishedAt: new Date('2026-08-10T09:00:00Z'),
+    imageUrl: STOCK_PHOTO('inne'),
   },
   {
     slug: 'dab-i-gres-materialy-ktore-wykorzystujemy',
@@ -587,6 +593,7 @@ const BLOG_POST_SEEDS: readonly BlogPostSeed[] = [
     seoTitlePl: 'Dąb i gres — materiały, które wykorzystujemy — CNC Selling',
     seoDescPl: 'Dlaczego dąb i gres trafiły do oferty i czym różnią się jako materiały pod grawer.',
     publishedAt: new Date('2026-08-18T09:00:00Z'),
+    imageUrl: STOCK_PHOTO('gres'),
   },
   {
     slug: 'czym-jest-personalizacja-grawerem',
@@ -597,6 +604,7 @@ const BLOG_POST_SEEDS: readonly BlogPostSeed[] = [
     seoTitlePl: 'Czym jest personalizacja grawerem — CNC Selling',
     seoDescPl: 'Jak działa personalizacja tekstem i na co zwrócić uwagę przy wyborze kroju pisma.',
     publishedAt: new Date('2026-08-24T09:00:00Z'),
+    imageUrl: STOCK_PHOTO('obrazy-drewniane'),
   },
 ];
 
@@ -612,8 +620,12 @@ async function seedBlogPosts(): Promise<void> {
         seoTitlePl: seed.seoTitlePl,
         seoDescPl: seed.seoDescPl,
         publishedAt: seed.publishedAt,
+        imageUrl: seed.imageUrl,
       },
-      update: {},
+      // Re-asserted on every run: the 4 posts were originally seeded
+      // 2026-08-25 with no image, so an existing dev database needs this
+      // repaired on the next `db:seed`, not left stuck without one.
+      update: { imageUrl: seed.imageUrl },
     });
     console.log(`BlogPost: ${post.titlePl} (/blog/${seed.slug})`);
   }

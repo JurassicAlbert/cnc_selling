@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
 
 import { getPublishedBlogPostBySlug, listAllPublishedBlogPostSlugs } from '@/server/repositories/blog';
@@ -52,6 +53,21 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         <div style={{ marginBlockStart: 8, font: 'var(--mui-font-caption)', color: 'var(--mui-palette-text-secondary)' }}>
           {SITE.blogPublishedLabelPl} {dateFormatter.format(post.publishedAt)}
         </div>
+        {post.imageUrl !== null && (
+          <div
+            style={{
+              position: 'relative',
+              marginBlockStart: 24,
+              maxWidth: 720,
+              aspectRatio: '16 / 9',
+              borderRadius: 'var(--radius-card)',
+              overflow: 'hidden',
+              boxShadow: 'var(--shadow-sm)',
+            }}
+          >
+            <Image src={post.imageUrl} alt="" fill sizes="(max-width: 768px) 100vw, 720px" style={{ objectFit: 'cover' }} priority />
+          </div>
+        )}
         <div style={{ marginBlockStart: 24, maxWidth: 720, whiteSpace: 'pre-wrap' }}>
           <Text>{post.bodyPl}</Text>
         </div>

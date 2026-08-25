@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 
 import { listPublishedBlogPosts } from '@/server/repositories/blog';
@@ -17,11 +18,12 @@ export const metadata: Metadata = {
 const dateFormatter = new Intl.DateTimeFormat('pl-PL', { dateStyle: 'long' });
 
 /**
- * Scaffold, added 2026-08-25 at the owner's explicit request: real
- * infrastructure (schema, repository, this page), zero fabricated posts.
- * `listPublishedBlogPosts()` returns an empty array today — the table has
- * no seeded rows — so the honest empty state below is what every visitor
- * sees until a real post exists (`docs/HANDOVER.md` §9n's follow-up).
+ * Scaffold, added 2026-08-25: real infrastructure (schema, repository,
+ * this page). Started with zero seeded rows; a same-day follow-up added 4
+ * real placeholder posts (each with a real reused photo) at the owner's
+ * explicit request, so the empty state below is only what a visitor sees
+ * once every post is ever removed, not the default (`docs/HANDOVER.md`
+ * §9p).
  */
 export default async function BlogIndexPage() {
   const posts = await listPublishedBlogPosts();
@@ -50,6 +52,26 @@ export default async function BlogIndexPage() {
                 href={`/blog/${post.slug}`}
                 style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
               >
+                {post.imageUrl !== null && (
+                  <div
+                    style={{
+                      position: 'relative',
+                      aspectRatio: '16 / 9',
+                      borderRadius: 'var(--radius-card)',
+                      overflow: 'hidden',
+                      marginBlockEnd: 'var(--space-3)',
+                      boxShadow: 'var(--shadow-sm)',
+                    }}
+                  >
+                    <Image
+                      src={post.imageUrl}
+                      alt=""
+                      fill
+                      sizes="(max-width: 768px) 100vw, 280px"
+                      style={{ objectFit: 'cover' }}
+                    />
+                  </div>
+                )}
                 <div style={{ font: 'var(--mui-font-h6)', color: 'var(--mui-palette-text-primary)' }}>
                   {post.titlePl}
                 </div>

@@ -1,18 +1,41 @@
 import type { ComponentType, CSSProperties } from 'react';
+import Image from 'next/image';
 
-import { ChairIcon, DiamondIcon, GridViewIcon, ViewColumnIcon } from '@/ui/icons';
+import {
+  ChairIcon,
+  DiamondIcon,
+  DrawIcon,
+  EngineeringIcon,
+  GridViewIcon,
+  ImagePlaceholderIcon,
+  PrecisionManufacturingIcon,
+  ViewColumnIcon,
+} from '@/ui/icons';
 
 type IconComponent = ComponentType<{ readonly size?: number; readonly style?: CSSProperties }>;
+export type IconPair = readonly [IconComponent, IconComponent];
+
+/**
+ * One pair per real placement on the site (2026-08-26 — the owner said the
+ * hexagons repeated the same few icons too much). 8 real icons already
+ * built for other UI (header, cards, `OrbitIconHero`), each used exactly
+ * once across the whole site so no two visible sections repeat an icon.
+ */
+export const ICON_PAIRS = {
+  heroLeft: [ChairIcon, EngineeringIcon] as IconPair,
+  heroRight: [DiamondIcon, PrecisionManufacturingIcon] as IconPair,
+  kategorie: [GridViewIcon, ImagePlaceholderIcon] as IconPair,
+  produkty: [ViewColumnIcon, DrawIcon] as IconPair,
+};
 
 type HexSpec = {
   readonly cx: number;
   readonly cy: number;
   readonly r: number;
-  /** Present only on the minority "material tile" hexagons — see this file's header comment. */
   readonly icon?: IconComponent;
 };
 
-const CLUSTER_WIDTH = 260;
+const CLUSTER_WIDTH = 420;
 
 /** Pointy-top hexagon vertices, center (cx, cy), center-to-vertex radius r. */
 function hexPoints(cx: number, cy: number, r: number): string {
@@ -25,48 +48,40 @@ function hexPoints(cx: number, cy: number, r: number): string {
 }
 
 /**
- * Cluster is authored in a `CLUSTER_WIDTH`-wide (260) box where HIGH x is
- * the true page edge and LOW x is toward the content — the wrapper below
- * positions this box flush against the section's edge (`[side]: 0`, no
- * negative offset), so everything here is inside the section's own
- * `overflow: hidden` bounds except where a hexagon's own radius pushes
- * past `CLUSTER_WIDTH`, which the SVG's default clip then trims — that's
- * the "partially outside the viewport... feels more organic" bleed, kept
- * to a few outline hexagons only (an icon needs to stay intact to read as
- * a shape, so icon tiles never cross the edge).
- *
- * `CORE_HEXAGONS` is the small subset kept down to 600px (tablet);
- * `EXTRA_HEXAGONS` (below) is hidden under 900px via `.hex-extra` in
- * `theme-vars.css`.
+ * Authored in a `CLUSTER_WIDTH`-wide box where HIGH x is the true page
+ * edge and LOW x is toward the content. Widened and pushed further into
+ * the box (2026-08-26 — the owner said the pattern was too narrowed to
+ * the margins) — the dense area now spans roughly 270-420 instead of the
+ * original 170-260, and the fade mask (in `SectionDecoration` below) was
+ * pushed out to match, so the pattern genuinely reaches further into the
+ * page rather than hugging the very edge.
  */
 const CORE_HEXAGONS: readonly HexSpec[] = [
-  { cx: 200, cy: 70, r: 14 },
-  { cx: 225, cy: 190, r: 13 },
-  { cx: 195, cy: 310, r: 15 },
-  { cx: 230, cy: 430, r: 13 },
-  { cx: 200, cy: 550, r: 14 },
+  { cx: 320, cy: 70, r: 15 },
+  { cx: 360, cy: 190, r: 14 },
+  { cx: 310, cy: 310, r: 16 },
+  { cx: 370, cy: 430, r: 14 },
+  { cx: 320, cy: 550, r: 15 },
 ];
 
-/**
- * `ChairIcon`/`DiamondIcon`/`GridViewIcon`/`ViewColumnIcon` stand in for
- * furniture, jewellery/materials, tile, and panels — the brief's "small
- * icons representing the products/materials/technology of the brand"
- * without rendering real photos in a decorative accent (would read as a
- * fake curated gallery, and cost real image requests; these reuse the
- * same already-loaded inline icon components used throughout the
- * header/cards).
- */
-const EXTRA_HEXAGONS: readonly HexSpec[] = [
-  { cx: 245, cy: 40, r: 22 },
-  { cx: 220, cy: 120, r: 24, icon: ChairIcon },
-  { cx: 170, cy: 150, r: 17 },
-  { cx: 240, cy: 230, r: 20 },
-  { cx: 215, cy: 345, r: 26, icon: DiamondIcon },
-  { cx: 175, cy: 390, r: 15 },
-  { cx: 225, cy: 460, r: 22, icon: GridViewIcon },
-  { cx: 245, cy: 560, r: 20 },
-  { cx: 220, cy: 605, r: 24, icon: ViewColumnIcon },
+/** Fixed outline hexagons shared by every placement — only the 2 icon slots vary per `IconPair`. */
+const EXTRA_OUTLINE: readonly HexSpec[] = [
+  { cx: 395, cy: 40, r: 24 },
+  { cx: 270, cy: 155, r: 18 },
+  { cx: 400, cy: 235, r: 22 },
+  { cx: 275, cy: 395, r: 16 },
+  { cx: 360, cy: 465, r: 24 },
+  { cx: 400, cy: 565, r: 22 },
+  { cx: 340, cy: 610, r: 26 },
 ];
+
+function extraHexagonsFor(icons: IconPair): readonly HexSpec[] {
+  return [
+    ...EXTRA_OUTLINE,
+    { cx: 350, cy: 125, r: 28, icon: icons[0] },
+    { cx: 345, cy: 350, r: 30, icon: icons[1] },
+  ];
+}
 
 function Hexagon({ cx, cy, r, icon: Icon }: HexSpec) {
   if (Icon) {
@@ -94,29 +109,71 @@ function Hexagon({ cx, cy, r, icon: Icon }: HexSpec) {
 }
 
 /**
- * A honeycomb accent for a `Section` — the material/product "tile" motif
- * the owner asked for (2026-08-25), replacing the earlier concentric-ring
- * version. Still a pure inline-SVG RSC primitive: `aria-hidden`,
- * `pointer-events: none`, zero client JS, same discipline as
- * `OrbitIconHero` and every other decorative primitive here.
+ * A large photographic hex "tile" — added 2026-08-26 at the owner's
+ * request for "some CNC images so the page looks more pro." A real photo
+ * (already used elsewhere on the site — no new sourcing), clipped to the
+ * same pointy-top hexagon shape as the icon tiles via `clip-path`, muted
+ * with opacity + a grayscale filter so it stays a background accent
+ * rather than competing with real content photography. Positioned in the
+ * same authored coordinate space as the hex data (`left`/`top` here are
+ * local-box pixels, high-x/toward-edge convention); its own `<Image>`
+ * counter-mirrors (`scaleX(-1)`) when the parent cluster is mirrored for
+ * `side="left"`, so the photo itself is never shown flipped.
+ */
+function HexPhoto({ src, cx, cy, size, mirrored }: { readonly src: string; readonly cx: number; readonly cy: number; readonly size: number; readonly mirrored: boolean }) {
+  return (
+    <div
+      className="hex-extra"
+      style={{
+        position: 'absolute',
+        left: cx - size / 2,
+        top: cy - size / 2,
+        width: size,
+        height: size,
+        clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+        overflow: 'hidden',
+        opacity: 0.4,
+      }}
+    >
+      <Image
+        src={src}
+        alt=""
+        fill
+        sizes={`${size}px`}
+        style={{
+          objectFit: 'cover',
+          filter: 'grayscale(35%)',
+          transform: mirrored ? 'scaleX(-1)' : undefined,
+        }}
+      />
+    </div>
+  );
+}
+
+type SectionDecorationProps = {
+  readonly side?: 'left' | 'right';
+  readonly icons: IconPair;
+  /** A real photo path (e.g. `/images/photos/inne.jpg`) for one large accent hex — optional, used sparingly (1-2 placements sitewide). */
+  readonly photo?: string;
+};
+
+/**
+ * A honeycomb accent for a `Section`. Pure inline-SVG (+ one optional
+ * `next/image` for the photo tile) RSC primitive: `aria-hidden`,
+ * `pointer-events: none`, zero client JS.
  *
  * The cluster is authored once with its dense side at HIGH local x; for
  * `side="right"` that's flush against the section's right edge as-is, and
- * for `side="left"` the inner `<svg>` is mirrored (`scaleX(-1)`) rather
- * than duplicating hand-placed coordinates — safe for abstract geometric
- * icons like these. The fade mask lives on the OUTER wrapper (before the
- * mirror transform), so its direction is authored correctly per side
- * rather than getting flipped along with the content.
+ * for `side="left"` the inner wrapper (svg + photo) is mirrored
+ * (`scaleX(-1)`) rather than duplicating hand-placed coordinates.
  */
-export function SectionDecoration({ side = 'right' }: { readonly side?: 'left' | 'right' }) {
-  // side="right": dense edge (high local x) is the box's own right edge,
-  // which sits flush at the section's right edge — fade "to left", toward
-  // content. side="left": box is flush at the section's left edge and the
-  // svg is mirrored, so the dense edge (still authored at high local x,
-  // now visually on the left after the flip) lines up with the true page
-  // edge — fade "to right", toward content.
+export function SectionDecoration({ side = 'right', icons, photo }: SectionDecorationProps) {
   const fadeToward = side === 'right' ? 'left' : 'right';
-  const mask = `linear-gradient(to ${fadeToward}, black 0%, black 40%, transparent 85%)`;
+  // Pushed further into the page (2026-08-26) — opaque through most of the
+  // hex content (which now extends to local x ~270) and a longer, more
+  // gradual fade tail, instead of vanishing almost immediately.
+  const mask = `linear-gradient(to ${fadeToward}, black 0%, black 38%, transparent 90%)`;
+  const mirrored = side === 'left';
 
   return (
     <div
@@ -135,24 +192,21 @@ export function SectionDecoration({ side = 'right' }: { readonly side?: 'left' |
         WebkitMaskImage: mask,
       }}
     >
-      <svg
-        aria-hidden="true"
-        viewBox={`0 0 ${CLUSTER_WIDTH} 640`}
-        width="100%"
-        height="100%"
-        style={{ transform: side === 'left' ? 'scaleX(-1)' : undefined }}
-      >
-        <g className="hex-core">
-          {CORE_HEXAGONS.map((hex) => (
-            <Hexagon key={`${hex.cx}-${hex.cy}`} {...hex} />
-          ))}
-        </g>
-        <g className="hex-extra">
-          {EXTRA_HEXAGONS.map((hex) => (
-            <Hexagon key={`${hex.cx}-${hex.cy}`} {...hex} />
-          ))}
-        </g>
-      </svg>
+      <div style={{ position: 'relative', width: '100%', height: '100%', transform: mirrored ? 'scaleX(-1)' : undefined }}>
+        <svg aria-hidden="true" viewBox={`0 0 ${CLUSTER_WIDTH} 640`} width="100%" height="100%">
+          <g className="hex-core">
+            {CORE_HEXAGONS.map((hex) => (
+              <Hexagon key={`${hex.cx}-${hex.cy}`} {...hex} />
+            ))}
+          </g>
+          <g className="hex-extra">
+            {extraHexagonsFor(icons).map((hex) => (
+              <Hexagon key={`${hex.cx}-${hex.cy}`} {...hex} />
+            ))}
+          </g>
+        </svg>
+        {photo && <HexPhoto src={photo} cx={330} cy={300} size={160} mirrored={mirrored} />}
+      </div>
     </div>
   );
 }

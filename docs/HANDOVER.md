@@ -1986,6 +1986,68 @@ genuinely clipped at the edge; at 800px only the small `.hex-core` subset
 remains; at 400px the decoration is completely gone with zero
 interference with the header/hero text or buttons.
 
+## 9q. Hexagon variety/scale + blog images — 2026-08-26
+
+Same-day follow-up to §9p: the owner said the hexagon icons repeated too
+much, wanted a bigger CNC-photo hexagon "so the page looks more pro," said
+the pattern was still too narrowed to the margins, and asked for real
+images on the blog posts.
+
+**Icon diversity.** All 4 placements (hero left/right, Kategorie,
+Nasze produkty) used the same 4 icons before. Now each of the 8 real
+icons already in the codebase (`ChairIcon`/`DiamondIcon`/`GridViewIcon`/
+`ViewColumnIcon`/`ImagePlaceholderIcon`/`PrecisionManufacturingIcon`/
+`EngineeringIcon`/`DrawIcon`) is used exactly once sitewide —
+`SectionDecoration.tsx` exports `ICON_PAIRS` (one pair per placement),
+and `Section`'s `decorative` prop changed from a plain string to a real
+config object (`DecorativeSide`, `{ side, icons, photo? }`, or a tuple of
+two for the hero) so each call site can specify its own pair instead of
+everything defaulting to the same hardcoded set.
+
+**Big CNC photo hexagon.** New `HexPhoto` (inside `SectionDecoration.tsx`)
+— a real photo (`inne.jpg`, the CNC-machine category photo; `material-dab.jpg`
+elsewhere) clipped to the same pointy-top hexagon shape via CSS
+`clip-path`, muted with opacity + grayscale so it stays a background
+accent. One in the hero, one in Kategorie — kept to 2 sitewide, not
+"some" meaning "many," to stay restrained. Reuses already-fetched
+photos, no new sourcing.
+
+**Reach further into the page.** `CLUSTER_WIDTH` 260 -> 420, hex content
+re-authored to span roughly local x 270-420 instead of 170-260 (further
+from the true edge, deeper into the section), and the fade mask's opaque
+zone extended (`black 38%` / `transparent 90%`, was `25%`/`80%`) so the
+pattern doesn't vanish almost immediately.
+
+**Blog images.** The 4 seeded posts (§9p) gained real `imageUrl`s —
+reused category/material photos (`material-dab.jpg`, `inne.jpg`,
+`gres.jpg`, `obrazy-drewniane.jpg`), each matched to its post's real
+topic. `seedBlogPosts()`'s `update` clause now re-asserts `imageUrl` so
+an existing dev database gets it repaired on the next `db:seed`, not
+stuck imageless. All 3 blog surfaces (`/blog`, `/blog/[slug]`, and the
+homepage teaser) now render the image.
+
+### One more real responsive bug, same class as before
+
+The new `HexPhoto` div wasn't given the `.hex-extra` class, so the
+`@media (max-width: 899px) { .hex-extra { display: none } }` rule in
+`theme-vars.css` never applied to it — the small icon/outline hexagons
+correctly thinned out at tablet width, but the big CNC photo kept
+showing. Fixed by adding `className="hex-extra"` to the photo wrapper
+(it's a plain CSS class, applies to a `<div>` exactly the same as the
+`<g>` it was written for). Caught the same way as §9p's two bugs: by
+actually resizing to 800px and looking, not by any type-check.
+
+### Verified
+
+`npm test` (373/373, unchanged), `npm run typecheck`, `npm run lint`,
+`npm run build`, `npm run e2e` (6/6, both browser projects) all pass.
+Browser-verified at desktop (1401px), tablet (800px), and mobile (400px):
+8 distinct icons visible across the 4 placements with no repeats, both
+CNC/material photo hexagons render clipped and muted, the pattern
+visibly extends further into the page without touching real text, the
+photo hexagon (not just the small icon tiles) correctly disappears at
+tablet width, and all 3 blog surfaces show the right image per post.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

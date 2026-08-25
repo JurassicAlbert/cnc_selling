@@ -13,6 +13,7 @@ import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
 import { ProductCard } from '@/ui/primitives/ProductCard';
 import { Section } from '@/ui/primitives/Section';
+import { ICON_PAIRS } from '@/ui/primitives/SectionDecoration';
 import { Text } from '@/ui/primitives/Text';
 import { SITE } from '@/content/pl/site';
 
@@ -49,7 +50,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   ]);
 
   return (
-    <Section decorative="right">
+    <Section decorative={{ side: 'right', icons: ICON_PAIRS.kategorie }}>
       <Container>
         <Breadcrumbs trail={[{ labelPl: category.namePl, href: `/${category.slug}` }]} />
         <Heading level={1}>{category.namePl}</Heading>
