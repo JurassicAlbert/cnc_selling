@@ -1441,6 +1441,12 @@ Online payments · courier/InPost integration · automated invoicing · 3D confi
 
 *(The admin panel was moved out of this list on 2026-08-23 and is now P7–P8.)*
 
+*(A blog was never in this list either way — added 2026-08-25 at the
+owner's explicit request. Scope stayed deliberately minimal: `BlogPost`
+model, `/blog` + `/blog/[slug]` pages, sitemap entry, zero seeded posts.
+No authoring UI exists yet — that's P7's job, same as every other
+content-editing surface. See `docs/HANDOVER.md` §9o.)*
+
 Each of these has a defined extension point in the model above; none requires a rewrite to add.
 
 ---

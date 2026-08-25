@@ -144,7 +144,14 @@ further — a real category-icon badge on every card, and a "Grawer" pill
 that appears only on the three products that genuinely have personalization
 enabled, not every card — added a faint sitewide grain texture so the
 background isn't a flat single color, and gave the footer a short authored
-tagline beside its description.
+tagline beside its description. **A third same-day pass**
+(`docs/HANDOVER.md` §9o) went further on all three: a bolder blueprint-
+grid background texture, a permanent gradient tint on every section plus
+a few real decorative corner accents, product cards now show real
+production-time/size-range facts and a material chip, and a new `/blog`
+section exists as a real, working scaffold — schema, pages, sitemap entry
+— with zero fabricated posts; it shows an honest "coming soon" state until
+a real one is added.
 
 ---
 

@@ -83,7 +83,7 @@ export default async function MarketingHomePage() {
         </Container>
       </Section>
 
-      <Section>
+      <Section decorative="right">
         <Container>
           <div id="kategorie" style={{ scrollMarginTop: 96 }}>
             <Heading level={2}>{SITE.catalogueCategoriesHeadingPl}</Heading>
@@ -110,7 +110,7 @@ export default async function MarketingHomePage() {
         </Container>
       </Section>
 
-      <Section surface="paper">
+      <Section surface="paper" decorative="left">
         <Container>
           <Heading level={2}>{SITE.homeProductsHeadingPl}</Heading>
           <div
@@ -131,6 +131,11 @@ export default async function MarketingHomePage() {
                 imageUrl={product.primaryImageUrl}
                 minPriceGrosze={product.minPriceGrosze}
                 hasPersonalization={product.hasPersonalization}
+                productionDaysMin={product.productionDaysMin}
+                productionDaysMax={product.productionDaysMax}
+                minWidthMm={product.minWidthMm}
+                maxWidthMm={product.maxWidthMm}
+                materials={product.materials}
                 priority={index === 0}
               />
             ))}

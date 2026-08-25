@@ -59,6 +59,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                     imageUrl={product.primaryImageUrl}
                     minPriceGrosze={product.minPriceGrosze}
                     hasPersonalization={product.hasPersonalization}
+                    productionDaysMin={product.productionDaysMin}
+                    productionDaysMax={product.productionDaysMax}
+                    minWidthMm={product.minWidthMm}
+                    maxWidthMm={product.maxWidthMm}
+                    materials={product.materials}
                   />
                 ))}
               </div>

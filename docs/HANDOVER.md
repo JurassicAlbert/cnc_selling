@@ -1828,6 +1828,88 @@ its accent border, and the mobile grid still stacks correctly (this pass
 didn't touch the `.footer-grid`/`.hero-grid` responsive rules from §9m,
 so no repeat of that bug).
 
+## 9o. Third design pass: bolder background, richer cards, blog scaffold — 2026-08-25
+
+Same day, third round: the owner said the background was *still* flat even
+after §9n's grain, wanted the cards richer with more real info, and asked
+for a blog section + post sub-page before moving to the next major phase
+(P4/P6/P7). Clarified via `AskUserQuestion` rather than guessed a third
+time on "flat," given guessing on it twice already hadn't landed.
+
+**Background, round 2.** `body` (`theme-vars.css`) now layers a
+`repeating-linear-gradient` blueprint-style grid (on-brand for a CNC/laser
+shop — a technical-drawing motif, pure CSS, no image request) under a
+bolder grain (opacity 0.035 → 0.06). `Section.tsx` gained a permanent
+gradient tint on both `default`/`paper` surfaces (previously flat-color
+only) plus an opt-in `decorative` prop that renders a new
+`SectionDecoration.tsx` — a static, low-opacity concentric-ring accent
+reusing `OrbitIconHero`'s exact visual language, `aria-hidden`, `z-index:
+-1` so it sits behind real content without a stacking bug (verified: a
+naive `z-index: auto` absolute child would have painted *above*
+in-flow content per CSS3's stacking order — used `z-index: -1` instead,
+which paints after the section's own background but before its static
+children). Applied to 3 real accent points (homepage's Kategorie/Nasze
+produkty, the category-page header), not every section — a deliberate
+scope boundary against visual noise.
+
+**Cards, round 2.** `ProductCardData` (`src/server/repositories/products.ts`)
+gained `productionDaysMin/Max`, `minWidthMm/maxWidthMm`, and `materials`
+(kept as an array — `ProductMaterial` is a real many-to-many join and
+`ProductDetail` already models it that way, even though all 5 seeded
+products have exactly one material today). `ProductCard.tsx` renders a
+compact facts row (a new `AccessTimeIcon`, same `makeIcon` pattern as the
+other 13, + the real production-day range + real width range via the
+already-existing `formatMmAsCentimetres`) and a material chip
+(`.material-chip`, new CSS class). Explicitly did NOT add a
+popularity/urgency badge ("Bestseller" etc.) — flagged to the owner as
+fabrication risk with only 5 products and no real sales data, and they
+did not select it.
+
+**Blog — scaffold, no fabricated posts.** New `BlogPost` Prisma model
+(migration `20260825010000_add_blog_post`), mirroring `Category`'s exact
+conventions (slug, `*Pl` fields, `isActive`, `sortOrder`,
+`createdAt`/`updatedAt`) plus a nullable `publishedAt` that doubles as a
+draft flag. New `src/server/repositories/blog.ts`
+(`listPublishedBlogPosts`, `getPublishedBlogPostBySlug`,
+`listAllPublishedBlogPostSlugs`), `/blog` index and `/blog/[slug]` detail
+pages under `(marketing)` (content-oriented, like the homepage — `(shop)`
+only holds catalogue/cart/checkout/legal today), the same honest-404
+pattern as categories/products/orders for an unknown or unpublished slug,
+a footer nav link, and a third branch folded into `sitemap.ts`'s existing
+`Promise.all` pattern. **Zero seeded rows** — confirmed directly against
+the live DB after `db:deploy` (`blogPost.count() === 0`) — so every real
+visitor sees the honest "Wpisy pojawią się tutaj wkrótce" empty state
+until a real post exists. No admin UI to add one yet (P7 doesn't exist);
+today that means a manual DB insert, the same limitation every other
+"prepared, not yet wired to an editor" piece in this project already has.
+
+### A real Playwright environment flake, not a regression
+
+`npm run e2e` first failed with `Timed out waiting 180000ms from
+config.webServer` — the exact same failure this project hit once before,
+unrelated to any code change. Diagnosed by running the webServer's own
+command (`npm run build && npm run start`) directly: it built and bound
+port 3000 in under 300ms, and `curl` confirmed the blog page served
+correctly. Killing leftover processes holding port 3000 from an earlier
+manual `preview_start` (a recurring nuisance in this sandboxed dev
+environment — the port shows stale `TIME_WAIT` sockets after a process is
+killed) and re-running `npm run e2e` passed cleanly, 6/6, both browser
+projects, on the first clean attempt. Recorded here so a future session
+recognizes the pattern instead of chasing a phantom regression.
+
+### Verified
+
+`npm test` (373/373, unchanged), `npm run typecheck`, `npm run lint`,
+`npm run build`, `npm run db:deploy` (new `BlogPost` table, confirmed
+empty), `npm run e2e` (6/6, both browser projects) all pass. Browser-
+verified at desktop (1400px) and mobile (375px): the grid texture is
+now clearly visible (confirmed directly on the `/blog` page's mostly-
+empty background), section gradients and the corner ring accents render
+without layout shift, product cards show correct production-time/size-
+range text and the right material chip for all 5 real products, cards
+don't overflow at 375px, `/blog` renders the honest empty state, and the
+footer's new "Blog" link resolves to it.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

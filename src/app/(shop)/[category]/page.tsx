@@ -49,7 +49,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   ]);
 
   return (
-    <Section>
+    <Section decorative="right">
       <Container>
         <Breadcrumbs trail={[{ labelPl: category.namePl, href: `/${category.slug}` }]} />
         <Heading level={1}>{category.namePl}</Heading>
@@ -98,6 +98,11 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
                     imageUrl={product.primaryImageUrl}
                     minPriceGrosze={product.minPriceGrosze}
                     hasPersonalization={product.hasPersonalization}
+                    productionDaysMin={product.productionDaysMin}
+                    productionDaysMax={product.productionDaysMax}
+                    minWidthMm={product.minWidthMm}
+                    maxWidthMm={product.maxWidthMm}
+                    materials={product.materials}
                   />
                 ))}
               </div>

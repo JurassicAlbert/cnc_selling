@@ -197,6 +197,18 @@ test — genuinely inert until someone wires it up.
 - [x] Real Yato-yane customer copy (`src/content/pl/joinery.ts`) — not imported by any component yet
 - [ ] Configurator step / summary toggle to let a customer actually select this — not started, deliberately deferred
 
+**A third design pass + blog scaffold, same day, 2026-08-25.** Owner said
+the background was still flat after the second pass, wanted the cards
+richer with real info, and asked for a blog section before moving to
+P4/P6/P7. Full detail in `docs/HANDOVER.md` §9o, including a real
+Playwright `webServer` timeout traced to a stale port, not a code
+regression.
+
+- [x] Background — bolder grain + blueprint-grid wash on `body`, a permanent gradient tint on every `Section`, real decorative corner accents on 3 sections
+- [x] Product cards — real production-time and size-range facts row (`AccessTimeIcon`, new), a material chip; explicitly no fabricated popularity/urgency badge
+- [x] `BlogPost` model + migration, `src/server/repositories/blog.ts`, `/blog` + `/blog/[slug]` pages, footer link, sitemap entry — zero seeded posts, confirmed against the live DB
+- [ ] Blog admin/authoring — not started; needs P7 or a manual DB insert for now
+
 ## P3 — Configurator
 
 Started 2026-08-23. The foundation (step machine, compatibility resolution,

@@ -171,9 +171,18 @@ export const SITE = {
   footerPrivacyLinkPl: 'Polityka prywatności',
   footerCopyrightPl: 'CNC Selling',
   footerTaglinePl: 'Precyzja CNC. Ciepło rzemiosła.',
+  footerBlogLinkPl: 'Blog',
 
   legalComingSoonNoticePl:
     'Ten dokument jest w przygotowaniu i zostanie opublikowany przed uruchomieniem sklepu.',
   legalTermsHeadingPl: 'Regulamin',
   legalPrivacyHeadingPl: 'Polityka prywatności',
+
+  blogHeadingPl: 'Blog',
+  blogSeoTitlePl: 'Blog — CNC Selling',
+  blogSeoDescPl: 'Artykuły o rzemiośle, materiałach i personalizacji grawerem.',
+  blogEmptyStatePl: 'Wpisy pojawią się tutaj wkrótce.',
+  blogPublishedLabelPl: 'Opublikowano',
+  blogReadMorePl: 'Czytaj dalej',
+  blogPostNotFoundPl: 'Nie znaleziono takiego wpisu.',
 } as const;

@@ -90,14 +90,21 @@
 
 body {
   background-color: var(--mui-palette-background-default);
-  /* A very faint grain (feTurbulence, ~3.5% opacity) so the page reads as a
-     crafted surface rather than a flat digital rectangle — added 2026-08-25
-     after the owner's feedback that the background was "still flat, just
-     the color." Deliberately no `background-attachment: fixed` — that's a
-     known mobile-Safari scroll-jank trap, and this project tests on
+  /* Round 2, 2026-08-25: the owner said the background was still flat even
+     with the first grain pass, and asked for it bolder plus a wash that
+     runs through sections. This layers three things: a faint blueprint-
+     style grid (on-brand for a CNC/laser precision shop — cheap, pure CSS,
+     no image request) over a bolder grain (opacity raised 0.035 -> 0.06).
+     Section-level gradient tint lives in Section.tsx; decorative shapes
+     live in SectionDecoration.tsx — this file only owns the sitewide base.
+     Deliberately no `background-attachment: fixed` anywhere here — a known
+     mobile-Safari scroll-jank trap, and this project tests on
      mobile-safari in e2e. */
-  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='180'%20height='180'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.85'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23n)'%20opacity='0.035'/%3E%3C/svg%3E");
-  background-repeat: repeat;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(46, 42, 38, 0.028) 0 1px, transparent 1px 40px),
+    repeating-linear-gradient(90deg, rgba(46, 42, 38, 0.028) 0 1px, transparent 1px 40px),
+    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='180'%20height='180'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.85'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23n)'%20opacity='0.06'/%3E%3C/svg%3E");
+  background-repeat: repeat, repeat, repeat;
   color: var(--mui-palette-text-primary);
   margin: 0;
 }
@@ -210,6 +217,21 @@ body {
   color: var(--mui-palette-background-paper);
   font: var(--mui-font-caption);
   box-shadow: var(--shadow-sm);
+}
+
+/* A small neutral pill for a product card's material fact — distinct from
+   `.card-personalization-badge` (which overlays the image) since this one
+   sits inline in the text block, alongside the production-time/size facts
+   added 2026-08-25. */
+.material-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--mui-palette-divider);
+  background-color: var(--mui-palette-background-default);
+  color: var(--mui-palette-text-secondary);
+  font: var(--mui-font-caption);
 }
 
 /* Scoped to the homepage hero only — not a sitewide texture, just enough

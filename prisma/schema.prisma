@@ -82,6 +82,30 @@ model Category {
   @@index([isActive, sortOrder])
 }
 
+/// Scaffold only, added 2026-08-25 at the owner's request — real
+/// infrastructure, zero seeded rows. No admin panel exists yet (P7), so a
+/// real post today means a manual DB insert until one does; the same
+/// honest limitation as every other "prepared, not yet wired to an
+/// editor" piece in this project. `publishedAt` doubles as a draft flag:
+/// null means not yet published, so a row can exist without going live.
+model BlogPost {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  titlePl     String
+  shortDescPl String
+  bodyPl      String    @db.Text
+  seoTitlePl  String
+  seoDescPl   String
+  imageUrl    String?
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isActive, publishedAt])
+}
+
 model Product {
   id                 String          @id @default(cuid())
   slug               String          @unique

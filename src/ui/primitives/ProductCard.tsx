@@ -2,8 +2,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 import { formatPln } from '@/domain/money/money';
+import { formatMmAsCentimetres } from '@/domain/text/numeric-input';
 import { SITE } from '@/content/pl/site';
-import { DrawIcon } from '@/ui/icons';
+import { AccessTimeIcon, DrawIcon } from '@/ui/icons';
 import { getCategoryIcon } from '@/ui/primitives/category-icon';
 
 type ProductCardProps = {
@@ -15,19 +16,26 @@ type ProductCardProps = {
   readonly minPriceGrosze: number;
   /** Real, from `PersonalizationSpec.isEnabled` — not every product offers it. */
   readonly hasPersonalization: boolean;
+  readonly productionDaysMin: number;
+  readonly productionDaysMax: number;
+  readonly minWidthMm: number;
+  readonly maxWidthMm: number;
+  readonly materials: readonly { readonly namePl: string }[];
   /** Set on the homepage's first card only — see CategoryTile.tsx's comment on why this matters. */
   readonly priority?: boolean;
 };
 
 /**
- * The v2 product card — image, category label, name, real price, plus two
- * badges added 2026-08-25: the category icon (top-left, same mapping
- * `CategoryTile` uses) and a "Grawer" pill (top-right) when the product
- * genuinely has personalization enabled — real data, not shown on every
- * card. Deliberately NOT a star rating or review count: the brief forbids
- * fabricating reviews (§16A.1 module 9), and a rating is the same category
- * of invented content. No reference template's card gets copied wholesale;
- * this one only shows what's real.
+ * The v2 product card — image, category label, name, real price, two image
+ * badges (category icon + a "Grawer" pill only when personalization is
+ * genuinely enabled), and — added 2026-08-25, round 2 — a compact facts row
+ * (production time, width range) plus a material chip, all real DB fields,
+ * to make the card more informative without inventing anything (no rating,
+ * no "bestseller"/popularity claim — §16A.1 module 9 forbids fabricated
+ * social proof, and this project has followed that everywhere). `materials`
+ * is a real many-to-many join; every seeded product has exactly one today,
+ * but this renders the first plus a "+N" suffix so it doesn't silently
+ * break if a product ever has more.
  */
 export function ProductCard({
   href,
@@ -37,6 +45,11 @@ export function ProductCard({
   imageUrl,
   minPriceGrosze,
   hasPersonalization,
+  productionDaysMin,
+  productionDaysMax,
+  minWidthMm,
+  maxWidthMm,
+  materials,
   priority = false,
 }: ProductCardProps) {
   const CategoryIcon = getCategoryIcon(categorySlug);
@@ -95,7 +108,36 @@ export function ProductCard({
         <div style={{ font: 'var(--mui-font-subtitle1)', color: 'var(--mui-palette-text-primary)' }}>
           {namePl}
         </div>
-        <div style={{ font: 'var(--mui-font-body2)', color: 'var(--mui-palette-text-primary)' }}>
+        <div
+          style={{
+            marginBlockStart: 'var(--space-1)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-1)',
+            font: 'var(--mui-font-caption)',
+            color: 'var(--mui-palette-text-secondary)',
+          }}
+        >
+          <AccessTimeIcon size={13} />
+          {productionDaysMin}–{productionDaysMax} {SITE.catalogueProductionTimeUnitPl}
+          <span aria-hidden="true">·</span>
+          {formatMmAsCentimetres(minWidthMm)}–{formatMmAsCentimetres(maxWidthMm)} cm
+        </div>
+        {materials.length > 0 && (
+          <div style={{ marginBlockStart: 'var(--space-2)' }}>
+            <span className="material-chip">
+              {materials[0]?.namePl}
+              {materials.length > 1 ? ` +${materials.length - 1}` : ''}
+            </span>
+          </div>
+        )}
+        <div
+          style={{
+            marginBlockStart: 'var(--space-2)',
+            font: 'var(--mui-font-body2)',
+            color: 'var(--mui-palette-text-primary)',
+          }}
+        >
           {SITE.catalogueStartingPricePrefixPl} {formatPln(minPriceGrosze)}
         </div>
       </div>

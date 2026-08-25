@@ -11,6 +11,12 @@ export type ProductCardData = {
   readonly categorySlug: string;
   /** Real, from `PersonalizationSpec.isEnabled` — not every product offers it. */
   readonly hasPersonalization: boolean;
+  readonly productionDaysMin: number;
+  readonly productionDaysMax: number;
+  readonly minWidthMm: number;
+  readonly maxWidthMm: number;
+  /** A real many-to-many join (`ProductMaterial`) — every seeded product has exactly one today, but the card must not assume that's permanent. */
+  readonly materials: readonly { readonly namePl: string }[];
 };
 
 export type ProductSort = 'price_asc' | 'price_desc' | null;
@@ -50,6 +56,11 @@ export async function listActiveProductsByCategorySlug(
         select: { url: true },
       },
       personalization: { select: { isEnabled: true } },
+      productionDaysMin: true,
+      productionDaysMax: true,
+      minWidthMm: true,
+      maxWidthMm: true,
+      materials: { select: { material: { select: { namePl: true } } } },
     },
   });
 
@@ -62,6 +73,11 @@ export async function listActiveProductsByCategorySlug(
     categoryNamePl: product.category.namePl,
     categorySlug: product.category.slug,
     hasPersonalization: product.personalization?.isEnabled ?? false,
+    productionDaysMin: product.productionDaysMin,
+    productionDaysMax: product.productionDaysMax,
+    minWidthMm: product.minWidthMm,
+    maxWidthMm: product.maxWidthMm,
+    materials: product.materials.map((m) => ({ namePl: m.material.namePl })),
   }));
 }
 
@@ -97,6 +113,11 @@ export async function listAllActiveProducts(): Promise<ProductCardData[]> {
         select: { url: true },
       },
       personalization: { select: { isEnabled: true } },
+      productionDaysMin: true,
+      productionDaysMax: true,
+      minWidthMm: true,
+      maxWidthMm: true,
+      materials: { select: { material: { select: { namePl: true } } } },
     },
   });
 
@@ -109,6 +130,11 @@ export async function listAllActiveProducts(): Promise<ProductCardData[]> {
     categoryNamePl: product.category.namePl,
     categorySlug: product.category.slug,
     hasPersonalization: product.personalization?.isEnabled ?? false,
+    productionDaysMin: product.productionDaysMin,
+    productionDaysMax: product.productionDaysMax,
+    minWidthMm: product.minWidthMm,
+    maxWidthMm: product.maxWidthMm,
+    materials: product.materials.map((m) => ({ namePl: m.material.namePl })),
   }));
 }
 
