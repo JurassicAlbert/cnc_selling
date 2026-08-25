@@ -1,51 +1,73 @@
 import { hexPoints } from '@/ui/primitives/SectionDecoration';
 
 /**
- * Rewritten 2026-08-26 at the owner's explicit request: not several
- * independent hex tiles each with their own small image, but one real
- * honeycomb tessellation — 10 adjacent hex cells (within the "7-12" the
- * owner asked for) that collectively reveal ONE illustration, like a
- * stained-glass or mosaic reconstruction of a single picture, with thin
- * gaps between cells so the honeycomb structure stays visible. The
- * illustration is an original engraved-line-art botanical mandala (see
- * `engravings.tsx`'s header for why this is drawn rather than a reused
- * photo — every real photo on the site is already spread across
- * categories/products/blog, so reusing one here would be exactly the
- * duplication the owner flagged).
+ * Rewritten 2026-08-26 at the owner's explicit request (`docs/HANDOVER.md`
+ * §9v): the honeycomb tessellation now tapers 2-3-4-3-2 across 5 rows so
+ * the 14 cells collectively read as ONE BIG HEXAGON silhouette, not the
+ * rectangular 3-2-3-2 block from the previous pass. The artwork behind
+ * the hexes is now a real photo — `obrazy-drewniane.jpg`, an actual
+ * laser-cut engraved wood piece already sourced for the "Obrazy
+ * drewniane" category (reused deliberately: it's the single best
+ * representation of "engraved wood art" in the site's photo set, and the
+ * hero is a different context — a fragmented textural background, not a
+ * product thumbnail, so the reuse doesn't read as duplication the way it
+ * would on two product cards).
  *
- * A same-day follow-up asked for the underlying picture to be a real
- * photo, and for it to move independently behind the hexes on scroll
- * (real scroll-linked parallax). That's real, separate work — not done
- * here yet, noted in `docs/HANDOVER.md` — and a first attempt at a
- * simpler "let it bleed past the section" version (an oversized,
- * absolutely-positioned, `overflow: visible` SVG) turned out to be a real
- * bug: at certain viewport heights it collapsed the entire page to a
- * narrow column (reproduced at 1401x1000, fine at 1401x800 — a genuine
- * layout bug, not a screenshot artifact). Reverted to a normal,
- * fully-contained block element here rather than ship something that
- * broke the page at some real viewport sizes.
+ * The image is rendered oversized relative to its clip window and
+ * translated via a CSS `view()` scroll timeline (`animation-timeline:
+ * view()`) — no JavaScript. As the section scrolls through the viewport,
+ * progress drives a `translateY` on the image, so it visibly "overflows"
+ * and shifts independently of the static hex outlines above it (the
+ * requested parallax). `view()` ties animation progress to this
+ * element's own visibility in its scroll container, so it needs no named
+ * timeline set up elsewhere. Browsers without `animation-timeline`
+ * support (older Safari) simply skip the animation and show a static
+ * image — a clean degrade, not a broken one. `prefers-reduced-motion:
+ * reduce` disables it outright. This is a materially different approach
+ * from the earlier abandoned attempt (`overflow-y: visible` on the whole
+ * mosaic/section, reverted for collapsing the page layout at some
+ * viewport heights) — here the hex clip shapes stay fixed and fully
+ * contained; only the image *within* them moves, so `Section.tsx`'s
+ * `overflow: hidden` needs no change at all.
  */
 
-/** Slightly smaller than the 45px tessellation spacing baked into `CELLS` below, so adjacent cells show a visible gap instead of touching edge-to-edge. */
+/** Slightly smaller than the 78px column / 67.5px row tessellation spacing baked into `CELLS` below, so adjacent cells show a visible gap instead of touching edge-to-edge. */
 const CLIP_R = 40;
 
+/** 2-3-4-3-2 across 5 rows (14 cells) — a symmetric taper that reads as one big hexagon, not a rectangle. Rows alternate between two column phases 39px apart, matching pointy-top hex tessellation math (column spacing = sqrt(3) * CLIP_R ≈ 78, row spacing = 1.5 * CLIP_R ≈ 67.5). */
 const CELLS: readonly { readonly cx: number; readonly cy: number }[] = [
-  { cx: 85, cy: 75 },
-  { cx: 163, cy: 75 },
-  { cx: 241, cy: 75 },
-  { cx: 124, cy: 142 },
-  { cx: 202, cy: 142 },
-  { cx: 85, cy: 210 },
-  { cx: 163, cy: 210 },
-  { cx: 241, cy: 210 },
-  { cx: 124, cy: 277 },
-  { cx: 202, cy: 277 },
+  { cx: 131, cy: 40 },
+  { cx: 209, cy: 40 },
+  { cx: 92, cy: 108 },
+  { cx: 170, cy: 108 },
+  { cx: 248, cy: 108 },
+  { cx: 53, cy: 175 },
+  { cx: 131, cy: 175 },
+  { cx: 209, cy: 175 },
+  { cx: 287, cy: 175 },
+  { cx: 92, cy: 242 },
+  { cx: 170, cy: 242 },
+  { cx: 248, cy: 242 },
+  { cx: 131, cy: 310 },
+  { cx: 209, cy: 310 },
 ];
 
 export function HeroHexMosaic() {
   return (
-    <div aria-hidden="true" style={{ width: '100%', maxWidth: 320, marginInline: 'auto' }}>
-      <svg aria-hidden="true" viewBox="0 0 300 350" width="100%">
+    <div aria-hidden="true" style={{ width: '100%', maxWidth: 380, marginInline: 'auto' }}>
+      <style>{`
+        @keyframes hero-mosaic-parallax {
+          from { transform: translateY(-7%); }
+          to { transform: translateY(7%); }
+        }
+        @media (prefers-reduced-motion: no-preference) {
+          .hero-mosaic-image {
+            animation: hero-mosaic-parallax linear both;
+            animation-timeline: view();
+          }
+        }
+      `}</style>
+      <svg aria-hidden="true" viewBox="0 0 340 350" width="100%">
         <defs>
           <clipPath id="hero-mosaic-clip">
             {CELLS.map((cell) => (
@@ -54,21 +76,17 @@ export function HeroHexMosaic() {
           </clipPath>
         </defs>
 
-        <g clipPath="url(#hero-mosaic-clip)" style={{ color: 'var(--mui-palette-secondary-main)' }}>
-          <rect x={0} y={0} width={300} height={350} fill="var(--mui-palette-background-paper)" />
-          <g transform="translate(163, 175)" style={{ stroke: 'currentColor', fill: 'none', strokeWidth: 2.5 }}>
-            <circle r={140} strokeOpacity={0.3} />
-            <circle r={95} strokeOpacity={0.5} />
-            {Array.from({ length: 12 }, (_, i) => i * 30).map((angle) => (
-              <path
-                key={angle}
-                d="M0,-30 Q-24,-90 0,-155 Q24,-90 0,-30"
-                transform={`rotate(${angle})`}
-                strokeOpacity={0.85}
-              />
-            ))}
-            <circle r={26} fill="currentColor" stroke="none" fillOpacity={0.9} />
-          </g>
+        <g clipPath="url(#hero-mosaic-clip)">
+          <rect x={0} y={0} width={340} height={350} fill="var(--mui-palette-background-paper)" />
+          <image
+            className="hero-mosaic-image"
+            href="/images/photos/obrazy-drewniane.jpg"
+            x={-20}
+            y={-45}
+            width={380}
+            height={490}
+            preserveAspectRatio="xMidYMid slice"
+          />
         </g>
 
         {/* Thin outlines on top of the artwork so each cell reads as a distinct hex tile, not just a clipped shape. */}
