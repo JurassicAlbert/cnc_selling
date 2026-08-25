@@ -151,7 +151,14 @@ a few real decorative corner accents, product cards now show real
 production-time/size-range facts and a material chip, and a new `/blog`
 section exists as a real, working scaffold — schema, pages, sitemap entry
 — with zero fabricated posts; it shows an honest "coming soon" state until
-a real one is added.
+a real one is added. **A fourth same-day pass** (`docs/HANDOVER.md` §9p)
+replaced that blueprint-grid texture with a hexagonal "material tile"
+motif — mixed outline hexagons and icon-centered tiles concentrated at
+section edges, fading toward content, gone entirely on mobile — added the
+homepage blog section that was missing, and seeded 4 real placeholder
+posts (wood care, the CNC/laser process, materials, personalization) so
+both it and `/blog` show real content instead of the empty state. Two
+real CSS bugs were found and fixed along the way — full account in §9p.
 
 ---
 

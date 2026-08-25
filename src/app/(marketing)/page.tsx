@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
+import { listPublishedBlogPosts } from '@/server/repositories/blog';
 import { listActiveCategories } from '@/server/repositories/categories';
 import { listAllActiveProducts } from '@/server/repositories/products';
 import { CategoryTile } from '@/ui/primitives/CategoryTile';
@@ -28,15 +29,18 @@ import { SITE } from '@/content/pl/site';
  * owner's-own-words content ARCHITECTURE.md §22 describes, which remains
  * unbuilt.
  */
+const blogDateFormatter = new Intl.DateTimeFormat('pl-PL', { dateStyle: 'long' });
+
 export default async function MarketingHomePage() {
-  const [categories, products] = await Promise.all([
+  const [categories, products, blogPosts] = await Promise.all([
     listActiveCategories(),
     listAllActiveProducts(),
+    listPublishedBlogPosts(),
   ]);
 
   return (
     <>
-      <Section className="hero-surface">
+      <Section className="hero-surface" decorative="both">
         <Container>
           <div style={{ display: 'grid', gap: 48, alignItems: 'center' }} className="hero-grid">
             {/* grid-template-columns lives here, not inline: an inline style always
@@ -142,6 +146,55 @@ export default async function MarketingHomePage() {
           </div>
         </Container>
       </Section>
+
+      {blogPosts.length > 0 && (
+        <Section>
+          <Container>
+            <Heading level={2}>{SITE.homeBlogHeadingPl}</Heading>
+            <div
+              style={{
+                marginBlockStart: 24,
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                gap: 24,
+              }}
+            >
+              {blogPosts.slice(0, 3).map((post) => (
+                <Link
+                  key={post.slug}
+                  href={`/blog/${post.slug}`}
+                  style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+                >
+                  <div style={{ font: 'var(--mui-font-h6)', color: 'var(--mui-palette-text-primary)' }}>
+                    {post.titlePl}
+                  </div>
+                  <div
+                    style={{
+                      marginBlockStart: 4,
+                      font: 'var(--mui-font-caption)',
+                      color: 'var(--mui-palette-text-secondary)',
+                    }}
+                  >
+                    {blogDateFormatter.format(post.publishedAt)}
+                  </div>
+                  <div style={{ marginBlockStart: 8 }}>
+                    <Text muted>{post.shortDescPl}</Text>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div style={{ marginBlockStart: 32 }}>
+              <Link
+                href="/blog"
+                className="nav-link"
+                style={{ font: 'var(--mui-font-button)', textTransform: 'none' }}
+              >
+                {SITE.blogViewAllPl}
+              </Link>
+            </div>
+          </Container>
+        </Section>
+      )}
     </>
   );
 }

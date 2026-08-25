@@ -1910,6 +1910,82 @@ range text and the right material chip for all 5 real products, cards
 don't overflow at 375px, `/blog` renders the honest empty state, and the
 footer's new "Blog" link resolves to it.
 
+## 9p. Fourth design pass: hexagon background + real blog content — 2026-08-25
+
+Same day, fourth round. Two asks: the blog never actually appeared on the
+homepage even though it existed at `/blog`, and — since the owner now
+wanted to *see* it working, not just exist — 4 placeholder posts; and a
+detailed brief to replace the flat/grid background with a hexagonal
+"material tile" motif.
+
+**Blog content.** `prisma/seed.ts` gained a `seedBlogPost()` helper and 4
+real posts (wood care, the CNC/laser process, materials used, what
+personalization means) with distinct past `publishedAt` dates. This is a
+deliberate, documented exception to "nothing is faked," scoped narrowly:
+generic craft/material topics the business could really publish, not
+fabricated claims, numbers, or customer voices — the fabrication rule
+`docs/ARCHITECTURE.md` §16A.1 module 9 actually forbids is reviews/
+testimonials in a customer's voice, which this isn't. Marked in the
+seed file's own header exactly like `TODO_PRICING` — a real first draft,
+must be reviewed before launch. `(marketing)/page.tsx` gained a "Z
+naszego bloga" section (latest 3 posts + a link to `/blog`) after "Nasze
+produkty" — no `decorative` accent on it, keeping the existing 3 accented
+sections plus the hero as the honest limit.
+
+**Hexagon background.** `SectionDecoration.tsx` was rewritten from
+concentric rings to a honeycomb cluster — mixed outline-only hexagons and
+a minority of "material tile" hexagons centered on real existing icons
+(`ChairIcon`/`DiamondIcon`/`GridViewIcon`/`ViewColumnIcon` — furniture,
+jewellery/materials, tile, panels), deliberately not real photos (would
+read as a fake curated gallery and cost real image requests). `Section.tsx`'s
+`decorative` prop gained a `'both'` option for the hero. `theme-vars.css`'s
+`body` dropped the earlier round's blueprint-grid wash (two geometric
+languages fighting each other) but kept the faint grain.
+
+### Two real bugs, both caught by actually looking, neither by any type-check
+
+1. **The whole cluster was invisible on first render.** `Section` set
+   `position: relative` but never `z-index`, so it never established its
+   own stacking context — the decoration's `z-index: -1` escaped to a far
+   higher ancestor (effectively the page root) and painted *behind*
+   the section's own opaque `backgroundColor` instead of on top of it.
+   Fixed by giving `Section` an explicit `zIndex: 0` alongside
+   `position: relative` whenever `decorative` is set, so the negative
+   z-index resolves within the section's own, now-real stacking context.
+2. **After fixing #1, still nothing showed** — a second, independent bug:
+   the hexagon coordinates were authored backwards relative to the CSS
+   positioning. The wrapper used `right: -110px` (or `left: -110px`) with
+   a 300px-wide box, which — worked through arithmetically — means only
+   the box's *low-x* local region survives the section's own
+   `overflow: hidden` clip, while every hexagon had deliberately been
+   placed at *high* local x, thinking that was "the edge." Combined with
+   a fade mask that was already transparent by the time it reached the
+   surviving region, literally nothing could ever have been both visible
+   and opaque at once. Fixed by redesigning the coordinate scheme
+   entirely: the cluster box is now positioned flush (`[side]: 0`, no
+   negative offset) against the section's edge, authored so its *own*
+   high-x edge IS the true page edge (dense hexagons there, a few
+   deliberately exceeding the box so the SVG's own default clip trims
+   them for the brief's "partially outside the viewport" effect), fading
+   toward low x (content). Caught only by taking real screenshots at
+   several viewport widths and reasoning through the actual pixel math —
+   the kind of bug no type-check or lint rule can see, since every value
+   involved was a syntactically valid, plausible-looking CSS position.
+
+### Verified
+
+`npm test` (373/373, unchanged), `npm run typecheck`, `npm run lint`,
+`npm run build`, `npm run db:seed` (confirmed exactly 4 `BlogPost` rows
+against the live DB, correct slugs and past `publishedAt` dates),
+`npm run e2e` (6/6, both browser projects) all pass. Browser-verified at
+desktop (1401px), tablet (800px), and mobile (400px): the homepage's new
+blog section shows 3 real posts linking correctly; the hexagon cluster
+renders clearly on both hero edges and the two previously-decorated
+sections, mixed outline/icon hexagons, fading toward content, several
+genuinely clipped at the edge; at 800px only the small `.hex-core` subset
+remains; at 400px the decoration is completely gone with zero
+interference with the header/hero text or buttons.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

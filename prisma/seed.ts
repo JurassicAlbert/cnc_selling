@@ -44,6 +44,13 @@
  *     pattern (not a real engraving motif) for the same reason as the
  *     photos: a design's artwork is the business's actual creative IP,
  *     not something to invent.
+ *   - 4 `BlogPost` rows (2026-08-25, owner's explicit request) — real,
+ *     generic craft/material topics (wood care, the CNC/laser process,
+ *     the materials used, what personalization means), no invented
+ *     claims, numbers, or customer voices. A first draft, same
+ *     "must be reviewed before launch" discipline as everything above —
+ *     see `seedBlogPosts()`'s own comment for why this doesn't conflict
+ *     with the no-fabricated-reviews rule.
  *
  * What IS fully real, added 2026-08-24: the `Font` row (`seedFont`) — a
  * genuine, freely-licensed font file (`public/fonts/Inter-Variable.ttf`,
@@ -99,6 +106,7 @@ async function main(): Promise<void> {
 
   const categories = await seedCategories();
   await seedProducts(categories, materials, design, font);
+  await seedBlogPosts();
 }
 
 // ---------------------------------------------------------------------------
@@ -520,6 +528,95 @@ async function seedCategories(): Promise<Record<string, { readonly id: string }>
     console.log(`Category: ${category.namePl} (/${seed.slug})`);
   }
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// 4. Blog — placeholder posts
+// ---------------------------------------------------------------------------
+
+type BlogPostSeed = {
+  readonly slug: string;
+  readonly titlePl: string;
+  readonly shortDescPl: string;
+  readonly bodyPl: string;
+  readonly seoTitlePl: string;
+  readonly seoDescPl: string;
+  readonly publishedAt: Date;
+};
+
+/**
+ * Explicit, one-time exception to this project's "nothing is faked" rule
+ * — added 2026-08-25 at the owner's direct request, so the new homepage
+ * blog section and `/blog` render real content instead of the empty
+ * state. This is NOT the same category of fabrication `docs/ARCHITECTURE.md`
+ * §16A.1 module 9 forbids (reviews/testimonials in a customer's voice) —
+ * these are generic, genuinely-useful craft/material topics the business
+ * could really publish, with no invented numbers, dates, or customer
+ * claims. Same discipline as `TODO_PRICING`: a real first draft, safe to
+ * demo, must be reviewed and replaced with the owner's own words before
+ * launch.
+ */
+const BLOG_POST_SEEDS: readonly BlogPostSeed[] = [
+  {
+    slug: 'jak-dbac-o-drewniane-produkty-z-grawerem',
+    titlePl: 'Jak dbać o drewniane produkty z grawerem',
+    shortDescPl:
+      'Kilka prostych zasad pielęgnacji, dzięki którym drewniany produkt z grawerem posłuży przez lata.',
+    bodyPl:
+      'Drewno to materiał naturalny — reaguje na wilgotność i temperaturę otoczenia, dlatego warto unikać stawiania produktów bezpośrednio nad grzejnikiem lub w miejscu z dużymi wahaniami wilgotności.\n\nDo czyszczenia na co dzień wystarczy sucha lub lekko wilgotna ściereczka. Należy unikać silnych detergentów i moczenia elementu w wodzie — może to uszkodzić zarówno drewno, jak i wykończenie olejem.\n\nGrawerowane wzory z czasem mogą lekko pociemnieć wraz z naturalnym starzeniem się drewna — to normalny proces, który nie wpływa na trwałość wzoru.\n\nRegularne, delikatne naoliwienie (raz na kilka miesięcy, zależnie od intensywności użytkowania) pomaga utrzymać naturalny wygląd i chroni powierzchnię przed wysychaniem.',
+    seoTitlePl: 'Jak dbać o drewniane produkty z grawerem — CNC Selling',
+    seoDescPl: 'Proste zasady pielęgnacji drewnianych produktów z grawerem, aby służyły przez lata.',
+    publishedAt: new Date('2026-08-01T09:00:00Z'),
+  },
+  {
+    slug: 'jak-powstaje-grawer-cnc-i-laserowy',
+    titlePl: 'Jak powstaje grawer CNC i laserowy',
+    shortDescPl: 'Krótkie wyjaśnienie, czym różni się frezowanie CNC od grawerowania laserowego.',
+    bodyPl:
+      'Frezowanie CNC polega na precyzyjnym usuwaniu materiału za pomocą obracającej się frezarki, sterowanej komputerowo według wcześniej przygotowanego projektu. Sprawdza się przy głębszych, wyraźnie wyczuwalnych fakturowo wzorach.\n\nGrawerowanie laserowe działa inaczej — skupiona wiązka światła wypala lub przebarwia powierzchnię materiału, co pozwala uzyskać bardzo drobne detale i delikatne cieniowanie, niemożliwe do wykonania frezem.\n\nWybór metody zależy od materiału, wielkości detali wzoru i efektu, jaki ma zostać osiągnięty — czasem obie techniki są łączone w jednym produkcie.\n\nKażdy projekt jest najpierw sprawdzany pod kątem wykonalności — minimalnej grubości linii i odstępów między detalami — zanim trafi do produkcji.',
+    seoTitlePl: 'Jak powstaje grawer CNC i laserowy — CNC Selling',
+    seoDescPl: 'Czym różni się frezowanie CNC od grawerowania laserowego i kiedy stosujemy każdą z technik.',
+    publishedAt: new Date('2026-08-10T09:00:00Z'),
+  },
+  {
+    slug: 'dab-i-gres-materialy-ktore-wykorzystujemy',
+    titlePl: 'Dąb i gres — materiały, które wykorzystujemy',
+    shortDescPl: 'Krótko o tym, dlaczego akurat te materiały trafiły do naszej oferty.',
+    bodyPl:
+      'Dąb to twarde, naturalne drewno o wyraźnym rysunku słojów — każdy egzemplarz jest inny, co sprawia, że gotowy produkt jest unikalny. Dobrze znosi grawerowanie zarówno CNC, jak i laserowe, a przy odpowiedniej pielęgnacji zachowuje trwałość na lata.\n\nGres to materiał ceramiczny o wysokiej odporności na wilgoć i uszkodzenia mechaniczne — sprawdza się szczególnie tam, gdzie drewno nie byłoby praktycznym wyborem, na przykład jako fartuch kuchenny nad blatem roboczym.\n\nOba materiały mają swoje realne ograniczenia — minimalną grubość linii wzoru czy maksymalny rozmiar arkusza — które są uwzględniane już na etapie konfiguracji produktu, aby zamówienie było wykonalne w praktyce, nie tylko w projekcie.',
+    seoTitlePl: 'Dąb i gres — materiały, które wykorzystujemy — CNC Selling',
+    seoDescPl: 'Dlaczego dąb i gres trafiły do oferty i czym różnią się jako materiały pod grawer.',
+    publishedAt: new Date('2026-08-18T09:00:00Z'),
+  },
+  {
+    slug: 'czym-jest-personalizacja-grawerem',
+    titlePl: 'Czym jest personalizacja grawerem',
+    shortDescPl: 'Jak działa dodanie własnego tekstu do produktu i na co zwrócić uwagę.',
+    bodyPl:
+      'Personalizacja pozwala dodać własny tekst — na przykład imię, datę lub krótką sentencję — bezpośrednio na powierzchni produktu, w wybranym kroju pisma.\n\nNie każdy krój pisma obsługuje wszystkie znaki, dlatego przed zatwierdzeniem tekstu sprawdzane jest realne pokrycie glifów w wybranej czcionce — łącznie z polskimi znakami diakrytycznymi, takimi jak „ł" czy „ę".\n\nDługość tekstu i liczba wierszy są ograniczone przez rozmiar produktu — zbyt drobny tekst mógłby nie zostać precyzyjnie wykonany, dlatego minimalna wysokość liter jest sprawdzana automatycznie podczas konfiguracji.\n\nNie każdy produkt oferuje personalizację — dostępność tej opcji zależy od konkretnego wyrobu i jest zawsze widoczna wprost w konfiguratorze.',
+    seoTitlePl: 'Czym jest personalizacja grawerem — CNC Selling',
+    seoDescPl: 'Jak działa personalizacja tekstem i na co zwrócić uwagę przy wyborze kroju pisma.',
+    publishedAt: new Date('2026-08-24T09:00:00Z'),
+  },
+];
+
+async function seedBlogPosts(): Promise<void> {
+  for (const seed of BLOG_POST_SEEDS) {
+    const post = await prisma.blogPost.upsert({
+      where: { slug: seed.slug },
+      create: {
+        slug: seed.slug,
+        titlePl: seed.titlePl,
+        shortDescPl: seed.shortDescPl,
+        bodyPl: seed.bodyPl,
+        seoTitlePl: seed.seoTitlePl,
+        seoDescPl: seed.seoDescPl,
+        publishedAt: seed.publishedAt,
+      },
+      update: {},
+    });
+    console.log(`BlogPost: ${post.titlePl} (/blog/${seed.slug})`);
+  }
 }
 
 async function seedProducts(

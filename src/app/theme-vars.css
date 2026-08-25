@@ -90,23 +90,36 @@
 
 body {
   background-color: var(--mui-palette-background-default);
-  /* Round 2, 2026-08-25: the owner said the background was still flat even
-     with the first grain pass, and asked for it bolder plus a wash that
-     runs through sections. This layers three things: a faint blueprint-
-     style grid (on-brand for a CNC/laser precision shop — cheap, pure CSS,
-     no image request) over a bolder grain (opacity raised 0.035 -> 0.06).
-     Section-level gradient tint lives in Section.tsx; decorative shapes
-     live in SectionDecoration.tsx — this file only owns the sitewide base.
+  /* Round 3, 2026-08-25: the owner asked to replace the flat background
+     with a hexagonal "material tile" motif (per-section, see
+     SectionDecoration.tsx) rather than a sitewide geometric wash — the
+     earlier round's blueprint grid (repeating-linear-gradient) is removed
+     here since a technical-drawing grid and a honeycomb pattern are two
+     different visual languages that would fight each other. The faint
+     feTurbulence grain stays: paper-like tactility, not a geometric
+     pattern, so it doesn't compete with the hexagons.
      Deliberately no `background-attachment: fixed` anywhere here — a known
      mobile-Safari scroll-jank trap, and this project tests on
      mobile-safari in e2e. */
-  background-image:
-    repeating-linear-gradient(0deg, rgba(46, 42, 38, 0.028) 0 1px, transparent 1px 40px),
-    repeating-linear-gradient(90deg, rgba(46, 42, 38, 0.028) 0 1px, transparent 1px 40px),
-    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='180'%20height='180'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.85'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23n)'%20opacity='0.06'/%3E%3C/svg%3E");
-  background-repeat: repeat, repeat, repeat;
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='180'%20height='180'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.85'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23n)'%20opacity='0.06'/%3E%3C/svg%3E");
+  background-repeat: repeat;
   color: var(--mui-palette-text-primary);
   margin: 0;
+}
+
+/* Responsive density for the hexagon decoration (SectionDecoration.tsx),
+   added 2026-08-25 per the owner's brief: full cluster on desktop, only
+   the small `.hex-core` subset on tablet, nothing at all on phones —
+   "never allow the decorative pattern to interfere with readability." */
+@media (max-width: 899px) {
+  .hex-extra {
+    display: none;
+  }
+}
+@media (max-width: 599px) {
+  .hex-decoration {
+    display: none;
+  }
 }
 
 /*

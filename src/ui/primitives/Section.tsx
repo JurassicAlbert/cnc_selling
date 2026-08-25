@@ -10,12 +10,13 @@ type SectionProps = {
   readonly className?: string;
   /**
    * Adds a subtle corner accent (`SectionDecoration`) on top of the section's
-   * own gradient wash — reserved for a few real accent points (the
-   * homepage's Kategorie/Nasze produkty sections, a category page header),
-   * not every section on every page, so it stays an accent rather than
-   * repeated noise.
+   * own gradient wash — reserved for a few real accent points (the hero on
+   * both sides, the homepage's Kategorie/Nasze produkty sections, a category
+   * page header), not every section on every page, so it stays an accent
+   * rather than repeated noise. `'both'` renders one cluster per side —
+   * reserved for the hero, the brief's primary target for a larger accent.
    */
-  readonly decorative?: 'left' | 'right' | false;
+  readonly decorative?: 'left' | 'right' | 'both' | false;
 };
 
 /**
@@ -32,6 +33,14 @@ export function Section({ children, surface = 'default', className, decorative =
       className={className}
       style={{
         position: decorative ? 'relative' : undefined,
+        // `zIndex: 0` (not just `position: relative`) is required so this
+        // section establishes its OWN stacking context — otherwise the
+        // decoration's `z-index: -1` escapes to a much higher ancestor
+        // context (effectively the page root) and paints BEHIND this
+        // section's own opaque backgroundColor instead of on top of it,
+        // making it invisible. A real bug, caught by actually looking in
+        // the browser rather than trusting the CSS to "just work."
+        zIndex: decorative ? 0 : undefined,
         overflow: decorative ? 'hidden' : undefined,
         paddingBlock: 96,
         backgroundColor:
@@ -45,7 +54,14 @@ export function Section({ children, surface = 'default', className, decorative =
         borderBottom: '1px solid var(--mui-palette-divider)',
       }}
     >
-      {decorative && <SectionDecoration side={decorative} />}
+      {decorative === 'both' ? (
+        <>
+          <SectionDecoration side="left" />
+          <SectionDecoration side="right" />
+        </>
+      ) : (
+        decorative && <SectionDecoration side={decorative} />
+      )}
       {children}
     </section>
   );

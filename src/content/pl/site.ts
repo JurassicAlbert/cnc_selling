@@ -185,4 +185,6 @@ export const SITE = {
   blogPublishedLabelPl: 'Opublikowano',
   blogReadMorePl: 'Czytaj dalej',
   blogPostNotFoundPl: 'Nie znaleziono takiego wpisu.',
+  homeBlogHeadingPl: 'Z naszego bloga',
+  blogViewAllPl: 'Zobacz wszystkie posty',
 } as const;

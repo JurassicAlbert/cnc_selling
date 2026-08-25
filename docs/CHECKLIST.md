@@ -209,6 +209,21 @@ regression.
 - [x] `BlogPost` model + migration, `src/server/repositories/blog.ts`, `/blog` + `/blog/[slug]` pages, footer link, sitemap entry — zero seeded posts, confirmed against the live DB
 - [ ] Blog admin/authoring — not started; needs P7 or a manual DB insert for now
 
+**A fourth design pass, same day, 2026-08-25.** The blog never actually
+appeared on the homepage, and the owner wanted a hexagonal "material
+tile" background motif instead of the blueprint grid. Full detail in
+`docs/HANDOVER.md` §9p, including two real CSS bugs (a stacking-context
+mistake that made the whole decoration invisible, then an inverted
+coordinate scheme that kept it invisible after the first fix) — both
+caught only by taking real screenshots and reasoning through the pixel
+math, not by any type-check.
+
+- [x] 4 real placeholder `BlogPost` rows (wood care, CNC/laser process, materials, personalization) — an explicit, documented exception to "nothing is faked," not the reviews/testimonials fabrication §16A.1 forbids
+- [x] Homepage "Z naszego bloga" section — latest 3 posts + a link to `/blog`, confirmed live
+- [x] `SectionDecoration.tsx` rewritten — honeycomb cluster (outline hexagons + `ChairIcon`/`DiamondIcon`/`GridViewIcon`/`ViewColumnIcon` material tiles) replacing the concentric rings; `Section`'s `decorative` prop gained `'both'` for the hero
+- [x] `theme-vars.css` — blueprint-grid wash removed (fights the honeycomb motif), grain kept
+- [x] Responsive verified at 1401px/800px/400px — full cluster, core-only, and fully hidden respectively
+
 ## P3 — Configurator
 
 Started 2026-08-23. The foundation (step machine, compatibility resolution,
