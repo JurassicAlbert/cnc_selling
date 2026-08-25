@@ -12,11 +12,16 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 
 import { PrismaClient } from '../../generated/prisma/client';
+import { DB_POOL_IDLE_TIMEOUT_MS, DB_POOL_MAX_CONNECTIONS } from './pool-config';
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 function createClient(): PrismaClient {
-  const adapter = new PrismaPg({ connectionString: requireEnv('DATABASE_URL') });
+  const adapter = new PrismaPg({
+    connectionString: requireEnv('DATABASE_URL'),
+    max: DB_POOL_MAX_CONNECTIONS,
+    idleTimeoutMillis: DB_POOL_IDLE_TIMEOUT_MS,
+  });
   return new PrismaClient({ adapter });
 }
 

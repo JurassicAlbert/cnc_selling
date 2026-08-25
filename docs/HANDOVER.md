@@ -2111,7 +2111,7 @@ shows the orbit graphic (rings + 8 icons across 3 visibly different
 radii) correctly sized with no overflow at any width, and the blog
 section's new edge accent renders without crowding the post cards.
 
-## 9q. Fifth design pass: diverse engraved-art hexes, honeycomb hero mosaic, footer orbit column — 2026-08-26
+## 9s. Fifth design pass: diverse engraved-art hexes, honeycomb hero mosaic, footer orbit column — 2026-08-26
 
 Same thread, next round. Three asks: (1) the hex decorations repeated the
 same 4 icons everywhere — needed real variety; (2) a bigger, more
@@ -2202,6 +2202,65 @@ viewports — the honeycomb mosaic, diverse icons per section, the
 footer's 4th orbit column, and the wave-grain/compass/leaf-sprig
 engravings on kategorie/produkty/blog all render correctly with no
 console errors.
+
+## 9t. Dev-time `EADDRINUSE` on the Postgres pool — diagnosed and mitigated — 2026-08-26
+
+The owner pasted a runtime error: `PrismaClientKnownRequestError` from
+`listActiveCategories()` wrapping `connect EADDRINUSE 127.0.0.1:5433`,
+plus asked to analyze it and add tests to cover it if warranted.
+
+**Diagnosis.** `docker ps` showed the one `cnc_selling_db` container
+healthy, so the database itself was fine. `netstat -ano` told the real
+story: ~2,100 sockets in `TIME_WAIT` on `127.0.0.1:5433` alone. Cause:
+`src/server/db/client.ts` passed `PrismaPg` nothing but a
+`connectionString`, so the underlying `pg.Pool` ran on its library
+defaults — `max: 10`, `idleTimeoutMillis: 10_000`. In a real dev session,
+where requests land more than 10s apart far more often than not, that
+10s idle timeout means the pool closes and reopens a connection almost
+every time — thousands of connect/close cycles across a day. Each closed
+connection sits in `TIME_WAIT` for several minutes on Windows; enough of
+them piling up against one fixed destination is what finally made a
+later `connect()` fail with `EADDRINUSE`. (Checked and ruled out a
+smaller cause: Windows' dyndev port range here is the full 49152–65535,
+16384 ports, with only ~600 administratively excluded — not itself tight
+enough to explain this without the churn.) The globalThis-cached
+singleton pattern in `client.ts` (module comment, unchanged) is correct
+and not implicated — this isn't multiple pools, it's one pool cycling
+too fast.
+
+**Fix.** New `src/server/db/pool-config.ts` — two named constants,
+`DB_POOL_MAX_CONNECTIONS = 5` and `DB_POOL_IDLE_TIMEOUT_MS = 60_000`,
+pulled out of `client.ts` specifically so they're importable without
+touching Prisma/`pg` at all. `client.ts` now passes both into `PrismaPg`
+alongside `connectionString`. A smaller pool and a 6x longer idle timeout
+cut the connect/close rate substantially without adding latency this
+app would notice.
+
+**Tests.** The existing `vitest.config.ts` scope is explicit — "Domain
+tests are pure: no DB, no network, no framework" — and this bug is a
+live OS-level socket-exhaustion condition, not something a unit test can
+reproduce or would want to (importing the real `client.ts` pulls in
+`@prisma/adapter-pg` and the generated Prisma client, exactly the
+"framework" dependency that file excludes). So no test asserts the
+EADDRINUSE symptom itself. What *is* testable and pure: the tuning
+values don't regress back toward `pg`'s churn-prone defaults. New
+`tests/unit/db-pool-config.test.ts` imports only the two constants from
+`pool-config.ts` — no DB, no network, no framework — and asserts the
+idle timeout stays well above `pg`'s 10s default and the pool stays
+small. It won't catch a future EADDRINUSE by itself, but it will catch
+someone quietly reverting this fix.
+
+### Verified
+
+`npm test` (375/375 — 373 prior + 2 new), `npm run typecheck`, `npm run
+lint` all pass. No dev server was running at the time (confirmed via
+`Get-CimInstance Win32_Process` — nothing matching `next dev`/
+`next-server`), so this pass was diagnosis + a config fix, not something
+to re-verify against a live browser session; the `TIME_WAIT` backlog
+itself will drain on its own once nothing keeps reopening connections
+against it; a `docker restart cnc_selling_db` (or just leaving the dev
+server stopped for a few minutes) clears it immediately if the owner
+hits the error again before it does.
 
 ## 10. Working style the owner expects
 
