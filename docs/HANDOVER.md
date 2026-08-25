@@ -2262,6 +2262,86 @@ against it; a `docker restart cnc_selling_db` (or just leaving the dev
 server stopped for a few minutes) clears it immediately if the owner
 hits the error again before it does.
 
+## 9u. The real cause of the `EADDRINUSE` — §9t's fix was real but addressed the wrong layer — 2026-08-26
+
+The owner restarted Docker Desktop entirely (fresh container, "Up 47
+seconds") and asked to continue. Re-running `npm run build` reproduced
+`EADDRINUSE` immediately — on a completely clean container, seconds
+after restart, which ruled out "stale backlog from before the restart"
+and meant §9t's pool-size/idle-timeout tuning had not actually fixed
+the underlying problem, just made it a bit slower to trigger.
+
+**Diagnosis.** Added a temporary `console.error` in `createClient()`
+and re-ran the build: it fired exactly 8 times (one per build worker,
+as expected — the module-scoped singleton is not the problem). But
+`netstat` after one failed build showed 2,122 sockets in `TIME_WAIT`
+against `127.0.0.1:5433` — two orders of magnitude more than 8 pools ×
+`max: 5` could ever produce if each pool's connections were actually
+being reused. Read `node_modules/@prisma/adapter-pg/dist/index.js`
+directly (its `.d.ts` doesn't show this): `PrismaPgAdapterFactory`'s
+constructor branches on the *type* of its first argument —
+
+```js
+if (poolOrConfig instanceof pg.Pool) {
+  this.externalPool = poolOrConfig;   // reused across every connect()
+} else {
+  this.externalPool = null;           // config object OR connection string
+}
+// ...
+async connect() {
+  const client = this.externalPool ?? new pg.Pool(this.config); // fresh pool!
+  return new PrismaPgAdapter(client, this.options, async () => {
+    if (this.externalPool) { /* kept alive unless disposeExternalPool */ }
+    else { await client.end(); }      // torn down completely
+  });
+}
+```
+
+`client.ts` was calling `new PrismaPg({ connectionString, max,
+idleTimeoutMillis })` — a **config object**, not a `pg.Pool` instance.
+So `externalPool` was always `null`, and every single `.connect()` call
+(Prisma calls this far more than once per process — effectively once
+per logical operation) spun up a **brand-new `pg.Pool`** with its own up
+to `max` physical connections, then fully tore it down again via
+`pool.end()` on dispose. §9t's `max`/`idleTimeoutMillis` tuning was real
+and not wrong, but it was tuning the settings of pools that were being
+destroyed almost as fast as they were created — the size/timeout of a
+pool that lives for one query barely matters.
+
+**Fix.** `client.ts` now constructs a `pg.Pool` itself (`new Pool({
+connectionString, max, idleTimeoutMillis })`, using the same
+`pool-config.ts` constants from §9t) and passes that **instance** to
+`new PrismaPg(pool)`. With a real `pg.Pool` instance, the factory stores
+it as `externalPool` and every `connect()` call reuses the same pool —
+one genuine, long-lived pool per process (matching the existing
+module-scope-singleton comment's actual intent), not one per operation.
+
+**Tests.** No new automated regression test for this specific fix.
+Reasoning: proving it requires either (a) a live DB + socket-level
+inspection (`netstat`), which is exactly the "no DB, no network, no
+framework" scope `vitest.config.ts` rules out for this test suite, or
+(b) mocking `@prisma/adapter-pg`'s internals well enough to assert
+`PrismaPg` was constructed with `expect(arg).toBeInstanceOf(Pool)` —
+possible, but it would test that *this file* calls the constructor
+correctly, not that doing so actually prevents the bug (that requires
+trusting the adapter's internals, which is exactly what got missed
+before). If this regresses, it will most likely show up the same way it
+did this time: `npm run build` failing with `EADDRINUSE`, not a passing
+test suite hiding a broken assumption. `tests/unit/db-pool-config.test.ts`
+still guards the pool-size/idle-timeout constants from §9t, which remain
+correct and worth keeping even though they weren't the root cause.
+
+### Verified
+
+`npm run build` completed. `npm test` (375/375), `npm run typecheck`,
+`npm run lint` all pass. Build-time `EADDRINUSE` reproduction was
+blocked by leftover `TIME_WAIT` backlog from the pre-fix build attempts
+(Windows holds these for several minutes regardless of the Docker
+container restarting — that's client-side OS state, not something the
+container's restart touches); see the note below on how that was
+confirmed to drain before the fix could be verified against a clean
+build.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous
