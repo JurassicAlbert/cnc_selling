@@ -3,8 +3,10 @@ import { redirect } from 'next/navigation';
 
 import { formatPln } from '@/domain/money/money';
 import { SITE } from '@/content/pl/site';
+import { getSession } from '@/server/auth/session';
 import { readGuestSessionToken } from '@/server/session/read-guest-session';
 import { findCartForRequest } from '@/server/repositories/cart';
+import { recordAnalyticsEvent } from '@/server/analytics/record-event';
 import { SHIPPING_FLAT_GROSZE } from '@/server/orders/create-order';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
@@ -22,12 +24,14 @@ export const metadata: Metadata = {
  * and the order-summary render need no interactivity at all.
  */
 export default async function CheckoutPage() {
-  const sessionToken = await readGuestSessionToken();
-  const cart = await findCartForRequest({ userId: null, sessionToken });
+  const [sessionToken, session] = await Promise.all([readGuestSessionToken(), getSession()]);
+  const cart = await findCartForRequest({ userId: session?.userId ?? null, sessionToken });
 
   if (cart.items.length === 0) {
     redirect('/koszyk');
   }
+
+  void recordAnalyticsEvent({ name: 'checkout_started', sessionToken, userId: session?.userId ?? null });
 
   const totalGrossGrosze = cart.subtotalGrossGrosze + SHIPPING_FLAT_GROSZE;
 

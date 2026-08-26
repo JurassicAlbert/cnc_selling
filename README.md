@@ -105,11 +105,11 @@ lookup/confirmation. See `docs/HANDOVER.md` §9l for the full account,
 including two real bugs an e2e test caught (a `Secure` cookie silently
 dropped by Safari/WebKit over plain HTTP, and a validation-error form
 losing everything the customer had already typed) and what's honestly
-still deferred: real shipping rates and a real bank account number (both
-need P7's admin panel to exist first — no such data exists anywhere in
+still deferred: real shipping rates and a real bank account number — both
+need P7's admin panel to exist first, no such data exists anywhere in
 this system, and a fabricated bank account number specifically would be a
-real-world harm, not just an ordinary placeholder) and guest-cart-merge-
-on-login (needs P6's auth to exist first).
+real-world harm, not just an ordinary placeholder. (Guest-cart-merge-on-
+login, also listed as blocked here originally, is built — see P6 below.)
 
 | File | What it is |
 |---|---|
@@ -170,6 +170,24 @@ purpose: the mosaic's illustration becoming a real photo with genuine
 scroll-linked parallax — real client-side work this codebase doesn't
 have yet, needs its own design pass (§9q's "explicitly NOT done" note).
 
+**P6, accounts & polish — built 2026-08-26.** Real user accounts (Better
+Auth — email+password and passwordless email-OTP, chosen over the brief's
+literal Auth.js v5 because that library is still beta with no verified
+Prisma 7 support), guest-cart-merge-on-login (the P5 checklist item this
+was blocked on), order history, saved configurations, a real `Mailer`
+adapter over Resend, a first-party RODO consent banner gating real
+`AnalyticsEvent` writes, real Regulamin/Polityka prywatności content
+(business-identity fields honestly marked as placeholders, not invented),
+and sitewide loading/empty/error states including a root error boundary
+with a correlation id. The bigger, less visible part: every
+`UploadedFile`/`CustomerDesign`/`Configuration`/`Cart` ownership check was
+extended from `sessionToken`-only to `userId` **or** `sessionToken` —
+§16.1 always specified this, but `userId` was always `null` in practice
+until real accounts existed. See `docs/HANDOVER.md` §9x for the full
+account, including a hand-authored migration (never `prisma migrate dev`
+in this project — §9u/§9x explain why) and a real error-mapping bug found
+live in the browser, not by code review.
+
 ---
 
 ## Getting set up
@@ -184,7 +202,7 @@ npm install
 npm run db:up
 npm run db:deploy      # applies the initial migration
 
-npm test               # 369 assertions across fourteen files, about a second
+npm test               # 453 assertions across twenty-three files, unit + integration
 npm run typecheck      # TypeScript strict, noUncheckedIndexedAccess, no emit
 npm run lint             # Biome + the Polish-literal check
 npm run build           # Next.js production build
@@ -243,12 +261,12 @@ stripping), IP consent, the review state machine, an authorizing
 file-serving route, and a real configurator step wired into a real
 seeded `CUSTOM` product; a customer can genuinely upload their own
 design and check out today, verified live end to end including the
-order landing in `DESIGN_REVIEW` automatically. See `docs/CHECKLIST.md`
-for the itemised state of every phase. Next:
+order landing in `DESIGN_REVIEW` automatically. **P6, accounts &
+polish, is built** (§9x) — real accounts, guest-cart-merge-on-login,
+order history, saved configurations, a real mailer, RODO consent +
+legal content, and sitewide loading/empty/error states. See
+`docs/CHECKLIST.md` for the itemised state of every phase. Next:
 
-- **P6, accounts** — not started. Needed before "guest cart merges into
-  user cart on login" (a real P5 checklist item, currently blocked on
-  exactly this) can be closed.
 - **P7, admin panel** — not started. Needed before shipping rates and a
   real bank account number can be anything but the placeholders P5 uses
   today; see `docs/ARCHITECTURE.md`'s note near §16A for the Materio

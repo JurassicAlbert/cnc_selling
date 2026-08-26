@@ -17,6 +17,7 @@ import type { PersonalizationIssue } from '@/domain/personalization/validate';
 import type { ParseErrorCode } from '@/domain/text/numeric-input';
 import type { UploadWarning } from '@/domain/upload/inspect';
 import type { UnavailabilityReason } from '@/server/configurator/resolve-options';
+import type { OrderStatus } from '@/generated/prisma/enums';
 import { formatMmAsCentimetres } from '@/domain/text/numeric-input';
 import { countPl } from '@/domain/text/plural';
 import { NOUNS } from '@/domain/text/nouns';
@@ -242,6 +243,71 @@ export function checkoutIssueMessage(code: CheckoutFieldIssueCode): string {
       return 'Musisz zaakceptować regulamin, aby złożyć zamówienie.';
     case 'WITHDRAWAL_NOT_ACKNOWLEDGED':
       return 'Musisz potwierdzić informację o braku prawa odstąpienia od umowy.';
+  }
+}
+
+export function orderStatusMessage(status: OrderStatus): string {
+  switch (status) {
+    case 'NEW':
+      return 'Nowe';
+    case 'AWAITING_PAYMENT':
+      return 'Oczekuje na płatność';
+    case 'DESIGN_REVIEW':
+      return 'Weryfikacja projektu';
+    case 'CONFIRMED':
+      return 'Potwierdzone';
+    case 'IN_PRODUCTION':
+      return 'W produkcji';
+    case 'FINISHING':
+      return 'Wykończenie';
+    case 'READY_TO_SHIP':
+      return 'Gotowe do wysyłki';
+    case 'SHIPPED':
+      return 'Wysłane';
+    case 'COMPLETED':
+      return 'Zrealizowane';
+    case 'CANCELLED':
+      return 'Anulowane';
+  }
+}
+
+export type AuthFieldIssueCode =
+  | 'EMAIL_REQUIRED'
+  | 'EMAIL_INVALID'
+  | 'NAME_REQUIRED'
+  | 'PASSWORD_REQUIRED'
+  | 'PASSWORD_TOO_SHORT'
+  | 'OTP_REQUIRED';
+
+export function authIssueMessage(code: AuthFieldIssueCode): string {
+  switch (code) {
+    case 'EMAIL_REQUIRED':
+      return 'Podaj adres e-mail.';
+    case 'EMAIL_INVALID':
+      return 'Podaj poprawny adres e-mail.';
+    case 'NAME_REQUIRED':
+      return 'Podaj imię i nazwisko.';
+    case 'PASSWORD_REQUIRED':
+      return 'Podaj hasło.';
+    case 'PASSWORD_TOO_SHORT':
+      return 'Hasło musi mieć co najmniej 8 znaków.';
+    case 'OTP_REQUIRED':
+      return 'Podaj kod logowania.';
+  }
+}
+
+export type AuthFormErrorCode = 'INVALID_CREDENTIALS' | 'EMAIL_ALREADY_EXISTS' | 'OTP_INVALID' | 'UNKNOWN';
+
+export function authFormErrorMessage(code: AuthFormErrorCode): string {
+  switch (code) {
+    case 'INVALID_CREDENTIALS':
+      return 'Nieprawidłowy adres e-mail lub hasło.';
+    case 'EMAIL_ALREADY_EXISTS':
+      return 'Konto z tym adresem e-mail już istnieje.';
+    case 'OTP_INVALID':
+      return 'Nieprawidłowy lub nieaktualny kod logowania.';
+    case 'UNKNOWN':
+      return 'Coś poszło nie tak. Spróbuj ponownie.';
   }
 }
 

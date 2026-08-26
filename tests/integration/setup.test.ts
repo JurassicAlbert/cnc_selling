@@ -18,7 +18,7 @@ describe('withTestTransaction', () => {
     const email = `rollback-check-${Date.now()}@example.test`;
 
     await withTestTransaction(async (tx) => {
-      const admin = await tx.user.create({ data: { email, role: 'ADMIN' } });
+      const admin = await tx.user.create({ data: { email, name: 'Rollback Check', role: 'ADMIN' } });
       expect(admin.email).toBe(email);
     });
 

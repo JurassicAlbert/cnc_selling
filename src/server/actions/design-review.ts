@@ -44,11 +44,11 @@ export async function reuploadCustomDesign(
   customerDesignId: string,
   formData: FormData,
 ): Promise<ReuploadCustomDesignResult> {
-  const owned = await requireOwnedDesignId(customerDesignId);
-  if (owned === null) {
+  const owner = await requireOwnedDesignId(customerDesignId);
+  if (owner === null) {
     return { ok: false, code: 'NOT_OWNED' };
   }
-  const { sessionToken } = owned;
+  const { userId, sessionToken } = owner;
 
   const current = await prisma.customerDesign.findUniqueOrThrow({
     where: { id: customerDesignId },
@@ -69,7 +69,7 @@ export async function reuploadCustomDesign(
     return { ok: false, code: 'NO_FILE' };
   }
 
-  if (await isUploadRateLimited({ sessionToken, userId: null })) {
+  if (await isUploadRateLimited({ sessionToken, userId })) {
     return { ok: false, code: 'RATE_LIMITED' };
   }
 
@@ -97,6 +97,7 @@ export async function reuploadCustomDesign(
   await prisma.$transaction(async (tx) => {
     const uploadedFile = await tx.uploadedFile.create({
       data: {
+        userId,
         sessionToken,
         kind: 'CUSTOMER_DESIGN',
         storageKey,

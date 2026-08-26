@@ -15,6 +15,7 @@ import { redirect } from 'next/navigation';
 import { validateNip, validatePhone, validatePostalCode } from '@/domain/checkout/validate';
 import type { CheckoutFieldIssueCode } from '@/content/pl/messages';
 import type { PaymentMethod } from '@/generated/prisma/enums';
+import { getSession } from '@/server/auth/session';
 import { readGuestSessionToken } from '@/server/session/read-guest-session';
 import { createOrder } from '@/server/orders/create-order';
 
@@ -92,10 +93,10 @@ export async function submitCheckout(
     return { fieldErrors, formError: null, values };
   }
 
-  const sessionToken = await readGuestSessionToken();
+  const [sessionToken, session] = await Promise.all([readGuestSessionToken(), getSession()]);
   const result = await createOrder({
     sessionToken,
-    userId: null,
+    userId: session?.userId ?? null,
     email,
     phone: phone.length > 0 ? phone : null,
     firstName,

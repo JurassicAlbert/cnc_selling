@@ -330,7 +330,7 @@ to skip anything within P5's real scope. Full detail in `docs/HANDOVER.md`
 - [x] Remove configuration — verified
 - [x] Two different configurations of the same product in one cart — structural by construction (every add-to-cart is a fresh `Configuration`, never merged) and DB-verified (two distinct `configurationId`s, two `OrderItem` rows on checkout)
 - [x] Quantity changes recalculate correctly — verified (701,84 zł × 3 = 2105,52 zł)
-- [ ] Guest cart merges into user cart on login without loss — **blocked, not skipped**: impossible without Auth.js (P6, not started). Guest checkout is built completely and is the primary path today; the merge logic gets written once there is a login to merge on
+- [x] Guest cart merges into user cart on login without loss — was blocked here (no auth existed); done in P6, see that section below
 - [x] Checkout collects buyer, invoice (NIP checksum), address, delivery — delivery is address-only (no method-choice UI): the schema has no `deliveryMethod` field and no `ShippingMethod` model, so there is exactly one implicit method at a flat placeholder rate, not a fabricated chooser
 - [x] Polish postal code and phone validation — real algorithms (`domain/checkout/validate.ts`), unit-tested and browser-verified (a "98765" postal code was rejected with the real Polish message, a corrected "80-001" was accepted)
 - [x] Terms and withdrawal-right acknowledgements captured — real Polish legal copy citing art. 38 pkt 3 ustawy o prawach konsumenta, stored verbatim on the `Order` row with `termsVersion` and both timestamps
@@ -348,21 +348,25 @@ to skip anything within P5's real scope. Full detail in `docs/HANDOVER.md`
 
 ## P6 — Account & polish
 
-- [ ] Order history with full original configuration and pricing
-- [ ] Saved configurations
-- [ ] Customer file access restricted to owner
-- [ ] Mailer adapter; unconfigured mailer logs and does not claim delivery
-- [ ] Transactional messages in Polish for each status
-- [ ] Analytics events implemented
-- [ ] Analytics fire only after consent
-- [ ] Cookie/consent banner (RODO)
-- [ ] Legal pages: Regulamin, Polityka prywatności, RODO clause, Prawo odstąpienia
-- [ ] Withdrawal-right exemption for custom goods stated and acknowledged
-- [ ] Loading states everywhere data is fetched
-- [ ] Empty states (cart, orders, saved configurations, no results)
-- [ ] Error states for every case in §35 of the brief
-- [ ] No raw technical errors shown to customers
-- [ ] Correlation id shown on server errors
+- [x] Real accounts — Better Auth (`src/server/auth/auth.ts`), replacing the brief's literal "Auth.js/NextAuth v5" choice: that library was still beta with no verified Prisma 7 support at the time (`docs/HANDOVER.md` §9); email+password and a passwordless email-OTP path, both live-verified in the browser (register, login, wrong-password error, logout, OTP request form)
+- [x] Guest cart merges into user cart on login without loss — `mergeGuestCartIntoUser` (`src/server/cart/merge-guest-cart.ts`); the blocked item above is now unblocked. Two real cases (user has no cart yet / user already has one) both integration-tested against real Postgres and covered end-to-end by `tests/e2e/accounts.spec.ts`
+- [x] Order history with full original configuration and pricing — `/moje-konto/zamowienia`, reuses the guest confirmation page's own `OrderSummary` display component
+- [x] Saved configurations — `/moje-konto/projekty`, real "Edytuj"/"Dodaj do koszyka" actions over `Configuration` rows a logged-in user already has
+- [x] Customer file access restricted to owner — every `UploadedFile`/`CustomerDesign`/`Configuration`/`Cart` ownership check extended from `sessionToken`-only to `userId` **or** `sessionToken` (`src/server/session/ownership.ts`), matching §16.1's rule literally for the first time
+- [x] Mailer adapter; unconfigured mailer logs and does not claim delivery — `ResendMailer`/`UnconfiguredMailer` behind one `Mailer` interface (`src/server/mail/mailer.ts`), same safe-fallback contract as before, now genuine over Resend's HTTP API once `RESEND_API_KEY`/`EMAIL_FROM` are set
+- [ ] Transactional messages in Polish for each order status — only `order-confirmation` (NEW) and `verification-otp` (login) are wired. Status-change emails (confirmed/in production/shipped/etc.) need a real trigger for those transitions, which is P7's admin panel (no way to move an order past NEW today) — genuinely blocked on that, not skipped
+- [x] Analytics events implemented — real, consent-gated `AnalyticsEvent` writes (`src/server/analytics/record-event.ts`) for the 4 of 13 §_.4-named events that have a natural SERVER-side trigger already: `product_view`, `add_to_cart`, `checkout_started`, `purchase`. The remaining named events (`configurator_step_completed`, `design_selected`, etc.) fire from client-side state deep inside `Configurator.tsx` — wiring those needs a client-to-server event channel this polish pass didn't build; the infrastructure here is what a later pass (or P8) wires them into unchanged
+- [x] Analytics fire only after consent — `readConsentChoice()` gates every write; verified live (a `product_view` row only appeared in the DB after clicking "Akceptuję")
+- [x] Cookie/consent banner (RODO) — first-party `consent` cookie (`src/server/session/consent.ts`), deliberately separate from the guest-session and Better Auth cookies; live-verified (shows on first visit, disappears and stays gone after a choice)
+- [x] Legal pages: Regulamin, Polityka prywatności, RODO clause, Prawo odstąpienia — real, structurally-correct Polish content (`src/content/pl/legal.ts`), replacing the "w przygotowaniu" stub; business-identity fields (name, address, NIP, contact email) are explicitly marked `[DO UZUPEŁNIENIA: ...]` placeholders, not invented — a qualified Polish e-commerce lawyer still needs to review the real thing before launch
+- [x] Withdrawal-right exemption for custom goods stated and acknowledged — unchanged since P5, now also cited verbatim in the real Regulamin text (one legal claim, not two copies)
+- [x] Loading states where data is fetched — `loading.tsx` added at the 7 route segments with a real DB read and no closer ancestor boundary (`[category]`, `produkt/[slug]`, `koszyk` (covers `koszyk/zamowienie` too), `moje-konto` (covers its whole subtree), `zamowienie` (covers `sprawdz` and `[orderNumber]`), `szukaj`, `blog`); `logowanie`/`rejestracja` were left without one (session check only, no meaningful fetch latency)
+- [x] Empty states (cart, orders, saved configurations, no results) — cart and search already had honest ones from earlier phases; order history and saved configurations got real ones this pass, each with a next action, never a blank page
+- [ ] Error states for every case in the brief's error-handling section — only the root `error.tsx` (generic server-error boundary, §20's exact copy) was built this pass; a full per-case audit against the brief's own enumerated list wasn't done
+- [x] No raw technical errors shown to customers — the root `error.tsx` never surfaces a stack trace, only `COPY.genericServerError` plus the correlation id
+- [x] Correlation id shown on server errors — `error.digest` (Next.js's own hash, traceable to server logs), shown next to the generic message
+
+Also done this pass, not in the brief's own P6 checklist but load-bearing for the above: `prisma/migrations/20260826000000_better_auth_schema` (hand-authored, not `prisma migrate dev` — see `docs/HANDOVER.md` §9u/§9v for why that command is unsafe in this project); `tests/integration/auth.test.ts` (guest-cart-merge + order-history/saved-config ownership, real Postgres); `tests/e2e/accounts.spec.ts` (register→guest-cart-merge→order-history, both browsers).
 
 ## P7 — Admin panel
 

@@ -8,6 +8,9 @@ import { formatPln } from '@/domain/money/money';
 import { formatMmAsCentimetres } from '@/domain/text/numeric-input';
 import { getActiveProductBySlug, listAllActiveProductSlugs } from '@/server/repositories/products';
 import { getConfiguratorProductData } from '@/server/repositories/configurator';
+import { recordAnalyticsEvent } from '@/server/analytics/record-event';
+import { getSession } from '@/server/auth/session';
+import { readGuestSessionToken } from '@/server/session/read-guest-session';
 import { Breadcrumbs } from '@/ui/primitives/Breadcrumbs';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
@@ -54,6 +57,14 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
   const configuratorData = await getConfiguratorProductData(slug);
   const primaryImage = product.images[0] ?? null;
+
+  const [sessionToken, session] = await Promise.all([readGuestSessionToken(), getSession()]);
+  void recordAnalyticsEvent({
+    name: 'product_view',
+    sessionToken,
+    userId: session?.userId ?? null,
+    productId: configuratorData?.productId ?? null,
+  });
 
   const dimensionsPl =
     `${formatMmAsCentimetres(product.minWidthMm)}–${formatMmAsCentimetres(product.maxWidthMm)} × ` +

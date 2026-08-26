@@ -181,10 +181,53 @@ export const SITE = {
   footerTaglinePl: 'Precyzja CNC. Ciepło rzemiosła.',
   footerBlogLinkPl: 'Blog',
 
-  legalComingSoonNoticePl:
-    'Ten dokument jest w przygotowaniu i zostanie opublikowany przed uruchomieniem sklepu.',
   legalTermsHeadingPl: 'Regulamin',
   legalPrivacyHeadingPl: 'Polityka prywatności',
+
+  headerAccountLinkPl: 'Moje konto',
+  headerLoginLinkPl: 'Zaloguj się',
+  headerLogoutPl: 'Wyloguj się',
+
+  authLoginHeadingPl: 'Logowanie',
+  authRegisterHeadingPl: 'Rejestracja',
+  authEmailLabelPl: 'Adres e-mail',
+  authPasswordLabelPl: 'Hasło',
+  authNameLabelPl: 'Imię i nazwisko',
+  authLoginSubmitPl: 'Zaloguj się',
+  authRegisterSubmitPl: 'Załóż konto',
+  authNoAccountPl: 'Nie masz jeszcze konta?',
+  authSwitchToRegisterPl: 'Zarejestruj się',
+  authHaveAccountPl: 'Masz już konto?',
+  authSwitchToLoginPl: 'Zaloguj się',
+  authOrDividerPl: 'lub',
+  authOtpRequestSubmitPl: 'Wyślij kod logowania e-mailem',
+  authOtpCodeLabelPl: 'Kod logowania',
+  authOtpSubmitPl: 'Zaloguj kodem',
+  authOtpSentNoticePl: 'Wysłaliśmy kod logowania na podany adres e-mail. Sprawdź skrzynkę.',
+  authGenericErrorPl: 'Coś poszło nie tak. Spróbuj ponownie.',
+
+  accountNavOrdersPl: 'Zamówienia',
+  accountNavConfigurationsPl: 'Zapisane projekty',
+  accountOrdersHeadingPl: 'Moje zamówienia',
+  accountOrdersEmptyPl: 'Nie masz jeszcze żadnych zamówień.',
+  accountOrdersEmptyActionPl: 'Przejdź do sklepu',
+  accountConfigurationsHeadingPl: 'Moje zapisane projekty',
+  accountConfigurationsEmptyPl: 'Nie masz jeszcze żadnych zapisanych konfiguracji.',
+  accountConfigurationsEmptyActionPl: 'Skonfiguruj produkt',
+  accountConfigurationEditPl: 'Edytuj',
+  accountConfigurationAddToCartPl: 'Dodaj do koszyka',
+
+  consentBannerTextPl:
+    'Używamy niezbędnych plików cookie do działania koszyka i logowania oraz — za Twoją zgodą — plików analitycznych, które pomagają nam ulepszać sklep.',
+  consentBannerAcceptPl: 'Akceptuję',
+  consentBannerDeclinePl: 'Tylko niezbędne',
+
+  routeLoadingPl: 'Ładowanie…',
+
+  errorPageHeadingPl: 'Coś poszło nie tak',
+  errorPageBodyPl: 'Wystąpił nieoczekiwany błąd. Spróbuj odświeżyć stronę.',
+  errorPageRetryPl: 'Spróbuj ponownie',
+  errorPageCorrelationIdLabelPl: 'Numer błędu',
 
   blogHeadingPl: 'Blog',
   blogSeoTitlePl: 'Blog — CNC Selling',

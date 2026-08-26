@@ -27,6 +27,75 @@ export type OrderConfirmationView = {
   readonly items: readonly OrderConfirmationItemView[];
 };
 
+export type OrderSummaryView = {
+  readonly orderNumber: string;
+  readonly status: OrderStatus;
+  readonly totalGrossGrosze: number;
+  readonly createdAt: Date;
+  readonly itemCount: number;
+};
+
+/** Order history (P6 Part C) — `Order.userId` is already indexed. */
+export async function listOrdersForUser(userId: string): Promise<readonly OrderSummaryView[]> {
+  const orders = await prisma.order.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      orderNumber: true,
+      status: true,
+      totalGrossGrosze: true,
+      createdAt: true,
+      items: { select: { quantity: true } },
+    },
+  });
+  return orders.map((order) => ({
+    orderNumber: order.orderNumber,
+    status: order.status,
+    totalGrossGrosze: order.totalGrossGrosze,
+    createdAt: order.createdAt,
+    itemCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
+  }));
+}
+
+/**
+ * The order-history detail view — ownership checked by `userId`, not by
+ * `accessToken` (unlike `findOrderForConfirmation`'s guest lookup): a logged
+ * in customer viewing their own history has already proven who they are via
+ * their session, so no token is needed or shown here.
+ */
+export async function findOrderForUser(orderNumber: string, userId: string): Promise<OrderConfirmationView | null> {
+  const order = await prisma.order.findUnique({
+    where: { orderNumber },
+    select: {
+      orderNumber: true,
+      userId: true,
+      status: true,
+      paymentMethod: true,
+      totalGrossGrosze: true,
+      email: true,
+      items: {
+        select: { quantity: true, lineGrossGrosze: true, snapshot: true },
+      },
+    },
+  });
+  if (order === null || order.userId !== userId) {
+    return null;
+  }
+
+  return {
+    orderNumber: order.orderNumber,
+    status: order.status,
+    paymentMethod: order.paymentMethod,
+    totalGrossGrosze: order.totalGrossGrosze,
+    email: order.email,
+    items: order.items.map((item) => ({
+      quantity: item.quantity,
+      lineGrossGrosze: item.lineGrossGrosze,
+      snapshot: item.snapshot as unknown as OrderItemSnapshot,
+    })),
+  };
+}
+
 export async function findOrderForConfirmation(
   orderNumber: string,
   token: string,

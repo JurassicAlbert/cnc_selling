@@ -193,8 +193,8 @@ async function seedPricingSettings(): Promise<void> {
 
 /**
  * The first ADMIN. Seeded from the project owner's own email so there is an
- * account to sign in with the moment Auth.js is wired up in P0's remaining
- * Next.js work — there is no other path to this role (§16.3).
+ * account to sign in with once a real password is set via Better Auth (P6)
+ * — there is no other path to this role (§16.3).
  */
 async function seedFirstAdmin(): Promise<void> {
   const email = requireEnv('SEED_ADMIN_EMAIL');

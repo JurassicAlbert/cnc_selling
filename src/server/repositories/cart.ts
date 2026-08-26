@@ -53,6 +53,67 @@ export type CartView = {
 
 const EMPTY_CART: CartView = { cartId: '', items: [], subtotalGrossGrosze: 0 };
 
+export type SavedConfigurationView = {
+  readonly configurationId: string;
+  readonly productSlug: string;
+  readonly productNamePl: string;
+  readonly imageUrl: string | null;
+  readonly updatedAt: Date;
+  readonly isComplete: boolean;
+  readonly priceGrossGrosze: number | null;
+  readonly selections: Selections;
+  readonly acknowledgedWarnings: readonly string[];
+};
+
+/** Saved configurations (P6 Part C) — every `Configuration` a logged-in user has ever priced, not just ones currently in a cart. */
+export async function listConfigurationsForUser(userId: string): Promise<readonly SavedConfigurationView[]> {
+  const configurations = await prisma.configuration.findMany({
+    where: { userId },
+    orderBy: { updatedAt: 'desc' },
+    select: {
+      id: true,
+      designId: true,
+      customDesignId: true,
+      materialId: true,
+      finishId: true,
+      thicknessMm: true,
+      widthMm: true,
+      heightMm: true,
+      installVariant: true,
+      personalizationText: true,
+      fontId: true,
+      isComplete: true,
+      priceGrossGrosze: true,
+      acknowledgedWarnings: true,
+      updatedAt: true,
+      product: { select: { slug: true, namePl: true, images: { where: { isPrimary: true }, select: { url: true }, take: 1 } } },
+    },
+  });
+
+  return configurations.map((configuration) => ({
+    configurationId: configuration.id,
+    productSlug: configuration.product.slug,
+    productNamePl: configuration.product.namePl,
+    imageUrl: configuration.product.images[0]?.url ?? null,
+    updatedAt: configuration.updatedAt,
+    isComplete: configuration.isComplete,
+    priceGrossGrosze: configuration.priceGrossGrosze,
+    acknowledgedWarnings: configuration.acknowledgedWarnings,
+    selections: {
+      designId: configuration.designId,
+      customUploadId: configuration.customDesignId,
+      materialId: configuration.materialId,
+      widthMm: configuration.widthMm,
+      heightMm: configuration.heightMm,
+      thicknessMm: configuration.thicknessMm,
+      finishId: configuration.finishId,
+      installationVariant: configuration.installVariant,
+      personalizationText: configuration.personalizationText,
+      fontId: configuration.fontId,
+    },
+  }));
+}
+
 export async function findCartForRequest(params: {
   readonly userId: string | null;
   readonly sessionToken: string | null;

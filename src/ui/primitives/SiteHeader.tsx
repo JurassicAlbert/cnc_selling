@@ -11,6 +11,7 @@ type CategoryLink = {
 
 type SiteHeaderProps = {
   readonly categories: readonly CategoryLink[];
+  readonly session: { readonly name: string } | null;
 };
 
 /**
@@ -24,7 +25,7 @@ type SiteHeaderProps = {
  * `SearchBar` section below — see that file and the owner's explicit
  * feedback recorded in `docs/HANDOVER.md`.
  */
-export function SiteHeader({ categories }: SiteHeaderProps) {
+export function SiteHeader({ categories, session }: SiteHeaderProps) {
   return (
     <header
       style={{
@@ -77,6 +78,10 @@ export function SiteHeader({ categories }: SiteHeaderProps) {
           >
             <CartIcon size={20} />
             {SITE.cartHeadingPl}
+          </Link>
+
+          <Link href={session !== null ? '/moje-konto' : '/logowanie'} className="nav-link" style={{ font: 'var(--mui-font-body2)' }}>
+            {session !== null ? SITE.headerAccountLinkPl : SITE.headerLoginLinkPl}
           </Link>
         </nav>
       </Container>

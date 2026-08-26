@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { formatPln } from '@/domain/money/money';
 import { formatMmAsCentimetres } from '@/domain/text/numeric-input';
 import { SITE } from '@/content/pl/site';
+import { getSession } from '@/server/auth/session';
 import { readGuestSessionToken } from '@/server/session/read-guest-session';
 import { findCartForRequest } from '@/server/repositories/cart';
 import type { CartItemView } from '@/server/repositories/cart';
@@ -31,8 +32,8 @@ export const metadata: Metadata = {
  * real `addToCart` (a Server Action, where writing is allowed).
  */
 export default async function CartPage() {
-  const sessionToken = await readGuestSessionToken();
-  const cart = await findCartForRequest({ userId: null, sessionToken });
+  const [sessionToken, session] = await Promise.all([readGuestSessionToken(), getSession()]);
+  const cart = await findCartForRequest({ userId: session?.userId ?? null, sessionToken });
 
   return (
     <Section>

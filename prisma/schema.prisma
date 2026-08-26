@@ -885,8 +885,26 @@ model DesignReviewComment {
 }
 
 // ---------------------------------------------------------------------------
-// Users (Auth.js v5 + Prisma adapter) and roles
+// Users (Better Auth + Prisma adapter) and roles — P6, 2026-08-26
 // ---------------------------------------------------------------------------
+//
+// `User`/`Account`/`Session`/`Verification` field names/shapes here are
+// Better Auth's own exact expected schema — read directly from
+// `node_modules/@better-auth/core/dist/db/schema/{user,account,session,
+// verification}.d.mts` (its zod schemas), not guessed or copied from
+// NextAuth/Auth.js's different convention (an earlier version of this
+// schema was shaped for Auth.js specifically — see the P6 planning
+// decision in `docs/HANDOVER.md` for why Better Auth replaced it: Auth.js
+// v5 is still beta with no verified Prisma 7 support, Better Auth is
+// stable and explicitly supports Prisma 7). `role`/`phone`/`anonymizedAt`
+// on `User` are this project's own additions on top of Better Auth's base
+// shape, registered via `user.additionalFields` in `src/server/auth/auth.ts`
+// so the adapter round-trips them untouched.
+//
+// No real Account/Session/Verification rows existed before this migration
+// (nothing used these tables — no auth existed yet), so this rebuilds
+// them rather than attempting an in-place column rename with data to
+// preserve.
 
 enum UserRole {
   CUSTOMER
@@ -896,9 +914,9 @@ enum UserRole {
 
 model User {
   id            String    @id @default(cuid())
-  name          String?
+  name          String
   email         String    @unique
-  emailVerified DateTime?
+  emailVerified Boolean   @default(false)
   image         String?
   /// There is no self-service path to STAFF or ADMIN. The first ADMIN is
   /// created by the seed script; further staff are invited from the panel.
@@ -919,41 +937,55 @@ model User {
   customDesigns  CustomerDesign[]
 }
 
+/// One row per sign-in method a user has — the credentials ("local")
+/// provider's hashed password lives here (`password`), never on `User`.
 model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                    String    @id @default(cuid())
+  userId                String
+  providerId            String
+  /// "The stable provider-side key used to recognize an account"
+  /// (Better Auth's own doc comment) — [issuer, accountId] together,
+  /// not providerId, is the real natural key.
+  issuer                String
+  accountId             String
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?   @db.Text
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([provider, providerAccountId])
+  @@unique([issuer, accountId])
   @@index([userId])
 }
 
 model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
-model VerificationToken {
+model Verification {
+  id         String   @id @default(cuid())
   identifier String
-  token      String   @unique
-  expires    DateTime
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@unique([identifier, token])
+  @@index([identifier])
 }
 
 // ---------------------------------------------------------------------------

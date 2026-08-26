@@ -5,6 +5,7 @@ import {
   findOwnedDesignStatus,
   findOwnedUploadedFile,
 } from '@/server/repositories/design-review';
+import type { Owner } from '@/server/session/ownership';
 import { isUploadRateLimited } from '@/server/upload/rate-limit';
 import { prisma } from '@/server/db/client';
 
@@ -43,6 +44,10 @@ function token(): string {
   return `${PREFIX}${crypto.randomUUID()}`;
 }
 
+function owner(sessionToken: string | null): Owner {
+  return { userId: null, sessionToken };
+}
+
 afterEach(async () => {
   await prisma.customerDesign.deleteMany({ where: { sessionToken: { startsWith: PREFIX } } });
   await prisma.uploadedFile.deleteMany({ where: { sessionToken: { startsWith: PREFIX } } });
@@ -74,7 +79,7 @@ describe('UploadedFile ownership (§16.2: "Customer A / Customer B\'s uploaded f
     const ownerToken = token();
     const file = await seedUploadedFile(ownerToken);
 
-    const found = await findOwnedUploadedFile(file.id, ownerToken);
+    const found = await findOwnedUploadedFile(file.id, owner(ownerToken));
     expect(found?.id).toBe(file.id);
   });
 
@@ -83,7 +88,7 @@ describe('UploadedFile ownership (§16.2: "Customer A / Customer B\'s uploaded f
     const strangerToken = token();
     const file = await seedUploadedFile(ownerToken);
 
-    const found = await findOwnedUploadedFile(file.id, strangerToken);
+    const found = await findOwnedUploadedFile(file.id, owner(strangerToken));
     expect(found).toBeNull();
   });
 
@@ -91,12 +96,12 @@ describe('UploadedFile ownership (§16.2: "Customer A / Customer B\'s uploaded f
     const ownerToken = token();
     const file = await seedUploadedFile(ownerToken);
 
-    const found = await findOwnedUploadedFile(file.id, null);
+    const found = await findOwnedUploadedFile(file.id, owner(null));
     expect(found).toBeNull();
   });
 
   it('a nonexistent file id gets null — indistinguishable from "not yours"', async () => {
-    const found = await findOwnedUploadedFile('does-not-exist', token());
+    const found = await findOwnedUploadedFile('does-not-exist', owner(token()));
     expect(found).toBeNull();
   });
 });
@@ -106,7 +111,7 @@ describe('CustomerDesign ownership', () => {
     const ownerToken = token();
     const design = await seedDesign(ownerToken);
 
-    const found = await findOwnedDesignStatus(design.id, ownerToken);
+    const found = await findOwnedDesignStatus(design.id, owner(ownerToken));
     expect(found).toEqual({ id: design.id, status: 'PENDING_REVIEW', comments: [] });
   });
 
@@ -115,7 +120,7 @@ describe('CustomerDesign ownership', () => {
     const strangerToken = token();
     const design = await seedDesign(ownerToken);
 
-    const found = await findOwnedDesignStatus(design.id, strangerToken);
+    const found = await findOwnedDesignStatus(design.id, owner(strangerToken));
     expect(found).toBeNull();
   });
 
@@ -124,9 +129,9 @@ describe('CustomerDesign ownership', () => {
     const strangerToken = token();
     const design = await seedDesign(ownerToken);
 
-    expect(await findOwnedDesignId(design.id, ownerToken)).toBe(true);
-    expect(await findOwnedDesignId(design.id, strangerToken)).toBe(false);
-    expect(await findOwnedDesignId(design.id, null)).toBe(false);
+    expect(await findOwnedDesignId(design.id, owner(ownerToken))).toBe(true);
+    expect(await findOwnedDesignId(design.id, owner(strangerToken))).toBe(false);
+    expect(await findOwnedDesignId(design.id, owner(null))).toBe(false);
   });
 });
 

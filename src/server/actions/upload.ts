@@ -27,6 +27,7 @@ import type { UploadWarning } from '@/domain/upload/inspect';
 import { sanitizeFilenameForDisplay } from '@/domain/upload/inspect';
 import { prisma } from '@/server/db/client';
 import type { Prisma } from '@/generated/prisma/client';
+import { getSession } from '@/server/auth/session';
 import { ensureGuestSessionToken } from '@/server/session/guest-session';
 import { storage } from '@/server/storage/local-disk';
 import type { InspectFileErrorCode } from '@/server/upload/inspect-file';
@@ -70,8 +71,10 @@ export async function uploadCustomDesign(formData: FormData): Promise<UploadCust
   }
 
   const sessionToken = await ensureGuestSessionToken();
+  const session = await getSession();
+  const userId = session?.userId ?? null;
 
-  if (await isUploadRateLimited({ sessionToken, userId: null })) {
+  if (await isUploadRateLimited({ sessionToken, userId })) {
     return { ok: false, code: 'RATE_LIMITED' };
   }
 
@@ -96,6 +99,7 @@ export async function uploadCustomDesign(formData: FormData): Promise<UploadCust
   const design = await prisma.$transaction(async (tx) => {
     const uploadedFile = await tx.uploadedFile.create({
       data: {
+        userId,
         sessionToken,
         kind: 'CUSTOMER_DESIGN',
         storageKey,
@@ -112,6 +116,7 @@ export async function uploadCustomDesign(formData: FormData): Promise<UploadCust
     return tx.customerDesign.create({
       data: {
         fileId: uploadedFile.id,
+        userId,
         sessionToken,
         status: 'PENDING_REVIEW',
         autoWarnings: toJsonInput(inspected.warnings),
