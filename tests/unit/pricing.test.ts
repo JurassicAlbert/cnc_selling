@@ -1,8 +1,22 @@
 import { describe, expect, it } from 'vitest';
 
 import { calculatePrice } from '@/domain/pricing/calculate';
-import type { PricingInput } from '@/domain/pricing/types';
+import type { DesignPricing, PricingInput } from '@/domain/pricing/types';
 import { PricingError } from '@/domain/pricing/types';
+
+/**
+ * A concrete, non-nullable `DesignPricing` for spreading in overrides
+ * (e.g. `{ ...BASE_DESIGN, method }`) — `BASE.design` itself is typed
+ * `DesignPricing | null` (P4 widened `PricingInput.design` to support
+ * CUSTOM products with no catalog design), so spreading it directly
+ * loses TypeScript's certainty that every property is present. `BASE`
+ * always sets `design: BASE_DESIGN`, never `null`, in this file.
+ */
+const BASE_DESIGN: DesignPricing = {
+  machiningMilliMinutesPerM2: 10_000, // 10 min/m²
+  surchargeGrosze: 0,
+  method: 'CNC_CARVE',
+};
 
 /**
  * A deliberately plain baseline: 1 m², every rate round, every factor neutral,
@@ -17,11 +31,7 @@ const BASE: PricingInput = {
   heightMm: 1000, // 1 m²
   material: { pricePerM2Grosze: 20_000, priceFactorBp: 10_000 },
   thicknessFactorBp: 10_000,
-  design: {
-    machiningMilliMinutesPerM2: 10_000, // 10 min/m²
-    surchargeGrosze: 0,
-    method: 'CNC_CARVE',
-  },
+  design: BASE_DESIGN,
   machineRates: { cncPerMinuteGrosze: 100, laserPerMinuteGrosze: 200 },
   finish: { pricePerM2Grosze: 5_000, setupFeeGrosze: 1_000 },
   modules: { count: 1, surchargePerExtraModuleGrosze: 3_000 },
@@ -66,14 +76,14 @@ describe('calculatePrice — components in isolation', () => {
 
   it('bills laser work at the laser rate', () => {
     const result = priceOf({
-      design: { ...BASE.design, method: 'LASER_ENGRAVE' },
+      design: { ...BASE_DESIGN, method: 'LASER_ENGRAVE' },
     });
     expect(result.components.machiningGrosze).toBe(2_000);
   });
 
   it('bills mixed and manual-prep work at the CNC rate for now', () => {
     for (const method of ['MIXED', 'MANUAL_PREP', 'CNC_ENGRAVE'] as const) {
-      const result = priceOf({ design: { ...BASE.design, method } });
+      const result = priceOf({ design: { ...BASE_DESIGN, method } });
       expect(result.components.machiningGrosze, method).toBe(1_000);
     }
   });
@@ -107,7 +117,7 @@ describe('calculatePrice — components in isolation', () => {
 
   it('adds the design surcharge unchanged', () => {
     expect(
-      priceOf({ design: { ...BASE.design, surchargeGrosze: 4_321 } }).components
+      priceOf({ design: { ...BASE_DESIGN, surchargeGrosze: 4_321 } }).components
         .designSurchargeGrosze,
     ).toBe(4_321);
   });
@@ -187,7 +197,7 @@ describe('calculatePrice — VAT and quantity', () => {
     const result = priceOf({
       basePriceGrosze: 899,
       material: { pricePerM2Grosze: 0, priceFactorBp: 10_000 },
-      design: { ...BASE.design, machiningMilliMinutesPerM2: 0 },
+      design: { ...BASE_DESIGN, machiningMilliMinutesPerM2: 0 },
       finish: { pricePerM2Grosze: 0, setupFeeGrosze: 0 },
       packagingGrosze: 0,
     });
@@ -228,7 +238,7 @@ describe('calculatePrice — determinism', () => {
       heightMm: 911,
       material: { pricePerM2Grosze: 23_456, priceFactorBp: 10_777 },
       thicknessFactorBp: 11_333,
-      design: { ...BASE.design, machiningMilliMinutesPerM2: 7_777 },
+      design: { ...BASE_DESIGN, machiningMilliMinutesPerM2: 7_777 },
       personalization: { ...BASE.personalization, characterCount: 13 },
       installationFactorBp: 10_450,
       quantity: 3,
@@ -288,7 +298,7 @@ describe('calculatePrice — invalid input is rejected, never coerced', () => {
 
   it('rejects a fractional machining time, which must be milli-minutes', () => {
     expect(() =>
-      priceOf({ design: { ...BASE.design, machiningMilliMinutesPerM2: 2.5 } }),
+      priceOf({ design: { ...BASE_DESIGN, machiningMilliMinutesPerM2: 2.5 } }),
     ).toThrow(PricingError);
   });
 
@@ -296,5 +306,25 @@ describe('calculatePrice — invalid input is rejected, never coerced', () => {
     expect(() =>
       priceOf({ personalization: { ...BASE.personalization, characterCount: -1 } }),
     ).toThrow(PricingError);
+  });
+});
+
+describe('design: null — CUSTOM products with no catalog design (P4)', () => {
+  it('zeroes machining and design-surcharge, not an estimate', () => {
+    const result = priceOf({ design: null });
+    expect(result.components.machiningGrosze).toBe(0);
+    expect(result.components.designSurchargeGrosze).toBe(0);
+  });
+
+  it('still charges material, finish, and base price normally', () => {
+    const withDesign = priceOf();
+    const withoutDesign = priceOf({ design: null });
+    expect(withoutDesign.components.materialGrosze).toBe(withDesign.components.materialGrosze);
+    expect(withoutDesign.components.finishGrosze).toBe(withDesign.components.finishGrosze);
+    expect(withoutDesign.components.baseGrosze).toBe(withDesign.components.baseGrosze);
+  });
+
+  it('never throws for a missing design, unlike an invalid one', () => {
+    expect(() => priceOf({ design: null })).not.toThrow();
   });
 });

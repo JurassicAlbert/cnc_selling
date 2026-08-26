@@ -131,8 +131,9 @@ export type PricingRows = {
   readonly productMaterial: Pick<ProductMaterialModel, 'priceFactorBp'>;
   /** Null for product types without a thickness step. */
   readonly thickness: Pick<ProductThicknessModel, 'priceFactorBp'> | null;
-  readonly design: DesignRow;
-  readonly productDesign: Pick<ProductDesignModel, 'surchargeGrosze'>;
+  /** Null for CUSTOM (no catalog design — a customer-uploaded design instead, P4). Always paired with `productDesign` — both null or both present. */
+  readonly design: DesignRow | null;
+  readonly productDesign: Pick<ProductDesignModel, 'surchargeGrosze'> | null;
   /** Null while the customer has not chosen a finish. */
   readonly finish: Pick<FinishModel, 'pricePerM2Grosze' | 'setupFeeGrosze'> | null;
   /** Kitchen tiles only. */
@@ -185,7 +186,10 @@ export function toSplitLimits(
   };
 }
 
-export function toDesignConstraints(design: DesignRow): DesignConstraints {
+export function toDesignConstraints(design: DesignRow | null): DesignConstraints | null {
+  if (design === null) {
+    return null;
+  }
   return {
     referenceWidthMm: requireInteger(design.referenceWidthMm, 'design.referenceWidthMm'),
     minLineWidthMm: umToMm(design.minLineWidthUm, 'design.minLineWidthUm'),
@@ -356,17 +360,20 @@ export function toPricingInput(rows: PricingRows): PricingInput {
       rows.thickness === null
         ? NEUTRAL_FACTOR_BP
         : requireInteger(rows.thickness.priceFactorBp, 'thickness.priceFactorBp'),
-    design: {
-      machiningMilliMinutesPerM2: requireInteger(
-        rows.design.machiningMilliMinutesPerM2,
-        'design.machiningMilliMinutesPerM2',
-      ),
-      surchargeGrosze: requireInteger(
-        rows.productDesign.surchargeGrosze,
-        'productDesign.surchargeGrosze',
-      ),
-      method: rows.design.recommendedMethod,
-    },
+    design:
+      rows.design === null || rows.productDesign === null
+        ? null
+        : {
+            machiningMilliMinutesPerM2: requireInteger(
+              rows.design.machiningMilliMinutesPerM2,
+              'design.machiningMilliMinutesPerM2',
+            ),
+            surchargeGrosze: requireInteger(
+              rows.productDesign.surchargeGrosze,
+              'productDesign.surchargeGrosze',
+            ),
+            method: rows.design.recommendedMethod,
+          },
     machineRates: {
       cncPerMinuteGrosze: requireInteger(
         rows.pricing.machineRateCncGrosze,

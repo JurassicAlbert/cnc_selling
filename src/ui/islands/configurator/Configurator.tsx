@@ -58,8 +58,13 @@ import {
   numericInputMessage,
   personalizationMessage,
   unavailabilityReasonMessage,
+  uploadErrorMessage,
+  uploadWarningMessage,
 } from '@/content/pl/messages';
+import type { UploadErrorCode } from '@/content/pl/messages';
 import { SITE } from '@/content/pl/site';
+import { UPLOAD } from '@/content/pl/upload';
+import type { UploadWarning } from '@/domain/upload/inspect';
 import { Text } from '@/ui/primitives/Text';
 import type {
   ConfiguratorOptionData,
@@ -68,6 +73,7 @@ import type {
 import { getConfiguratorSnapshot } from '@/server/actions/configurator';
 import type { ConfiguratorSnapshot } from '@/server/actions/configurator';
 import { addToCart, updateCartItemConfiguration } from '@/server/actions/cart';
+import { uploadCustomDesign } from '@/server/actions/upload';
 import { ConfiguratorPreview } from './ConfiguratorPreview';
 import { readSelectionsFromSearch, writeSelectionsToSearch } from './selections-url';
 
@@ -449,7 +455,12 @@ export function Configurator({
         )}
 
         {currentStep === 'CUSTOM_UPLOAD' && (
-          <Alert severity="info">{SITE.configuratorNoOptionsPl}</Alert>
+          <CustomUploadStep
+            customerDesignId={selections.customUploadId}
+            onUploaded={(customerDesignId) =>
+              setSelections((prev) => ({ ...prev, customUploadId: customerDesignId }))
+            }
+          />
         )}
 
         {currentStep === 'SUMMARY' && (
@@ -674,6 +685,98 @@ function PersonalizationStep({
   );
 }
 
+/**
+ * P4's real upload flow (`ARCHITECTURE.md` §13). Only the first-upload
+ * path is wired here — `uploadCustomDesign`. `reuploadCustomDesign`
+ * (customer re-upload after staff requests `NEEDS_CHANGES`) is real,
+ * tested, and callable (`server/actions/design-review.ts`), but that
+ * event happens on an existing ORDER already past checkout, not inside
+ * this pre-purchase configurator — it belongs on an order-tracking page,
+ * which doesn't exist yet (P6 account features, not started). Prepared
+ * but not wired here, same pattern as the Yato-yane joinery module.
+ */
+function CustomUploadStep({
+  customerDesignId,
+  onUploaded,
+}: {
+  readonly customerDesignId: string | null;
+  readonly onUploaded: (customerDesignId: string) => void;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [ipConsent, setIpConsent] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<UploadErrorCode | null>(null);
+  const [warnings, setWarnings] = useState<readonly UploadWarning[]>([]);
+
+  const handleSubmit = async () => {
+    if (file === null) {
+      setError('NO_FILE');
+      return;
+    }
+    setPending(true);
+    setError(null);
+    const formData = new FormData();
+    formData.set('file', file);
+    if (ipConsent) {
+      formData.set('ipConsent', 'on');
+    }
+
+    const result = await uploadCustomDesign(formData);
+    setPending(false);
+    if (!result.ok) {
+      setError(result.code);
+      return;
+    }
+    setWarnings(result.warnings);
+    onUploaded(result.customerDesignId);
+  };
+
+  if (customerDesignId !== null) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 480 }}>
+        <Alert severity="success">{SITE.configuratorUploadSuccessPl}</Alert>
+        <Text muted>{COPY.designStatusPending}</Text>
+        <Text muted>{COPY.customDesignNeedsReview}</Text>
+        {warnings.map((warning) => (
+          <Alert severity="warning" key={warning.code}>
+            {uploadWarningMessage(warning)}
+          </Alert>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 480 }}>
+      <div>
+        <Text muted>{SITE.configuratorUploadChooseFilePl}</Text>
+        <input
+          type="file"
+          accept=".jpg,.jpeg,.png,.svg,.pdf,image/jpeg,image/png,image/svg+xml,application/pdf"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          style={{ display: 'block', marginTop: 8 }}
+        />
+      </div>
+
+      <Alert severity="info">{UPLOAD.ipDeclarationTextPl}</Alert>
+      <FormControlLabel
+        control={<Checkbox checked={ipConsent} onChange={(e) => setIpConsent(e.target.checked)} />}
+        label={SITE.configuratorUploadIpConsentLabelPl}
+      />
+
+      {error !== null && <Alert severity="error">{uploadErrorMessage(error)}</Alert>}
+
+      <Button
+        variant="contained"
+        disabled={pending || file === null || !ipConsent}
+        onClick={handleSubmit}
+      >
+        {pending ? SITE.configuratorUploadSubmittingPl : SITE.configuratorUploadSubmitPl}
+      </Button>
+    </div>
+  );
+}
+
 function SummaryStep({
   snapshot,
   selections,
@@ -744,6 +847,10 @@ function SummaryStep({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {selections.customUploadId !== null && (
+        <Alert severity="info">{SITE.configuratorCustomPriceEstimatePl}</Alert>
+      )}
+
       {materialNotesPl !== null && <Alert severity="info">{materialNotesPl}</Alert>}
 
       {selectedVariantReceivesPl !== null && (

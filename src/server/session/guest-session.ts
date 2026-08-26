@@ -23,6 +23,9 @@
  */
 
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { cookies } from 'next/headers';
+
+import { GUEST_SESSION_COOKIE_NAME } from './read-guest-session';
 
 function sign(token: string, secret: string): string {
   return createHmac('sha256', secret).update(token).digest('base64url');
@@ -59,4 +62,47 @@ export function requireSessionSecret(): string {
     throw new Error('SESSION_SECRET is not set — check your .env');
   }
   return value;
+}
+
+const GUEST_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 90;
+
+/**
+ * `NODE_ENV === 'production'` is the BUILD mode, not the request's actual
+ * protocol — a real bug this project's own e2e suite caught (§9l/§9h):
+ * this project's Playwright config runs a production build over plain
+ * `http://localhost`, and a `Secure` cookie set over plain HTTP is
+ * silently dropped by a spec-compliant browser (WebKit, not Chromium,
+ * which special-cases `localhost`). Deriving `secure` from
+ * `NEXT_PUBLIC_SITE_URL` instead ties it to whether this deployment is
+ * actually HTTPS, not to how it was built.
+ */
+const SITE_IS_HTTPS = (process.env.NEXT_PUBLIC_SITE_URL ?? '').startsWith('https://');
+
+/**
+ * Mints (and persists via a `Set-Cookie`) a guest session if one doesn't
+ * already exist, or returns the existing valid one. Only callable from a
+ * Server Action or Route Handler — `cookies().set()` is illegal from a
+ * Server Component, which is why `read-guest-session.ts`'s
+ * `readGuestSessionToken` stays read-only and this lives here instead.
+ * Shared by every action that can be a customer's first mutation of a
+ * visit (`cart.ts`'s `addToCart`, `upload.ts`'s `uploadCustomDesign`) —
+ * extracted here once a second real caller needed it, rather than two
+ * copies of security-relevant cookie-writing logic drifting apart.
+ */
+export async function ensureGuestSessionToken(): Promise<string> {
+  const store = await cookies();
+  const secret = requireSessionSecret();
+  const existing = store.get(GUEST_SESSION_COOKIE_NAME)?.value;
+  if (existing !== undefined && isValidSignedSessionValue(existing, secret)) {
+    return existing;
+  }
+  const fresh = mintSignedSessionValue(secret);
+  store.set(GUEST_SESSION_COOKIE_NAME, fresh, {
+    httpOnly: true,
+    secure: SITE_IS_HTTPS,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: GUEST_COOKIE_MAX_AGE_SECONDS,
+  });
+  return fresh;
 }

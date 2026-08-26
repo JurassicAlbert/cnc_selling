@@ -15,6 +15,7 @@ import type { DimensionIssue } from '@/domain/dimensions/dimensions';
 import type { FeasibilityFinding } from '@/domain/feasibility/rules';
 import type { PersonalizationIssue } from '@/domain/personalization/validate';
 import type { ParseErrorCode } from '@/domain/text/numeric-input';
+import type { UploadWarning } from '@/domain/upload/inspect';
 import type { UnavailabilityReason } from '@/server/configurator/resolve-options';
 import { formatMmAsCentimetres } from '@/domain/text/numeric-input';
 import { countPl } from '@/domain/text/plural';
@@ -92,6 +93,67 @@ export function personalizationMessage(issue: PersonalizationIssue): string {
       return `Ten tekst może być zbyt drobny do precyzyjnego wykonania w wybranym kroju. Minimalna wysokość to ${mm(issue.limit ?? 0)}.`;
     case 'TEXT_TOO_SMALL_FOR_MATERIAL':
       return `Ten tekst może być zbyt drobny dla wybranego materiału. Minimalna wysokość to ${mm(issue.limit ?? 0)}.`;
+  }
+}
+
+export function uploadWarningMessage(warning: UploadWarning): string {
+  switch (warning.code) {
+    case 'LOW_RESOLUTION':
+      return `Rozdzielczość przesłanego pliku jest niższa niż zalecana (${warning.params.effectiveDpi} DPI zamiast ${warning.params.thresholdDpi} DPI). Wydruk/grawer może wyjść mniej ostry.`;
+    case 'VERY_LOW_RESOLUTION':
+      return `Rozdzielczość przesłanego pliku jest wyraźnie za niska (${warning.params.effectiveDpi} DPI zamiast ${warning.params.thresholdDpi} DPI). Zalecamy przesłanie pliku w wyższej rozdzielczości.`;
+    case 'ASPECT_MISMATCH':
+      return 'Proporcje przesłanego pliku różnią się od proporcji wybranego produktu. Plik zostanie dopasowany/przycięty — sprawdź podgląd przed złożeniem zamówienia.';
+  }
+}
+
+/**
+ * Covers every failure code either `uploadCustomDesign`
+ * (`server/actions/upload.ts`) or `reuploadCustomDesign`
+ * (`server/actions/design-review.ts`) can return. A plain string union
+ * here rather than importing each action's own error-code type —
+ * `messages.ts` otherwise only imports from `domain/*` (plus one
+ * existing exception, `UnavailabilityReason` from
+ * `server/configurator/resolve-options`); duplicating this short,
+ * stable list of codes keeps this file from depending on three
+ * different server-action modules for one switch statement.
+ */
+export type UploadErrorCode =
+  | 'NO_FILE'
+  | 'CONSENT_REQUIRED'
+  | 'RATE_LIMITED'
+  | 'NOT_OWNED'
+  | 'ILLEGAL_TRANSITION'
+  | 'ACTOR_NOT_PERMITTED'
+  | 'EMPTY_FILE'
+  | 'UNSUPPORTED_TYPE'
+  | 'FILE_TOO_LARGE'
+  | 'CORRUPTED_FILE'
+  | 'PDF_CONTAINS_ACTIVE_CONTENT';
+
+export function uploadErrorMessage(code: UploadErrorCode): string {
+  switch (code) {
+    case 'NO_FILE':
+      return 'Wybierz plik do przesłania.';
+    case 'CONSENT_REQUIRED':
+      return 'Musisz zaakceptować oświadczenie o prawach do przesłanego pliku.';
+    case 'RATE_LIMITED':
+      return 'Zbyt wiele przesłanych plików w krótkim czasie. Spróbuj ponownie za godzinę.';
+    case 'NOT_OWNED':
+      return 'Nie znaleziono tego projektu.';
+    case 'ILLEGAL_TRANSITION':
+    case 'ACTOR_NOT_PERMITTED':
+      return 'Tego projektu nie można teraz przesłać ponownie.';
+    case 'EMPTY_FILE':
+      return 'Przesłany plik jest pusty.';
+    case 'UNSUPPORTED_TYPE':
+      return 'Nieobsługiwany format pliku. Akceptujemy JPG, PNG, SVG i PDF.';
+    case 'FILE_TOO_LARGE':
+      return 'Plik jest za duży.';
+    case 'CORRUPTED_FILE':
+      return 'Nie udało się odczytać pliku. Sprawdź, czy nie jest uszkodzony, i spróbuj ponownie.';
+    case 'PDF_CONTAINS_ACTIVE_CONTENT':
+      return 'Ten plik PDF zawiera treści, których nie możemy zaakceptować. Prześlij plik bez elementów aktywnych (skryptów, akcji).';
   }
 }
 

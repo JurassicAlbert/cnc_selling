@@ -255,3 +255,34 @@ describe('the add-to-cart gate', () => {
     expect(acknowledgementsRequired(findings)).not.toContain('NATURAL_VARIATION');
   });
 });
+
+describe('design: null — CUSTOM products with no catalog design (P4)', () => {
+  it('never produces any design-derived finding, regardless of size or material', () => {
+    const codes = codesOf({ design: null, widthMm: 50, material: MDF });
+    expect(codes).not.toContain('LINE_TOO_THIN');
+    expect(codes).not.toContain('DETAIL_SPACING_TOO_TIGHT');
+    expect(codes).not.toContain('DESIGN_TOO_DETAILED');
+  });
+
+  it('still produces every non-design finding normally', () => {
+    const codes = codesOf({
+      design: null,
+      thicknessMm: 150,
+      moduleCount: 3,
+      material: { ...OAK, isNaturalVariable: true },
+      isFloorElement: true,
+    });
+    expect(codes).toContain('THICKNESS_EXCEEDS_MACHINE');
+    expect(codes).toContain('MODULAR_BUILD');
+    expect(codes).toContain('NATURAL_VARIATION');
+    expect(codes).toContain('FLOOR_MATCH_NOT_GUARANTEED');
+  });
+
+  it('produces no findings at all for an otherwise-plain configuration', () => {
+    // MDF specifically (not BASE's default OAK, which is naturally
+    // variable and always produces its own NATURAL_VARIATION notice
+    // regardless of design) — isolates this assertion to the
+    // design-derived findings this describe block is actually about.
+    expect(codesOf({ design: null, material: MDF })).toEqual([]);
+  });
+});

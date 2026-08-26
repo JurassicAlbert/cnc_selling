@@ -63,7 +63,14 @@ export type MachineConstraints = {
 
 export type FeasibilityInput = {
   readonly widthMm: number;
-  readonly design: DesignConstraints;
+  /**
+   * `null` for a product with no catalog design at all — `CUSTOM`
+   * (customer-uploaded artwork, P4). Line-width/spacing/detail-level
+   * feasibility genuinely can't be evaluated against an unreviewed
+   * upload; that's what design review (§13.3) is for. `null` simply
+   * skips the three design-derived findings below rather than guessing.
+   */
+  readonly design: DesignConstraints | null;
   readonly material: MaterialConstraints;
   readonly moduleCount: number;
   readonly isFloorElement: boolean;
@@ -82,46 +89,51 @@ export function evaluateFeasibility(
   const findings: FeasibilityFinding[] = [];
   const { design, material } = input;
 
-  // Features scale with the product: a design drawn for 600 mm and produced at
-  // 300 mm has every line at half its declared width.
-  const scale = input.widthMm / design.referenceWidthMm;
-  const effectiveLineWidthMm = round2(design.minLineWidthMm * scale);
-  const effectiveSpacingMm = round2(design.minDetailSpacingMm * scale);
+  // `design === null` (CUSTOM, no catalog design) skips all three
+  // design-derived findings below entirely — see FeasibilityInput's
+  // comment on why nothing here is guessed in its place.
+  if (design !== null) {
+    // Features scale with the product: a design drawn for 600 mm and produced
+    // at 300 mm has every line at half its declared width.
+    const scale = input.widthMm / design.referenceWidthMm;
+    const effectiveLineWidthMm = round2(design.minLineWidthMm * scale);
+    const effectiveSpacingMm = round2(design.minDetailSpacingMm * scale);
 
-  if (effectiveLineWidthMm < material.minLineWidthMm) {
-    findings.push({
-      code: 'LINE_TOO_THIN',
-      severity: 'error',
-      requiresAcknowledgement: false,
-      params: {
-        effectiveLineWidthMm,
-        requiredMm: material.minLineWidthMm,
-      },
-    });
-  }
+    if (effectiveLineWidthMm < material.minLineWidthMm) {
+      findings.push({
+        code: 'LINE_TOO_THIN',
+        severity: 'error',
+        requiresAcknowledgement: false,
+        params: {
+          effectiveLineWidthMm,
+          requiredMm: material.minLineWidthMm,
+        },
+      });
+    }
 
-  if (effectiveSpacingMm < material.minDetailSpacingMm) {
-    findings.push({
-      code: 'DETAIL_SPACING_TOO_TIGHT',
-      severity: 'error',
-      requiresAcknowledgement: false,
-      params: {
-        effectiveSpacingMm,
-        requiredMm: material.minDetailSpacingMm,
-      },
-    });
-  }
+    if (effectiveSpacingMm < material.minDetailSpacingMm) {
+      findings.push({
+        code: 'DETAIL_SPACING_TOO_TIGHT',
+        severity: 'error',
+        requiresAcknowledgement: false,
+        params: {
+          effectiveSpacingMm,
+          requiredMm: material.minDetailSpacingMm,
+        },
+      });
+    }
 
-  if (design.detailLevel >= 4 && input.widthMm < design.minRecommendedWidthMm) {
-    findings.push({
-      code: 'DESIGN_TOO_DETAILED',
-      severity: 'warning',
-      requiresAcknowledgement: true,
-      params: {
-        widthMm: input.widthMm,
-        recommendedMinWidthMm: design.minRecommendedWidthMm,
-      },
-    });
+    if (design.detailLevel >= 4 && input.widthMm < design.minRecommendedWidthMm) {
+      findings.push({
+        code: 'DESIGN_TOO_DETAILED',
+        severity: 'warning',
+        requiresAcknowledgement: true,
+        params: {
+          widthMm: input.widthMm,
+          recommendedMinWidthMm: design.minRecommendedWidthMm,
+        },
+      });
+    }
   }
 
   if (input.thicknessMm !== null && input.thicknessMm > input.machine.maxWorkpieceThicknessMm) {

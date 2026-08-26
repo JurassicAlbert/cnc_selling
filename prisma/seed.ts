@@ -9,8 +9,11 @@
  *   2. Catalogue — the owner's real category list (2026-08-23): loft
  *      furniture, engraved jewellery, gres kitchen backsplashes, engraved
  *      floor panels, wall art, and an "inne" catch-all. One representative
- *      product per category (except "inne", which stays empty — there is
- *      nothing concrete to describe in a catch-all).
+ *      product per category — "inne" originally stayed empty (nothing
+ *      concrete to describe in a catch-all yet), until P4's upload
+ *      pipeline made a real customer-supplied-design product possible;
+ *      see `seedProducts`'s comment above `wlasnyProjekt` for why that
+ *      fulfills the category's own description rather than reversing it.
  *
  * What is still deliberately NOT real:
  *
@@ -642,12 +645,14 @@ async function seedProducts(
   const gres = categories.gres;
   const panele = categories['panele-podlogowe'];
   const obrazy = categories['obrazy-drewniane'];
+  const inne = categories.inne;
   if (
     loft === undefined ||
     amulety === undefined ||
     gres === undefined ||
     panele === undefined ||
-    obrazy === undefined
+    obrazy === undefined ||
+    inne === undefined
   ) {
     throw new Error('seedCategories must run before seedProducts');
   }
@@ -820,7 +825,53 @@ async function seedProducts(
     allowedFontIds: [font.id],
   });
 
-  console.log('Products: 5 seeded (loft, amulety, gres, panele, obrazy) — "inne" left empty by design');
+  /**
+   * "inne" was deliberately left empty when first seeded (2026-08-24) —
+   * at that time there was nothing real to put there. Its own Polish
+   * description ("Projekty nietypowe, wykraczające poza pozostałe
+   * kategorie — wycena indywidualna" — unusual projects, beyond the
+   * other categories, individually priced) already described exactly
+   * this: a customer-supplied custom design, engraved on request. P4's
+   * upload pipeline (`CUSTOM_UPLOAD` step, `ARCHITECTURE.md` §13) is
+   * what makes that offer real rather than aspirational, so this product
+   * fulfills the category's original intent rather than reversing the
+   * "kept empty" decision. `CUSTOM`'s step list has no `DESIGN` step —
+   * the customer's own upload replaces a catalogue design entirely — so
+   * this is the one product in the seed with no `seedProductDesign` call.
+   */
+  const wlasnyProjekt = await upsertProduct({
+    slug: 'wlasny-projekt-z-grawerem',
+    typeCode: 'CUSTOM',
+    categoryId: inne.id,
+    namePl: 'Własny projekt z grawerem',
+    shortDescPl: 'Prześlij swój projekt — wykonamy grawer według Twojego pliku.',
+    longDescPl:
+      'Dla projektów, które nie mieszczą się w pozostałych kategoriach: prześlij własny plik (JPG, PNG, SVG lub PDF), a wykonamy grawer na dębowym elemencie według Twojego wzoru. Każde zgłoszenie sprawdzamy indywidualnie pod kątem wykonalności przed przyjęciem do produkcji.',
+    careInstructionsPl: 'Czyścić suchą lub lekko wilgotną ściereczką. Unikać długiego kontaktu z wodą.',
+    materialNotesPl: null,
+    seoTitlePl: 'Własny projekt z grawerem — dąb',
+    seoDescPl: 'Grawer według własnego, przesłanego projektu, wykonanie na indywidualne zamówienie.',
+    basePriceGrosze: 15_000,
+    minPriceGrosze: 20_000,
+    productionDaysMin: 7,
+    productionDaysMax: 14,
+    minWidthMm: 200,
+    maxWidthMm: 1200,
+    minHeightMm: 200,
+    maxHeightMm: 1200,
+  });
+  await seedProductMaterial(wlasnyProjekt.id, materials.dab.id);
+  await seedProductImage(wlasnyProjekt.id, STOCK_PHOTO('inne'), 'Dębowy element przygotowany pod własny grawerowany projekt');
+  await seedPersonalizationSpec(wlasnyProjekt.id, {
+    maxCharacters: 40,
+    maxLines: 2,
+    minTextHeightUm: 6_000,
+    allowedFontIds: [font.id],
+  });
+
+  console.log(
+    'Products: 6 seeded (loft, amulety, gres, panele, obrazy, wlasny-projekt) — "inne" now holds the P4 custom-upload product',
+  );
 }
 
 // ---------------------------------------------------------------------------

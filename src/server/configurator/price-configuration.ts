@@ -4,13 +4,20 @@
  * pricing actually runs (§10.2: "Prices are computed only in Server
  * Actions") — a Server Action calls this, never the client.
  *
- * Scope: only product types with a `designId` (WALL_ART, TABLE_TOP,
- * KITCHEN_TILE, FLOOR_ELEMENT, LOFT_FURNITURE, JEWELRY) can be priced here.
- * `CUSTOM` has no seeded Design row to read machining time or a surcharge
- * from — a customer-uploaded design's production cost is a design-review
- * concern (P4), not something to invent a number for. `selections.designId
- * === null` simply never reaches 'priced' below; that is deliberate, not an
- * oversight.
+ * `CUSTOM` (customer-uploaded artwork, no catalog `Design` row) DOES reach
+ * 'priced' here — `data.design: null` is a legitimate input, not an
+ * incomplete one. What it can't have is anything that depends on knowing
+ * the artwork's actual complexity: `evaluateFeasibility`'s three
+ * design-derived findings (`LINE_TOO_THIN`, `DETAIL_SPACING_TOO_TIGHT`,
+ * `DESIGN_TOO_DETAILED`) are skipped entirely, and `calculatePrice`
+ * zeroes `machiningGrosze`/`designSurchargeGrosze` rather than guessing —
+ * see `domain/feasibility/rules.ts` and `domain/pricing/calculate.ts`'s
+ * own comments. The price shown is a real base-price/material/finish
+ * estimate ("wycena indywidualna" — individually priced, `inne`
+ * category's own description), not the final figure; the actual
+ * feasibility and any price adjustment happen during design review
+ * (§13.3) before the order can leave `DESIGN_REVIEW` — a gate this
+ * project already built (`domain/order-status/transitions.ts`).
  */
 
 import type { DimensionIssue } from '@/domain/dimensions/dimensions';
@@ -47,7 +54,8 @@ import type {
 export type ConfiguratorPricingData = {
   readonly product: ProductRow & { readonly isFloorElement: boolean };
   readonly material: MaterialRow & { readonly priceFactorBp: number };
-  readonly design: DesignRow & { readonly surchargeGrosze: number };
+  /** `null` for CUSTOM — no catalog design (a customer-uploaded one instead, see this file's header). */
+  readonly design: (DesignRow & { readonly surchargeGrosze: number }) | null;
   readonly finish: { readonly pricePerM2Grosze: number; readonly setupFeeGrosze: number } | null;
   readonly thickness: { readonly priceFactorBp: number } | null;
   readonly installationVariant: { readonly priceFactorBp: number } | null;
@@ -126,7 +134,7 @@ export function priceConfiguration(
       productMaterial: { priceFactorBp: data.material.priceFactorBp },
       thickness: data.thickness,
       design: data.design,
-      productDesign: { surchargeGrosze: data.design.surchargeGrosze },
+      productDesign: data.design === null ? null : { surchargeGrosze: data.design.surchargeGrosze },
       finish: data.finish,
       installationVariant: data.installationVariant,
       personalizationSpec: data.personalizationSpec,

@@ -76,6 +76,14 @@ export const SITE = {
     'Wybrane wykończenie zostało wyczyszczone, ponieważ nie jest dostępne dla nowo wybranego materiału.',
   configuratorClearedThicknessPl:
     'Wybrana grubość została wyczyszczona, ponieważ nie mieści się w wybranym sposobie montażu.',
+  configuratorUploadChooseFilePl: 'Wybierz plik (JPG, PNG, SVG lub PDF)',
+  configuratorUploadSubmitPl: 'Prześlij projekt',
+  configuratorUploadSubmittingPl: 'Przesyłanie…',
+  configuratorUploadSuccessPl: 'Projekt został przesłany.',
+  configuratorUploadIpConsentLabelPl: 'Akceptuję powyższe oświadczenie',
+  configuratorUploadReplacePl: 'Prześlij inny plik',
+  configuratorCustomPriceEstimatePl:
+    'Podana cena to wstępny szacunek (materiał, wykończenie, cena bazowa). Ostateczna wycena, uwzględniająca złożoność Twojego projektu, zostanie potwierdzona podczas weryfikacji projektu.',
 
   // Homepage hero — real claims about how this business actually operates,
   // not generic retail trust-badge copy. No "free shipping"/"money-back

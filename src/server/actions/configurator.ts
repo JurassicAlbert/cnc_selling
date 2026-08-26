@@ -67,12 +67,16 @@ export async function getConfiguratorSnapshot(
       : (data.installVariantsByCode.get(selections.installationVariant) ?? null);
   const font = selections.fontId === null ? null : (data.fontsById.get(selections.fontId) ?? null);
 
-  // priceConfiguration requires a concrete material and design row — a
-  // product type with no DESIGN step (CUSTOM) or a customer who has not
-  // chosen one yet never reaches 'priced'. See price-configuration.ts's
-  // header for why CUSTOM specifically stays 'incomplete' by design.
+  // `design === null` only means "incomplete" for a product type that
+  // actually HAS a DESIGN step and the customer hasn't picked one yet.
+  // CUSTOM has no DESIGN step at all (its design is the customer's own
+  // upload, via CUSTOM_UPLOAD) — for it, `design` stays null forever and
+  // that's the correct, complete state; `priceConfiguration`/
+  // `calculatePrice` handle a null design explicitly rather than
+  // guessing (see price-configuration.ts's header).
+  const designIncomplete = steps.includes('DESIGN') && design === null;
   const pricing: ConfiguratorPricingResult =
-    material === null || design === null
+    material === null || designIncomplete
       ? { status: 'incomplete' }
       : priceConfiguration(
           {

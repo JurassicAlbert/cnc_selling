@@ -21,30 +21,13 @@ import { prisma } from '@/server/db/client';
 import type { Prisma } from '@/generated/prisma/client';
 import type { InstallationVariantCode } from '@/generated/prisma/enums';
 import { priceAndValidateSelections } from '@/server/configurator/validate-and-price';
+import { findOwnedDesignId } from '@/server/repositories/design-review';
 import {
+  ensureGuestSessionToken,
   isValidSignedSessionValue,
-  mintSignedSessionValue,
   requireSessionSecret,
 } from '@/server/session/guest-session';
 import { GUEST_SESSION_COOKIE_NAME } from '@/server/session/read-guest-session';
-
-const GUEST_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 90;
-
-/**
- * `NODE_ENV === 'production'` is the BUILD mode, not the request's actual
- * protocol — a real bug caught by this session's own e2e suite: this
- * project's Playwright config deliberately runs a production build over
- * plain `http://localhost` (§9h/§9i's Turbopack-dev-mode fix), and a
- * `Secure` cookie set over plain HTTP is silently dropped by a
- * spec-compliant browser. Chromium happens to special-case `localhost` as
- * an implicitly secure context, which is why this only ever failed under
- * WebKit (`mobile-safari` in the e2e matrix) — the guest session cookie
- * never got stored, so the very next request saw an empty cart. Deriving
- * `secure` from `NEXT_PUBLIC_SITE_URL` instead — the same env var already
- * used for canonical/OG URLs — ties it to whether this deployment is
- * actually HTTPS, not to how it was built.
- */
-const SITE_IS_HTTPS = (process.env.NEXT_PUBLIC_SITE_URL ?? '').startsWith('https://');
 
 /**
  * Prisma's JSON input type isn't structurally compatible with the plain
@@ -59,22 +42,23 @@ function toJsonInput<T>(value: T): Prisma.InputJsonValue {
   return value as unknown as Prisma.InputJsonValue;
 }
 
-async function ensureGuestSessionToken(): Promise<string> {
-  const store = await cookies();
-  const secret = requireSessionSecret();
-  const existing = store.get(GUEST_SESSION_COOKIE_NAME)?.value;
-  if (existing !== undefined && isValidSignedSessionValue(existing, secret)) {
-    return existing;
+/**
+ * `selections.customUploadId` names a `CustomerDesign` row the client
+ * chose to attach — per §16.1, an id from the request is never trusted
+ * on its own, so this re-derives ownership the same way
+ * `requireOwnedCartItem`/`requireOwnedConfiguration` do: the row must
+ * actually belong to the caller's own session, or this rejects the
+ * whole submission. `null` (no custom design attached) always passes —
+ * there's nothing to own. Delegates the actual check to
+ * `design-review.ts`'s `findOwnedDesignId` rather than duplicating the
+ * query — that function exists in this exact "sessionToken as an
+ * explicit parameter" shape specifically so it's shared like this.
+ */
+async function verifyOwnedCustomDesign(customDesignId: string | null, sessionToken: string): Promise<boolean> {
+  if (customDesignId === null) {
+    return true;
   }
-  const fresh = mintSignedSessionValue(secret);
-  store.set(GUEST_SESSION_COOKIE_NAME, fresh, {
-    httpOnly: true,
-    secure: SITE_IS_HTTPS,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: GUEST_COOKIE_MAX_AGE_SECONDS,
-  });
-  return fresh;
+  return findOwnedDesignId(customDesignId, sessionToken);
 }
 
 export type AddToCartResult =
@@ -94,11 +78,16 @@ export async function addToCart(
   const { data, pricing } = validated;
   const sessionToken = await ensureGuestSessionToken();
 
+  if (!(await verifyOwnedCustomDesign(selections.customUploadId, sessionToken))) {
+    return { ok: false, code: 'CONFIGURATION_INVALID' };
+  }
+
   const configuration = await prisma.configuration.create({
     data: {
       sessionToken,
       productId: data.productId,
       designId: selections.designId,
+      customDesignId: selections.customUploadId,
       materialId: selections.materialId,
       finishId: selections.finishId,
       thicknessMm: selections.thicknessMm,
@@ -219,17 +208,18 @@ export async function duplicateCartItem(cartItemId: string): Promise<void> {
  * `Configuration` id, not the `CartItem` id, precisely so this can be
  * verified this way.
  */
-async function requireOwnedConfiguration(configurationId: string): Promise<boolean> {
+/** `null` when there's no valid session or the configuration isn't this session's own — the caller's session token otherwise, so it can also verify a `customUploadId` without re-reading the cookie a second time. */
+async function requireOwnedConfiguration(configurationId: string): Promise<string | null> {
   const store = await cookies();
   const sessionToken = store.get(GUEST_SESSION_COOKIE_NAME)?.value;
   if (sessionToken === undefined || !isValidSignedSessionValue(sessionToken, requireSessionSecret())) {
-    return false;
+    return null;
   }
   const configuration = await prisma.configuration.findFirst({
     where: { id: configurationId, sessionToken },
     select: { id: true },
   });
-  return configuration !== null;
+  return configuration === null ? null : sessionToken;
 }
 
 export async function updateCartItemConfiguration(
@@ -238,8 +228,11 @@ export async function updateCartItemConfiguration(
   selections: Selections,
   acknowledgedWarnings: readonly string[],
 ): Promise<AddToCartResult> {
-  const owned = await requireOwnedConfiguration(configurationId);
-  if (!owned) {
+  const sessionToken = await requireOwnedConfiguration(configurationId);
+  if (sessionToken === null) {
+    return { ok: false, code: 'CONFIGURATION_INVALID' };
+  }
+  if (!(await verifyOwnedCustomDesign(selections.customUploadId, sessionToken))) {
     return { ok: false, code: 'CONFIGURATION_INVALID' };
   }
   const validated = await priceAndValidateSelections(productSlug, selections);
@@ -252,6 +245,7 @@ export async function updateCartItemConfiguration(
     where: { id: configurationId },
     data: {
       designId: selections.designId,
+      customDesignId: selections.customUploadId,
       materialId: selections.materialId,
       finishId: selections.finishId,
       thicknessMm: selections.thicknessMm,

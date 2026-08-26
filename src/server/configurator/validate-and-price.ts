@@ -46,7 +46,12 @@ export async function priceAndValidateSelections(
       : (data.installVariantsByCode.get(selections.installationVariant) ?? null);
   const font = selections.fontId === null ? null : (data.fontsById.get(selections.fontId) ?? null);
 
-  if (material === null || design === null) {
+  // See `server/actions/configurator.ts`'s identical check: `design ===
+  // null` only means "incomplete" for a product type that actually has
+  // a DESIGN step. CUSTOM has none (CUSTOM_UPLOAD replaces it) — for it,
+  // a null design is the correct, permanent state, not a missing one.
+  const designIncomplete = steps.includes('DESIGN') && design === null;
+  if (material === null || designIncomplete) {
     return null;
   }
 

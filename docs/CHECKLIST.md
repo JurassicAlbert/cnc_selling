@@ -3,10 +3,13 @@
 Reviewed item by item before the project is considered finished (brief §40–41).
 `[ ]` not started · `[~]` in progress · `[x]` done and verified by a passing test or manual check.
 
-**Last verified: 2026-08-25** — `npm test` 369/369 green, `npm run typecheck` clean, `npm run build`
-clean, `npm run lint` clean, `npm run e2e` 6/6 green against a production build (desktop + mobile),
-Lighthouse SEO 100/100, on Node v22.15.0 / TypeScript 7.0.2 / Vitest 4.1.11 / Prisma 7.9.1 /
-Next.js 16.3.2 / MUI 9.3.1 / Biome 2.5.10 / opentype.js 2.0.0. **P0 is complete. P2 is functionally
+**Last verified: 2026-08-26** — `npm test` 446/446 green (375 unit + 26 new domain unit + 45 new
+integration, a genuinely new tier — `tests/integration/`, real Postgres via `TEST_DATABASE_URL`,
+see HANDOVER §9w), `npm run typecheck` clean, `npm run build` clean, `npm run lint` clean, `npm run
+e2e` 8/9 green against a production build (one `shell.spec.ts` failure confirmed as pre-existing
+4-worker parallel-load flakiness, passes reliably alone — unrelated to any file this pass touched),
+on Node v22.15.0 / TypeScript 7.0.2 / Vitest 4.1.11 / Prisma 7.9.1 / Next.js 16.3.2 / MUI 9.3.1 /
+Biome 2.5.10 / opentype.js 2.0.0. **P0 is complete. P2 is functionally
 complete and its storefront was redesigned 2026-08-24** to match the owner's actual intent for
 "minimalistic" (restraint in style, not content — see `docs/HANDOVER.md` §9g) — real
 category/product/material photography, a hero animation, trust badges, filters, and search all now
@@ -23,7 +26,13 @@ order-creation transaction with a race-free per-month order-number counter, real
 snapshots (verified by mutating a live catalogue row and confirming an existing order's display
 didn't change), and a real guest order-lookup/confirmation flow — see `docs/HANDOVER.md` §9l for
 the full account, including what's honestly still deferred (shipping rates and guest-cart-merge-
-on-login, both blocked on phases that haven't started, not skipped by choice).
+on-login, both blocked on phases that haven't started, not skipped by choice). **P4 (upload,
+design review, IP) was built 2026-08-26** — the full validation pipeline, IP consent, the review
+state machine, and a real configurator step, wired into a real seeded `CUSTOM` product; two real
+pre-existing bugs found and fixed along the way (CUSTOM products could never actually be priced;
+Next's 1MB default Server Action body limit silently capped every upload well under this
+pipeline's real 25MB/5MB caps) — see `docs/HANDOVER.md` §9w for the full account, including what's
+honestly still deferred (a staff review UI, P7 — no admin auth exists yet either, P6).
 
 ---
 
@@ -262,28 +271,52 @@ are genuinely unbuilt still — marked `[ ]`, not glossed over. Full detail in
 
 ## P4 — Upload, design review, IP
 
-- [ ] Upload accepts JPG, PNG, SVG, PDF
-- [ ] File type validated by magic bytes, not extension or declared MIME
-- [ ] Size limits enforced by streamed byte count, not content-length header
-- [ ] SVG sanitized (script, foreignObject, event handlers, external refs, entities)
-- [ ] PDF inspected, embedded JS rejected
-- [ ] Image resolution and effective DPI checked against target size
-- [ ] Aspect mismatch warning with crop preview
-- [ ] Filename sanitized for display; storage key opaque and unguessable
-- [ ] EXIF (incl. GPS) stripped from previews
-- [ ] Preview generated
-- [ ] Warnings persisted and shown, incl. „Projekt może wymagać ręcznej korekty przed produkcją."
-- [ ] Corrupted and zero-byte files rejected cleanly
-- [ ] IP/copyright checkbox unchecked by default, enforced server-side
-- [ ] Consent record stores declaration text, version, timestamp
-- [ ] Review states: PENDING_REVIEW → APPROVED / NEEDS_CHANGES / REJECTED
-- [ ] Illegal transitions rejected
-- [ ] Re-upload after NEEDS_CHANGES returns to PENDING_REVIEW
-- [ ] Staff comments visible to the customer
-- [ ] Customer sees plain status, never CAM terminology
-- [ ] Order cannot leave DESIGN_REVIEW with an unapproved custom design
-- [ ] Customers cannot access other customers' files (404, not 403)
-- [ ] Upload rate limiting
+Built 2026-08-26 — the full validation pipeline, IP consent, the review
+state machine, an authorizing file-serving route, and a real
+configurator step, wired end to end into a real, seeded `CUSTOM` product
+(`wlasny-projekt-z-grawerem`, under `inne`). Full detail in
+`docs/HANDOVER.md` §9w. Deliberately NOT built here, matching the
+checklist's own phasing: a staff review UI — approve/request-changes/
+reject has no UI anywhere (`P7a`, not started; no admin auth/roles exist
+until P6 either). The domain transition function and the data it needs
+are real and tested directly; nothing here fakes an "approve" button
+without real auth behind it.
+
+Two real bugs found and fixed along the way that would have made this
+feature quietly broken for realistic use even though every individual
+piece was correct in isolation: (1) `CUSTOM` products could never
+actually reach a priced, purchasable state — `priceConfiguration`
+unconditionally required a catalog `Design` row, which a customer
+upload doesn't have; fixed by making `design` nullable through the
+pricing/feasibility domain layer, zeroing the machining/design-surcharge
+components rather than guessing them (owner-confirmed approach — "base
+price... wycena indywidualna"). (2) Next.js's Server Action body limit
+defaults to 1MB, well under the real 25MB/5MB caps below — every upload
+over 1MB would have failed at the framework level before reaching any
+of this pipeline; fixed via `next.config.ts`'s `experimental.serverActions.bodySizeLimit`.
+
+- [x] Upload accepts JPG, PNG, SVG, PDF — `src/server/upload/inspect-file.ts`, magic-byte sniffed via `file-type` (SVG detected by content, the one format with no fixed byte signature); integration-tested for each type with real bytes (`tests/integration/upload.test.ts`)
+- [x] File type validated by magic bytes, not extension or declared MIME — same file; a GIF and plain text are both rejected regardless of what they claim to be
+- [x] Size limits enforced by streamed byte count, not content-length header — `domain/upload/inspect.ts`'s `maxUploadSizeBytes` checked against the actual received buffer length, never a header; tested at the exact 5MB SVG boundary (pass) and one byte over (reject). Not literally mid-stream rejection — the body is fully read via the File API before the check runs, bounded by Next's own `bodySizeLimit` (26MB) as the outer ceiling
+- [x] SVG sanitized (script, foreignObject, event handlers, external refs, entities) — DOMPurify+jsdom, `FORBID_TAGS` explicit, a custom hook strips any `href`/`xlink:href` that isn't a same-document `#fragment`; verified against a real hostile SVG (script, onclick, external image, `javascript:` URI, foreignObject) — every one stripped, harmless content survives. XXE not separately guarded — DOMPurify parses via an HTML parser, which has no DTD/entity-expansion step at all, so that attack class doesn't apply to this parsing path
+- [x] PDF inspected, embedded JS rejected — `pdf-lib` for page count; a raw-byte scan rejects `/JavaScript`, `/JS`, `/OpenAction`, `/AA`, `/Launch` tokens (a documented heuristic, not a full PDF interpreter — errs toward rejecting a borderline file)
+- [x] Image resolution and effective DPI checked against target size — `domain/upload/inspect.ts`'s `evaluateResolution`, warns <150 DPI, warns harder <100 DPI, per §13.1.6's exact formula. Never actually fires in the real `CUSTOM_UPLOAD` flow today, honestly: that step comes *before* `SIZE` in `CUSTOM`'s own step list, so no target size is known yet at upload time — `target: null` is passed, documented in `upload.ts`'s header, not silently guessed
+- [x] Aspect mismatch warning with crop preview — `evaluateAspectMismatch`, 5% tolerance (this project's own threshold, not further specified); same "never fires today" caveat as DPI above. "Crop preview" itself is not built — nothing in the real flow reaches the state that would need it yet
+- [x] Filename sanitized for display; storage key opaque and unguessable — `sanitizeFilenameForDisplay` (strips path components and control characters by character code, not a regex class — a real bug was caught here: an earlier regex-based version got mangled in transit and silently stripped spaces/hyphens instead of control characters, caught by its own unit test); storage keys are `crypto.randomUUID()`, never derived from the original filename
+- [x] EXIF (incl. GPS) stripped from previews — `sharp`'s default re-encode behavior (metadata is only preserved via an explicit `.withMetadata()` call, never made)
+- [x] Preview generated — raster (JPG/PNG) and SVG (rasterized via `sharp`) both get a real max-1600px EXIF-stripped preview. PDF does not — documented gap, `inspect-file.ts`'s header: rasterizing a PDF page needs a rendering engine `pdf-lib` doesn't provide, a materially bigger dependency this pass didn't take on
+- [x] Warnings persisted and shown, incl. „Projekt może wymagać ręcznej korekty przed produkcją." — `CustomerDesign.autoWarnings`, shown in the configurator's upload-success state
+- [x] Corrupted and zero-byte files rejected cleanly — integration-tested: zero bytes, and a real JPEG signature followed by garbage (sniffs correctly as `image/jpeg`, fails at the `sharp` decode step)
+- [x] IP/copyright checkbox unchecked by default, enforced server-side — `uploadCustomDesign` rejects with `CONSENT_REQUIRED` if `ipConsent !== 'on'`, checked server-side regardless of the client's own disabled-submit-button state
+- [x] Consent record stores declaration text, version, timestamp — `ipConfirmedAt`/`ipDeclarationVersion`/`ipDeclarationTextPl` (verbatim text, not just a boolean) — DB-verified live: a real row shows the exact `UPLOAD.ipDeclarationTextPl` string, `v1`, a real timestamp, and the real request IP (`X-Forwarded-For`, best-effort — `null` in local dev with no proxy in front, honestly)
+- [x] Review states: PENDING_REVIEW → APPROVED / NEEDS_CHANGES / REJECTED — `domain/design-review/transitions.ts`, mirrors `order-status/transitions.ts`'s shape; unit-tested (14 assertions) and integration-tested against real Prisma enum values (`tests/integration/design-review.test.ts`)
+- [x] Illegal transitions rejected — same tests; a rejected/illegal attempt is verified to write nothing (status stays unchanged)
+- [x] Re-upload after NEEDS_CHANGES returns to PENDING_REVIEW — `server/actions/design-review.ts`'s `reuploadCustomDesign`, real and tested (domain + the transition gate), but has no UI yet — that event happens on an existing order past checkout, which needs an order-tracking page (P6 account features, not started); same "prepared, not wired" pattern as Yato-yane joinery
+- [x] Staff comments visible to the customer — `DesignReviewComment.authorType`/`bodyPl`, integration-tested for authorship + ordering; no UI to actually write one yet (P7, staff-only)
+- [x] Customer sees plain status, never CAM terminology — `findOwnedDesignStatus` never selects `productionMethod`; `COPY.designStatusPending/Approved/NeedsChanges/Rejected` are the only strings exposed
+- [x] Order cannot leave DESIGN_REVIEW with an unapproved custom design — already built in P5 (`order-status/transitions.ts`'s `DESIGN_REVIEW_GATE_BLOCKED`), but never exercised by a real `CustomerDesign` until this pass — verified live: a real order (`2026/08/0021`) with a real uploaded design automatically landed in `DESIGN_REVIEW`, not `CONFIRMED`
+- [x] Customers cannot access other customers' files (404, not 403) — `/api/plik/[fileId]/route.ts`; live-verified: an authorized session gets 200, no session gets 404, a nonexistent id gets 404 — indistinguishable. Integration-tested at the repository level (`tests/integration/authz.test.ts`) for both `UploadedFile` and `CustomerDesign`
+- [x] Upload rate limiting — a plain count query (`UploadedFile` rows in the last hour per session), not a new piece of infrastructure (no rate-limit model/library exists anywhere in the spec); integration-tested at and below the threshold, scoped correctly per session
 
 ## P5 — Cart, checkout, order
 

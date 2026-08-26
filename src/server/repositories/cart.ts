@@ -40,7 +40,7 @@ export type CartItemView = {
   /** The `Design.code` (§6.8's order snapshot wants a stable code, not just a display name that can be edited later). */
   readonly designCode: string | null;
   readonly pricingVersion: number | null;
-  /** Both null until P4's upload pipeline exists — read now so `createOrder`'s automatic DESIGN_REVIEW routing is correct the day it does. */
+  /** Null unless the configuration is a CUSTOM product's own upload (P4). Feeds `createOrder`'s automatic DESIGN_REVIEW routing (`hasUnapprovedCustomDesign`). */
   readonly customDesignId: string | null;
   readonly customDesignStatus: 'PENDING_REVIEW' | 'APPROVED' | 'NEEDS_CHANGES' | 'REJECTED' | null;
 };
@@ -135,7 +135,7 @@ export async function findCartForRequest(params: {
     customDesignStatus: configuration.customDesign?.status ?? null,
     selections: {
       designId: configuration.designId,
-      customUploadId: null,
+      customUploadId: configuration.customDesignId,
       materialId: configuration.materialId,
       widthMm: configuration.widthMm,
       heightMm: configuration.heightMm,

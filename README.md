@@ -237,13 +237,15 @@ compatibility/pricing/feasibility, the first real MUI client island, font-
 backed personalization, and the 2D preview are all built and browser-
 verified; see `docs/HANDOVER.md` §9f/§9j/§9k. **P5, cart/checkout/order, is
 built** (§9l) — a customer can genuinely place an order today, guest
-checkout only. See `docs/CHECKLIST.md` for the itemised state of every
-phase. Next:
+checkout only. **P4, upload & design review, is built** (§9w) — the full
+validation pipeline (magic bytes, SVG sanitization, PDF inspection, EXIF
+stripping), IP consent, the review state machine, an authorizing
+file-serving route, and a real configurator step wired into a real
+seeded `CUSTOM` product; a customer can genuinely upload their own
+design and check out today, verified live end to end including the
+order landing in `DESIGN_REVIEW` automatically. See `docs/CHECKLIST.md`
+for the itemised state of every phase. Next:
 
-- **P4, upload & design review** — not started. The one real infrastructure
-  decision it needs first: where uploaded files actually live (local disk
-  vs. an object store), since nothing about the review workflow can be
-  built without a real storage adapter behind it.
 - **P6, accounts** — not started. Needed before "guest cart merges into
   user cart on login" (a real P5 checklist item, currently blocked on
   exactly this) can be closed.

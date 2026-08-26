@@ -35,11 +35,14 @@ export function calculatePrice(input: PricingInput): PriceBreakdown {
     [input.material.priceFactorBp, input.thicknessFactorBp],
   );
 
-  const machiningGrosze = machiningCost(
-    areaMm2,
-    input.design.machiningMilliMinutesPerM2,
-    rateFor(input.design.method, input.machineRates),
-  );
+  // `null` only for CUSTOM (no catalog design) — see PricingInput's
+  // comment. Zero, not an estimate: machining time depends on the
+  // actual uploaded artwork's complexity, which nothing here can know
+  // yet — that is design review's job (§13.3), not a number to guess.
+  const machiningGrosze =
+    input.design === null
+      ? 0
+      : machiningCost(areaMm2, input.design.machiningMilliMinutesPerM2, rateFor(input.design.method, input.machineRates));
 
   const finishGrosze =
     divRoundHalfUp(areaMm2 * input.finish.pricePerM2Grosze, MM2_PER_M2) +
@@ -60,7 +63,7 @@ export function calculatePrice(input: PricingInput): PriceBreakdown {
     baseGrosze: input.basePriceGrosze,
     materialGrosze,
     machiningGrosze,
-    designSurchargeGrosze: input.design.surchargeGrosze,
+    designSurchargeGrosze: input.design === null ? 0 : input.design.surchargeGrosze,
     finishGrosze,
     modulesGrosze,
     personalizationGrosze,
@@ -167,11 +170,13 @@ function validate(input: PricingInput): void {
     input.material.pricePerM2Grosze,
     'material.pricePerM2Grosze',
   );
-  requireNonNegativeInteger(
-    input.design.machiningMilliMinutesPerM2,
-    'design.machiningMilliMinutesPerM2',
-  );
-  requireNonNegativeInteger(input.design.surchargeGrosze, 'design.surchargeGrosze');
+  if (input.design !== null) {
+    requireNonNegativeInteger(
+      input.design.machiningMilliMinutesPerM2,
+      'design.machiningMilliMinutesPerM2',
+    );
+    requireNonNegativeInteger(input.design.surchargeGrosze, 'design.surchargeGrosze');
+  }
   requireNonNegativeInteger(input.finish.pricePerM2Grosze, 'finish.pricePerM2Grosze');
   requireNonNegativeInteger(input.finish.setupFeeGrosze, 'finish.setupFeeGrosze');
   requireNonNegativeInteger(

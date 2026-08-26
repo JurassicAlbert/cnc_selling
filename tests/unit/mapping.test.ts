@@ -189,18 +189,27 @@ describe('toMachineConstraints', () => {
 
 describe('toDesignConstraints and toMaterialConstraints', () => {
   it('converts micrometres to the millimetres the domain compares in', () => {
-    expect(toDesignConstraints(design).minLineWidthMm).toBe(1.5);
-    expect(toDesignConstraints(design).minDetailSpacingMm).toBe(1);
+    // toDesignConstraints returns null only for a CUSTOM product's
+    // absent catalog design (P4) — this fixture always supplies one.
+    const constraints = toDesignConstraints(design);
+    if (constraints === null) throw new Error('expected non-null constraints for a real design row');
+    expect(constraints.minLineWidthMm).toBe(1.5);
+    expect(constraints.minDetailSpacingMm).toBe(1);
     expect(toMaterialConstraints(material).minLineWidthMm).toBe(1.2);
     expect(toMaterialConstraints(material).minDetailSpacingMm).toBe(0.8);
   });
 
   it('carries the reference width, detail level and recommended width through', () => {
     const constraints = toDesignConstraints(design);
+    if (constraints === null) throw new Error('expected non-null constraints for a real design row');
 
     expect(constraints.referenceWidthMm).toBe(600);
     expect(constraints.detailLevel).toBe(3);
     expect(constraints.minRecommendedWidthMm).toBe(300);
+  });
+
+  it('returns null for a null design row — CUSTOM products with no catalog design', () => {
+    expect(toDesignConstraints(null)).toBeNull();
   });
 
   it('rejects a non-integer micrometre value instead of rounding it away', () => {
@@ -358,6 +367,9 @@ describe('toPricingInput', () => {
     expect(input.material.pricePerM2Grosze).toBe(18_000);
     expect(input.material.priceFactorBp).toBe(11_500);
     expect(input.thicknessFactorBp).toBe(10_000);
+    // null only when the caller passes rows.design/productDesign: null
+    // (CUSTOM, P4) — pricingRows() always supplies both.
+    if (input.design === null) throw new Error('expected non-null design for a real design row');
     expect(input.design.machiningMilliMinutesPerM2).toBe(2500);
     expect(input.design.surchargeGrosze).toBe(3_000);
     expect(input.design.method).toBe('CNC_CARVE');
@@ -368,6 +380,11 @@ describe('toPricingInput', () => {
     expect(input.modules.surchargePerExtraModuleGrosze).toBe(4_000);
     expect(input.vatRateBp).toBe(2300);
     expect(input.quantity).toBe(1);
+  });
+
+  it('maps a null design/productDesign through as null — CUSTOM, P4', () => {
+    const input = toPricingInput(pricingRows({ design: null, productDesign: null }));
+    expect(input.design).toBeNull();
   });
 
   it('maps an unselected finish to zero cost, not to a missing key', () => {

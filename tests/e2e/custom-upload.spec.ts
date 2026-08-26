@@ -1,0 +1,91 @@
+import path from 'node:path';
+
+import { expect, test } from '@playwright/test';
+
+/**
+ * P4's real end-to-end path, checklist's own framing: "Custom upload:
+ * upload → IP checkbox → warnings → order → status DESIGN_REVIEW". Same
+ * click-through-by-visible-Polish-label style as `checkout.spec.ts`,
+ * against the real seeded `wlasny-projekt-z-grawerem` product (`CUSTOM`
+ * type — the one product with `CUSTOM_UPLOAD` as its first step, before
+ * `MATERIAL`/`SIZE`, matching `domain/configuration/steps.ts`'s real
+ * step order).
+ *
+ * Unlike `checkout.spec.ts`'s design (a pre-existing catalogue Design),
+ * this product prices with `design: null` — base price + material +
+ * finish only, no machining/design-surcharge component (P4's pricing
+ * fix, `domain/pricing/calculate.ts`). This test's real value is proving
+ * that whole chain end to end: a real uploaded file survives magic-byte
+ * sniffing and storage, the resulting `CustomerDesign` id correctly
+ * flows through cart and checkout (a real bug this session found and
+ * fixed — `cart.ts`'s repository was hardcoding `customUploadId: null`
+ * when reconstructing `Selections` from a stored `Configuration`), and
+ * the order automatically lands in `DESIGN_REVIEW` — a gate that
+ * existed since P5 but had never been exercised by a real
+ * `CustomerDesign` until this pass.
+ */
+test('uploads a custom design, completes checkout, and lands in DESIGN_REVIEW', async ({ page }) => {
+  await page.goto('/produkt/wlasny-projekt-z-grawerem');
+
+  const main = page.getByRole('main');
+
+  // Step 1: Twój projekt (CUSTOM_UPLOAD)
+  const fileInput = main.locator('input[type="file"]');
+  await fileInput.setInputFiles(path.resolve(process.cwd(), 'public/images/photos/gres.jpg'));
+  await main.getByLabel('Akceptuję powyższe oświadczenie').check();
+  await main.getByRole('button', { name: 'Prześlij projekt' }).click();
+  await expect(main.getByText('Projekt został przesłany.')).toBeVisible();
+  await expect(main.getByRole('button', { name: 'Dalej' })).toBeEnabled();
+  await main.getByRole('button', { name: 'Dalej' }).click();
+
+  // Step 2: Materiał
+  await main.getByRole('button', { name: 'Dąb', exact: true }).click();
+  await main.getByRole('button', { name: 'Dalej' }).click();
+
+  // Step 3: Wymiary — within the product's 200-1200mm envelope.
+  await main.getByLabel('Szerokość (cm)').fill('40');
+  await main.getByLabel('Szerokość (cm)').blur();
+  await main.getByLabel('Wysokość (cm)').fill('40');
+  await main.getByLabel('Wysokość (cm)').blur();
+  await expect(main.getByRole('button', { name: 'Dalej' })).toBeEnabled();
+  await main.getByRole('button', { name: 'Dalej' }).click();
+
+  // Step 4: Wykończenie
+  await main.getByRole('button', { name: 'Olejowanie' }).click();
+  await main.getByRole('button', { name: 'Dalej' }).click();
+
+  // Step 5: Personalizacja — optional, skipped.
+  await main.getByRole('button', { name: 'Dalej' }).click();
+
+  // Step 6: Podsumowanie — the honest "this is an estimate" notice (P4).
+  await expect(
+    main.getByText('Podana cena to wstępny szacunek', { exact: false }),
+  ).toBeVisible();
+  const addToCartButton = main.getByRole('button', { name: 'Dodaj do koszyka' });
+  await expect(addToCartButton).toBeEnabled();
+  await addToCartButton.click();
+
+  await expect(page).toHaveURL('/koszyk');
+  await expect(page.getByText('Własny projekt z grawerem')).toBeVisible();
+
+  await page.getByRole('link', { name: 'Przejdź do zamówienia' }).click();
+  await expect(page).toHaveURL('/koszyk/zamowienie');
+  // The real bug this test guards: a stale cart-repository mapping used
+  // to drop the uploaded design when re-pricing at checkout, which
+  // surfaced as exactly this message.
+  await expect(page.getByText('Cena tej konfiguracji uległa zmianie')).not.toBeVisible();
+
+  await page.getByLabel('E-mail').fill('e2e-custom-upload@example.com');
+  await page.getByLabel('Imię').fill('Test');
+  await page.getByLabel('Nazwisko').fill('E2E');
+  await page.getByLabel('Ulica i numer').fill('Testowa 1');
+  await page.getByLabel('Kod pocztowy').fill('00-001');
+  await page.getByLabel('Miejscowość').fill('Warszawa');
+  await page.getByLabel('Akceptuję regulamin sklepu.').check();
+  await page.getByText('Przyjmuję do wiadomości, że produkty wykonywane na indywidualne').click();
+
+  await page.getByRole('button', { name: 'Złóż zamówienie' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Zamówienie przyjęte' })).toBeVisible();
+  await expect(page.getByText('Numer zamówienia:')).toBeVisible();
+});
