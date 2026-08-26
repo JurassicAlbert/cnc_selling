@@ -85,11 +85,19 @@ import { hexPoints } from '@/ui/primitives/SectionDecoration';
  * that) leaves zero gap — `sqrt(3) * r` is exactly the center-to-center
  * distance at which two same-radius pointy-top hexagons touch.
  */
-const SPACING_R = 34;
-const CLIP_R = 30;
+const SPACING_R = 48;
+const CLIP_R = 42;
 
-/** Ring radius of the hex-of-hexagons — row `r` (|r| <= HEX_RADIUS) holds `2*HEX_RADIUS + 1 - |r|` cells. 3 gives rows 4-5-6-7-6-5-4 (37 cells). */
-const HEX_RADIUS = 3;
+/**
+ * Ring radius of the hex-of-hexagons — row `r` (|r| <= HEX_RADIUS) holds
+ * `2*HEX_RADIUS + 1 - |r|` cells. 2 gives rows 3-4-5-4-3 (19 cells).
+ * Dropped from 3 (37 cells) back to 2 per the owner's follow-up —
+ * "bigger hexes so we need them less" — with `SPACING_R`/`CLIP_R` scaled
+ * up so the CLUSTER's overall footprint stays the same as the 37-cell
+ * version (still spans the same ~420x370 viewBox), just built from fewer,
+ * larger cells instead of more, smaller ones.
+ */
+const HEX_RADIUS = 2;
 const CENTER_X = 210;
 const CENTER_Y = 185;
 
