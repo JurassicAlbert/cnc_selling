@@ -74,6 +74,10 @@ import { hexPoints } from '@/ui/primitives/SectionDecoration';
  * carries over unchanged, since a `<video>` is a normal HTML element
  * once inside the foreignObject and behaves identically to the `<image>`
  * it replaced for sizing, clipping, and the parallax transform.
+ *
+ * `poster="/videos/hero-carving-poster.jpg"` is the video's own first
+ * frame (`ffmpeg -i hero-carving.mp4 -frames:v 1`, 30KB) — shown while
+ * the video downloads/decodes instead of a blank paper-color rect.
  */
 
 /**
@@ -171,6 +175,7 @@ export function HeroHexMosaic() {
             <video
               ref={videoRef}
               src="/videos/hero-carving.mp4"
+              poster="/videos/hero-carving-poster.jpg"
               autoPlay
               muted
               loop
