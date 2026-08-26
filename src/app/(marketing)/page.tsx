@@ -58,7 +58,10 @@ export default async function MarketingHomePage() {
             <style>{`
               .hero-grid { grid-template-columns: 1fr; }
               @media (min-width: 900px) {
-                .hero-grid { grid-template-columns: 1fr 1fr; }
+                /* Wider than 1fr 1fr on purpose — the hex mosaic needs real
+                   room to read as a proper hero visual, not a small accent
+                   next to the heading (2026-08-26). */
+                .hero-grid { grid-template-columns: 1fr 1.3fr; }
               }
             `}</style>
             <div>

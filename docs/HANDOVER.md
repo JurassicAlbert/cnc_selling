@@ -2342,6 +2342,28 @@ container's restart touches); see the note below on how that was
 confirmed to drain before the fix could be verified against a clean
 build.
 
+## 9v. Hero mosaic, round three: real hexagon geometry, a bigger cluster, a real video loop, and a themed scrollbar — 2026-08-26
+
+Same day, later — the owner looked at the shipped §9s/§9u hero mosaic and pushed back on three things, then two follow-ups after that.
+
+**Round 1 — hex shape, movement proof, scrollbar.** "hex shape not honeycomb shape... I don't mean to tighten the spacing but about the shape the hexes creates." Diagnosed: the 14-cell 2-3-4-3-2 taper from §9s wasn't a valid hex-of-hexagons ring pattern at all — only "radius N" sizes (row `r` holds `2N+1-|r|` cells) actually tile into a hexagon silhouette. Rewrote `HeroHexMosaic.tsx`'s `CELLS` as a true radius-2 hexagon (rows 3-4-5-4-3, 19 cells) computed from real axial hex coordinates instead of hand-picked offsets.
+
+Also re-litigated the parallax mechanism from §9s: `animation-timeline: view()` was correctly attached (`element.getAnimations()` showed a running effect with real progress), but its `currentTime` never advanced under this project's browser-automation tooling across repeated tests — programmatic `scrollTo` and simulated wheel scroll both left it frozen. Rather than ship an effect that couldn't be verified, replaced it with a small `requestAnimationFrame`-throttled scroll listener (`getBoundingClientRect()` → 0–1 transit progress → `translateY` in px) — this codebase's first client-side JS for a purely decorative element, a deliberate, documented exception. Directly verified moving: `translateY` measured at three different scroll positions, three different values.
+
+Also added sitewide scrollbar theming to `theme-vars.css`: `scrollbar-color`/`scrollbar-width` for Firefox, `::-webkit-scrollbar*` for Chromium/WebKit (including mobile Safari), matching the warm cream/brown palette instead of the OS-default grey.
+
+**Round 2 — real gap, real size.** The owner pasted the classic `background-attachment: fixed` snippet asking if it would help; declined — already rejected project-wide for mobile-Safari scroll-jank (see `theme-vars.css`'s own comment), and it doesn't fit a photo fragmented across many SVG hex clips anyway. Two real bugs instead: (1) the 19-cell layout drew each hexagon at the *same* radius used to space their centers — `sqrt(3) * r` is exactly the touching distance for two same-radius pointy-top hexagons, so there was no gap at all. Fixed by splitting `SPACING_R` (centers) from a smaller `CLIP_R` (drawn shape). (2) grew the cluster from radius 2 (19 cells) to radius 3 (37 cells) and the container from 520px to 700px so it reads as a real hero visual against the heading/subcopy/button column, not a small accent — also widened the hero grid's column ratio from `1fr 1fr` to `1fr 1.3fr` (`(marketing)/page.tsx`) so the bigger mosaic has room without starving the text column. Verified: mosaic height now ~79% of the text block's height (577px vs 729px at 1400px viewport), up from ~65% before.
+
+**Round 3 — a real video.** The owner asked for the static photo to become a short video of the actual carving process, "keeping image properties" (same clipping/parallax). No video asset existed in the repo; asked whether they had one rather than guessing or fetching one unprompted. They provided three options — a Pexels URL, a downloaded 116MB 2160×4096 25fps MP4, and a 55MB GIF export — with a stated preference for the GIF "if better." Overrode that preference: a 55MB GIF would be a serious page-weight regression this project's Lighthouse-driven discipline wouldn't accept, and H.264 video is strictly better for a looping clip like this at any size. Re-encoded the MP4 with ffmpeg instead — cropped to the mosaic's exact aspect ratio, scaled to 960×846, 24fps, a 6s loop, H.264/yuv420p, no audio — landed at 523KB (`public/videos/hero-carving.mp4`).
+
+Swapping `<image>` for `<video>` inside the existing SVG needed `<foreignObject>` (SVG has no native video element) — everything else (the clip-path `<g>`, the oversize-for-parallax x/y/width/height, the scroll handler's `getBoundingClientRect()`/`style.transform`) carried over unchanged, since a `<video>` behaves like any other HTML element once inside a foreignObject. `autoPlay muted loop playsInline` for autoplay-policy compliance.
+
+**A tooling gotcha worth remembering:** after the rename `imageRef` → `videoRef`, the browser tab kept reporting `ReferenceError: imageRef is not defined` from a stale Turbopack HMR chunk — persisted identically across a `.next` cache clear *and* a full dev-server restart, because the error was actually stale console-log history from the reused browser tab, not a live error (confirmed by opening a brand-new tab, which showed zero errors against the same running server). If a console error looks impossible to reproduce given the current file contents, check whether it's stale tab history before assuming a real regression — `grep` the file for the referenced symbol first.
+
+### Verified
+
+`npm test` (375/375), `npm run typecheck`, `npm run lint`, `npm run build` all pass after every round. Live-verified in-browser: 37 hex cells with visible gaps forming a real hexagon silhouette; the scroll parallax `translateY` changing across multiple real scroll positions (not just attached-but-frozen); the video loop actually playing (`currentTime` advancing, `paused: false` after an explicit tab focus) and clipped correctly through the hex mosaic; the themed scrollbar's computed `scrollbar-color` resolving to the theme's actual hex values.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

@@ -257,3 +257,29 @@ body {
     transparent 60%
   );
 }
+
+/* Sitewide scrollbar styling, 2026-08-26 — the default OS scrollbar (flat
+   grey) sat visually outside this warm cream/brown palette. Firefox reads
+   `scrollbar-color`/`scrollbar-width` on `html`; every Chromium/WebKit
+   browser (including mobile Safari, this project's tested browser) reads
+   the `::-webkit-scrollbar*` pseudo-elements instead — both are declared
+   so the thumb/track match the theme everywhere. */
+html {
+  scrollbar-color: var(--mui-palette-secondary-main) var(--mui-palette-background-default);
+  scrollbar-width: thin;
+}
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--mui-palette-background-default);
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--mui-palette-secondary-main);
+  border-radius: 999px;
+  border: 3px solid var(--mui-palette-background-default);
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--mui-palette-primary-main);
+}
