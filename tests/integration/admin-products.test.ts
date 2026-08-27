@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyCreateProduct, applySetProductActive, applyUpdateProduct } from '@/server/actions/admin-products';
+import { applyCreateProduct, applySetProductActive, applySetProductSortOrder, applyUpdateProduct } from '@/server/actions/admin-products';
 import type { ProductCoreInput } from '@/server/actions/admin-products';
 import { applySetProductMaterial } from '@/server/actions/admin-product-catalogue';
 import { listActiveProductsByCategorySlug } from '@/server/repositories/products';
@@ -142,6 +142,34 @@ describe('applySetProductActive', () => {
 
     expect((await listActiveProductsByCategorySlug(category.slug)).some((p) => p.slug === input.slug)).toBe(false);
     expect(await prisma.product.findUnique({ where: { id: created.id } })).not.toBeNull();
+  });
+});
+
+describe('applySetProductSortOrder', () => {
+  it('updates sortOrder and audits the change', async () => {
+    const staff = staffActor();
+    const category = await seedCategory();
+    const created = await applyCreateProduct(staff, productInput(category.id, { sortOrder: 0 }));
+    if (!created.ok) throw new Error('setup failed');
+
+    await applySetProductSortOrder(staff, created.id, 7);
+
+    const product = await prisma.product.findUniqueOrThrow({ where: { id: created.id } });
+    expect(product.sortOrder).toBe(7);
+    expect(await prisma.auditLog.count({ where: { entity: 'Product', entityId: created.id, action: 'update', actorEmail: staff.email } })).toBeGreaterThanOrEqual(1);
+  });
+
+  it('rejects a negative or non-integer value and leaves sortOrder unchanged', async () => {
+    const staff = staffActor();
+    const category = await seedCategory();
+    const created = await applyCreateProduct(staff, productInput(category.id, { sortOrder: 4 }));
+    if (!created.ok) throw new Error('setup failed');
+
+    await applySetProductSortOrder(staff, created.id, -1);
+    await applySetProductSortOrder(staff, created.id, 1.5);
+
+    const product = await prisma.product.findUniqueOrThrow({ where: { id: created.id } });
+    expect(product.sortOrder).toBe(4);
   });
 });
 

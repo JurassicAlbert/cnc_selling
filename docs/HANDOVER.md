@@ -2814,6 +2814,37 @@ Fixed with a small role lookup, not a read off Better Auth's own sign-in result 
 
 Verified: `npm run typecheck/lint/test/build` clean; live end-to-end in a fresh browser tab — logged out, requested a fresh OTP for `panel@example.com`, read the code from the dev server log, signed in, landed directly on `/panel` with the real dashboard rendered.
 
+## 9z18. P7c, slice 9 — inline editing for cheap fields (availability, sort order) — 2026-08-27
+
+`docs/ARCHITECTURE.md` §16A.5: "Inline editing in grids for the cheap fields... so a five-second change is not a page navigation." Scoped to the 6 catalogue entities sharing `EntityDataGrid`: Kategorie, Produkty, Materiały, Wykończenia, Wzory, Kolekcje.
+
+### Half the infrastructure already existed
+
+Every one of the 6 entities already had a `setXActive`/`setXAvailable`-style quick-toggle Server Action from P7b's CRUD slices — `applySetCategoryActive`/`setCategoryActive`, and the equivalent for Product/Material/Finish/Design/DesignCollection — apparently built for a details-page toggle, never wired into a grid. This slice's real new work was one `setXSortOrder` action per entity (mirroring the existing pattern exactly) and the grid wiring itself.
+
+### `Switch`, not `DataGrid`'s own boolean `editable` column
+
+MUI's `type: 'boolean'` editable column needs a double-click to enter edit mode, a click on the checkbox, then a commit — clunky for what the architecture doc calls a "toggle." A `Switch` in a `renderCell`, firing its `onChange` on a single click and calling the existing action directly, matches "toggle" literally. Sort order, in contrast, is exactly what `DataGrid`'s real `editable`/`processRowUpdate` mechanism is for (a plain number, double-click, type, Enter/blur commits) — no reason to hand-roll that one.
+
+### A real interaction bug, caught in design before it shipped
+
+`EntityDataGrid`'s `onRowClick` fires on any click in a row, including the first click of a double-click-to-edit on a newly-`editable` cell. Without a guard, clicking to edit `sortOrder` would navigate away before the edit could start. Fixed with a grid-level `onCellClick` that calls `event.stopPropagation()` whenever `params.colDef.editable` is true — the documented MUI X Data Grid pattern, same principle as the existing Link-cell columns' own `onClick={(e) => e.stopPropagation()}`, just at the grid level since an editable cell has no child element to attach that to.
+
+### `showToolbar` boolean column editing isn't what "toggle" means, and MUI's toolbar assumptions bit again
+
+No new bug here beyond what slice 8 already found (`showToolbar` + `slots={{toolbar: GridToolbar}}` together) — just confirming it still holds with the new columns present.
+
+### Live verification found two real, unrelated bugs
+
+1. **Browser-automation coordinate math was wrong, not the app** — screenshot-based click coordinates need scaling to the real viewport (a 1200×800 viewport photographed at 800×533 needs an 0.667 scale factor applied to any click target computed from the DOM), and `ctrl+a` still doesn't select-all inside a `DataGrid` numeric cell editor (same quirk already logged for a plain `TextField`) — worked around by setting the input's value via the native setter + dispatching a real `input` event, and committing via a dispatched `KeyboardEvent('keydown', {key: 'Enter', ...})` rather than the `computer` tool's `key` action (which didn't produce an event `DataGrid`'s internal handler recognized). Confirmed via the dev server's own request log (`setCategorySortOrder(...)` actually firing), not just DOM state — the DOM read was showing an in-flight, not-yet-settled value at first.
+2. **A real, pre-existing determinism bug, not caused by this slice but newly visible because of it**: `orderBy: { sortOrder: 'asc' }` alone has no tiebreaker. This dev seed data has every material's `sortOrder` defaulted to `0` (never customized) — Postgres doesn't guarantee stable ordering across repeated queries for tied sort keys, so the row at position 0 could be a genuinely different database row on every `router.refresh()`. Caught live: a verification click aimed at "Gres biały" landed on "Dąb" instead, on the very next refresh. Fixed by adding `id` as a secondary sort key to all 6 list queries (`orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }]`) — a small, low-risk, directly-justified addition beyond the slice's original plan. FAQ/Strony's own identical `orderBy: { sortOrder: 'asc' }` pattern was deliberately left untouched — out of scope this slice (no quick-toggle action exists for them yet), noted for whoever picks that entity up next.
+
+Both issues were fixed, and the two disposable-looking-but-real state changes made while diagnosing them (a category's `sortOrder`/`isActive`, two materials' `isAvailable`) were restored to their original values via a one-off script before moving on — dev data used for live verification, not a throwaway sandbox.
+
+### Verified
+
+`npm run typecheck && npm run lint && npm test && npm run build` clean (561/561 tests, 561 stable across 3 consecutive full-suite runs — the dashboard test flakiness from slice 8 recurred once more here, purely from adding more concurrent order-creating test files, not a regression in the dashboard logic itself; fixed properly this time by pinning `getDashboardKpis`'s date-scoped tests to a far-future `now` fully decoupled from any other test file's real-wall-clock fixtures, and switching its two non-date-scoped fields to absolute lower-bound assertions instead of before/after deltas, which can go negative from unrelated concurrent cleanup). Live-verified end-to-end via the dev server's own request log for every mutation (not just DOM state, which can read stale mid-flight): `Switch` toggle → `setMaterialAvailable(id, false)` → real DB write → `router.refresh()`; `sortOrder` cell edit → `setCategorySortOrder(id, 99)` → real DB write → the list re-sorted with the edited row moving to its new position, proving the whole round trip including re-ordering. Confirmed no accidental row-click navigation fires when interacting with either editable field.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

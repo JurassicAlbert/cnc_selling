@@ -451,6 +451,29 @@ absolute counts against an intentionally-unscoped, shared test database
 — rewritten as before/after deltas, race-proof under `npm test`'s
 parallel file execution. See `docs/HANDOVER.md` §9z16.
 
+**Fix: STAFF/ADMIN land on `/panel` after sign-in, not `/moje-konto` —
+2026-08-27.** Found live by the owner: signing in with a real staff OTP
+landed on the plain customer account page with no indication `/panel`
+was a separate destination. Now does one extra role lookup and
+redirects accordingly — not a read off Better Auth's own sign-in
+result, since `signInEmailOTP`'s returned `user` doesn't carry the
+custom `role` field (caught by `tsc`), unlike `signInEmail`/
+`signUpEmail`'s. See `docs/HANDOVER.md` §9z17.
+
+**P7c, inline editing for cheap fields (slice 9) — built 2026-08-27.**
+Availability toggle and sort order, editable directly in the grid, on
+the 6 catalogue entities. Availability is a `Switch` (single click,
+matching "toggle" — MUI's own boolean-column editing needs a
+double-click-then-checkbox, clunky for this); sort order is a real
+`editable`/`processRowUpdate` number column. Reused the `setXActive`/
+`setXAvailable` actions already built in P7b (never wired into a grid
+before); added the matching `setXSortOrder` per entity. Found and fixed
+a real, pre-existing determinism bug along the way: `orderBy: {
+sortOrder: 'asc' }` alone has no tiebreaker, so materials sharing
+`sortOrder: 0` (unseeded dev data) rendered in a different order on
+every refresh — added `id` as a secondary sort key across all 6 list
+queries. See `docs/HANDOVER.md` §9z18.
+
 ---
 
 ## Getting set up
@@ -548,7 +571,10 @@ admin-only theme, and a grouped icon sidebar (§9z15) — are built, and so
 is slice 8 (§9z16) — persisted dense grids (density/sort/columns via a
 new `useGridPreferences` hook, `localStorage`-backed) across all 13 grid
 components, and every Dashboard stat card linking through to its real,
-correctly-filtered records. **P8's Dashboard module is correspondingly
+correctly-filtered records — and slice 9 (§9z18): inline editing
+(availability toggle, sort order) on the 6 catalogue grids. A related
+fix (§9z17): staff/admin sign-in lands on `/panel` directly now, not
+the customer account page. **P8's Dashboard module is correspondingly
 checked off in `docs/CHECKLIST.md`**, except the configurator funnel
 (needs a new `AnalyticsEvent` model, deliberately deferred, not silently
 dropped). See `docs/CHECKLIST.md` for the itemised state of every phase.
@@ -558,8 +584,8 @@ Next:
   each needing its own design: Produkcja's rows link to a different
   entity's page; Szablony e-mail is a fixed two-row list; Dziennik
   zdarzeń's diff column holds variable-height JSON `DataGrid` doesn't
-  suit. Then bulk actions, inline editing, saved filters, keyboard nav
-  (J/K between records), and the rest of the list, one slice at a time.
+  suit. Then bulk actions, saved filters, keyboard nav (J/K between
+  records), and the rest of the list, one slice at a time.
 - **P8, the rest of it** — pricing admin (versioned saves, price
   simulator, audit diff — highest-risk screen in the app) and the
   configurator funnel (needs `AnalyticsEvent` + instrumenting every

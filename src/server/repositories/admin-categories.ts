@@ -18,7 +18,7 @@ export type AdminCategoryListItem = {
 
 export async function listCategoriesForAdmin(): Promise<readonly AdminCategoryListItem[]> {
   const categories = await prisma.category.findMany({
-    orderBy: { sortOrder: 'asc' },
+    orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
     select: {
       id: true,
       slug: true,

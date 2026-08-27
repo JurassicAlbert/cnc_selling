@@ -15,15 +15,23 @@ export type AdminCollectionListItem = {
   readonly slug: string;
   readonly namePl: string;
   readonly isActive: boolean;
+  readonly sortOrder: number;
   readonly designCount: number;
 };
 
 export async function listCollectionsForAdmin(): Promise<readonly AdminCollectionListItem[]> {
   const collections = await prisma.designCollection.findMany({
-    orderBy: { sortOrder: 'asc' },
-    select: { id: true, slug: true, namePl: true, isActive: true, _count: { select: { designs: true } } },
+    orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+    select: { id: true, slug: true, namePl: true, isActive: true, sortOrder: true, _count: { select: { designs: true } } },
   });
-  return collections.map((c) => ({ id: c.id, slug: c.slug, namePl: c.namePl, isActive: c.isActive, designCount: c._count.designs }));
+  return collections.map((c) => ({
+    id: c.id,
+    slug: c.slug,
+    namePl: c.namePl,
+    isActive: c.isActive,
+    sortOrder: c.sortOrder,
+    designCount: c._count.designs,
+  }));
 }
 
 export type AdminCollectionDetail = {
@@ -55,6 +63,7 @@ export type AdminDesignListItem = {
   readonly namePl: string;
   readonly rightsStatus: DesignRightsStatus;
   readonly isActive: boolean;
+  readonly sortOrder: number;
 };
 
 export type AdminDesignListFilters = { readonly search?: string };
@@ -66,8 +75,8 @@ export async function listDesignsForAdmin(filters: AdminDesignListFilters = {}):
       filters.search !== undefined && filters.search.length > 0
         ? { OR: [{ code: { contains: filters.search, mode: 'insensitive' } }, { namePl: { contains: filters.search, mode: 'insensitive' } }] }
         : undefined,
-    orderBy: { sortOrder: 'asc' },
-    select: { id: true, code: true, namePl: true, rightsStatus: true, isActive: true },
+    orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+    select: { id: true, code: true, namePl: true, rightsStatus: true, isActive: true, sortOrder: true },
   });
 }
 

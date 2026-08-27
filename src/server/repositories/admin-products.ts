@@ -21,6 +21,7 @@ export type AdminProductListItem = {
   readonly typeCode: ProductTypeCode;
   readonly categoryNamePl: string;
   readonly isActive: boolean;
+  readonly sortOrder: number;
 };
 
 export async function listProductsForAdmin(filters: AdminProductListFilters): Promise<readonly AdminProductListItem[]> {
@@ -32,13 +33,14 @@ export async function listProductsForAdmin(filters: AdminProductListFilters): Pr
         ? { namePl: { contains: filters.search, mode: 'insensitive' } }
         : {}),
     },
-    orderBy: [{ categoryId: 'asc' }, { sortOrder: 'asc' }],
+    orderBy: [{ categoryId: 'asc' }, { sortOrder: 'asc' }, { id: 'asc' }],
     select: {
       id: true,
       slug: true,
       namePl: true,
       typeCode: true,
       isActive: true,
+      sortOrder: true,
       category: { select: { namePl: true } },
     },
   });
@@ -49,6 +51,7 @@ export async function listProductsForAdmin(filters: AdminProductListFilters): Pr
     typeCode: product.typeCode,
     categoryNamePl: product.category.namePl,
     isActive: product.isActive,
+    sortOrder: product.sortOrder,
   }));
 }
 

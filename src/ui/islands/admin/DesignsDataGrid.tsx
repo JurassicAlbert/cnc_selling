@@ -1,16 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import { Chip } from '@mui/material';
+import { useRouter } from 'next/navigation';
+import { Chip, Switch } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN, adminDesignRightsStatusLabel } from '@/content/pl/admin';
+import { setDesignActive, setDesignSortOrder } from '@/server/actions/admin-designs';
 import type { AdminDesignListItem } from '@/server/repositories/admin-designs';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
 
 const SELLABLE_RIGHTS = new Set(['APPROVED_COMMERCIAL', 'PUBLIC_DOMAIN']);
 
 export function DesignsDataGrid({ rows }: { readonly rows: readonly AdminDesignListItem[] }) {
+  const router = useRouter();
+
   const columns: GridColDef<AdminDesignListItem>[] = [
     {
       field: 'code',
@@ -38,19 +42,45 @@ export function DesignsDataGrid({ rows }: { readonly rows: readonly AdminDesignL
       ),
     },
     {
+      field: 'sortOrder',
+      headerName: ADMIN.designFieldSortOrderPl,
+      flex: 0.6,
+      minWidth: 130,
+      type: 'number',
+      editable: true,
+    },
+    {
       field: 'isActive',
       headerName: ADMIN.designsColumnStatusPl,
       flex: 0.7,
-      minWidth: 130,
+      minWidth: 110,
       renderCell: (params) => (
-        <Chip
+        <Switch
           size="small"
-          label={params.value ? ADMIN.activeLabelPl : ADMIN.inactiveLabelPl}
-          color={params.value ? 'success' : 'default'}
+          checked={params.value}
+          onClick={(e) => e.stopPropagation()}
+          onChange={async (e) => {
+            await setDesignActive(params.row.id, e.target.checked);
+            router.refresh();
+          }}
         />
       ),
     },
   ];
 
-  return <EntityDataGrid rows={rows} columns={columns} basePath="/panel/wzory" />;
+  return (
+    <EntityDataGrid
+      rows={rows}
+      columns={columns}
+      basePath="/panel/wzory"
+      processRowUpdate={async (newRow, oldRow) => {
+        if (newRow.sortOrder !== oldRow.sortOrder) {
+          await setDesignSortOrder(newRow.id, newRow.sortOrder);
+          router.refresh();
+        }
+        return newRow;
+      }}
+      onProcessRowUpdateError={(error) => console.error('[DesignsDataGrid] row update failed:', error)}
+    />
+  );
 }

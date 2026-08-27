@@ -130,6 +130,31 @@ export async function setCollectionActive(id: string, isActive: boolean): Promis
   revalidatePath(`/panel/kolekcje/${id}`);
 }
 
+export async function applySetCollectionSortOrder(staff: CurrentSession, id: string, sortOrder: number): Promise<void> {
+  if (!Number.isInteger(sortOrder) || sortOrder < 0) {
+    return;
+  }
+  const current = await prisma.designCollection.findUnique({ where: { id }, select: { sortOrder: true } });
+  if (current === null) {
+    return;
+  }
+  await prisma.designCollection.update({ where: { id }, data: { sortOrder } });
+  await writeAuditLog({
+    actor: staff,
+    entity: 'DesignCollection',
+    entityId: id,
+    action: 'update',
+    diff: { sortOrder: { from: current.sortOrder, to: sortOrder } },
+  });
+}
+
+export async function setCollectionSortOrder(id: string, sortOrder: number): Promise<void> {
+  const staff = await requireStaffSession();
+  await applySetCollectionSortOrder(staff, id, sortOrder);
+  revalidatePath('/panel/kolekcje');
+  revalidatePath(`/panel/kolekcje/${id}`);
+}
+
 // --- Designs ------------------------------------------------------------
 
 export type DesignMutationResult =
@@ -351,6 +376,31 @@ export async function applySetDesignActive(staff: CurrentSession, id: string, is
 export async function setDesignActive(id: string, isActive: boolean): Promise<void> {
   const staff = await requireStaffSession();
   await applySetDesignActive(staff, id, isActive);
+  revalidatePath('/panel/wzory');
+  revalidatePath(`/panel/wzory/${id}`);
+}
+
+export async function applySetDesignSortOrder(staff: CurrentSession, id: string, sortOrder: number): Promise<void> {
+  if (!Number.isInteger(sortOrder) || sortOrder < 0) {
+    return;
+  }
+  const current = await prisma.design.findUnique({ where: { id }, select: { sortOrder: true } });
+  if (current === null) {
+    return;
+  }
+  await prisma.design.update({ where: { id }, data: { sortOrder } });
+  await writeAuditLog({
+    actor: staff,
+    entity: 'Design',
+    entityId: id,
+    action: 'update',
+    diff: { sortOrder: { from: current.sortOrder, to: sortOrder } },
+  });
+}
+
+export async function setDesignSortOrder(id: string, sortOrder: number): Promise<void> {
+  const staff = await requireStaffSession();
+  await applySetDesignSortOrder(staff, id, sortOrder);
   revalidatePath('/panel/wzory');
   revalidatePath(`/panel/wzory/${id}`);
 }

@@ -166,3 +166,36 @@ export async function setCategoryActive(id: string, isActive: boolean): Promise<
   revalidatePath('/panel/kategorie');
   revalidatePath(`/panel/kategorie/${id}`);
 }
+
+export async function applySetCategorySortOrder(
+  staff: CurrentSession,
+  id: string,
+  sortOrder: number,
+): Promise<CategoryMutationResult> {
+  if (!Number.isInteger(sortOrder) || sortOrder < 0) {
+    return { ok: false, detail: 'Kolejność wyświetlania musi być liczbą całkowitą nieujemną.' };
+  }
+
+  const current = await prisma.category.findUnique({ where: { id }, select: { sortOrder: true } });
+  if (current === null) {
+    return { ok: false, detail: 'Kategoria nie istnieje.' };
+  }
+
+  await prisma.category.update({ where: { id }, data: { sortOrder } });
+  await writeAuditLog({
+    actor: staff,
+    entity: 'Category',
+    entityId: id,
+    action: 'update',
+    diff: { sortOrder: { from: current.sortOrder, to: sortOrder } },
+  });
+
+  return { ok: true, id };
+}
+
+export async function setCategorySortOrder(id: string, sortOrder: number): Promise<void> {
+  const staff = await requireStaffSession();
+  await applySetCategorySortOrder(staff, id, sortOrder);
+  revalidatePath('/panel/kategorie');
+  revalidatePath(`/panel/kategorie/${id}`);
+}

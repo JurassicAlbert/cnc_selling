@@ -4,7 +4,9 @@ import {
   applyCreateCollection,
   applyCreateDesign,
   applySetCollectionActive,
+  applySetCollectionSortOrder,
   applySetDesignActive,
+  applySetDesignSortOrder,
   applyUpdateCollection,
 } from '@/server/actions/admin-designs';
 import { applyAddDesignMaterial } from '@/server/actions/admin-design-materials';
@@ -89,6 +91,32 @@ describe('applyCreateCollection / applyUpdateCollection / applySetCollectionActi
   });
 });
 
+describe('applySetCollectionSortOrder', () => {
+  it('updates sortOrder and audits the change', async () => {
+    const staff = staffActor();
+    const created = await applyCreateCollection(staff, { slug: uid(), namePl: 'Testowa kolekcja', descPl: 'Opis', sortOrder: 0 });
+    if (!created.ok) throw new Error('setup failed');
+
+    await applySetCollectionSortOrder(staff, created.id, 8);
+
+    const collection = await prisma.designCollection.findUniqueOrThrow({ where: { id: created.id } });
+    expect(collection.sortOrder).toBe(8);
+    expect(await prisma.auditLog.count({ where: { entity: 'DesignCollection', entityId: created.id, action: 'update', actorEmail: staff.email } })).toBeGreaterThanOrEqual(1);
+  });
+
+  it('rejects a negative or non-integer value and leaves sortOrder unchanged', async () => {
+    const staff = staffActor();
+    const created = await applyCreateCollection(staff, { slug: uid(), namePl: 'Testowa kolekcja', descPl: 'Opis', sortOrder: 2 });
+    if (!created.ok) throw new Error('setup failed');
+
+    await applySetCollectionSortOrder(staff, created.id, -1);
+    await applySetCollectionSortOrder(staff, created.id, 1.5);
+
+    const collection = await prisma.designCollection.findUniqueOrThrow({ where: { id: created.id } });
+    expect(collection.sortOrder).toBe(2);
+  });
+});
+
 describe('applyCreateDesign', () => {
   it('creates a design with two real uploaded images and audits it', async () => {
     const staff = staffActor();
@@ -148,6 +176,32 @@ describe('applySetDesignActive', () => {
 
     expect((await listDesignOptionsForAdmin()).some((d) => d.id === created.id)).toBe(false);
     expect(await prisma.design.findUnique({ where: { id: created.id } })).not.toBeNull();
+  });
+});
+
+describe('applySetDesignSortOrder', () => {
+  it('updates sortOrder and audits the change', async () => {
+    const staff = staffActor();
+    const created = await applyCreateDesign(staff, designFormData({ sortOrder: '0' }));
+    if (!created.ok) throw new Error('setup failed');
+
+    await applySetDesignSortOrder(staff, created.id, 10);
+
+    const design = await prisma.design.findUniqueOrThrow({ where: { id: created.id } });
+    expect(design.sortOrder).toBe(10);
+    expect(await prisma.auditLog.count({ where: { entity: 'Design', entityId: created.id, action: 'update', actorEmail: staff.email } })).toBeGreaterThanOrEqual(1);
+  });
+
+  it('rejects a negative or non-integer value and leaves sortOrder unchanged', async () => {
+    const staff = staffActor();
+    const created = await applyCreateDesign(staff, designFormData({ sortOrder: '3' }));
+    if (!created.ok) throw new Error('setup failed');
+
+    await applySetDesignSortOrder(staff, created.id, -1);
+    await applySetDesignSortOrder(staff, created.id, 1.5);
+
+    const design = await prisma.design.findUniqueOrThrow({ where: { id: created.id } });
+    expect(design.sortOrder).toBe(3);
   });
 });
 

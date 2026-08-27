@@ -1,14 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { Chip } from '@mui/material';
+import { useRouter } from 'next/navigation';
+import { Switch } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN } from '@/content/pl/admin';
+import { setCollectionActive, setCollectionSortOrder } from '@/server/actions/admin-designs';
 import type { AdminCollectionListItem } from '@/server/repositories/admin-designs';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
 
 export function CollectionsDataGrid({ rows }: { readonly rows: readonly AdminCollectionListItem[] }) {
+  const router = useRouter();
+
   const columns: GridColDef<AdminCollectionListItem>[] = [
     {
       field: 'namePl',
@@ -30,19 +34,45 @@ export function CollectionsDataGrid({ rows }: { readonly rows: readonly AdminCol
       headerAlign: 'right',
     },
     {
+      field: 'sortOrder',
+      headerName: ADMIN.collectionFieldSortOrderPl,
+      flex: 0.6,
+      minWidth: 130,
+      type: 'number',
+      editable: true,
+    },
+    {
       field: 'isActive',
       headerName: ADMIN.collectionsColumnStatusPl,
       flex: 0.7,
-      minWidth: 130,
+      minWidth: 110,
       renderCell: (params) => (
-        <Chip
+        <Switch
           size="small"
-          label={params.value ? ADMIN.activeLabelPl : ADMIN.inactiveLabelPl}
-          color={params.value ? 'success' : 'default'}
+          checked={params.value}
+          onClick={(e) => e.stopPropagation()}
+          onChange={async (e) => {
+            await setCollectionActive(params.row.id, e.target.checked);
+            router.refresh();
+          }}
         />
       ),
     },
   ];
 
-  return <EntityDataGrid rows={rows} columns={columns} basePath="/panel/kolekcje" />;
+  return (
+    <EntityDataGrid
+      rows={rows}
+      columns={columns}
+      basePath="/panel/kolekcje"
+      processRowUpdate={async (newRow, oldRow) => {
+        if (newRow.sortOrder !== oldRow.sortOrder) {
+          await setCollectionSortOrder(newRow.id, newRow.sortOrder);
+          router.refresh();
+        }
+        return newRow;
+      }}
+      onProcessRowUpdateError={(error) => console.error('[CollectionsDataGrid] row update failed:', error)}
+    />
+  );
 }

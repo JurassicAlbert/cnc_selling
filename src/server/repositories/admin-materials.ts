@@ -15,12 +15,13 @@ export type AdminMaterialListItem = {
   readonly namePl: string;
   readonly family: MaterialFamily;
   readonly isAvailable: boolean;
+  readonly sortOrder: number;
 };
 
 export async function listMaterialsForAdmin(): Promise<readonly AdminMaterialListItem[]> {
   return prisma.material.findMany({
-    orderBy: { sortOrder: 'asc' },
-    select: { id: true, slug: true, namePl: true, family: true, isAvailable: true },
+    orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+    select: { id: true, slug: true, namePl: true, family: true, isAvailable: true, sortOrder: true },
   });
 }
 

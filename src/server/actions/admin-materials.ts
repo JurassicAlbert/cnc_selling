@@ -188,3 +188,28 @@ export async function setMaterialAvailable(id: string, isAvailable: boolean): Pr
   revalidatePath('/panel/materialy');
   revalidatePath(`/panel/materialy/${id}`);
 }
+
+export async function applySetMaterialSortOrder(staff: CurrentSession, id: string, sortOrder: number): Promise<void> {
+  if (!Number.isInteger(sortOrder) || sortOrder < 0) {
+    return;
+  }
+  const current = await prisma.material.findUnique({ where: { id }, select: { sortOrder: true } });
+  if (current === null) {
+    return;
+  }
+  await prisma.material.update({ where: { id }, data: { sortOrder } });
+  await writeAuditLog({
+    actor: staff,
+    entity: 'Material',
+    entityId: id,
+    action: 'update',
+    diff: { sortOrder: { from: current.sortOrder, to: sortOrder } },
+  });
+}
+
+export async function setMaterialSortOrder(id: string, sortOrder: number): Promise<void> {
+  const staff = await requireStaffSession();
+  await applySetMaterialSortOrder(staff, id, sortOrder);
+  revalidatePath('/panel/materialy');
+  revalidatePath(`/panel/materialy/${id}`);
+}

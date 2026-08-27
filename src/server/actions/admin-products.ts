@@ -153,3 +153,28 @@ export async function setProductActive(id: string, isActive: boolean): Promise<v
   revalidatePath('/panel/produkty');
   revalidatePath(`/panel/produkty/${id}`);
 }
+
+export async function applySetProductSortOrder(staff: CurrentSession, id: string, sortOrder: number): Promise<void> {
+  if (!Number.isInteger(sortOrder) || sortOrder < 0) {
+    return;
+  }
+  const current = await prisma.product.findUnique({ where: { id }, select: { sortOrder: true } });
+  if (current === null) {
+    return;
+  }
+  await prisma.product.update({ where: { id }, data: { sortOrder } });
+  await writeAuditLog({
+    actor: staff,
+    entity: 'Product',
+    entityId: id,
+    action: 'update',
+    diff: { sortOrder: { from: current.sortOrder, to: sortOrder } },
+  });
+}
+
+export async function setProductSortOrder(id: string, sortOrder: number): Promise<void> {
+  const staff = await requireStaffSession();
+  await applySetProductSortOrder(staff, id, sortOrder);
+  revalidatePath('/panel/produkty');
+  revalidatePath(`/panel/produkty/${id}`);
+}

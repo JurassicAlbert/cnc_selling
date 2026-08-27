@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyCreateFinish, applySetFinishAvailable, applyUpdateFinish } from '@/server/actions/admin-finishes';
+import { applyCreateFinish, applySetFinishAvailable, applySetFinishSortOrder, applyUpdateFinish } from '@/server/actions/admin-finishes';
 import { listFinishOptionsForAdmin } from '@/server/repositories/admin-finishes';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';
@@ -101,5 +101,31 @@ describe('applySetFinishAvailable', () => {
 
     expect((await listFinishOptionsForAdmin()).some((f) => f.id === created.id)).toBe(false);
     expect(await prisma.finish.findUnique({ where: { id: created.id } })).not.toBeNull();
+  });
+});
+
+describe('applySetFinishSortOrder', () => {
+  it('updates sortOrder and audits the change', async () => {
+    const staff = staffActor();
+    const created = await applyCreateFinish(staff, finishFormData({ sortOrder: '0' }));
+    if (!created.ok) throw new Error('setup failed');
+
+    await applySetFinishSortOrder(staff, created.id, 6);
+
+    const finish = await prisma.finish.findUniqueOrThrow({ where: { id: created.id } });
+    expect(finish.sortOrder).toBe(6);
+    expect(await prisma.auditLog.count({ where: { entity: 'Finish', entityId: created.id, action: 'update', actorEmail: staff.email } })).toBeGreaterThanOrEqual(1);
+  });
+
+  it('rejects a negative or non-integer value and leaves sortOrder unchanged', async () => {
+    const staff = staffActor();
+    const created = await applyCreateFinish(staff, finishFormData({ sortOrder: '1' }));
+    if (!created.ok) throw new Error('setup failed');
+
+    await applySetFinishSortOrder(staff, created.id, -1);
+    await applySetFinishSortOrder(staff, created.id, 1.5);
+
+    const finish = await prisma.finish.findUniqueOrThrow({ where: { id: created.id } });
+    expect(finish.sortOrder).toBe(1);
   });
 });

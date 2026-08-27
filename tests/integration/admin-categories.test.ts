@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyCreateCategory, applySetCategoryActive, applyUpdateCategory } from '@/server/actions/admin-categories';
+import { applyCreateCategory, applySetCategoryActive, applySetCategorySortOrder, applyUpdateCategory } from '@/server/actions/admin-categories';
 import type { CategoryFormInput } from '@/server/actions/admin-categories';
 import { listActiveCategories } from '@/server/repositories/categories';
 import type { CurrentSession } from '@/server/auth/session';
@@ -89,5 +89,32 @@ describe('applySetCategoryActive', () => {
 
     expect((await listActiveCategories()).some((c) => c.slug === slug)).toBe(false);
     expect(await prisma.category.findUnique({ where: { id: created.id } })).not.toBeNull();
+  });
+});
+
+describe('applySetCategorySortOrder', () => {
+  it('updates sortOrder and audits the change', async () => {
+    const staff = staffActor();
+    const created = await applyCreateCategory(staff, categoryInput({ sortOrder: 0 }));
+    if (!created.ok) throw new Error('setup failed');
+
+    const result = await applySetCategorySortOrder(staff, created.id, 5);
+    expect(result.ok).toBe(true);
+
+    const category = await prisma.category.findUniqueOrThrow({ where: { id: created.id } });
+    expect(category.sortOrder).toBe(5);
+    expect(await prisma.auditLog.count({ where: { entity: 'Category', entityId: created.id, action: 'update', actorEmail: staff.email } })).toBeGreaterThanOrEqual(1);
+  });
+
+  it('rejects a negative or non-integer value and leaves sortOrder unchanged', async () => {
+    const staff = staffActor();
+    const created = await applyCreateCategory(staff, categoryInput({ sortOrder: 3 }));
+    if (!created.ok) throw new Error('setup failed');
+
+    expect((await applySetCategorySortOrder(staff, created.id, -1)).ok).toBe(false);
+    expect((await applySetCategorySortOrder(staff, created.id, 1.5)).ok).toBe(false);
+
+    const category = await prisma.category.findUniqueOrThrow({ where: { id: created.id } });
+    expect(category.sortOrder).toBe(3);
   });
 });

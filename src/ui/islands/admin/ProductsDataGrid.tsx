@@ -1,14 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { Chip } from '@mui/material';
+import { useRouter } from 'next/navigation';
+import { Switch } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN } from '@/content/pl/admin';
+import { setProductActive, setProductSortOrder } from '@/server/actions/admin-products';
 import type { AdminProductListItem } from '@/server/repositories/admin-products';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
 
 export function ProductsDataGrid({ rows }: { readonly rows: readonly AdminProductListItem[] }) {
+  const router = useRouter();
+
   const columns: GridColDef<AdminProductListItem>[] = [
     {
       field: 'namePl',
@@ -24,19 +28,45 @@ export function ProductsDataGrid({ rows }: { readonly rows: readonly AdminProduc
     { field: 'slug', headerName: ADMIN.productsColumnSlugPl, flex: 1, minWidth: 160 },
     { field: 'categoryNamePl', headerName: ADMIN.productsColumnCategoryPl, flex: 1, minWidth: 160 },
     {
+      field: 'sortOrder',
+      headerName: ADMIN.productFieldSortOrderPl,
+      flex: 0.6,
+      minWidth: 130,
+      type: 'number',
+      editable: true,
+    },
+    {
       field: 'isActive',
       headerName: ADMIN.productsColumnStatusPl,
       flex: 0.7,
-      minWidth: 130,
+      minWidth: 110,
       renderCell: (params) => (
-        <Chip
+        <Switch
           size="small"
-          label={params.value ? ADMIN.activeLabelPl : ADMIN.inactiveLabelPl}
-          color={params.value ? 'success' : 'default'}
+          checked={params.value}
+          onClick={(e) => e.stopPropagation()}
+          onChange={async (e) => {
+            await setProductActive(params.row.id, e.target.checked);
+            router.refresh();
+          }}
         />
       ),
     },
   ];
 
-  return <EntityDataGrid rows={rows} columns={columns} basePath="/panel/produkty" />;
+  return (
+    <EntityDataGrid
+      rows={rows}
+      columns={columns}
+      basePath="/panel/produkty"
+      processRowUpdate={async (newRow, oldRow) => {
+        if (newRow.sortOrder !== oldRow.sortOrder) {
+          await setProductSortOrder(newRow.id, newRow.sortOrder);
+          router.refresh();
+        }
+        return newRow;
+      }}
+      onProcessRowUpdateError={(error) => console.error('[ProductsDataGrid] row update failed:', error)}
+    />
+  );
 }

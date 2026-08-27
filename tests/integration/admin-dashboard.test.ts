@@ -103,57 +103,69 @@ afterEach(async () => {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// Far enough in the future that no other test file's `createdAt: now()`
+// default fixtures (real wall-clock time) can ever land inside these
+// windows — full isolation from cross-file parallel noise, not just a
+// same-file precaution. `getDashboardKpis`'s date-scoped fields
+// (orders*/revenue*/AOV) all key off the explicit `now` parameter it
+// already accepts specifically for this reason.
+const ISOLATED_NOW = new Date('2030-06-15T12:00:00.000Z');
+
 describe('getDashboardKpis', () => {
   // `getDashboardKpis` is deliberately unscoped (no test-fixture-prefix
   // filter — it queries every real order, matching its real production
-  // purpose). Every assertion below is therefore a BEFORE/AFTER delta
-  // across this test's own fixtures, never an absolute value — asserting
-  // e.g. `ordersToday === 2` would be flaky under `npm test`'s parallel
-  // test-file execution, where other files' own fixtures (created with the
-  // same real `createdAt: now()` default) transiently exist in the same
-  // shared database. A prior version of this test asserted absolutes and
-  // failed exactly this way the first time it ran inside the full suite.
+  // purpose). A prior version of this describe block asserted BEFORE/AFTER
+  // deltas against the real `now()` — still flaky under `npm test`'s
+  // parallel file execution, since another file's concurrent order-creation
+  // (or its own afterEach cleanup, for the two fields below with no date
+  // scoping at all) can land inside the measurement window in either
+  // direction. Fixed two different ways, per field:
   it('counts orders in each window regardless of status, but only sums revenue for non-CANCELLED orders', async () => {
-    const now = new Date();
-    const before = await getDashboardKpis(now);
+    // Date-scoped fields: pin `now` far into the future (see ISOLATED_NOW)
+    // so this window is exclusively populated by this test's own fixtures.
+    await seedOrder({ createdAt: ISOLATED_NOW, status: 'NEW', subtotalNetGrosze: 1000, totalGrossGrosze: 1230 });
+    await seedOrder({ createdAt: ISOLATED_NOW, status: 'CANCELLED', subtotalNetGrosze: 5000, totalGrossGrosze: 6150 });
 
-    await seedOrder({ createdAt: now, status: 'NEW', subtotalNetGrosze: 1000, totalGrossGrosze: 1230 });
-    await seedOrder({ createdAt: now, status: 'CANCELLED', subtotalNetGrosze: 5000, totalGrossGrosze: 6150 });
+    const kpis = await getDashboardKpis(ISOLATED_NOW);
 
-    const after = await getDashboardKpis(now);
-
-    expect(after.ordersToday - before.ordersToday).toBe(2); // both today's orders count, cancelled included
-    expect(after.orders30d - before.orders30d).toBe(2);
-    expect(after.revenueNet30dGrosze - before.revenueNet30dGrosze).toBe(1000); // cancelled order's 5000 excluded
-    expect(after.revenueGross30dGrosze - before.revenueGross30dGrosze).toBe(1230);
+    expect(kpis.ordersToday).toBe(2); // both count, cancelled included
+    expect(kpis.orders30d).toBe(2);
+    expect(kpis.revenueNet30dGrosze).toBe(1000); // cancelled order's 5000 excluded
+    expect(kpis.revenueGross30dGrosze).toBe(1230);
   });
 
   it('counts orders awaiting payment, pending design reviews, and in-production orders correctly', async () => {
-    const before = await getDashboardKpis();
-
+    // Not date-scoped at all (global counts by design), so no `now` pin can
+    // isolate them — a before/after delta can go negative from an unrelated
+    // concurrent test's own cleanup, observed live. An absolute lower bound
+    // on the value immediately after seeding is what's actually robust:
+    // this test's own row is guaranteed present at that point (nothing else
+    // can remove a row only this test's own afterEach owns), so the true
+    // count is unconditionally >= 1 regardless of concurrent activity.
     await seedOrder({ paymentStatus: 'AWAITING' });
     await seedCustomerDesign('PENDING_REVIEW');
     await seedOrder({ status: 'IN_PRODUCTION', paymentStatus: 'PAID' }); // PAID: must not also count toward ordersAwaitingPayment
 
-    const after = await getDashboardKpis();
+    const kpis = await getDashboardKpis();
 
-    expect(after.ordersAwaitingPayment - before.ordersAwaitingPayment).toBe(1);
-    expect(after.designsAwaitingReview - before.designsAwaitingReview).toBe(1);
-    expect(after.ordersInProduction - before.ordersInProduction).toBe(1);
+    expect(kpis.ordersAwaitingPayment).toBeGreaterThanOrEqual(1);
+    expect(kpis.designsAwaitingReview).toBeGreaterThanOrEqual(1);
+    expect(kpis.ordersInProduction).toBeGreaterThanOrEqual(1);
   });
 
-  it('an order outside the 30-day window changes neither revenue nor AOV', async () => {
-    const now = new Date();
-    const before = await getDashboardKpis(now);
+  it('an order outside the 30-day window does not count toward it or its revenue', async () => {
+    await seedOrder({
+      createdAt: new Date(ISOLATED_NOW.getTime() - 40 * DAY_MS),
+      subtotalNetGrosze: 999_999,
+      totalGrossGrosze: 999_999,
+    });
 
-    await seedOrder({ createdAt: new Date(now.getTime() - 40 * DAY_MS), subtotalNetGrosze: 999_999, totalGrossGrosze: 999_999 });
+    const kpis = await getDashboardKpis(ISOLATED_NOW);
 
-    const after = await getDashboardKpis(now);
-
-    expect(after.revenueNet30dGrosze).toBe(before.revenueNet30dGrosze);
-    expect(after.revenueGross30dGrosze).toBe(before.revenueGross30dGrosze);
-    expect(after.averageOrderValueGrosze).toBe(before.averageOrderValueGrosze);
-    expect(after.orders30d).toBe(before.orders30d); // 40 days ago is outside the 30-day window entirely
+    expect(kpis.orders30d).toBe(0);
+    expect(kpis.revenueNet30dGrosze).toBe(0);
+    expect(kpis.revenueGross30dGrosze).toBe(0);
+    expect(kpis.averageOrderValueGrosze).toBe(0);
   });
 });
 

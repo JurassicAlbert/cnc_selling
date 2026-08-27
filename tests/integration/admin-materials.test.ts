@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyCreateMaterial, applySetMaterialAvailable, applyUpdateMaterial } from '@/server/actions/admin-materials';
+import { applyCreateMaterial, applySetMaterialAvailable, applySetMaterialSortOrder, applyUpdateMaterial } from '@/server/actions/admin-materials';
 import { applyAddMaterialFinish } from '@/server/actions/admin-material-finishes';
 import { listMaterialOptionsForAdmin } from '@/server/repositories/admin-products';
 import type { CurrentSession } from '@/server/auth/session';
@@ -115,6 +115,32 @@ describe('applySetMaterialAvailable', () => {
 
     expect((await listMaterialOptionsForAdmin()).some((m) => m.id === created.id)).toBe(false);
     expect(await prisma.material.findUnique({ where: { id: created.id } })).not.toBeNull();
+  });
+});
+
+describe('applySetMaterialSortOrder', () => {
+  it('updates sortOrder and audits the change', async () => {
+    const staff = staffActor();
+    const created = await applyCreateMaterial(staff, materialFormData({ sortOrder: '0' }));
+    if (!created.ok) throw new Error('setup failed');
+
+    await applySetMaterialSortOrder(staff, created.id, 9);
+
+    const material = await prisma.material.findUniqueOrThrow({ where: { id: created.id } });
+    expect(material.sortOrder).toBe(9);
+    expect(await prisma.auditLog.count({ where: { entity: 'Material', entityId: created.id, action: 'update', actorEmail: staff.email } })).toBeGreaterThanOrEqual(1);
+  });
+
+  it('rejects a negative or non-integer value and leaves sortOrder unchanged', async () => {
+    const staff = staffActor();
+    const created = await applyCreateMaterial(staff, materialFormData({ sortOrder: '2' }));
+    if (!created.ok) throw new Error('setup failed');
+
+    await applySetMaterialSortOrder(staff, created.id, -1);
+    await applySetMaterialSortOrder(staff, created.id, 1.5);
+
+    const material = await prisma.material.findUniqueOrThrow({ where: { id: created.id } });
+    expect(material.sortOrder).toBe(2);
   });
 });
 

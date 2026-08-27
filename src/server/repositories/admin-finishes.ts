@@ -9,12 +9,13 @@ export type AdminFinishListItem = {
   readonly namePl: string;
   readonly kind: FinishKind;
   readonly isAvailable: boolean;
+  readonly sortOrder: number;
 };
 
 export async function listFinishesForAdmin(): Promise<readonly AdminFinishListItem[]> {
   return prisma.finish.findMany({
-    orderBy: { sortOrder: 'asc' },
-    select: { id: true, slug: true, namePl: true, kind: true, isAvailable: true },
+    orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+    select: { id: true, slug: true, namePl: true, kind: true, isAvailable: true, sortOrder: true },
   });
 }
 

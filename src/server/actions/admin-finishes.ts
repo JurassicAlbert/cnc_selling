@@ -153,6 +153,31 @@ export async function applySetFinishAvailable(staff: CurrentSession, id: string,
   });
 }
 
+export async function applySetFinishSortOrder(staff: CurrentSession, id: string, sortOrder: number): Promise<void> {
+  if (!Number.isInteger(sortOrder) || sortOrder < 0) {
+    return;
+  }
+  const current = await prisma.finish.findUnique({ where: { id }, select: { sortOrder: true } });
+  if (current === null) {
+    return;
+  }
+  await prisma.finish.update({ where: { id }, data: { sortOrder } });
+  await writeAuditLog({
+    actor: staff,
+    entity: 'Finish',
+    entityId: id,
+    action: 'update',
+    diff: { sortOrder: { from: current.sortOrder, to: sortOrder } },
+  });
+}
+
+export async function setFinishSortOrder(id: string, sortOrder: number): Promise<void> {
+  const staff = await requireStaffSession();
+  await applySetFinishSortOrder(staff, id, sortOrder);
+  revalidatePath('/panel/wykonczenia');
+  revalidatePath(`/panel/wykonczenia/${id}`);
+}
+
 export async function setFinishAvailable(id: string, isAvailable: boolean): Promise<void> {
   const staff = await requireStaffSession();
   await applySetFinishAvailable(staff, id, isAvailable);
