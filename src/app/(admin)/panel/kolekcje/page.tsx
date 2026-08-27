@@ -4,6 +4,7 @@ import { Button, Typography } from '@mui/material';
 import { ADMIN } from '@/content/pl/admin';
 import { listCollectionsForAdmin } from '@/server/repositories/admin-designs';
 import { CollectionsDataGrid } from '@/ui/islands/admin/CollectionsDataGrid';
+import { EmptyState } from '@/ui/primitives/EmptyState';
 
 export default async function AdminCollectionsPage() {
   const collections = await listCollectionsForAdmin();
@@ -20,7 +21,7 @@ export default async function AdminCollectionsPage() {
       </Typography>
 
       {collections.length === 0 ? (
-        <Typography color="text.secondary">{ADMIN.collectionsEmptyPl}</Typography>
+        <EmptyState message={ADMIN.collectionsEmptyPl} actionLabel={ADMIN.collectionsNewPl} actionHref="/panel/kolekcje/nowa" />
       ) : (
         <CollectionsDataGrid rows={collections} />
       )}

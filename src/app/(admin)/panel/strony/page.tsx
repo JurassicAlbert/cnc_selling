@@ -4,6 +4,7 @@ import { Button, Typography } from '@mui/material';
 import { ADMIN } from '@/content/pl/admin';
 import { listStaticPagesForAdmin } from '@/server/repositories/admin-static-pages';
 import { StaticPagesDataGrid } from '@/ui/islands/admin/StaticPagesDataGrid';
+import { EmptyState } from '@/ui/primitives/EmptyState';
 
 export default async function AdminStaticPagesPage() {
   const pages = await listStaticPagesForAdmin();
@@ -20,7 +21,7 @@ export default async function AdminStaticPagesPage() {
       </Typography>
 
       {pages.length === 0 ? (
-        <Typography color="text.secondary">{ADMIN.staticPagesEmptyPl}</Typography>
+        <EmptyState message={ADMIN.staticPagesEmptyPl} actionLabel={ADMIN.staticPagesNewPl} actionHref="/panel/strony/nowa" />
       ) : (
         <StaticPagesDataGrid rows={pages} />
       )}

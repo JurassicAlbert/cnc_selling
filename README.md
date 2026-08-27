@@ -590,6 +590,17 @@ honestly unchecked where genuinely unaudited: Polish plural forms,
 typographic quote/line-break rules in copy. See `docs/HANDOVER.md`
 §9z27.
 
+**Real empty states — built 2026-08-27, autonomously.** New shared
+`EmptyState` (message + a real action button, not just better copy)
+replaces the bare "Brak X." text on all 9 top-level catalogue/content
+list pages. Scoped deliberately: read-only per-customer empty states
+and already-correct "no matches for this filter" states were left
+alone — there's nothing to create there, and a stray CTA would be
+wrong. Produkty's own filter needed a genuine distinction between
+"empty catalogue" (real CTA) and "empty filter result" (no CTA, just
+guidance to adjust it) — live-verified both paths render correctly.
+See `docs/HANDOVER.md` §9z28.
+
 ---
 
 ## Getting set up
@@ -706,8 +717,11 @@ out the "print views" checklist line** alongside the production brief
 (§9z25), **"Preview as customer" is built for Products** (§9z26), and
 **a cross-cutting Polish-correctness sweep verified most of the
 locale-correctness checklist true and fixed the one real gap it
-found** — Polish collation, now wired into every admin grid (§9z27).
-See `docs/CHECKLIST.md` for the itemised state of every phase. Next,
+found** — Polish collation, now wired into every admin grid (§9z27) —
+and **empty states across the 9 top-level catalogue/content lists now
+say what to do next**, with a real action button, not just prose
+(§9z28). See `docs/CHECKLIST.md` for the itemised state of every
+phase. Next,
 continuing autonomously per the owner's standing direction to close
 remaining gaps toward "no missing pages, functionality, design and UI":
 

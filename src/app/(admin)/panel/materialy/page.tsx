@@ -4,6 +4,7 @@ import { Button, Typography } from '@mui/material';
 import { ADMIN } from '@/content/pl/admin';
 import { listMaterialsForAdmin } from '@/server/repositories/admin-materials';
 import { MaterialsDataGrid } from '@/ui/islands/admin/MaterialsDataGrid';
+import { EmptyState } from '@/ui/primitives/EmptyState';
 
 export default async function AdminMaterialsPage() {
   const materials = await listMaterialsForAdmin();
@@ -20,7 +21,7 @@ export default async function AdminMaterialsPage() {
       </Typography>
 
       {materials.length === 0 ? (
-        <Typography color="text.secondary">{ADMIN.materialsEmptyPl}</Typography>
+        <EmptyState message={ADMIN.materialsEmptyPl} actionLabel={ADMIN.materialsNewPl} actionHref="/panel/materialy/nowy" />
       ) : (
         <MaterialsDataGrid rows={materials} />
       )}

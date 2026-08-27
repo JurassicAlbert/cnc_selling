@@ -4,6 +4,7 @@ import { Button, Typography } from '@mui/material';
 import { ADMIN } from '@/content/pl/admin';
 import { listFaqsForAdmin } from '@/server/repositories/admin-faq';
 import { FaqDataGrid } from '@/ui/islands/admin/FaqDataGrid';
+import { EmptyState } from '@/ui/primitives/EmptyState';
 
 export default async function AdminFaqPage() {
   const faqs = await listFaqsForAdmin();
@@ -20,7 +21,7 @@ export default async function AdminFaqPage() {
       </Typography>
 
       {faqs.length === 0 ? (
-        <Typography color="text.secondary">{ADMIN.faqEmptyPl}</Typography>
+        <EmptyState message={ADMIN.faqEmptyPl} actionLabel={ADMIN.faqNewPl} actionHref="/panel/faq/nowe" />
       ) : (
         <FaqDataGrid rows={faqs} />
       )}

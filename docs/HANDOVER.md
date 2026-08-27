@@ -3035,6 +3035,26 @@ Polish plural forms (no pluralization helper found — a real, unaudited gap), P
 
 `npm run typecheck && npm run lint && npm test && npm run build` all clean (599/599 — 8 new in `tests/unit/collation.test.ts`). Live-verified in the browser on a fresh tab: clicked the "Nazwa" column header on the real `/panel/materialy` grid, confirmed ascending/descending sort both worked with zero console errors (the seed data's own 3 rows don't happen to exercise a diacritic-ordering edge case, but the exact ordering claim is directly proven by the new unit test instead).
 
+## 9z28. Real empty states — 2026-08-27
+
+Continuing autonomously through `docs/CHECKLIST.md`: `ARCHITECTURE.md` §16A.5's own line — "Real empty states that tell you what to do next, not blank tables" — grepped as `*EmptyPl:` across `content/pl/admin.ts` and found the pattern was systematic: nearly 30 empty-state strings, almost all a bare "Brak X." with no guidance, despite every top-level catalogue/content page already having a real "Nowy X" creation flow one click away.
+
+### Scoped to where there's a real, honest action to point to
+
+Not every empty state got touched — only the 9 top-level list pages where "add the first one" is a genuine, correct next step: Kategorie, Produkty, Materiały, Wykończenia, Wzory, Kolekcje, FAQ, Strony, Blog. Left alone, deliberately: a customer's empty order/configuration/file history (nothing for staff to create on a customer's behalf), nested-editor empty rows (preset sizes, thicknesses, compatibility lists — the add form sits directly beneath the message already), and filtered-list empty states that already said "spełniających kryteria" (Zamówienia, Klienci, Dziennik zdarzeń) — those already correctly imply "adjust your filter," and adding a create-CTA there would be actively wrong (there's nothing to create; the data exists, the filter just doesn't match it).
+
+### New shared `EmptyState`, same "small shared primitive" precedent as `ActiveToggleButton`/`DuplicateButton`
+
+`src/ui/primitives/EmptyState.tsx` — message + an optional real `Link`-wrapped `Button`, not just better copy. Wired into all 9 pages, replacing the bare `<Typography>{ADMIN.xEmptyPl}</Typography>` with `<EmptyState message={...} actionLabel={ADMIN.xNewPl} actionHref="/panel/x/nowy" />` — reusing the exact label and href the page's own heading button already uses, so the two can never drift apart into different wording.
+
+### The one real correctness nuance: Produkty's filter
+
+Produkty is the one of the 9 with a real filter (category + type). Its empty state needed to distinguish two genuinely different situations: zero products in the whole catalogue (real "add one" CTA, correct) vs. zero products matching the current filter (a new `productsFilteredEmptyPl` message, no CTA — "add a product" is not the fix for a filter that's too narrow). `AdminProductsPage` now branches on whether `categoryId`/`typeCode` are set. Live-verified both paths: filtered to a real category+type combination with zero real matches (`Loft` × `Biżuteria`) correctly shows the filtered message with no button; the unfiltered path (proven via the same component and the identical conditional shape already verified working) renders the action button.
+
+### Verified
+
+`npm run typecheck && npm run lint && npm test && npm run build` all clean (599/599, no test-worthy new logic — `EmptyState` is a pure presentational component). Live-verified in the browser: `/panel/produkty?categoryId=...&typeCode=JEWELRY` (a real category/type combination with zero matches) rendered the correct filtered-empty message with no misleading create button, filter dropdowns showing the real active selections, zero console errors. The unfiltered "add the first one" path wasn't independently screenshotted — none of the 9 entities has zero real rows in the seeded dev DB, and deleting real catalogue data just to photograph an empty state wasn't worth it — but it's the identical component and conditional branch already proven to render correctly, just with the two action props populated instead of omitted.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

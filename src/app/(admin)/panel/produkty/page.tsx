@@ -4,6 +4,7 @@ import { Button, MenuItem, TextField, Typography } from '@mui/material';
 import { ADMIN, adminProductTypeLabel } from '@/content/pl/admin';
 import { listCategoryOptionsForAdmin, listProductsForAdmin } from '@/server/repositories/admin-products';
 import { ProductsDataGrid } from '@/ui/islands/admin/ProductsDataGrid';
+import { EmptyState } from '@/ui/primitives/EmptyState';
 import type { ProductTypeCode } from '@/generated/prisma/enums';
 
 const PRODUCT_TYPES: readonly ProductTypeCode[] = [
@@ -29,6 +30,7 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
     listProductsForAdmin({ categoryId, typeCode }),
     listCategoryOptionsForAdmin(),
   ]);
+  const hasActiveFilter = categoryId !== undefined || typeCode !== undefined;
 
   return (
     <>
@@ -64,7 +66,11 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
       </form>
 
       {products.length === 0 ? (
-        <Typography color="text.secondary">{ADMIN.productsEmptyPl}</Typography>
+        hasActiveFilter ? (
+          <EmptyState message={ADMIN.productsFilteredEmptyPl} />
+        ) : (
+          <EmptyState message={ADMIN.productsEmptyPl} actionLabel={ADMIN.productsNewPl} actionHref="/panel/produkty/nowy" />
+        )
       ) : (
         <ProductsDataGrid rows={products} />
       )}

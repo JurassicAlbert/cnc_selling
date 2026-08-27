@@ -90,7 +90,7 @@ export const ADMIN = {
 
   categoriesHeadingPl: 'Kategorie',
   categoriesNewPl: 'Nowa kategoria',
-  categoriesEmptyPl: 'Brak kategorii.',
+  categoriesEmptyPl: 'Brak kategorii. Dodaj pierwszą, aby rozpocząć budowę katalogu.',
   categoriesColumnNamePl: 'Nazwa',
   categoriesColumnSlugPl: 'Identyfikator URL',
   categoriesColumnProductsPl: 'Produkty',
@@ -106,7 +106,8 @@ export const ADMIN = {
 
   productsHeadingPl: 'Produkty',
   productsNewPl: 'Nowy produkt',
-  productsEmptyPl: 'Brak produktów.',
+  productsEmptyPl: 'Brak produktów. Dodaj pierwszy, aby pojawił się w sklepie.',
+  productsFilteredEmptyPl: 'Brak produktów spełniających wybrane kryteria. Spróbuj zmienić filtry.',
   productsFilterCategoryPl: 'Kategoria',
   productsFilterTypePl: 'Typ',
   productsColumnNamePl: 'Nazwa',
@@ -224,7 +225,7 @@ export const ADMIN = {
 
   materialsHeadingPl: 'Materiały',
   materialsNewPl: 'Nowy materiał',
-  materialsEmptyPl: 'Brak materiałów.',
+  materialsEmptyPl: 'Brak materiałów. Dodaj pierwszy, aby móc przypisać go do produktów.',
   materialsColumnNamePl: 'Nazwa',
   materialsColumnFamilyPl: 'Rodzina',
   materialsColumnStatusPl: 'Status',
@@ -253,7 +254,7 @@ export const ADMIN = {
 
   finishesHeadingPl: 'Wykończenia',
   finishesNewPl: 'Nowe wykończenie',
-  finishesEmptyPl: 'Brak wykończeń.',
+  finishesEmptyPl: 'Brak wykończeń. Dodaj pierwsze, aby móc przypisać je do materiałów.',
   finishesColumnNamePl: 'Nazwa',
   finishesColumnKindPl: 'Rodzaj',
   finishesColumnStatusPl: 'Status',
@@ -272,7 +273,7 @@ export const ADMIN = {
 
   collectionsHeadingPl: 'Kolekcje',
   collectionsNewPl: 'Nowa kolekcja',
-  collectionsEmptyPl: 'Brak kolekcji.',
+  collectionsEmptyPl: 'Brak kolekcji. Dodaj pierwszą, aby pogrupować wzory.',
   collectionsColumnNamePl: 'Nazwa',
   collectionsColumnDesignsPl: 'Wzory',
   collectionsColumnStatusPl: 'Status',
@@ -284,7 +285,7 @@ export const ADMIN = {
 
   designsHeadingPl: 'Wzory',
   designsNewPl: 'Nowy wzór',
-  designsEmptyPl: 'Brak wzorów.',
+  designsEmptyPl: 'Brak wzorów. Dodaj pierwszy, aby móc przypisać go do produktów.',
   designsColumnCodePl: 'Kod',
   designsColumnNamePl: 'Nazwa',
   designsColumnRightsPl: 'Prawa',
@@ -370,7 +371,7 @@ export const ADMIN = {
 
   faqHeadingPl: 'FAQ',
   faqNewPl: 'Nowe pytanie',
-  faqEmptyPl: 'Brak pytań.',
+  faqEmptyPl: 'Brak pytań. Dodaj pierwsze, aby pojawiło się na stronie FAQ.',
   faqColumnQuestionPl: 'Pytanie',
   faqColumnStatusPl: 'Status',
   faqFieldQuestionPl: 'Pytanie',
@@ -379,7 +380,7 @@ export const ADMIN = {
 
   staticPagesHeadingPl: 'Strony',
   staticPagesNewPl: 'Nowa strona',
-  staticPagesEmptyPl: 'Brak stron.',
+  staticPagesEmptyPl: 'Brak stron. Dodaj pierwszą, aby pojawiła się pod adresem /strony/...',
   staticPagesColumnTitlePl: 'Tytuł',
   staticPagesColumnSlugPl: 'Identyfikator URL',
   staticPagesColumnStatusPl: 'Status',
@@ -392,7 +393,7 @@ export const ADMIN = {
 
   blogPostsHeadingPl: 'Blog',
   blogPostsNewPl: 'Nowy wpis',
-  blogPostsEmptyPl: 'Brak wpisów.',
+  blogPostsEmptyPl: 'Brak wpisów. Dodaj pierwszy, aby uruchomić bloga.',
   blogPostsColumnTitlePl: 'Tytuł',
   blogPostsColumnSlugPl: 'Identyfikator URL',
   blogPostsColumnStatusPl: 'Status',

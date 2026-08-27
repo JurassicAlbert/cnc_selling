@@ -4,6 +4,7 @@ import { Button, Typography } from '@mui/material';
 import { ADMIN } from '@/content/pl/admin';
 import { listCategoriesForAdmin } from '@/server/repositories/admin-categories';
 import { CategoriesDataGrid } from '@/ui/islands/admin/CategoriesDataGrid';
+import { EmptyState } from '@/ui/primitives/EmptyState';
 
 export default async function AdminCategoriesPage() {
   const categories = await listCategoriesForAdmin();
@@ -20,7 +21,7 @@ export default async function AdminCategoriesPage() {
       </Typography>
 
       {categories.length === 0 ? (
-        <Typography color="text.secondary">{ADMIN.categoriesEmptyPl}</Typography>
+        <EmptyState message={ADMIN.categoriesEmptyPl} actionLabel={ADMIN.categoriesNewPl} actionHref="/panel/kategorie/nowa" />
       ) : (
         <CategoriesDataGrid rows={categories} />
       )}

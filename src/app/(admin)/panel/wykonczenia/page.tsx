@@ -4,6 +4,7 @@ import { Button, Typography } from '@mui/material';
 import { ADMIN } from '@/content/pl/admin';
 import { listFinishesForAdmin } from '@/server/repositories/admin-finishes';
 import { FinishesDataGrid } from '@/ui/islands/admin/FinishesDataGrid';
+import { EmptyState } from '@/ui/primitives/EmptyState';
 
 export default async function AdminFinishesPage() {
   const finishes = await listFinishesForAdmin();
@@ -20,7 +21,7 @@ export default async function AdminFinishesPage() {
       </Typography>
 
       {finishes.length === 0 ? (
-        <Typography color="text.secondary">{ADMIN.finishesEmptyPl}</Typography>
+        <EmptyState message={ADMIN.finishesEmptyPl} actionLabel={ADMIN.finishesNewPl} actionHref="/panel/wykonczenia/nowe" />
       ) : (
         <FinishesDataGrid rows={finishes} />
       )}
