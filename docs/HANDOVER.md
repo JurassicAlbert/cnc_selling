@@ -3074,6 +3074,22 @@ Confirmed via the domain layer before wiring anything, not assumed: `domain/orde
 
 `npm run typecheck && npm run lint && npm test && npm run build` all clean (599/599, no new test-worthy logic — pure UI wiring). Restarted the dev server before live-verifying, per §9z2's standing rule; this is also the pass that surfaced a real, separate, pre-existing hydration bug in `PricingDraftForm.tsx`'s packaging-tier row `name` attributes (unrelated to this change, reproduced on a fresh tab, flagged as a background task rather than fixed inline). Live-verified all three real dialogs end to end: **pricing publish** — created a real draft version with rates identical to the active one (0,00 zł delta on all 3 reference products), opened the dialog, cancelled it (confirmed nothing published), reopened it, confirmed it for real — version #4 went active, #3 archived, no actual price change since the rates matched, the same "restore via the real mechanism" precedent this project already uses; **order cancellation** — on a real disposable E2E test order, confirmed the button stays disabled with an empty note, typed a note, opened the dialog, cancelled it, confirmed the order's status genuinely didn't change; **customer anonymization** — same pattern, opened the real dialog on a disposable test customer, cancelled it, confirmed the account's data was untouched. Never actually confirmed the two irreversible-and-not-restorable ones (cancellation, anonymization) for real, on principle — the dialog wiring is proven by the cancel path plus the one action that genuinely could be restored (pricing).
 
+## 9z30. Two quick verification wins: tablet layout at 1024px, CSV export already works — 2026-08-27
+
+Continuing autonomously — a short, verification-only pass (no code changes) on two more `docs/CHECKLIST.md` lines.
+
+### Tablet layout at 1024px — genuinely already correct
+
+Resized the browser to exactly 1024px and checked the three views the checklist line names: Zamówienia (list), Produkcja, and a real order detail page (the one two-column `Grid` layout in the order area). All three render with zero page-level horizontal overflow — checked programmatically (`document.body.scrollWidth` ≤ `window.innerWidth`), not just eyeballed. The `DataGrid`'s own internal horizontal scroll for columns wider than its container is the grid's normal, intended behavior at this width, not a layout defect — worth recording so a future pass doesn't mistake it for one.
+
+### CSV export was already built — genuinely, not partially
+
+Checked `docs/CHECKLIST.md`'s "CSV import/export on catalogue tables" line by actually clicking "Eksportuj" on a real grid rather than assuming: MUI's `GridToolbar` (already wired into all 13 admin `DataGrid`s since P7c, specifically for its toolbar features) includes a real, working "Pobierz jako plik CSV" download and a "Drukuj" print option, both functioning, zero extra code needed. **Import is the genuine remaining gap** — no bulk-create-from-CSV path exists anywhere in the codebase — split the checklist line to reflect this honestly (`[~]` partial, not `[ ]` or `[x]`) rather than either overclaiming completion or leaving a real half-completed feature looking entirely unbuilt.
+
+### Verified
+
+No code changed this pass — pure verification, both findings checked against real running behavior (a real browser resize + DOM measurement for the tablet check, a real click-through of the export menu for the CSV check), not inferred from reading source alone.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

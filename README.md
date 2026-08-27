@@ -615,6 +615,17 @@ to end, including a real pricing-version publish (identical rates, so
 no actual price change) to prove the confirm path, not just cancel.
 See `docs/HANDOVER.md` §9z29.
 
+**Two quick verification wins — checked 2026-08-27, autonomously.**
+No code changes — checked two more checklist lines against real
+running behavior rather than assumption. Tablet layout at exactly
+1024px (Zamówienia, Produkcja, an order detail page) genuinely has no
+page-level horizontal overflow, checked programmatically. CSV export
+already works on every admin grid (MUI's `GridToolbar`, already wired
+since P7c) — clicked "Eksportuj" to confirm rather than assume; CSV
+**import** is the real remaining gap, split out honestly rather than
+left looking like the whole line was still open. See
+`docs/HANDOVER.md` §9z30.
+
 ---
 
 ## Getting set up
@@ -736,7 +747,9 @@ and **empty states across the 9 top-level catalogue/content lists now
 say what to do next**, with a real action button, not just prose
 (§9z28). **Irreversible actions now get a real confirmation dialog**
 — pricing publish, order cancellation, customer anonymization (§9z29).
-See `docs/CHECKLIST.md` for the itemised state of every phase. Next,
+Tablet layout at 1024px and CSV export were both confirmed **already
+correct** by real verification, no code needed (§9z30). See
+`docs/CHECKLIST.md` for the itemised state of every phase. Next,
 continuing autonomously per the owner's standing direction to close
 remaining gaps toward "no missing pages, functionality, design and UI":
 
@@ -751,6 +764,8 @@ remaining gaps toward "no missing pages, functionality, design and UI":
 - **"Preview as customer" for Designs** — needs a real deep-link into
   the configurator (no standalone design page exists today), its own
   separate slice from the Product half just built.
+- **CSV import on catalogue tables** — export already works (§9z30);
+  bulk-create-from-CSV is a real, unbuilt gap.
 - **P8's configurator funnel** — needs `AnalyticsEvent` + instrumenting
   every configurator step to write events, its own substantial slice.
 - **P2's remaining piece** — the homepage's hero/craftsmanship narrative
