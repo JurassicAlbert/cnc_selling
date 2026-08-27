@@ -547,6 +547,17 @@ never confused with the original. Design/Material's existing images
 are reused by reference rather than re-uploaded. See
 `docs/HANDOVER.md` §9z24.
 
+**Packing list print view — built 2026-08-27, autonomously.** The
+other half of the "print views" checklist line — the production brief
+(`karta-produkcyjna`) already existed, but nothing told a warehouse
+worker what to physically put in the box. `/panel/zamowienia/
+[orderNumber]/lista-pakowania` mirrors the brief's own shape (same data
+source, same honesty banner, same `PrintButton`) and adds the one real
+new calculation: `quantity × totalModules` — the actual physical piece
+count for a multi-module product, verified live against a real order
+(3 units × 4 modules = 12 pieces, correctly). See `docs/HANDOVER.md`
+§9z25.
+
 ---
 
 ## Getting set up
@@ -657,10 +668,12 @@ existing orders stay unaffected. The **soft-delete invariant is now
 proven, not just claimed** (§9z21), **blog admin/authoring is now
 built** (§9z22) — the last open item from P2's blog scaffold — and
 **every admin detail page now shows a real activity timeline** from the
-audit log (§9z23), and **Products/Designs/Materials each have a real
-"Duplikuj" action** (§9z24). See `docs/CHECKLIST.md` for the itemised
-state of every phase. Next, continuing autonomously per the owner's
-standing direction to close remaining gaps toward "no missing pages,
+audit log (§9z23), **Products/Designs/Materials each have a real
+"Duplikuj" action** (§9z24), and **the packing-list print view closes
+out the "print views" checklist line** alongside the production brief
+(§9z25). See `docs/CHECKLIST.md` for the itemised state of every
+phase. Next, continuing autonomously per the owner's standing
+direction to close remaining gaps toward "no missing pages,
 functionality, design and UI":
 
 - **P7c, the rest of it** — three list pages still use a plain `<Table>`,

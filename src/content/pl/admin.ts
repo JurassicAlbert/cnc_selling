@@ -340,6 +340,7 @@ export const ADMIN = {
   orderManifestColumnSizePl: 'Wymiary (mm)',
   orderManifestColumnOrderPl: 'Kolejność produkcji',
   orderBriefLinkPl: 'Karta produkcyjna (do druku)',
+  orderPackingListLinkPl: 'Lista pakowania (do druku)',
 
   productionBriefHeadingPl: 'Karta produkcyjna',
   productionBriefNotAFilePl: 'Karta produkcyjna — nie jest to plik produkcyjny CNC/laserowy.',
@@ -353,6 +354,17 @@ export const ADMIN = {
   productionBriefThicknessLabelPl: 'Grubość',
   productionBriefPersonalizationLabelPl: 'Personalizacja',
   productionBriefModulesHeadingPl: 'Moduły',
+
+  packingListHeadingPl: 'Lista pakowania',
+  packingListNotAShippingLabelPl: 'Lista pakowania — nie jest to etykieta wysyłkowa ani list przewozowy.',
+  packingListRecipientHeadingPl: 'Adres dostawy',
+  packingListItemsHeadingPl: 'Elementy do spakowania',
+  packingListColumnItemPl: 'Element',
+  packingListColumnDetailsPl: 'Szczegóły',
+  packingListColumnQuantityPl: 'Ilość szt.',
+  packingListColumnCheckPl: 'Spakowano',
+  packingListTotalPiecesPl: 'Łączna liczba elementów do spakowania',
+  packingListPackedByLabelPl: 'Spakował(a) (imię i nazwisko, data)',
 
   faqHeadingPl: 'FAQ',
   faqNewPl: 'Nowe pytanie',

@@ -2972,6 +2972,26 @@ New shared `DuplicateButton.tsx` (`src/ui/primitives`) is the same `<form action
 
 `npm run typecheck && npm run lint && npm test && npm run build` all clean (586/586 tests — 7 new: 3 in `admin-products.test.ts`, 2 each in `admin-designs.test.ts`/`admin-materials.test.ts`, covering the core-field copy, the `-kopia`/`-kopia-2` collision path, and the not-found case). Live-verified in the browser end to end, restarting the dev server first after a stale-compile artifact briefly showed an unrelated transient error that cleared on restart: clicked "Duplikuj" on the real seeded `Gres biały` material — landed on `Gres biały (kopia)` with `gres-bialy-kopia`, "Aktywuj" (correctly inactive), every core field copied, and a real audit-log `create` entry recording `duplicatedFromId` → same for the real seeded `WZR-001` design — landed on the copy with both `slug` and `code` suffixed `-kopia`, the same reused thumbnail/preview images. Both disposable duplicates deleted from the dev DB afterward, restoring the original 3-material/2-design state.
 
+## 9z25. Packing list print view (the other half of the "print views" checklist line) — 2026-08-27
+
+Continuing autonomously: `docs/CHECKLIST.md`'s "Print views: production brief, packing list" was half-built — the production brief (`karta-produkcyjna`, §9z6) has existed since P7b, but nothing told a warehouse worker what to physically put in the box or where it's going.
+
+### Deliberately mirrors the production brief's shape, not a new pattern
+
+New `/panel/zamowienia/[orderNumber]/lista-pakowania` reuses the exact same data source (`findOrderForAdmin`), the same "not a real X" honesty banner convention (`Alert` + a plain sentence, matching `productionBriefNotAFilePl`'s own precedent — here `packingListNotAShippingLabelPl`, since a packing checklist is not a shipping label or waybill any more than a brief is a CNC file), and the same `PrintButton` island. Different purpose, though: the brief tells production what to *make*; this tells whoever ships the order what to *count into the box*.
+
+### The one real calculation this page adds: pieces, not configurations
+
+An order line's `quantity` is how many of that *configuration* the customer bought — for a multi-module product (e.g. a 2×2 wall art panel), each unit is actually several separate physical boards. `pieceCount = quantity × moduleLayout.totalModules` is what a packer actually needs to count, and what the printed checklist's `Ilość szt.` column shows — verified live against the real seeded order `2026/08/0001` (3 units × 4 modules = 12 pieces, matching its own module manifest exactly).
+
+### A real printed checkbox, not a claimed one
+
+The "Spakowano" column renders a literal `☐` per row, and a `Spakował(a) (imię i nazwisko, data)` signature line at the bottom — the standard paper packing-slip convention, genuinely usable at a physical packing station, not just a digital checklist.
+
+### Verified
+
+`npm run typecheck && npm run lint && npm test && npm run build` all clean (585/586 — the one failure, `upload.test.ts`'s 5MB-SVG-boundary test timing out under full-suite parallel load, confirmed a pre-existing flake unrelated to this change by re-running that file alone: 16/16 green). Live-verified in the browser on a fresh tab (avoiding the stale-console-history false lead a reused tab gave first): the real seeded order `2026/08/0001` rendered the correct recipient address, the correct `12` piece count for its 3×4-module wall-art item, the total-pieces line, and the signature line; confirmed 13 real `@media print` rules compiled for the page via `document.styleSheets`, same verification method used for the production brief in §9z6.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

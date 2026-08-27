@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Chip, Grid, Typography } from '@mui/material';
+import { Chip, Grid, Stack, Typography } from '@mui/material';
 
 import { ADMIN, adminOrderStatusLabel } from '@/content/pl/admin';
 import { ORDER_STATUSES, checkOrderStatusTransition } from '@/domain/order-status/transitions';
@@ -86,7 +86,10 @@ export default async function AdminOrderDetailPage({ params }: OrderDetailPagePr
             {ADMIN.orderManifestHeadingPl}
           </Typography>
           <OrderModuleManifest items={manifest} />
-          <Link href={`/panel/zamowienia/${encodeURIComponent(order.orderNumber)}/karta-produkcyjna`}>{ADMIN.orderBriefLinkPl}</Link>
+          <Stack spacing={0.5} sx={{ alignItems: 'flex-start' }}>
+            <Link href={`/panel/zamowienia/${encodeURIComponent(order.orderNumber)}/karta-produkcyjna`}>{ADMIN.orderBriefLinkPl}</Link>
+            <Link href={`/panel/zamowienia/${encodeURIComponent(order.orderNumber)}/lista-pakowania`}>{ADMIN.orderPackingListLinkPl}</Link>
+          </Stack>
         </Grid>
 
         <Grid size={{ xs: 12, md: 5 }}>

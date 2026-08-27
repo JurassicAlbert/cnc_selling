@@ -436,7 +436,7 @@ Slice 6 (raw-HTML-form cleanup — two `<button>`s and six `<input type="file">`
 - [ ] Empty states say what to do next
 - [x] Duplicate action on products, designs, materials — copies the core scalar record (not relations), starts inactive, distinct `-kopia` slug/name (built 2026-08-27, see `docs/HANDOVER.md` §9z24)
 - [ ] Drag-drop image upload with reordering and inline alt text
-- [ ] Print views: production brief, packing list
+- [x] Print views: production brief, packing list — packing list is new (`/panel/zamowienia/[orderNumber]/lista-pakowania`), production brief already existed (§9z6); both real `@media print` views, not files (built 2026-08-27, see `docs/HANDOVER.md` §9z25)
 - [ ] CSV import/export on catalogue tables
 - [ ] Order and production views usable on tablet at 1024px
 - [x] Dense grid mode by default with comfortable toggle — **built 2026-08-27 (slice 8)**: real `density` prop (`'compact'` default) replaces the hardcoded `getRowHeight={() => N}` every grid had; `slots={{toolbar: GridToolbar}}` (needs `showToolbar` set too — confirmed live, `showToolbar` alone renders a toolbar but without the density selector) adds the "Wysokość rzędu" (row height) toggle — Kompakt/Standard/Komfort
