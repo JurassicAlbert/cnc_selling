@@ -347,6 +347,26 @@ Live-verified finding a real order, customer, design, and product by
 typing a real fragment of each, and navigating to each one's real detail
 page. See `docs/HANDOVER.md` §9z9.
 
+**P7c, `@mui/x-data-grid` adoption (slice 2) — built 2026-08-27.** The
+foundation most of the rest of the 23-item list depends on — bulk
+actions, inline editing, column persistence, and keyboard nav in grids
+all need a real `DataGrid`, not a plain MUI `<Table>`. A genuinely new
+dependency (`@mui/x-data-grid`, MIT/Community), unlike everything else
+added this session — but it's the architecture doc's own documented plan,
+not a shortcut. Scoped to one grid, `/panel/zamowienia`, rather than a
+sweeping rewrite of all ~15 admin list pages; the rest come one slice at
+a time. MUI core's `plPL` locale turned out to already be wired in
+`theme.ts` from earlier work, just never exercised — only the DataGrid
+locale needed adding alongside it, confirmed live via the real Polish
+pagination footer. Live-verifying the grid's row-click surfaced a real,
+pre-existing bug: order numbers contain literal `/`, and every admin-side
+link to an order detail page built its `href` by interpolating the raw
+string, producing a broken multi-segment path — invisible until now
+because every prior live-verification navigated there via a manually
+encoded URL, never an actual click. Fixed at every site with the same
+`encodeURIComponent` the customer-facing order-history page already used
+correctly. See `docs/HANDOVER.md` §9z10.
+
 ---
 
 ## Getting set up
@@ -434,15 +454,16 @@ users & roles, bank details, shipping rate, email templates), and the
 audit-log viewer are all built
 (§9z/§9z2/§9z3/§9z4/§9z5/§9z6/§9z7/§9z8). Real shipping rates and a real
 bank account number have now replaced P5's placeholders. **P7c has
-started, also as vertical slices** — global search (Ctrl/⌘+K) is built
-(§9z9); the rest of its 23-item UX-polish list is still open. See
+started, also as vertical slices** — global search (Ctrl/⌘+K, §9z9) and
+`@mui/x-data-grid` adoption on the Orders grid (§9z10) are built; the
+rest of its 23-item UX-polish list is still open. See
 `docs/CHECKLIST.md` for the itemised state of every phase. Next:
 
-- **P7c, the rest of it** — `@mui/x-data-grid` adoption (the next slice
-  most other remaining items depend on), bulk actions, inline editing,
-  saved filters, and the rest of the list, one slice at a time. See
-  `docs/ARCHITECTURE.md`'s note near §16A for the Materio direction
-  already recorded for when the DataGrid work starts.
+- **P7c, the rest of it** — extend `@mui/x-data-grid` to the other ~14
+  admin list pages, then bulk actions, inline editing, column/density
+  persistence, saved filters, keyboard nav, and the rest of the list, one
+  slice at a time. See `docs/ARCHITECTURE.md`'s note near §16A for the
+  Materio direction already recorded for this work.
 - **P2's remaining piece** — the homepage's hero/craftsmanship narrative
   sections, once the owner's actual words exist for them (reviews and FAQ
   are now real, see above).

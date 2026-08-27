@@ -85,7 +85,7 @@ export default async function AdminOrderDetailPage({ params }: OrderDetailPagePr
             {ADMIN.orderManifestHeadingPl}
           </Typography>
           <OrderModuleManifest items={manifest} />
-          <Link href={`/panel/zamowienia/${order.orderNumber}/karta-produkcyjna`}>{ADMIN.orderBriefLinkPl}</Link>
+          <Link href={`/panel/zamowienia/${encodeURIComponent(order.orderNumber)}/karta-produkcyjna`}>{ADMIN.orderBriefLinkPl}</Link>
         </Grid>
 
         <Grid size={{ xs: 12, md: 5 }}>

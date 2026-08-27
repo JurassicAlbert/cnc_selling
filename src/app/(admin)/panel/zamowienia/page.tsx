@@ -1,20 +1,9 @@
-import Link from 'next/link';
-import {
-  Chip,
-  MenuItem,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { MenuItem, TextField, Typography } from '@mui/material';
 
 import { ADMIN, adminOrderStatusLabel } from '@/content/pl/admin';
-import { formatPln } from '@/domain/money/money';
 import { ORDER_STATUSES } from '@/domain/order-status/transitions';
 import { listOrdersForAdmin } from '@/server/repositories/admin-orders';
+import { OrdersDataGrid } from '@/ui/islands/admin/OrdersDataGrid';
 import type { OrderStatus, PaymentStatus } from '@/generated/prisma/enums';
 
 const PAYMENT_STATUSES: readonly PaymentStatus[] = ['AWAITING', 'UNDERPAID', 'PAID', 'REFUNDED'];
@@ -74,40 +63,7 @@ export default async function AdminOrdersPage({ searchParams }: OrdersPageProps)
       {orders.length === 0 ? (
         <Typography color="text.secondary">{ADMIN.ordersEmptyPl}</Typography>
       ) : (
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>{ADMIN.ordersColumnNumberPl}</TableCell>
-              <TableCell>{ADMIN.ordersColumnCustomerPl}</TableCell>
-              <TableCell>{ADMIN.ordersColumnStatusPl}</TableCell>
-              <TableCell>{ADMIN.ordersColumnPaymentPl}</TableCell>
-              <TableCell align="right">{ADMIN.ordersColumnTotalPl}</TableCell>
-              <TableCell>{ADMIN.ordersColumnDatePl}</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {orders.map((order) => (
-              <TableRow key={order.orderNumber} hover>
-                <TableCell>
-                  <Link href={`/panel/zamowienia/${order.orderNumber}`}>{order.orderNumber}</Link>
-                </TableCell>
-                <TableCell>
-                  {order.customerName}
-                  <br />
-                  <Typography variant="caption" color="text.secondary">
-                    {order.email}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Chip size="small" label={adminOrderStatusLabel(order.status)} />
-                </TableCell>
-                <TableCell>{order.paymentStatus}</TableCell>
-                <TableCell align="right">{formatPln(order.totalGrossGrosze)}</TableCell>
-                <TableCell>{order.createdAt.toLocaleDateString('pl-PL')}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <OrdersDataGrid rows={orders} />
       )}
     </>
   );

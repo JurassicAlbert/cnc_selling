@@ -16,6 +16,7 @@
 import { createTheme } from '@mui/material/styles';
 import type { Shadows } from '@mui/material/styles';
 import { plPL } from '@mui/material/locale';
+import { plPL as dataGridPlPL } from '@mui/x-data-grid/locales';
 
 const brandTheme = createTheme({
   cssVariables: true,
@@ -67,7 +68,7 @@ const brandTheme = createTheme({
   },
 });
 
-export const theme = createTheme(brandTheme, plPL);
+export const theme = createTheme(brandTheme, plPL, dataGridPlPL);
 
 /**
  * MUI's default shadow scale is 25 entries of increasingly heavy box-shadow,

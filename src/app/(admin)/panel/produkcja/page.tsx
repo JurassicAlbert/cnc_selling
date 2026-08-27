@@ -79,7 +79,7 @@ function ProductionSection({
             {orders.map((order) => (
               <TableRow key={order.orderNumber} hover>
                 <TableCell>
-                  <Link href={`/panel/zamowienia/${order.orderNumber}`}>{order.orderNumber}</Link>
+                  <Link href={`/panel/zamowienia/${encodeURIComponent(order.orderNumber)}`}>{order.orderNumber}</Link>
                 </TableCell>
                 <TableCell>{order.customerName}</TableCell>
                 <TableCell align="right">{order.moduleCount}</TableCell>

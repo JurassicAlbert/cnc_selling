@@ -53,7 +53,7 @@ export async function searchGlobal(query: string): Promise<GlobalSearchResults> 
       id: order.orderNumber,
       label: order.orderNumber,
       sublabel: order.customerName,
-      href: `/panel/zamowienia/${order.orderNumber}`,
+      href: `/panel/zamowienia/${encodeURIComponent(order.orderNumber)}`,
     })),
     customers: customers.slice(0, RESULTS_PER_TYPE).map((customer) => ({
       type: 'customer',

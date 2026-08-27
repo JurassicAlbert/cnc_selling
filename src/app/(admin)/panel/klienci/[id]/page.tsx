@@ -73,7 +73,7 @@ export default async function AdminCustomerDetailPage({ params }: CustomerDetail
                 {orders.map((order) => (
                   <TableRow key={order.orderNumber} hover>
                     <TableCell>
-                      <Link href={`/panel/zamowienia/${order.orderNumber}`}>{order.orderNumber}</Link>
+                      <Link href={`/panel/zamowienia/${encodeURIComponent(order.orderNumber)}`}>{order.orderNumber}</Link>
                     </TableCell>
                     <TableCell>{adminOrderStatusLabel(order.status)}</TableCell>
                     <TableCell align="right">{formatPln(order.totalGrossGrosze)}</TableCell>
