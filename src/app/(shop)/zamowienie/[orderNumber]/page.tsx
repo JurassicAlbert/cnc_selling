@@ -4,11 +4,14 @@ import { notFound } from 'next/navigation';
 import { SITE } from '@/content/pl/site';
 import { COPY } from '@/content/pl/messages';
 import { findOrderForConfirmation } from '@/server/repositories/orders';
+import { findReviewStatusForOrder } from '@/server/repositories/reviews';
+import { submitGuestReview } from '@/server/actions/reviews';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
 import { OrderSummary } from '@/ui/primitives/OrderSummary';
 import { Section } from '@/ui/primitives/Section';
 import { Text } from '@/ui/primitives/Text';
+import { ReviewForm } from '@/ui/islands/ReviewForm';
 
 type OrderConfirmationPageProps = {
   readonly params: Promise<{ readonly orderNumber: string }>;
@@ -45,6 +48,8 @@ export default async function OrderConfirmationPage({ params, searchParams }: Or
     notFound();
   }
 
+  const reviewStatus = order.status === 'COMPLETED' ? await findReviewStatusForOrder(order.orderNumber) : null;
+
   return (
     <Section>
       <Container>
@@ -62,6 +67,13 @@ export default async function OrderConfirmationPage({ params, searchParams }: Or
           <Text muted>{SITE.orderEmailFollowUpNoticePl}</Text>
           <Text muted>{COPY.orderReceived}</Text>
         </div>
+
+        {order.status === 'COMPLETED' &&
+          (reviewStatus !== null ? (
+            <Text muted>{SITE.reviewAlreadySubmittedPl}</Text>
+          ) : (
+            <ReviewForm action={submitGuestReview.bind(null, order.orderNumber, token)} />
+          ))}
       </Container>
     </Section>
   );

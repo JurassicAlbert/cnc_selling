@@ -2552,6 +2552,38 @@ Orders placed before this pass have no `machiningMilliMinutesPerM2` key in their
 
 `npm test` (500/500 — 495 prior + 5 new integration), `npm run typecheck`, `npm run lint`, `npm run build` all clean; no schema migration (the snapshot addition is a `Json`-column field, and `weeklyCapacityMinutes` already existed). Dev server restarted before live-verifying, per §9z2's standing rule. Live-verified in the browser: `/panel/produkcja` showed the real seeded order (`2026/08/0001`, `CONFIRMED`) with correct module count (12 = 4 modules/unit × quantity 3) and area (1.44 m²) — caught the `NaN` bug here, fixed it, re-verified `0 min` (correct, honest, for a pre-existing order) → the order detail page's new module manifest section showed the real 2×2 grid (`A1`–`B2`, 400×300mm each) → the printable brief rendered the same data with the explicit "not a production file" warning, and a JS check against `document.styleSheets` confirmed 8 real `@media print` rules were actually emitted (not just written in source and never compiled) for hiding the panel chrome.
 
+## 9z5. P7b, slice 5 — Content: FAQ, static pages, real customer reviews — 2026-08-27
+
+Sixth P7b vertical slice, and the first where the owner picked "Content" over the two entity-CRUD slices remaining (customers+RODO, settings). Unlike every prior P7b slice, **no schema existed for any of it** — `Faq`, `StaticPage`, and `Review` were genuinely new models, confirmed by grepping the schema before writing the plan. New migration `20260827000000_add_content_faq_pages_reviews`, hand-authored to match Prisma's own generated style, applied to both dev and test DBs.
+
+### Reviews needed a real submission source before there was anything honest to moderate
+
+A reviews-moderation UI over zero real submissions would have been decoration, not a feature — so before building it, the owner was asked directly (`AskUserQuestion`): build a minimal real submission flow, or defer reviews to a later slice. Chose to build it. The resulting model: one `Review` per genuine `COMPLETED` `Order` (`orderId` `@unique`), customer-submitted, `PENDING` by default. Two submission entry points — guest, via the same constant-time `accessToken` comparison `findOrderForConfirmation` already uses; logged-in, via the real session `userId` matched against `Order.userId` — both independently re-verify ownership, `status === 'COMPLETED'`, and that no review exists yet, server-side, never trusting the page that rendered the form. `src/server/actions/admin-reviews.ts` deliberately contains exactly one mutation, `setReviewStatus` (approve/reject) — no update-content function exists anywhere in the codebase, so §16A.1 module 9's "no facility to author a testimonial in a customer's name" is enforced by the shape of the code, not just by convention.
+
+### The `next/headers`-outside-request-scope lesson, applied to a new surface
+
+`submitAccountReview` initially called `getSession()` directly and failed in its integration test exactly the way P4/P6 already established (`headers was called outside a request scope`). Fixed with the same split every other actor-scoped mutation in this codebase now uses: `applySubmitAccountReview(userId, orderNumber, formData)` takes the actor explicitly (real DB logic, directly testable), `submitAccountReview(orderNumber, formData)` derives it via `getSession()` and wraps. Third time this exact shape has been needed this session (categories/materials/designs mutations used the staff equivalent) — it's now clearly the standing pattern for any actor-scoped Server Action, not a one-off.
+
+### `useActionState`'s initial state and a genuine success look identical
+
+`{ok: true}` is indistinguishable from `useActionState`'s own initial shape, so `ReviewForm.tsx` couldn't tell "not yet submitted" from "just succeeded" by inspecting `state` alone. Fixed with an explicit `useState<boolean> submitted`, set to `true` inside the action wrapper only when the real result is `ok`, and rendered instead of the form once true.
+
+### A route-collision avoided by checking first, not by convention
+
+Static pages needed a public URL. `/[slug]` was ruled out before writing any code — `(shop)/[category]/page.tsx` already claims that exact single-segment shape, and `/panel` itself later turned out to demonstrate the same fallthrough live (see below). Chose `/strony/[slug]` instead, a real second segment, no collision.
+
+### A shared-test-database fragility this slice's tests exposed in an earlier slice, not caused by it
+
+`admin-production.test.ts` (written in slice 4) asserted exact/absolute totals for specific `Order.status` values, correct only because it had that status space to itself at the time it was written. Once `reviews.test.ts` (this slice) also started creating `COMPLETED`/`CONFIRMED` orders in the same shared test database, both assumptions broke intermittently depending on run order. Fixed by switching to containment checks (`orderNumbers` contains mine, does not contain the ones I know shouldn't be there) and before/after deltas instead of absolute counts — verified by running the full suite twice consecutively, 514/514 both times. Durable lesson for every future slice: **never assert on-database totals in a shared-DB integration test; assert containment or deltas.**
+
+### `/panel` bare has no index page — not a bug
+
+Live-verifying, navigating straight to `/panel` (no subpath) rendered the storefront's category-not-found 404 page instead of anything admin-shaped. Not a routing regression: `(admin)/panel` has never had a bare `page.tsx`, only its subroutes do, so with no admin route matching the exact segment, Next.js falls through to `(shop)/[category]/page.tsx`, which happily treats `panel` as an unknown category slug. Confirmed via `location.href` (genuinely at `/panel`) plus the page's own text ("Nie znaleziono takiej kategorii"). Worth documenting once so a future slice doesn't "fix" it by adding a redirect nobody asked for.
+
+### Verified
+
+`npm test` (514/514 — 505 prior + 9 new integration), `npm run typecheck`, `npm run lint`, `npm run build` all clean; migration applied to both dev and test DBs. Dev server restarted before live-verifying, per §9z2's standing rule. Live-verified in the browser end to end: created a real FAQ entry in `/panel/faq/nowe` → confirmed it renders in the `/faq` accordion → created a real static page in `/panel/strony/nowa` → confirmed it renders at `/strony/o-nas` with the real SEO title → confirmed the FAQ teaser (but no reviews section — correctly, since none were approved yet) on the homepage → walked a real seeded order (`2026/08/0001`) through every status transition to `COMPLETED` via the existing P7a status actions → submitted a real guest review from `/zamowienie/2026/08/0001` (token-gated) → reloading the same page confirmed a second submission is refused server-side ("Opinia dla tego zamówienia została już przesłana") → confirmed the review was invisible on the homepage while `PENDING` → approved it in `/panel/opinie` → confirmed it then appeared in the homepage's real "Opinie klientów" section with the correct star rating, body, and author name.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

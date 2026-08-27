@@ -74,10 +74,12 @@ animation in place of a photo), real trust badges, category tiles, a
 filter/sort sidebar, real diacritic-insensitive search, and one honest
 product grid, no fabricated reviews or ratings anywhere. See
 `docs/HANDOVER.md` §9g/§9h — the latter for four more real bugs the redesign
-found and fixed. The homepage's *narrative* sections (hero copy,
-craftsmanship, reviews, FAQ) still aren't built — they need the owner's
-actual words, and reviews specifically need real customers, not invented
-ones. A working configurator exists on every product page — step machine,
+found and fixed. **The reviews and FAQ homepage sections were wired to real
+data in P7b slice 5 (2026-08-27)** — each renders nothing at all when its
+query is empty, never a fabricated testimonial or an empty heading; see
+below and `docs/HANDOVER.md` §9z5. The homepage's remaining *narrative*
+sections (hero copy, craftsmanship) still aren't built — they need the
+owner's actual words. A working configurator exists on every product page — step machine,
 real material/design/finish/thickness options, server-computed price and
 feasibility. Personalization is real too, as of 2026-08-24: a genuine font
 (Inter, self-hosted, real cmap-parsed Polish glyph coverage — never assumed)
@@ -256,6 +258,26 @@ verification caught a real `NaN` in the capacity total from exactly that
 gap (old snapshots have the field genuinely absent, not `null`) — fixed
 and reverified. See `docs/HANDOVER.md` §9z4.
 
+**P7b, content: FAQ, static pages, real reviews (slice 5) — built
+2026-08-27.** The first slice with no pre-existing schema — `Faq`,
+`StaticPage`, and `Review` are genuinely new models, added via a hand-
+authored migration. `/panel/faq` and `/panel/strony` are soft-delete-only
+CRUD; public `/faq` (with a real Schema.org `FAQPage` block) and
+`/strony/[slug]` (chosen over `/[slug]` deliberately, to avoid colliding
+with `(shop)/[category]`) render the active rows. Reviews needed a real
+submission source before there was anything honest to moderate, so before
+building it the owner was asked directly whether to build a minimal real
+flow or defer reviews — chose to build it: one `Review` per genuine
+`COMPLETED` `Order`, submitted by the customer (guest via the order's
+`accessToken`, or logged-in via session), landing `PENDING` and invisible
+on the storefront until staff approve it in `/panel/opinie` — whose
+actions file contains exactly one mutation, status change, so nothing in
+the codebase can author or edit a testimonial in a customer's name
+(§16A.1 module 9). Live-verified end to end: a real order walked through
+every status to `COMPLETED`, a real review submitted, confirmed pending
+and hidden, approved, confirmed live on the homepage, second submission
+on the same order refused. See `docs/HANDOVER.md` §9z5.
+
 ---
 
 ## Getting set up
@@ -335,20 +357,21 @@ order history, saved configurations, a real mailer, RODO consent +
 legal content, and sitewide loading/empty/error states. **P7a, the admin
 panel's operational minimum, is built** (§9y) — role-gated order
 management with staff-driven status transitions, marking bank-transfer
-orders paid, and a design-review queue, all audited. **P7b's first four
+orders paid, and a design-review queue, all audited. **P7b's first five
 slices, catalogue admin (categories + products), materials & finishes
-CRUD, designs & collections CRUD, and the production queue, are built**
-(§9z/§9z2/§9z3/§9z4). See `docs/CHECKLIST.md` for the itemised state of
-every phase. Next:
+CRUD, designs & collections CRUD, the production queue, and content (FAQ,
+static pages, real customer reviews), are built**
+(§9z/§9z2/§9z3/§9z4/§9z5). See `docs/CHECKLIST.md` for the itemised state
+of every phase. Next:
 
-- **P7b, the rest of it** — customers + RODO tooling, content, settings
-  (also where real shipping rates and a real bank account number finally
-  replace P5's placeholders), audit-log viewer — each its own slice, per
-  §16A.6.
+- **P7b, the rest of it** — customers + RODO tooling, settings (also where
+  real shipping rates and a real bank account number finally replace P5's
+  placeholders), audit-log viewer — each its own slice, per §16A.6.
 - **P7c** — `@mui/x-data-grid` adoption, dashboards, global search, bulk
   actions. See `docs/ARCHITECTURE.md`'s note near §16A for the Materio
   direction already recorded for when it starts.
-- **P2's remaining piece** — the homepage's hero/craftsmanship/reviews/FAQ
-  sections, once real content exists for them.
+- **P2's remaining piece** — the homepage's hero/craftsmanship narrative
+  sections, once the owner's actual words exist for them (reviews and FAQ
+  are now real, see above).
 
 Full phasing in `docs/ARCHITECTURE.md` §22.

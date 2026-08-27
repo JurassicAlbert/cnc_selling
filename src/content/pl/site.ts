@@ -238,4 +238,23 @@ export const SITE = {
   blogPostNotFoundPl: 'Nie znaleziono takiego wpisu.',
   homeBlogHeadingPl: 'Z naszego bloga',
   blogViewAllPl: 'Zobacz wszystkie posty',
+
+  faqHeadingPl: 'Najczęściej zadawane pytania',
+  faqSeoTitlePl: 'Najczęściej zadawane pytania — RYT',
+  faqSeoDescPl: 'Odpowiedzi na najczęstsze pytania o zamówienia, personalizację i realizację.',
+  faqEmptyStatePl: 'Pytania pojawią się tutaj wkrótce.',
+  homeFaqHeadingPl: 'Najczęściej zadawane pytania',
+  faqViewAllPl: 'Zobacz wszystkie pytania',
+
+  staticPageNotFoundPl: 'Nie znaleziono takiej strony.',
+
+  homeReviewsHeadingPl: 'Opinie klientów',
+  reviewFormHeadingPl: 'Zostaw opinię',
+  reviewFormAuthorNameLabelPl: 'Twoje imię (widoczne publicznie)',
+  reviewFormRatingLabelPl: 'Ocena (1–5)',
+  reviewFormBodyLabelPl: 'Treść opinii',
+  reviewFormSubmitPl: 'Wyślij opinię',
+  reviewFormThankYouPl: 'Dziękujemy za opinię! Zostanie opublikowana po weryfikacji.',
+  reviewAlreadySubmittedPl: 'Opinia dla tego zamówienia została już przesłana.',
+  reviewLinkPl: 'Zostaw opinię o tym zamówieniu',
 } as const;

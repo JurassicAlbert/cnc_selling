@@ -86,14 +86,21 @@ afterEach(async () => {
 
 describe('listProductionQueue', () => {
   it('includes only production-stage orders, with correctly summed modules and area', async () => {
+    // Asserts against its own seeded order specifically, not the queue's
+    // total length — `listProductionQueue()` genuinely queries every
+    // production-stage order in the database, not just this test's own
+    // prefixed rows (there's no test-marker column on a real business
+    // status), so other tests' orders sharing a status is expected, not a
+    // bug: a `toHaveLength` assertion here would be the flaky one.
     const confirmed = await seedOrder('CONFIRMED', [buildSnapshot()]);
-    await seedOrder('NEW', [buildSnapshot()]);
-    await seedOrder('SHIPPED', [buildSnapshot()]);
+    const newOrder = await seedOrder('NEW', [buildSnapshot()]);
+    const shipped = await seedOrder('SHIPPED', [buildSnapshot()]);
 
     const queue = await listProductionQueue();
     const orderNumbers = queue.map((q) => q.orderNumber);
     expect(orderNumbers).toContain(confirmed.orderNumber);
-    expect(queue).toHaveLength(1);
+    expect(orderNumbers).not.toContain(newOrder.orderNumber);
+    expect(orderNumbers).not.toContain(shipped.orderNumber);
 
     const entry = queue.find((q) => q.orderNumber === confirmed.orderNumber);
     expect(entry?.moduleCount).toBe(2);
@@ -115,16 +122,23 @@ describe('listProductionQueue', () => {
 
 describe('getProductionCapacity', () => {
   it('sums queued area and machine-minutes exactly, treating a null rate as zero minutes (real area still counted)', async () => {
+    // Delta-based, not absolute: `getProductionCapacity()` genuinely sums
+    // every production-stage order in the database, and other tests
+    // running against the same shared database may have their own
+    // production-stage orders in flight — a before/after comparison is
+    // robust to that, an absolute-total assertion would not be.
+    const before = await getProductionCapacity();
+
     await seedOrder('CONFIRMED', [buildSnapshot({ widthMm: 1000, heightMm: 1000, machiningMilliMinutesPerM2: 3000 })]); // 1 m^2 * 3 min/m^2 = 3 min
     await seedOrder('FINISHING', [buildSnapshot({ widthMm: 1000, heightMm: 2000, machiningMilliMinutesPerM2: null })]); // 2 m^2, 0 min (CUSTOM-style, unknown rate)
     await seedOrder('COMPLETED', [buildSnapshot({ widthMm: 5000, heightMm: 5000 })]); // not queued work, excluded entirely
 
-    const capacity = await getProductionCapacity();
-    expect(capacity.queuedAreaM2).toBeCloseTo(3, 5);
-    expect(capacity.queuedMachineMinutes).toBeCloseTo(3, 5);
+    const after = await getProductionCapacity();
+    expect(after.queuedAreaM2 - before.queuedAreaM2).toBeCloseTo(3, 5);
+    expect(after.queuedMachineMinutes - before.queuedMachineMinutes).toBeCloseTo(3, 5);
 
     const machineSettings = await prisma.machineSettings.findUnique({ where: { id: 1 }, select: { weeklyCapacityMinutes: true } });
-    expect(capacity.weeklyCapacityMinutes).toBe(machineSettings?.weeklyCapacityMinutes ?? 0);
+    expect(after.weeklyCapacityMinutes).toBe(machineSettings?.weeklyCapacityMinutes ?? 0);
   });
 });
 

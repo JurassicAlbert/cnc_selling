@@ -13,6 +13,7 @@ import type {
   MaterialFamily,
   OrderStatus,
   ProductTypeCode,
+  ReviewStatus,
 } from '@/generated/prisma/enums';
 
 export const ADMIN = {
@@ -25,6 +26,9 @@ export const ADMIN = {
   navDesignsPl: 'Wzory',
   navCollectionsPl: 'Kolekcje',
   navProductionPl: 'Produkcja',
+  navFaqPl: 'FAQ',
+  navStaticPagesPl: 'Strony',
+  navReviewsPl: 'Opinie',
   logoutPl: 'Wyloguj się',
 
   savePl: 'Zapisz',
@@ -302,6 +306,39 @@ export const ADMIN = {
   productionBriefThicknessLabelPl: 'Grubość',
   productionBriefPersonalizationLabelPl: 'Personalizacja',
   productionBriefModulesHeadingPl: 'Moduły',
+
+  faqHeadingPl: 'FAQ',
+  faqNewPl: 'Nowe pytanie',
+  faqEmptyPl: 'Brak pytań.',
+  faqColumnQuestionPl: 'Pytanie',
+  faqColumnStatusPl: 'Status',
+  faqFieldQuestionPl: 'Pytanie',
+  faqFieldAnswerPl: 'Odpowiedź',
+  faqFieldSortOrderPl: 'Kolejność wyświetlania',
+
+  staticPagesHeadingPl: 'Strony',
+  staticPagesNewPl: 'Nowa strona',
+  staticPagesEmptyPl: 'Brak stron.',
+  staticPagesColumnTitlePl: 'Tytuł',
+  staticPagesColumnSlugPl: 'Identyfikator URL',
+  staticPagesColumnStatusPl: 'Status',
+  staticPageFieldSlugPl: 'Identyfikator URL (slug)',
+  staticPageFieldTitlePl: 'Tytuł',
+  staticPageFieldBodyPl: 'Treść',
+  staticPageFieldSeoTitlePl: 'Tytuł SEO',
+  staticPageFieldSeoDescPl: 'Opis SEO',
+  staticPageFieldSortOrderPl: 'Kolejność wyświetlania',
+
+  reviewsHeadingPl: 'Opinie',
+  reviewsEmptyPl: 'Brak opinii.',
+  reviewsFilterStatusPl: 'Status',
+  reviewsColumnOrderPl: 'Zamówienie',
+  reviewsColumnAuthorPl: 'Autor',
+  reviewsColumnRatingPl: 'Ocena',
+  reviewsColumnBodyPl: 'Treść',
+  reviewsColumnDatePl: 'Data',
+  reviewApprovePl: 'Zatwierdź',
+  reviewRejectPl: 'Odrzuć',
 } as const;
 
 const ORDER_STATUS_LABELS_PL: Record<OrderStatus, string> = {
@@ -389,6 +426,16 @@ const FINISH_KIND_LABELS_PL: Record<FinishKind, string> = {
 
 export function adminFinishKindLabel(kind: FinishKind): string {
   return FINISH_KIND_LABELS_PL[kind];
+}
+
+const REVIEW_STATUS_LABELS_PL: Record<ReviewStatus, string> = {
+  PENDING: 'Oczekująca',
+  APPROVED: 'Zatwierdzona',
+  REJECTED: 'Odrzucona',
+};
+
+export function adminReviewStatusLabel(status: ReviewStatus): string {
+  return REVIEW_STATUS_LABELS_PL[status];
 }
 
 const DESIGN_RIGHTS_STATUS_LABELS_PL: Record<DesignRightsStatus, string> = {

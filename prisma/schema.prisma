@@ -734,8 +734,12 @@ model Order {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  items  OrderItem[]
-  events OrderEvent[]
+  items   OrderItem[]
+  events  OrderEvent[]
+  /// At most one — `Review.orderId` is `@unique`. A real customer testimonial
+  /// requires a genuine `COMPLETED` order behind it (§16A.1 module 9: "no
+  /// facility to author a testimonial in a customer's name").
+  reviews Review[]
 
   @@index([userId])
   @@index([status])
@@ -1027,4 +1031,67 @@ model AnalyticsEvent {
 
   @@index([name, createdAt])
   @@index([sessionToken])
+}
+
+// ---------------------------------------------------------------------------
+// Content — FAQ, static pages, customer reviews (P7b)
+// ---------------------------------------------------------------------------
+
+model Faq {
+  id         String   @id @default(cuid())
+  questionPl String
+  answerPl   String   @db.Text
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+/// Generic CMS-lite pages ("o nas", "dostawa i płatność", ...), rendered at
+/// `/strony/[slug]` — deliberately NOT `/[slug]`, already claimed by
+/// categories (`(shop)/[category]/page.tsx`). `Regulamin`/`Polityka
+/// prywatności` stay their own hardcoded routes (real content since P6),
+/// unrelated to this model.
+model StaticPage {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  titlePl    String
+  bodyPl     String   @db.Text
+  seoTitlePl String
+  seoDescPl  String
+  isActive   Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// One real customer testimonial per `Order` (`@unique` below), submitted by
+/// the customer themselves once their order is `COMPLETED` — never authored
+/// or edited by staff (§16A.1 module 9). Staff may only change `status`.
+model Review {
+  id               String       @id @default(cuid())
+  orderId          String       @unique
+  order            Order        @relation(fields: [orderId], references: [id])
+  authorNamePl     String
+  /// 1-5.
+  rating           Int
+  bodyPl           String       @db.Text
+  status           ReviewStatus @default(PENDING)
+  moderatedAt      DateTime?
+  /// Denormalised: survives staff account deletion, same reasoning as
+  /// `AuditLog.actorEmail`/`OrderEvent.actorEmail`.
+  moderatedByEmail String?
+  createdAt        DateTime     @default(now())
+
+  @@index([status, createdAt])
 }
