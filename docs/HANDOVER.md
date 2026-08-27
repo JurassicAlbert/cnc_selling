@@ -2845,6 +2845,40 @@ Both issues were fixed, and the two disposable-looking-but-real state changes ma
 
 `npm run typecheck && npm run lint && npm test && npm run build` clean (561/561 tests, 561 stable across 3 consecutive full-suite runs — the dashboard test flakiness from slice 8 recurred once more here, purely from adding more concurrent order-creating test files, not a regression in the dashboard logic itself; fixed properly this time by pinning `getDashboardKpis`'s date-scoped tests to a far-future `now` fully decoupled from any other test file's real-wall-clock fixtures, and switching its two non-date-scoped fields to absolute lower-bound assertions instead of before/after deltas, which can go negative from unrelated concurrent cleanup). Live-verified end-to-end via the dev server's own request log for every mutation (not just DOM state, which can read stale mid-flight): `Switch` toggle → `setMaterialAvailable(id, false)` → real DB write → `router.refresh()`; `sortOrder` cell edit → `setCategorySortOrder(id, 99)` → real DB write → the list re-sorted with the edited row moving to its new position, proving the whole round trip including re-ordering. Confirmed no accidental row-click navigation fires when interacting with either editable field.
 
+## 9z19. P8 — Pricing admin (versioned rates, mandatory simulator) — 2026-08-27
+
+Built autonomously — the owner gave standing authorization mid-session to keep working toward "no missing pages, functionality, design and UI" across the storefront and admin panel without stopping to ask each time. Surveyed `docs/CHECKLIST.md` for the single biggest concrete gap: P8's pricing admin was entirely unbuilt — there was no way to change `PricingSettings` through the panel at all, only a raw DB edit. `docs/ARCHITECTURE.md` §16A.1 module 7 calls this the "highest-risk screen in the application," and the schema had already been designed for exactly this (`PricingSettings.version` as `@id`, `isActive`/`publishedAt`/`publishedByEmail`/`notePl` sitting unused since the seed script, whose own comment said "versioning happens through the (future) admin pricing screen, never here").
+
+### Scope: only `PricingSettings`' own 5 fields
+
+Machine rates (CNC/laser), module surcharge, VAT rate, packaging tiers. "Material and finish rates, product base and minimum price" (also named in module 7) are already editable via the existing Materials/Finishes/Products CRUD from P7b — not duplicated here.
+
+### A real research mistake caught before it shipped: packaging tiers ARE consumed
+
+While planning, a `grep -rn "packagingTiers" src/domain/pricing/*.ts` came back empty and I concluded the field was captured but never applied to any price — and wrote that into the plan. It was wrong: the evaluation logic lives in `src/server/mapping/to-domain.ts` (the mapping layer, not the pure domain layer), not where I searched. `packagingGroszeFor` evaluates the tiers in order and is wired into every real price via `toPricingInput` — and, more importantly, **throws** if no tier matches a configuration's size ("no matching tier is an error rather than a zero," per that function's own comment, a deliberate choice: silently shipping a large order for free is a loss discovered in the accounts, not the code). That means a pricing draft whose last packaging tier isn't a genuine unbounded catch-all (`maxAreaM2: null, maxModules: null`) could crash real checkout pricing the first time a customer configures something outside every bounded row. Caught this before writing any code by reading the actual consumer function, not by testing after the fact — `applyCreatePricingDraft` now validates the last tier is a real catch-all, a genuine safety check this screen didn't have before.
+
+### The simulator reuses the real configurator pricing path
+
+`getConfiguratorProductData(slug)` + `priceConfiguration(...)` (`src/server/repositories/configurator.ts`, `src/server/configurator/price-configuration.ts`) are the exact functions the live storefront configurator calls on every selection change. `simulatePricingDraft` calls them twice per reference product — once with the real active `PricingSettings` row, once with its 5 rate fields overridden by the draft's — and diffs the two `priceBreakdown.unitGrossGrosze`s. Three real seeded products, looked up by slug (not id, which doesn't survive a reseed): `obraz-drewniany-z-grawerem` (simplest case), `stolek-loftowy-z-grawerem` (CNC + thickness sensitive), `panel-podlogowy-z-grawerem`. Each priced at its own `minWidthMm`/`minHeightMm` with its first available material/finish/design — deterministic, always valid, zero new selection logic.
+
+Live-verified by actually doubling the CNC rate in a real draft: the simulator showed +18,45 zł and +28,83 zł on the two CNC-sensitive products and **exactly 0,00 zł** on the third — a real, differentiated, useful result (that product's price is evidently dominated by something the CNC rate doesn't touch at its reference configuration), not a flat across-the-board bump that would have suggested the simulator wasn't really running distinct calculations per product.
+
+### Never edit in place, genuinely
+
+No `applyUpdatePricingVersion` exists anywhere — `applyCreatePricingDraft` always inserts a new row (`version = max(existing) + 1`, `isActive: false`), and `applyPublishPricingVersion` is the only thing that ever flips `isActive`, atomically (`prisma.$transaction`: deactivate whatever was active, activate the target) — audit-logged with a full diff of the outgoing and incoming rates. A draft that's never published is just an inert row.
+
+### "Publish blocked until simulation viewed" and the confirm() gap
+
+The simulator runs on mount inside its own client island (`PricingSimulator.tsx`) — no separate "run simulation" button, so there is no path to the Publish button that skips ever seeing the table. Publish itself uses a real `window.confirm()` — no MUI Dialog-based confirmation pattern exists anywhere in this codebase yet ("Confirmation dialogs only for irreversible actions" is still an open `docs/CHECKLIST.md` item), so a native blocking confirm for a genuinely irreversible, site-wide price change is the honest choice for now rather than skipping the confirmation step or inventing a one-off styled dialog for a single call site.
+
+### The load-bearing test doesn't recompute anything
+
+"Existing orders unchanged after a rate change" is true by construction — `OrderItem.pricingVersion`/`snapshot` are an immutable JSON snapshot, never a live join to `PricingSettings`. The test in `tests/integration/admin-pricing.test.ts` proves this the most direct way possible: seed a real `Order`/`OrderItem` under the currently active version, publish a brand new version with drastically different rates (999 999 grosze machine rates), then re-fetch the `OrderItem` and assert its `lineGrossGrosze`/`pricingVersion`/`snapshot` are byte-identical to what was inserted — no recomputation happens anywhere in that path, so if this ever broke it would mean something started reading `PricingSettings` live at order-display time, a real regression this test would catch.
+
+### Verified
+
+`npm run typecheck && npm run lint && npm test && npm run build` clean (569/569 tests; one unrelated transient 5s timeout in `upload.test.ts` under heavy parallel load, reproduced as passing cleanly in isolation, not a real regression — ran the full suite three times total to confirm). Live-verified end to end as the real admin account: created a draft doubling the CNC rate, watched the simulator resolve with real differentiated numbers, published it, confirmed `/panel/ceny` showed the new version active and the old one archived. Restored the dev DB's real active pricing back to the original seed rates afterward via the same real versioned-publish mechanism (a third version, same rates, a note explaining why) rather than leaving the doubled test rate live for the owner's own testing — the audit trail records all three versions honestly rather than hiding the detour.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

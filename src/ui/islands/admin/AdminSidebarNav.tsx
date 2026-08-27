@@ -26,6 +26,7 @@ import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined';
 import StarBorderOutlinedIcon from '@mui/icons-material/StarBorderOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import SellOutlinedIcon from '@mui/icons-material/SellOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 
 import { ADMIN } from '@/content/pl/admin';
@@ -77,6 +78,7 @@ const NAV_GROUPS: readonly NavGroup[] = [
     headerPl: ADMIN.navGroupSystemPl,
     items: [
       { href: '/panel/ustawienia', label: ADMIN.navSettingsPl, icon: <SettingsOutlinedIcon fontSize="small" /> },
+      { href: '/panel/ceny', label: ADMIN.navPricingPl, icon: <SellOutlinedIcon fontSize="small" /> },
       { href: '/panel/dziennik-zdarzen', label: ADMIN.navAuditLogPl, icon: <HistoryOutlinedIcon fontSize="small" /> },
     ],
   },

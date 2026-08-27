@@ -474,6 +474,26 @@ sortOrder: 'asc' }` alone has no tiebreaker, so materials sharing
 every refresh — added `id` as a secondary sort key across all 6 list
 queries. See `docs/HANDOVER.md` §9z18.
 
+**P8, pricing admin (versioned rates, mandatory simulator) — built
+2026-08-27, autonomously.** The single largest concrete gap left in the
+whole panel: there was no way to change `PricingSettings` (machine
+rates, module surcharge, VAT, packaging tiers) through the UI at all
+before this. `/panel/ceny`, ADMIN only. Genuinely never edits a version
+in place — every save is a brand new row, and a real publish workflow
+atomically swaps which one is active. The price simulator reuses the
+*exact* functions the live storefront configurator calls
+(`getConfiguratorProductData`/`priceConfiguration`) against 3 real
+seeded products, not a reimplementation — live-verified doubling the
+CNC rate and watching two rate-sensitive products move and a third
+stay at exactly 0,00 zł, a real differentiated result. Caught a real
+research mistake before it shipped: packaging tiers looked unused at
+first grep, but are genuinely wired in and **throw** on an unmatched
+configuration size — added a real safety validation (the last tier
+must be a genuine catch-all) that didn't exist before. The
+"existing orders unaffected" invariant has a real test that proves it
+directly against a seeded order, not just an architectural claim. See
+`docs/HANDOVER.md` §9z19.
+
 ---
 
 ## Getting set up
@@ -577,8 +597,13 @@ fix (§9z17): staff/admin sign-in lands on `/panel` directly now, not
 the customer account page. **P8's Dashboard module is correspondingly
 checked off in `docs/CHECKLIST.md`**, except the configurator funnel
 (needs a new `AnalyticsEvent` model, deliberately deferred, not silently
-dropped). See `docs/CHECKLIST.md` for the itemised state of every phase.
-Next:
+dropped) — and **P8's pricing admin is now built too** (§9z19):
+versioned rates, a mandatory price simulator reusing the real
+configurator pricing path, atomic publish, and a real test proving
+existing orders stay unaffected. See `docs/CHECKLIST.md` for the
+itemised state of every phase. Next, continuing autonomously per the
+owner's standing direction to close remaining gaps toward "no missing
+pages, functionality, design and UI":
 
 - **P7c, the rest of it** — three list pages still use a plain `<Table>`,
   each needing its own design: Produkcja's rows link to a different
@@ -586,12 +611,10 @@ Next:
   zdarzeń's diff column holds variable-height JSON `DataGrid` doesn't
   suit. Then bulk actions, saved filters, keyboard nav (J/K between
   records), and the rest of the list, one slice at a time.
-- **P8, the rest of it** — pricing admin (versioned saves, price
-  simulator, audit diff — highest-risk screen in the app) and the
-  configurator funnel (needs `AnalyticsEvent` + instrumenting every
-  configurator step).
+- **P8's configurator funnel** — needs `AnalyticsEvent` + instrumenting
+  every configurator step to write events, its own substantial slice.
 - **P2's remaining piece** — the homepage's hero/craftsmanship narrative
-  sections, once the owner's actual words exist for them (reviews and FAQ
-  are now real, see above).
+  sections, still genuinely blocked on the owner's actual words (reviews
+  and FAQ are now real, see above) — not something to fabricate.
 
 Full phasing in `docs/ARCHITECTURE.md` §22.
