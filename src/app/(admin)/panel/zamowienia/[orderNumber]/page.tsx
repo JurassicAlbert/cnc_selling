@@ -1,10 +1,13 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Chip, Grid, Typography } from '@mui/material';
 
 import { ADMIN, adminOrderStatusLabel } from '@/content/pl/admin';
 import { ORDER_STATUSES, checkOrderStatusTransition } from '@/domain/order-status/transitions';
 import { findOrderForAdmin } from '@/server/repositories/admin-orders';
+import { listOrderModuleManifest } from '@/server/repositories/admin-production';
 import { OrderEventTimeline } from '@/ui/primitives/OrderEventTimeline';
+import { OrderModuleManifest } from '@/ui/primitives/OrderModuleManifest';
 import { OrderSummary } from '@/ui/primitives/OrderSummary';
 import { OrderStatusActions } from '@/ui/islands/admin/OrderStatusActions';
 import type { StatusCandidate } from '@/ui/islands/admin/OrderStatusActions';
@@ -15,7 +18,11 @@ type OrderDetailPageProps = {
 
 export default async function AdminOrderDetailPage({ params }: OrderDetailPageProps) {
   const { orderNumber } = await params;
-  const order = await findOrderForAdmin(decodeURIComponent(orderNumber));
+  const decodedOrderNumber = decodeURIComponent(orderNumber);
+  const [order, manifest] = await Promise.all([
+    findOrderForAdmin(decodedOrderNumber),
+    listOrderModuleManifest(decodedOrderNumber),
+  ]);
   if (order === null) {
     notFound();
   }
@@ -71,6 +78,12 @@ export default async function AdminOrderDetailPage({ params }: OrderDetailPagePr
           <Typography color={order.productionNotes === null ? 'text.secondary' : undefined}>
             {order.productionNotes ?? ADMIN.orderProductionNotesEmptyPl}
           </Typography>
+
+          <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>
+            {ADMIN.orderManifestHeadingPl}
+          </Typography>
+          <OrderModuleManifest items={manifest} />
+          <Link href={`/panel/zamowienia/${order.orderNumber}/karta-produkcyjna`}>{ADMIN.orderBriefLinkPl}</Link>
         </Grid>
 
         <Grid size={{ xs: 12, md: 5 }}>

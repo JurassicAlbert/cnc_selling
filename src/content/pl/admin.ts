@@ -24,6 +24,7 @@ export const ADMIN = {
   navFinishesPl: 'Wykończenia',
   navDesignsPl: 'Wzory',
   navCollectionsPl: 'Kolekcje',
+  navProductionPl: 'Produkcja',
   logoutPl: 'Wyloguj się',
 
   savePl: 'Zapisz',
@@ -270,6 +271,37 @@ export const ADMIN = {
   designMaterialsHeadingPl: 'Zgodne materiały',
   designMaterialsEmptyPl: 'Żaden materiał nie jest jeszcze przypisany — brak wpisów oznacza, że dostępny jest każdy materiał dopuszczony przez produkt.',
   designMaterialFieldPl: 'Materiał',
+
+  productionHeadingPl: 'Produkcja',
+  productionCapacityAreaLabelPl: 'Zajęta powierzchnia w kolejce',
+  productionCapacityMinutesLabelPl: 'Czas maszynowy w kolejce',
+  productionCapacityWeeklyLabelPl: 'Tygodniowa pojemność',
+  productionCapacityUnconfiguredPl: 'Tygodniowa pojemność nie jest jeszcze skonfigurowana (Ustawienia).',
+  productionQueueEmptyPl: 'Brak zamówień w tej sekcji.',
+  productionColumnOrderPl: 'Zamówienie',
+  productionColumnCustomerPl: 'Klient',
+  productionColumnModulesPl: 'Moduły',
+  productionColumnAreaPl: 'Powierzchnia (m²)',
+
+  orderManifestHeadingPl: 'Manifest modułów',
+  orderManifestEmptyPl: 'Ten produkt nie jest podzielony na moduły.',
+  orderManifestColumnCodePl: 'Kod',
+  orderManifestColumnSizePl: 'Wymiary (mm)',
+  orderManifestColumnOrderPl: 'Kolejność produkcji',
+  orderBriefLinkPl: 'Karta produkcyjna (do druku)',
+
+  productionBriefHeadingPl: 'Karta produkcyjna',
+  productionBriefNotAFilePl: 'Karta produkcyjna — nie jest to plik produkcyjny CNC/laserowy.',
+  productionBriefPrintPl: 'Drukuj',
+  productionBriefOrderLabelPl: 'Zamówienie',
+  productionBriefProductLabelPl: 'Produkt',
+  productionBriefDesignLabelPl: 'Kod wzoru',
+  productionBriefMaterialLabelPl: 'Materiał',
+  productionBriefFinishLabelPl: 'Wykończenie',
+  productionBriefSizeLabelPl: 'Wymiary',
+  productionBriefThicknessLabelPl: 'Grubość',
+  productionBriefPersonalizationLabelPl: 'Personalizacja',
+  productionBriefModulesHeadingPl: 'Moduły',
 } as const;
 
 const ORDER_STATUS_LABELS_PL: Record<OrderStatus, string> = {

@@ -25,4 +25,15 @@ export type OrderItemSnapshot = {
   readonly personalizationText: string | null;
   readonly moduleLayout: ModuleLayout;
   readonly priceBreakdown: PriceBreakdown;
+  /**
+   * Not derivable from `priceBreakdown` (which keeps the resulting
+   * `machiningGrosze` cost, never the raw rate or which machine it used) —
+   * captured separately for the admin production-capacity view (P7b).
+   * `null` for `CUSTOM` products: no catalogue design, machining time
+   * genuinely unknown until staff reviews the upload (same reasoning
+   * `PricingInput.design`'s own doc comment states). Added 2026-08-27;
+   * orders placed before this carry no value here, honestly, not a
+   * backfilled guess.
+   */
+  readonly machiningMilliMinutesPerM2: number | null;
 };

@@ -243,6 +243,19 @@ derived from the other. New designs default to `REQUIRES_PERMISSION`
 just a form default, since the real enforcement (`APPROVED_COMMERCIAL`/
 `PUBLIC_DOMAIN`-only) already existed pre-P7. See `docs/HANDOVER.md` §9z3.
 
+**P7b, production queue (slice 4) — built 2026-08-27.** Read-only, unlike
+the previous three slices — `/panel/produkcja` (queue grouped by status,
+capacity view against `MachineSettings.weeklyCapacityMinutes`, which had
+sat unused in the schema since P0) and a printable production brief
+(`/panel/zamowienia/[orderNumber]/karta-produkcyjna`, explicitly labelled
+not a CNC/laser file). Added one real field, `OrderItemSnapshot.
+machiningMilliMinutesPerM2`, since `PriceBreakdown` only ever kept the
+resulting cost, never the raw rate — orders placed before this ship show
+no machine-minutes contribution, honestly, not backfilled. Live
+verification caught a real `NaN` in the capacity total from exactly that
+gap (old snapshots have the field genuinely absent, not `null`) — fixed
+and reverified. See `docs/HANDOVER.md` §9z4.
+
 ---
 
 ## Getting set up
@@ -257,7 +270,7 @@ npm install
 npm run db:up
 npm run db:deploy      # applies the initial migration
 
-npm test               # 495 assertions across thirty files, unit + integration
+npm test               # 500 assertions across thirty-one files, unit + integration
 npm run typecheck      # TypeScript strict, noUncheckedIndexedAccess, no emit
 npm run lint             # Biome + the Polish-literal check
 npm run build           # Next.js production build
@@ -322,15 +335,16 @@ order history, saved configurations, a real mailer, RODO consent +
 legal content, and sitewide loading/empty/error states. **P7a, the admin
 panel's operational minimum, is built** (§9y) — role-gated order
 management with staff-driven status transitions, marking bank-transfer
-orders paid, and a design-review queue, all audited. **P7b's first three
+orders paid, and a design-review queue, all audited. **P7b's first four
 slices, catalogue admin (categories + products), materials & finishes
-CRUD, and designs & collections CRUD, are built** (§9z/§9z2/§9z3). See
-`docs/CHECKLIST.md` for the itemised state of every phase. Next:
+CRUD, designs & collections CRUD, and the production queue, are built**
+(§9z/§9z2/§9z3/§9z4). See `docs/CHECKLIST.md` for the itemised state of
+every phase. Next:
 
-- **P7b, the rest of it** — customers + RODO tooling, content, production
-  queue, settings (also where real shipping rates and a real bank account
-  number finally replace P5's placeholders), audit-log viewer — each its
-  own slice, per §16A.6.
+- **P7b, the rest of it** — customers + RODO tooling, content, settings
+  (also where real shipping rates and a real bank account number finally
+  replace P5's placeholders), audit-log viewer — each its own slice, per
+  §16A.6.
 - **P7c** — `@mui/x-data-grid` adoption, dashboards, global search, bulk
   actions. See `docs/ARCHITECTURE.md`'s note near §16A for the Materio
   direction already recorded for when it starts.

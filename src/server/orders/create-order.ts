@@ -225,10 +225,9 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
 function buildOrderItemInput(entry: RevalidatedItem) {
   const { item, validated, lineNetGrosze, lineVatGrosze, lineGrossGrosze } = entry;
   const { priceBreakdown, moduleLayout } = validated.pricing;
-  const productionMethod =
-    item.selections.designId === null
-      ? null
-      : (validated.data.designsById.get(item.selections.designId)?.recommendedMethod ?? null);
+  const selectedDesign =
+    item.selections.designId === null ? null : (validated.data.designsById.get(item.selections.designId) ?? null);
+  const productionMethod = selectedDesign?.recommendedMethod ?? null;
 
   const snapshot: OrderItemSnapshot = {
     productNamePl: item.productNamePl,
@@ -244,6 +243,7 @@ function buildOrderItemInput(entry: RevalidatedItem) {
     personalizationText: item.personalizationText,
     moduleLayout,
     priceBreakdown,
+    machiningMilliMinutesPerM2: selectedDesign?.machiningMilliMinutesPerM2 ?? null,
   };
 
   return {

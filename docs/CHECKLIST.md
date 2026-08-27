@@ -387,7 +387,7 @@ Deliberately out of this pass, per `docs/ARCHITECTURE.md` §16A.6 and decision D
 
 ### P7b — management
 
-Built as vertical slices per §16A.6, not one pass — slice 1 (categories + products), slice 2 (materials + finishes), and slice 3 (designs + collections) all shipped 2026-08-27; customers+RODO, content, production queue, settings, and the audit-log viewer are still open.
+Built as vertical slices per §16A.6, not one pass — slice 1 (categories + products), slice 2 (materials + finishes), slice 3 (designs + collections), and slice 4 (production queue) all shipped 2026-08-27; customers+RODO, content, settings, and the audit-log viewer are still open.
 
 - [x] Categories CRUD — `/panel/kategorie`, no hard delete (soft-delete invariant, §16A.2 — `Category` is a real FK target)
 - [x] Products CRUD incl. dimension envelope, SEO fields, activate/deactivate — `/panel/produkty`, same soft-delete-only rule
@@ -405,8 +405,8 @@ Built as vertical slices per §16A.6, not one pass — slice 1 (categories + pro
 - [ ] RODO export and deletion (anonymise user, retain order records)
 - [ ] Content: FAQ, static pages, homepage sections
 - [ ] Reviews moderation — no facility to author a testimonial in a customer's name
-- [ ] Production queue grouped by status, module manifest, capacity view
-- [ ] Printable production brief, clearly labelled not a production file
+- [x] Production queue grouped by status, module manifest, capacity view — `/panel/produkcja`, read-only (no new mutations); capacity is queued m²/machine-minutes against `MachineSettings.weeklyCapacityMinutes` (already existed, seeded `0`; shows an honest "not configured" note rather than a fake percentage until Settings ships); module manifest also added to the existing order detail page, not just the queue
+- [x] Printable production brief, clearly labelled not a production file — `/panel/zamowienia/[orderNumber]/karta-produkcyjna`, the exact warning text on screen (and in print), panel chrome hidden via `@media print`
 - [ ] Settings: staff users, bank details, shipping rates, email templates
 - [ ] Audit log viewer
 - [ ] Soft delete enforced for entities referenced by orders

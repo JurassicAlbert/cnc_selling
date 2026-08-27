@@ -26,7 +26,10 @@ export default async function PanelLayout({ children }: { readonly children: Rea
   return (
     <ThemeRegistry>
       <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-        <Box component="nav" sx={{ width: 220, borderRight: 1, borderColor: 'divider', p: 2, flexShrink: 0 }}>
+        <Box
+          component="nav"
+          sx={{ width: 220, borderRight: 1, borderColor: 'divider', p: 2, flexShrink: 0, '@media print': { display: 'none' } }}
+        >
           <Typography variant="subtitle2" sx={{ mb: 2 }}>
             {staff.email}
           </Typography>
@@ -39,6 +42,7 @@ export default async function PanelLayout({ children }: { readonly children: Rea
             <Link href="/panel/wykonczenia">{ADMIN.navFinishesPl}</Link>
             <Link href="/panel/wzory">{ADMIN.navDesignsPl}</Link>
             <Link href="/panel/kolekcje">{ADMIN.navCollectionsPl}</Link>
+            <Link href="/panel/produkcja">{ADMIN.navProductionPl}</Link>
           </Stack>
           <form action={logout}>
             <Button type="submit" size="small" variant="text">
