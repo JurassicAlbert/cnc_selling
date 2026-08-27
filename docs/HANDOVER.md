@@ -3090,6 +3090,26 @@ Checked `docs/CHECKLIST.md`'s "CSV import/export on catalogue tables" line by ac
 
 No code changed this pass — pure verification, both findings checked against real running behavior (a real browser resize + DOM measurement for the tablet check, a real click-through of the export menu for the CSV check), not inferred from reading source alone.
 
+## 9z31. CSV import (pilot: Categories) — 2026-08-27
+
+Continuing autonomously straight from §9z30's finding: CSV export already worked everywhere, but no CSV **import** path existed at all. Built it for Categories as a real, complete pilot — not a stub — establishing the pattern the other 5 catalogue entities can follow mechanically.
+
+### New dependency, deliberately: hand-rolling CSV parsing was the wrong call
+
+Added `papaparse` (+ `@types/papaparse`) rather than writing a parser — RFC 4180 quoting (commas/newlines inside a quoted cell, escaped quotes) is exactly the kind of "looks simple, is not" text-format problem this project's own `domain/text/numeric-input.ts` doc comment warns about for a different case. `npm audit` showed 3 pre-existing high-severity findings (`deepmerge-ts` via `@prisma/config`, unrelated to this dependency, would need a breaking Prisma downgrade to fix — flagged, not touched) — `papaparse` itself added zero new findings.
+
+### Every imported row goes through the exact same path a manual create does
+
+`applyImportCategoriesFromCsv(staff, csvText)` parses with `Papa.parse(csvText, {header: true, skipEmptyLines: true})`, then calls the **existing** `applyCreateCategory` once per row — same validation, same duplicate-slug check, same audit log entry — rather than duplicating that logic. An imported category is indistinguishable from a hand-typed one in the audit trail. A bad row never aborts the batch: each row's own `CategoryMutationResult` is collected, so a staff member fixing a large CSV sees exactly which rows failed and why (row number matches what they'd see in a spreadsheet — header is row 1, so validation reports start at row 2), not "the whole import failed."
+
+### New shared `CsvImportForm` primitive, not a one-off
+
+`src/ui/islands/admin/CsvImportForm.tsx` takes the Server Action and the expected column list as props — the file-input form, pending state, success/error summary, and the per-row failure table are all generic. Wiring a 2nd entity means writing that entity's own `applyImportXFromCsv` (a small, mechanical mirror of the Category one) and one `<CsvImportForm action={...} expectedColumns={[...]} />` line on its list page — deliberately left as a follow-up rather than doing all 6 in one pass, to keep this slice reviewable and to prove the pattern on one real entity first.
+
+### Verified
+
+`npm run typecheck && npm run lint && npm test && npm run build` all clean (604/604 — 5 new tests in `admin-categories.test.ts`: every valid row created, a bad row reported without aborting the batch, an in-file duplicate slug caught on its second occurrence, an empty CSV rejected, and — a real, not hypothetical, check given this session's own Polish-correctness theme — genuine Polish diacritics (`Żółw i dąb — ćma łąka źrebię`) round-tripping correctly through `Papa.parse` and into Postgres unchanged). Also confirmed directly in a throwaway Node script (`papaparse` imported the same way the app does) that parsing preserves all 9 diacritic characters from a UTF-8 string. Restarted the dev server before live-verifying, per §9z2's standing rule. Live-verified the form itself renders correctly on `/panel/kategorie` (file input, "Importuj" button, the expected-columns hint) on a fresh tab with zero console errors — did not attempt a real click-through file upload, since this browser tooling cannot drive a native OS file picker (a known, previously-documented limitation); the actual import logic is proven by the 5 real DB-backed tests instead, which exercise the exact same `applyImportCategoriesFromCsv` function the real form submission calls.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

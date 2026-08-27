@@ -626,6 +626,19 @@ since P7c) — clicked "Eksportuj" to confirm rather than assume; CSV
 left looking like the whole line was still open. See
 `docs/HANDOVER.md` §9z30.
 
+**CSV import (pilot: Categories) — built 2026-08-27, autonomously.**
+The real gap §9z30 found, closed for one entity as a complete,
+non-stub pilot. Every imported row goes through the exact same
+`applyCreateCategory` a manual create does — same validation, same
+audit log — via a new `papaparse`-based `applyImportCategoriesFromCsv`
+and a new generic `CsvImportForm` primitive. A bad row is reported,
+not fatal to the whole batch. Genuine Polish diacritics verified
+round-tripping correctly through the parser and into Postgres, real
+test coverage for the success/per-row-failure/duplicate/empty-file
+cases. The other 5 catalogue entities can follow the same pattern —
+deliberately left as a mechanical follow-up rather than done all at
+once. See `docs/HANDOVER.md` §9z31.
+
 ---
 
 ## Getting set up
@@ -748,8 +761,10 @@ say what to do next**, with a real action button, not just prose
 (§9z28). **Irreversible actions now get a real confirmation dialog**
 — pricing publish, order cancellation, customer anonymization (§9z29).
 Tablet layout at 1024px and CSV export were both confirmed **already
-correct** by real verification, no code needed (§9z30). See
-`docs/CHECKLIST.md` for the itemised state of every phase. Next,
+correct** by real verification, no code needed (§9z30), and **CSV
+import is now built as a real pilot on Categories** — every other
+catalogue entity can follow the same `CsvImportForm` pattern (§9z31).
+See `docs/CHECKLIST.md` for the itemised state of every phase. Next,
 continuing autonomously per the owner's standing direction to close
 remaining gaps toward "no missing pages, functionality, design and UI":
 
@@ -764,8 +779,10 @@ remaining gaps toward "no missing pages, functionality, design and UI":
 - **"Preview as customer" for Designs** — needs a real deep-link into
   the configurator (no standalone design page exists today), its own
   separate slice from the Product half just built.
-- **CSV import on catalogue tables** — export already works (§9z30);
-  bulk-create-from-CSV is a real, unbuilt gap.
+- **CSV import for the other 5 catalogue entities** — Categories has
+  the real pattern now (§9z31); Products/Materials/Finishes/Designs/
+  Collections each need their own `applyImportXFromCsv`, a mechanical
+  follow-up.
 - **P8's configurator funnel** — needs `AnalyticsEvent` + instrumenting
   every configurator step to write events, its own substantial slice.
 - **P2's remaining piece** — the homepage's hero/craftsmanship narrative

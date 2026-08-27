@@ -1,10 +1,14 @@
 import Link from 'next/link';
-import { Button, Typography } from '@mui/material';
+import { Button, Divider, Typography } from '@mui/material';
 
 import { ADMIN } from '@/content/pl/admin';
+import { importCategoriesFromCsv } from '@/server/actions/admin-categories';
 import { listCategoriesForAdmin } from '@/server/repositories/admin-categories';
 import { CategoriesDataGrid } from '@/ui/islands/admin/CategoriesDataGrid';
+import { CsvImportForm } from '@/ui/islands/admin/CsvImportForm';
 import { EmptyState } from '@/ui/primitives/EmptyState';
+
+const CSV_COLUMNS = ['slug', 'namePl', 'descPl', 'seoTitlePl', 'seoDescPl', 'imageUrl', 'sortOrder'] as const;
 
 export default async function AdminCategoriesPage() {
   const categories = await listCategoriesForAdmin();
@@ -25,6 +29,9 @@ export default async function AdminCategoriesPage() {
       ) : (
         <CategoriesDataGrid rows={categories} />
       )}
+
+      <Divider sx={{ my: 4 }} />
+      <CsvImportForm action={importCategoriesFromCsv} expectedColumns={CSV_COLUMNS} />
     </>
   );
 }

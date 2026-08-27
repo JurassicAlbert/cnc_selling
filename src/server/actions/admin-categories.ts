@@ -13,6 +13,7 @@
  */
 
 import { revalidatePath } from 'next/cache';
+import Papa from 'papaparse';
 
 import { prisma } from '@/server/db/client';
 import { requireStaffSession } from '@/server/auth/session';
@@ -198,4 +199,77 @@ export async function setCategorySortOrder(id: string, sortOrder: number): Promi
   await applySetCategorySortOrder(staff, id, sortOrder);
   revalidatePath('/panel/kategorie');
   revalidatePath(`/panel/kategorie/${id}`);
+}
+
+// --- CSV import ------------------------------------------------------------
+//
+// Expected header row: slug,namePl,descPl,seoTitlePl,seoDescPl,imageUrl,sortOrder
+// (imageUrl and sortOrder are optional — a blank cell means null/0). Every
+// row goes through the exact same `applyCreateCategory` a manual create
+// does — same validation, same duplicate-slug check, same audit log — so
+// an imported row is indistinguishable from a hand-typed one afterward. A
+// bad row does not abort the batch: this reports per-row success/failure
+// instead of an all-or-nothing transaction, since a staff member fixing a
+// 200-row CSV wants to know exactly which rows to fix, not "row 47 failed,
+// nothing happened."
+
+export type CategoryCsvRowResult = {
+  readonly row: number;
+  readonly slug: string;
+  readonly ok: boolean;
+  readonly detail: string | null;
+};
+
+export type ImportCategoriesResult =
+  | { readonly ok: true; readonly createdCount: number; readonly rows: readonly CategoryCsvRowResult[] }
+  | { readonly ok: false; readonly detail: string };
+
+function csvCell(record: Record<string, string>, key: string): string {
+  return (record[key] ?? '').trim();
+}
+
+export async function applyImportCategoriesFromCsv(staff: CurrentSession, csvText: string): Promise<ImportCategoriesResult> {
+  const parsed = Papa.parse<Record<string, string>>(csvText, { header: true, skipEmptyLines: true });
+  if (parsed.data.length === 0) {
+    return { ok: false, detail: 'Plik CSV nie zawiera żadnych wierszy z danymi.' };
+  }
+
+  const rows: CategoryCsvRowResult[] = [];
+  let createdCount = 0;
+  for (const [index, record] of parsed.data.entries()) {
+    const rowNumber = index + 2; // header is row 1, so the first data row is row 2 — matches what a staff member sees in a spreadsheet
+    const slug = csvCell(record, 'slug');
+    const sortOrderRaw = csvCell(record, 'sortOrder');
+    const imageUrl = csvCell(record, 'imageUrl');
+    const input: CategoryFormInput = {
+      slug,
+      namePl: csvCell(record, 'namePl'),
+      descPl: csvCell(record, 'descPl'),
+      seoTitlePl: csvCell(record, 'seoTitlePl'),
+      seoDescPl: csvCell(record, 'seoDescPl'),
+      imageUrl: imageUrl.length > 0 ? imageUrl : null,
+      sortOrder: sortOrderRaw.length > 0 && Number.isInteger(Number(sortOrderRaw)) ? Number(sortOrderRaw) : 0,
+    };
+    const result = await applyCreateCategory(staff, input);
+    if (result.ok) {
+      createdCount += 1;
+    }
+    rows.push({ row: rowNumber, slug, ok: result.ok, detail: result.ok ? null : result.detail });
+  }
+
+  return { ok: true, createdCount, rows };
+}
+
+export async function importCategoriesFromCsv(formData: FormData): Promise<ImportCategoriesResult> {
+  const staff = await requireStaffSession();
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, detail: 'Wybierz plik CSV.' };
+  }
+  const csvText = await file.text();
+  const result = await applyImportCategoriesFromCsv(staff, csvText);
+  if (result.ok && result.createdCount > 0) {
+    revalidatePath('/panel/kategorie');
+  }
+  return result;
 }

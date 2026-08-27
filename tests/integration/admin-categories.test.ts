@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyCreateCategory, applySetCategoryActive, applySetCategorySortOrder, applyUpdateCategory } from '@/server/actions/admin-categories';
+import {
+  applyCreateCategory,
+  applyImportCategoriesFromCsv,
+  applySetCategoryActive,
+  applySetCategorySortOrder,
+  applyUpdateCategory,
+} from '@/server/actions/admin-categories';
 import type { CategoryFormInput } from '@/server/actions/admin-categories';
 import { listActiveCategories } from '@/server/repositories/categories';
 import type { CurrentSession } from '@/server/auth/session';
@@ -116,5 +122,93 @@ describe('applySetCategorySortOrder', () => {
 
     const category = await prisma.category.findUniqueOrThrow({ where: { id: created.id } });
     expect(category.sortOrder).toBe(3);
+  });
+});
+
+describe('applyImportCategoriesFromCsv', () => {
+  it('creates every valid row, real ones, going through the exact same audited path as a manual create', async () => {
+    const staff = staffActor();
+    const slugA = uid();
+    const slugB = uid();
+    const csv = [
+      'slug,namePl,descPl,seoTitlePl,seoDescPl,imageUrl,sortOrder',
+      `${slugA},Kategoria A,Opis A,SEO A,SEO opis A,,3`,
+      `${slugB},Kategoria B,Opis B,SEO B,SEO opis B,https://example.test/b.jpg,7`,
+    ].join('\n');
+
+    const result = await applyImportCategoriesFromCsv(staff, csv);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.createdCount).toBe(2);
+    expect(result.rows.every((r) => r.ok)).toBe(true);
+
+    const a = await prisma.category.findUniqueOrThrow({ where: { slug: slugA } });
+    expect(a.namePl).toBe('Kategoria A');
+    expect(a.imageUrl).toBeNull();
+    expect(a.sortOrder).toBe(3);
+
+    const b = await prisma.category.findUniqueOrThrow({ where: { slug: slugB } });
+    expect(b.imageUrl).toBe('https://example.test/b.jpg');
+    expect(b.sortOrder).toBe(7);
+
+    expect(await prisma.auditLog.count({ where: { entity: 'Category', action: 'create', actorEmail: staff.email } })).toBe(2);
+  });
+
+  it('reports a bad row without aborting the rest of the batch', async () => {
+    const staff = staffActor();
+    const slugGood = uid();
+    const csv = [
+      'slug,namePl,descPl,seoTitlePl,seoDescPl,imageUrl,sortOrder',
+      'Not A Slug!,Zły wiersz,Opis,SEO,SEO opis,,0',
+      `${slugGood},Dobry wiersz,Opis,SEO,SEO opis,,0`,
+    ].join('\n');
+
+    const result = await applyImportCategoriesFromCsv(staff, csv);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.createdCount).toBe(1);
+    expect(result.rows).toHaveLength(2);
+    expect(result.rows[0]?.ok).toBe(false);
+    expect(result.rows[0]?.row).toBe(2);
+    expect(result.rows[1]?.ok).toBe(true);
+    expect(result.rows[1]?.row).toBe(3);
+
+    expect(await prisma.category.findUnique({ where: { slug: slugGood } })).not.toBeNull();
+  });
+
+  it('reports a duplicate slug within the same file as a per-row failure on the second occurrence', async () => {
+    const staff = staffActor();
+    const slug = uid();
+    const csv = [
+      'slug,namePl,descPl,seoTitlePl,seoDescPl,imageUrl,sortOrder',
+      `${slug},Pierwsza,Opis,SEO,SEO opis,,0`,
+      `${slug},Duplikat,Opis,SEO,SEO opis,,0`,
+    ].join('\n');
+
+    const result = await applyImportCategoriesFromCsv(staff, csv);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.createdCount).toBe(1);
+    expect(result.rows[0]?.ok).toBe(true);
+    expect(result.rows[1]?.ok).toBe(false);
+  });
+
+  it('rejects a CSV with no data rows', async () => {
+    const result = await applyImportCategoriesFromCsv(staffActor(), 'slug,namePl,descPl,seoTitlePl,seoDescPl,imageUrl,sortOrder\n');
+    expect(result.ok).toBe(false);
+  });
+
+  it('preserves Polish diacritics through the CSV round trip', async () => {
+    const staff = staffActor();
+    const slug = uid();
+    const csv = `slug,namePl,descPl,seoTitlePl,seoDescPl,imageUrl,sortOrder\n${slug},Żółw i dąb — ćma łąka źrebię,Opis,SEO,SEO opis,,0\n`;
+
+    const result = await applyImportCategoriesFromCsv(staff, csv);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.createdCount).toBe(1);
+
+    const category = await prisma.category.findUniqueOrThrow({ where: { slug } });
+    expect(category.namePl).toBe('Żółw i dąb — ćma łąka źrebię');
   });
 });

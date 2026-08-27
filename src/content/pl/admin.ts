@@ -88,6 +88,16 @@ export const ADMIN = {
   previewAsCustomerPl: 'Zobacz jako klient',
   productPreviewBannerPl: 'Podgląd administratora — ta odsłona strony nie jest liczona jako wizyta klienta.',
 
+  csvImportHeadingPl: 'Import z pliku CSV',
+  csvImportColumnsHintPl: 'Oczekiwane kolumny w pierwszym wierszu',
+  csvImportFieldFilePl: 'Plik CSV',
+  csvImportButtonPl: 'Importuj',
+  csvImportPendingPl: 'Importowanie…',
+  csvImportSkippedHeadingPl: 'Pominięte wiersze',
+  csvImportColumnRowPl: 'Wiersz',
+  csvImportColumnSlugPl: 'Slug',
+  csvImportColumnReasonPl: 'Powód',
+
   categoriesHeadingPl: 'Kategorie',
   categoriesNewPl: 'Nowa kategoria',
   categoriesEmptyPl: 'Brak kategorii. Dodaj pierwszą, aby rozpocząć budowę katalogu.',
@@ -710,4 +720,24 @@ export function adminAuditActionLabel(action: string): string {
 /** Only `STAFF`/`ADMIN` ever reach this — `listStaffUsers()` never returns a `CUSTOMER` row — but takes a plain string (matching `UserRole`'s real type) so a client-island column definition can call it without importing the enum type just for this. */
 export function adminStaffRoleLabel(role: string): string {
   return role === 'ADMIN' ? ADMIN.staffRoleAdminPl : ADMIN.staffRoleStaffPl;
+}
+
+/**
+ * Real Polish plural grammar for "wiersz" (row), not a naive singular/plural
+ * toggle — `docs/CHECKLIST.md`'s own open item ("Polish plurals correct at
+ * 1 / 2 / 4 / 5 / 12 / 22 / 25 / 112") for this one word: `wiersz` at 1,
+ * `wiersze` for a trailing 2–4 EXCEPT when the last two digits are 12–14
+ * (which take the "many" form instead — Polish, unlike English, doesn't
+ * just split singular/plural on 1), `wierszy` otherwise (0, 5+, 11–14, ...).
+ */
+export function csvImportSuccessMessage(created: number): string {
+  const lastDigit = created % 10;
+  const lastTwoDigits = created % 100;
+  const form =
+    created === 1
+      ? 'wiersz'
+      : lastDigit >= 2 && lastDigit <= 4 && !(lastTwoDigits >= 12 && lastTwoDigits <= 14)
+        ? 'wiersze'
+        : 'wierszy';
+  return `Zaimportowano ${created} ${form}.`;
 }
