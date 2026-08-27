@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import { Button, Chip, MenuItem, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { Button, MenuItem, TextField, Typography } from '@mui/material';
 
 import { ADMIN, adminProductTypeLabel } from '@/content/pl/admin';
 import { listCategoryOptionsForAdmin, listProductsForAdmin } from '@/server/repositories/admin-products';
+import { ProductsDataGrid } from '@/ui/islands/admin/ProductsDataGrid';
 import type { ProductTypeCode } from '@/generated/prisma/enums';
 
 const PRODUCT_TYPES: readonly ProductTypeCode[] = [
@@ -65,30 +66,7 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
       {products.length === 0 ? (
         <Typography color="text.secondary">{ADMIN.productsEmptyPl}</Typography>
       ) : (
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>{ADMIN.productsColumnNamePl}</TableCell>
-              <TableCell>{ADMIN.productsColumnSlugPl}</TableCell>
-              <TableCell>{ADMIN.productsColumnCategoryPl}</TableCell>
-              <TableCell>{ADMIN.productsColumnStatusPl}</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {products.map((product) => (
-              <TableRow key={product.id} hover>
-                <TableCell>
-                  <Link href={`/panel/produkty/${product.id}`}>{product.namePl}</Link>
-                </TableCell>
-                <TableCell>{product.slug}</TableCell>
-                <TableCell>{product.categoryNamePl}</TableCell>
-                <TableCell>
-                  <Chip size="small" label={product.isActive ? ADMIN.activeLabelPl : ADMIN.inactiveLabelPl} color={product.isActive ? 'success' : 'default'} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <ProductsDataGrid rows={products} />
       )}
     </>
   );

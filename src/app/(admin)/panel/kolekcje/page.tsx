@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import { Button, Chip, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+import { Button, Typography } from '@mui/material';
 
 import { ADMIN } from '@/content/pl/admin';
 import { listCollectionsForAdmin } from '@/server/repositories/admin-designs';
+import { CollectionsDataGrid } from '@/ui/islands/admin/CollectionsDataGrid';
 
 export default async function AdminCollectionsPage() {
   const collections = await listCollectionsForAdmin();
@@ -21,28 +22,7 @@ export default async function AdminCollectionsPage() {
       {collections.length === 0 ? (
         <Typography color="text.secondary">{ADMIN.collectionsEmptyPl}</Typography>
       ) : (
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>{ADMIN.collectionsColumnNamePl}</TableCell>
-              <TableCell align="right">{ADMIN.collectionsColumnDesignsPl}</TableCell>
-              <TableCell>{ADMIN.collectionsColumnStatusPl}</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {collections.map((collection) => (
-              <TableRow key={collection.id} hover>
-                <TableCell>
-                  <Link href={`/panel/kolekcje/${collection.id}`}>{collection.namePl}</Link>
-                </TableCell>
-                <TableCell align="right">{collection.designCount}</TableCell>
-                <TableCell>
-                  <Chip size="small" label={collection.isActive ? ADMIN.activeLabelPl : ADMIN.inactiveLabelPl} color={collection.isActive ? 'success' : 'default'} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <CollectionsDataGrid rows={collections} />
       )}
     </>
   );

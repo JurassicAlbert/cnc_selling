@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import { Button, Chip, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+import { Button, Typography } from '@mui/material';
 
-import { ADMIN, adminMaterialFamilyLabel } from '@/content/pl/admin';
+import { ADMIN } from '@/content/pl/admin';
 import { listMaterialsForAdmin } from '@/server/repositories/admin-materials';
+import { MaterialsDataGrid } from '@/ui/islands/admin/MaterialsDataGrid';
 
 export default async function AdminMaterialsPage() {
   const materials = await listMaterialsForAdmin();
@@ -21,28 +22,7 @@ export default async function AdminMaterialsPage() {
       {materials.length === 0 ? (
         <Typography color="text.secondary">{ADMIN.materialsEmptyPl}</Typography>
       ) : (
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>{ADMIN.materialsColumnNamePl}</TableCell>
-              <TableCell>{ADMIN.materialsColumnFamilyPl}</TableCell>
-              <TableCell>{ADMIN.materialsColumnStatusPl}</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {materials.map((material) => (
-              <TableRow key={material.id} hover>
-                <TableCell>
-                  <Link href={`/panel/materialy/${material.id}`}>{material.namePl}</Link>
-                </TableCell>
-                <TableCell>{adminMaterialFamilyLabel(material.family)}</TableCell>
-                <TableCell>
-                  <Chip size="small" label={material.isAvailable ? ADMIN.activeLabelPl : ADMIN.inactiveLabelPl} color={material.isAvailable ? 'success' : 'default'} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <MaterialsDataGrid rows={materials} />
       )}
     </>
   );

@@ -367,6 +367,24 @@ encoded URL, never an actual click. Fixed at every site with the same
 `encodeURIComponent` the customer-facing order-history page already used
 correctly. See `docs/HANDOVER.md` §9z10.
 
+**P7c, `DataGrid` on the catalogue list pages (slice 3) — built
+2026-08-27.** Extends slice 2's pattern to six list pages at once —
+Kategorie, Produkty, Materiały, Wykończenia, Wzory, Kolekcje — grouped
+because they turned out to be genuinely identical in shape (heading + a
+"new" button, an optional filter field or two, a 3-4 column table with
+one link column and 1-2 status chips), the same reasoning P7b used to
+bundle materials+finishes into one slice. Introduced a shared
+`EntityDataGrid` primitive this time rather than six more hand-rolled
+copies of slice 2's `OrdersDataGrid` — worth the small abstraction once
+the boilerplate (row click → navigate, row id, pagination defaults)
+showed up a second time on genuinely homogeneous pages; each entity's own
+thin file only defines its columns, the one piece that actually differs.
+No `encodeURIComponent` needed here, unlike Orders — these six entities
+all navigate by a plain slash-free `cuid`. Live-verified two pages end to
+end (including Produkty's real filter form and empty state) and
+spot-checked the other four rendering real, correctly-labelled rows. See
+`docs/HANDOVER.md` §9z11.
+
 ---
 
 ## Getting set up
@@ -454,16 +472,19 @@ users & roles, bank details, shipping rate, email templates), and the
 audit-log viewer are all built
 (§9z/§9z2/§9z3/§9z4/§9z5/§9z6/§9z7/§9z8). Real shipping rates and a real
 bank account number have now replaced P5's placeholders. **P7c has
-started, also as vertical slices** — global search (Ctrl/⌘+K, §9z9) and
-`@mui/x-data-grid` adoption on the Orders grid (§9z10) are built; the
-rest of its 23-item UX-polish list is still open. See
-`docs/CHECKLIST.md` for the itemised state of every phase. Next:
+started, also as vertical slices** — global search (Ctrl/⌘+K, §9z9),
+`@mui/x-data-grid` on Orders (§9z10), and `DataGrid` on the six catalogue
+list pages (§9z11) are built; the rest of its 23-item UX-polish list is
+still open. See `docs/CHECKLIST.md` for the itemised state of every
+phase. Next:
 
-- **P7c, the rest of it** — extend `@mui/x-data-grid` to the other ~14
-  admin list pages, then bulk actions, inline editing, column/density
-  persistence, saved filters, keyboard nav, and the rest of the list, one
-  slice at a time. See `docs/ARCHITECTURE.md`'s note near §16A for the
-  Materio direction already recorded for this work.
+- **P7c, the rest of it** — `DataGrid` on the remaining ~9 admin list
+  pages (Klienci, Opinie, FAQ, Strony, Produkcja, Personel, Szablony
+  e-mail, Dziennik zdarzeń, Weryfikacja), then bulk actions, inline
+  editing, column/density persistence, saved filters, keyboard nav, and
+  the rest of the list, one slice at a time. See `docs/ARCHITECTURE.md`'s
+  note near §16A for the Materio direction already recorded for this
+  work.
 - **P2's remaining piece** — the homepage's hero/craftsmanship narrative
   sections, once the owner's actual words exist for them (reviews and FAQ
   are now real, see above).
