@@ -656,6 +656,22 @@ on `/panel` instead — exactly the staff/admin-lands-on-panel redirect
 fix from earlier in this session, re-proven by an unrelated test. See
 `docs/HANDOVER.md` §9z32.
 
+**Every disabled control explains why on hover — built 2026-08-27,
+autonomously.** Found a real bug before adding anything: a disabled
+MUI control has `pointer-events: none`, so a plain `title` attribute
+(and MUI's own `Tooltip`, which relies on the same hover event) can
+never fire — the one existing "explained" disabled button in the whole
+codebase had been silently non-functional the entire time, worked
+around with a redundant always-visible caption instead of ever being
+fixed. New `DisabledExplanation` primitive (MUI's own documented
+wrap-in-a-span pattern) fixes that case and three more genuine gaps:
+the configurator's step stepper (names the *specific* missing earlier
+step), its "Dalej" button, and `PricingDraftForm`'s remove-tier button
+(names the real catch-all-tier rule). All four verified live, hovering
+and confirming the tooltip genuinely renders. Left the add-to-cart
+button's four-way disabled reason for a dedicated follow-up rather
+than guess at which cause applies. See `docs/HANDOVER.md` §9z33.
+
 ---
 
 ## Getting set up
@@ -783,8 +799,11 @@ import is now built as a real pilot on Categories** — every other
 catalogue entity can follow the same `CsvImportForm` pattern (§9z31).
 **The authorization matrix is now genuinely tested** by a real
 Playwright spec, replacing a stale comment that claimed coverage which
-never actually existed (§9z32). See `docs/CHECKLIST.md` for the
-itemised state of every phase. Next,
+never actually existed (§9z32), and **disabled controls now genuinely
+explain why on hover** — a real, previously-broken `title`-on-a-
+disabled-MUI-control bug found and fixed, not just a documentation gap
+(§9z33). See `docs/CHECKLIST.md` for the itemised state of every
+phase. Next,
 continuing autonomously per the owner's standing direction to close
 remaining gaps toward "no missing pages, functionality, design and UI":
 

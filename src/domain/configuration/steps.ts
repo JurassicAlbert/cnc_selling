@@ -86,7 +86,7 @@ export const EMPTY_SELECTIONS: Selections = {
  * personalization is optional (brief never requires engraved text), and
  * SUMMARY has no selection of its own, it only requires everything before it.
  */
-function isStepSatisfied(step: StepCode, selections: Selections): boolean {
+export function isStepSatisfied(step: StepCode, selections: Selections): boolean {
   switch (step) {
     case 'DESIGN':
       return selections.designId !== null;

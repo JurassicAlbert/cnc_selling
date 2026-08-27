@@ -3134,6 +3134,35 @@ The `STAFF`/`ADMIN` promotion flow re-logs in after the role change (a fresh ses
 
 `npm run typecheck && npm run lint && npm run build` all clean. All 4 tests pass reliably on both configured browsers when run serially (`--workers=1`): 8/8 across desktop-chromium and mobile-safari. Under the suite's default full-parallel run, some of these (and, confirmed by running the *entire* pre-existing e2e suite the same way, several of `accounts.spec.ts`/`checkout.spec.ts`/`custom-upload.spec.ts`/`shell.spec.ts`'s own tests too) flake — the exact same "passes serially, flakes under full parallel load against one shared dev server" characteristic already documented for this project's e2e suite before this file existed (§9w), not a new problem this spec introduced. Left the disposable `e2e-authz-*@example.test` accounts this created in the shared dev DB, matching this directory's own established convention (every other e2e spec's test users are left in place too, never cleaned up per-run).
 
+## 9z33. Every disabled control explains why on hover — a real bug found, not just a gap — 2026-08-27
+
+Continuing autonomously through `ARCHITECTURE.md` §16A.5's own line: "A greyed-out button must say why on hover. Silent disabling is the single most common admin-panel failure." Grepped every `disabled={` across `src/ui/islands` (35 call sites) before touching anything, to separate the self-evident "briefly disabled while a form submits" cases (~25 of them — a universally understood pattern, no tooltip needed) from the genuinely non-obvious business-rule ones.
+
+### The real finding: the one existing "explained" case was already broken
+
+`OrderStatusActions.tsx`'s design-review-blocked status button already had `title={ADMIN.orderDesignBlockedPl}` — written specifically to satisfy this exact rule. Checked whether it actually works before assuming it did: `getComputedStyle(button).pointerEvents === 'none'` on every disabled MUI control, confirmed directly in the browser. A plain `title` attribute (and MUI's own `<Tooltip>`, which attaches its hover listener to the child it wraps) both need real pointer events to reach the element and trigger — `pointer-events: none` blocks that outright, so the tooltip could never have shown, on any browser, ever. The developer who wrote it seems to have discovered this too, empirically — the same disabled button also has a permanently-visible caption with the identical text right below it, a workaround for a `title` that silently never fired. The dead prop just stayed in the code.
+
+### The fix: MUI's own documented pattern, not a guess
+
+New `src/ui/primitives/DisabledExplanation.tsx` wraps a disabled control in a plain `<span>` (normal pointer events) and puts a real `<Tooltip>` there instead — the span receives the hover, the disabled button just sits inside it. This is MUI's own prescribed fix for exactly this situation (a disabled child can't fire the events a wrapping `Tooltip` needs), not an invented workaround.
+
+### Four real sites, each read from its own logic before writing an explanation
+
+Not a mechanical find-and-wrap pass — each disabled state's *actual* reason was read from the real code first:
+- `OrderStatusActions.tsx` — the existing case, now actually functional.
+- The configurator's step `Stepper` — new `stepBlockedReason()` walks the same steps `isStepEnterable` does and names the *specific* earlier step still missing an answer (exported `isStepSatisfied` from `domain/configuration/steps.ts`, previously private, to make this possible without reimplementing the rule).
+- The configurator's "Dalej" button — single clear cause when disabled (visible only mid-flow, never at `SUMMARY`): the current step's own answer isn't in yet.
+- `PricingDraftForm.tsx`'s remove-tier button — names the real rule (`to-domain.ts`'s own catch-all-last-tier requirement, first surfaced during P8's own build, §9z19) rather than a generic "can't remove."
+- The configurator's per-option `ToggleButton` (design/material/finish) already had the *correct* explanation logic wired in (`unavailabilityReasonMessage`, §7.2) — only the delivery was broken the same way as `OrderStatusActions`; fixed by the same wrap, no new logic needed there.
+
+### Deliberately incomplete, and said so
+
+The add-to-cart button on the Summary step (`disabled={!canProceed || addToCartPending}`) has four independent possible causes (incomplete configuration, a blocking price error, unacknowledged feasibility warnings, the floor-element exact-size acknowledgement) — guessing which one applies without reading how the Summary step already surfaces each of those elsewhere on the page risked writing a *wrong* explanation, worse than none. Left for a dedicated follow-up rather than shipped half-right.
+
+### Verified
+
+`npm run typecheck && npm run lint && npm test && npm run build` all clean (604/604 — no new test-worthy logic; `DisabledExplanation` is presentational, `stepBlockedReason`'s correctness is a live-browser behavior, not a unit-testable pure function on its own since it's local to the client component). Restarted the dev server before live-verifying, per §9z2's standing rule. Live-verified all four fixes for real, hovering and confirming the tooltip genuinely renders in the DOM (not just visually screenshotted, though those were taken too): the configurator's step 2 tooltip read "Najpierw uzupełnij krok: Wzór" before a design was picked; the "Dalej" button read "Uzupełnij ten krok, aby przejść dalej." with a design in hand but no material; `PricingDraftForm`'s remove-tier button, after removing tiers down to the last one, read `Musi zostać co najmniej jeden próg — ostatni pełni rolę „bez limitu".` (discarded via reload, no draft ever saved); the real seeded `2026/08/0066` order's design-review-blocked status button — previously silent — now shows the exact same explanation its own visible caption already gave, confirming the fix, not a regression.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

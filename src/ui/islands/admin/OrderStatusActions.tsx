@@ -17,6 +17,7 @@ import type { OrderStatus } from '@/domain/order-status/transitions';
 import { markOrderPaid, transitionOrderStatus } from '@/server/actions/admin-orders';
 import type { MarkOrderPaidResult, TransitionOrderStatusResult } from '@/server/actions/admin-orders';
 import { ConfirmSubmitButton } from '@/ui/primitives/ConfirmSubmitButton';
+import { DisabledExplanation } from '@/ui/primitives/DisabledExplanation';
 
 export type StatusCandidate = {
   readonly status: OrderStatus;
@@ -129,8 +130,10 @@ function SubmitButton({
 }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant={variant} disabled={disabled === true || pending} title={title} size="small">
-      {label}
-    </Button>
+    <DisabledExplanation title={disabled === true ? title : undefined}>
+      <Button type="submit" variant={variant} disabled={disabled === true || pending} size="small">
+        {label}
+      </Button>
+    </DisabledExplanation>
   );
 }

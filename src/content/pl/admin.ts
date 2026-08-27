@@ -547,6 +547,7 @@ export const ADMIN = {
   pricingTierNoLimitPl: 'bez limitu',
   pricingAddTierPl: 'Dodaj próg',
   pricingRemoveTierPl: 'Usuń próg',
+  pricingRemoveTierBlockedPl: 'Musi zostać co najmniej jeden próg — ostatni pełni rolę "bez limitu".',
   pricingSaveDraftPl: 'Zapisz jako wersję roboczą',
   pricingDraftCreatedNoticePl: 'Utworzono wersję roboczą. Przejrzyj symulację przed publikacją.',
   pricingSimulatorHeadingPl: 'Symulacja cen',

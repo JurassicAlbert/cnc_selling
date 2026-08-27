@@ -43,6 +43,7 @@ import {
   checkConfigurationComplete,
   EMPTY_SELECTIONS,
   isStepEnterable,
+  isStepSatisfied,
   type Selections,
   type StepCode,
 } from '@/domain/configuration/steps';
@@ -65,6 +66,7 @@ import type { UploadErrorCode } from '@/content/pl/messages';
 import { SITE } from '@/content/pl/site';
 import { UPLOAD } from '@/content/pl/upload';
 import type { UploadWarning } from '@/domain/upload/inspect';
+import { DisabledExplanation } from '@/ui/primitives/DisabledExplanation';
 import { Text } from '@/ui/primitives/Text';
 import type {
   ConfiguratorOptionData,
@@ -88,6 +90,23 @@ const STEP_LABEL: Record<StepCode, string> = {
   CUSTOM_UPLOAD: SITE.configuratorStepCustomUploadPl,
   SUMMARY: SITE.configuratorStepSummaryPl,
 };
+
+/**
+ * Why a not-yet-enterable step is disabled: the label of the first earlier
+ * step whose own answer is still missing — `isStepEnterable` only reports
+ * true/false, not which prerequisite is the blocker, so this walks the same
+ * ground `isStepEnterable` does to name it. `undefined` (not disabled, or
+ * genuinely nothing missing) tells `DisabledExplanation` to render plainly.
+ */
+function stepBlockedReason(steps: readonly StepCode[], index: number, selections: Selections): string | undefined {
+  for (let i = 0; i < index; i++) {
+    const step = steps[i] as StepCode;
+    if (!isStepSatisfied(step, selections)) {
+      return `${SITE.configuratorStepBlockedPrefixPl} ${STEP_LABEL[step]}`;
+    }
+  }
+  return undefined;
+}
 
 /** Fixed at 1 — quantity belongs to the cart (P5), not the configurator. */
 const QUANTITY = 1;
@@ -327,16 +346,18 @@ export function Configurator({
     <>
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 72 }}>
       <Stepper nonLinear activeStep={stepIndex} alternativeLabel>
-        {steps.map((step, index) => (
-          <Step key={step} completed={isStepEnterable(steps, index + 1, selections)}>
-            <StepButton
-              disabled={!isStepEnterable(steps, index, selections)}
-              onClick={() => setStepIndex(index)}
-            >
-              {STEP_LABEL[step]}
-            </StepButton>
-          </Step>
-        ))}
+        {steps.map((step, index) => {
+          const enterable = isStepEnterable(steps, index, selections);
+          return (
+            <Step key={step} completed={isStepEnterable(steps, index + 1, selections)}>
+              <DisabledExplanation title={enterable ? undefined : stepBlockedReason(steps, index, selections)}>
+                <StepButton disabled={!enterable} onClick={() => setStepIndex(index)}>
+                  {STEP_LABEL[step]}
+                </StepButton>
+              </DisabledExplanation>
+            </Step>
+          );
+        })}
       </Stepper>
 
       <ConfiguratorPreview
@@ -510,9 +531,11 @@ export function Configurator({
           {SITE.configuratorBackPl}
         </Button>
         {currentStep !== 'SUMMARY' && (
-          <Button variant="contained" disabled={!canGoNext} onClick={() => setStepIndex((i) => i + 1)}>
-            {SITE.configuratorNextPl}
-          </Button>
+          <DisabledExplanation title={canGoNext ? undefined : SITE.configuratorNextBlockedPl}>
+            <Button variant="contained" disabled={!canGoNext} onClick={() => setStepIndex((i) => i + 1)}>
+              {SITE.configuratorNextPl}
+            </Button>
+          </DisabledExplanation>
         )}
       </div>
     </div>
@@ -619,14 +642,11 @@ function OptionStep({
       aria-label={title}
     >
       {entries.map((entry) => (
-        <ToggleButton
-          key={entry.id}
-          value={entry.id}
-          disabled={!entry.isAvailable}
-          title={entry.reason === null ? undefined : unavailabilityReasonMessage(entry.reason)}
-        >
-          {entry.namePl}
-        </ToggleButton>
+        <DisabledExplanation key={entry.id} title={entry.reason === null ? undefined : unavailabilityReasonMessage(entry.reason)}>
+          <ToggleButton value={entry.id} disabled={!entry.isAvailable}>
+            {entry.namePl}
+          </ToggleButton>
+        </DisabledExplanation>
       ))}
     </ToggleButtonGroup>
   );

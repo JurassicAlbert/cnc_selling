@@ -19,6 +19,7 @@ import { ADMIN } from '@/content/pl/admin';
 import { createPricingDraft } from '@/server/actions/admin-pricing';
 import type { PackagingTierInput, PricingDraftResult } from '@/server/actions/admin-pricing';
 import type { AdminPricingVersion } from '@/server/repositories/admin-pricing';
+import { DisabledExplanation } from '@/ui/primitives/DisabledExplanation';
 
 const INITIAL_STATE: PricingDraftResult = { ok: true, version: 0 };
 
@@ -142,14 +143,16 @@ export function PricingDraftForm({ active }: { readonly active: AdminPricingVers
               slotProps={{ htmlInput: { step: '0.01', min: 0 } }}
               sx={{ width: 140 }}
             />
-            <IconButton
-              aria-label={ADMIN.pricingRemoveTierPl}
-              size="small"
-              disabled={tiers.length <= 1}
-              onClick={() => setTiers((prev) => prev.filter((t) => t.key !== key))}
-            >
-              <DeleteOutlineIcon fontSize="small" />
-            </IconButton>
+            <DisabledExplanation title={tiers.length <= 1 ? ADMIN.pricingRemoveTierBlockedPl : undefined}>
+              <IconButton
+                aria-label={ADMIN.pricingRemoveTierPl}
+                size="small"
+                disabled={tiers.length <= 1}
+                onClick={() => setTiers((prev) => prev.filter((t) => t.key !== key))}
+              >
+                <DeleteOutlineIcon fontSize="small" />
+              </IconButton>
+            </DisabledExplanation>
           </Stack>
         ))}
         <Button

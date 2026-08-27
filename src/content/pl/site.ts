@@ -51,6 +51,8 @@ export const SITE = {
   configuratorWidthLabelPl: 'Szerokość (cm)',
   configuratorHeightLabelPl: 'Wysokość (cm)',
   configuratorNoOptionsPl: 'Ta opcja nie jest jeszcze dostępna dla wybranej konfiguracji.',
+  configuratorStepBlockedPrefixPl: 'Najpierw uzupełnij krok:',
+  configuratorNextBlockedPl: 'Uzupełnij ten krok, aby przejść dalej.',
   configuratorPersonalizationUnavailablePl:
     'Ten produkt nie oferuje jeszcze personalizacji tekstem. Ten krok można pominąć.',
   configuratorPersonalizationLabelPl: 'Tekst do wygrawerowania',
