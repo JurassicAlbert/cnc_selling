@@ -1,6 +1,9 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Divider, Stack, Typography } from '@mui/material';
+import { Button, Divider, Stack, Typography } from '@mui/material';
+import OpenInNewOutlinedIcon from '@mui/icons-material/OpenInNewOutlined';
 
+import { ADMIN } from '@/content/pl/admin';
 import {
   findProductForAdmin,
   listCategoryOptionsForAdmin,
@@ -40,6 +43,11 @@ export default async function AdminProductDetailPage({ params }: ProductDetailPa
       <Stack direction="row" sx={{ mb: 3, justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h5">{product.namePl}</Typography>
         <Stack direction="row" spacing={1}>
+          <Link href={`/produkt/${product.slug}?podglad=1`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+            <Button size="small" variant="outlined" endIcon={<OpenInNewOutlinedIcon fontSize="small" />}>
+              {ADMIN.previewAsCustomerPl}
+            </Button>
+          </Link>
           <DuplicateButton action={duplicateProductAndGo.bind(null, product.id)} />
           <ActiveToggleButton isActive={product.isActive} action={setProductActive.bind(null, product.id, !product.isActive)} />
         </Stack>

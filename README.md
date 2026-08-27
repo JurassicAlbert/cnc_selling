@@ -558,6 +558,20 @@ count for a multi-module product, verified live against a real order
 (3 units × 4 modules = 12 pieces, correctly). See `docs/HANDOVER.md`
 §9z25.
 
+**"Preview as customer" (Product half) — built 2026-08-27,
+autonomously.** A "Zobacz jako klient" link on a product's admin edit
+form opens the real `/produkt/[slug]` page exactly as a customer would
+see it — reusing the live page itself via a staff-verified `?podglad=1`
+bypass of the `isActive` gate, not a parallel admin-maintained clone
+that would drift. Live verification of a genuinely inactive product
+surfaced and fixed two real, previously-invisible bugs along the way:
+the configurator's own URL-sync effect was silently wiping any query
+param it didn't own (including this new one) on its very first render,
+and its snapshot-fetching Server Action had no way to know preview mode
+was active at all. The Design half — no standalone design page exists
+to deep-link — is deliberately deferred as its own slice. See
+`docs/HANDOVER.md` §9z26.
+
 ---
 
 ## Getting set up
@@ -669,12 +683,12 @@ proven, not just claimed** (§9z21), **blog admin/authoring is now
 built** (§9z22) — the last open item from P2's blog scaffold — and
 **every admin detail page now shows a real activity timeline** from the
 audit log (§9z23), **Products/Designs/Materials each have a real
-"Duplikuj" action** (§9z24), and **the packing-list print view closes
+"Duplikuj" action** (§9z24), **the packing-list print view closes
 out the "print views" checklist line** alongside the production brief
-(§9z25). See `docs/CHECKLIST.md` for the itemised state of every
-phase. Next, continuing autonomously per the owner's standing
-direction to close remaining gaps toward "no missing pages,
-functionality, design and UI":
+(§9z25), and **"Preview as customer" is built for Products** (§9z26).
+See `docs/CHECKLIST.md` for the itemised state of every phase. Next,
+continuing autonomously per the owner's standing direction to close
+remaining gaps toward "no missing pages, functionality, design and UI":
 
 - **P7c, the rest of it** — three list pages still use a plain `<Table>`,
   each needing its own design: Produkcja's rows link to a different
@@ -684,6 +698,9 @@ functionality, design and UI":
   records), and the rest of the list, one slice at a time.
 - **Blog admin's own remaining piece** — not yet a 5th entity type in
   the Ctrl+K global search, a scoped follow-up.
+- **"Preview as customer" for Designs** — needs a real deep-link into
+  the configurator (no standalone design page exists today), its own
+  separate slice from the Product half just built.
 - **P8's configurator funnel** — needs `AnalyticsEvent` + instrumenting
   every configurator step to write events, its own substantial slice.
 - **P2's remaining piece** — the homepage's hero/craftsmanship narrative

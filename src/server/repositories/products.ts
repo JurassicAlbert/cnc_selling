@@ -186,9 +186,9 @@ export type ProductDetail = {
   }[];
 };
 
-export async function getActiveProductBySlug(slug: string): Promise<ProductDetail | null> {
+async function findProductBySlug(slug: string, activeOnly: boolean): Promise<ProductDetail | null> {
   const product = await prisma.product.findFirst({
-    where: { slug, isActive: true },
+    where: activeOnly ? { slug, isActive: true } : { slug },
     select: {
       slug: true,
       namePl: true,
@@ -233,6 +233,24 @@ export async function getActiveProductBySlug(slug: string): Promise<ProductDetai
     materials: product.materials.map((m) => ({ namePl: m.material.namePl })),
     installationVariants: installVariants,
   };
+}
+
+export async function getActiveProductBySlug(slug: string): Promise<ProductDetail | null> {
+  return findProductBySlug(slug, true);
+}
+
+/**
+ * Same shape as `getActiveProductBySlug`, minus the `isActive` filter —
+ * §16A.5's "Preview as customer" admin feature, letting staff see a
+ * not-yet-published product exactly as `/produkt/[slug]/page.tsx` renders
+ * it. **Callers MUST gate this behind `requireStaffSession()`** — it has
+ * no auth check of its own, matching every other admin-only repository
+ * function in this codebase (`admin-*.ts`), even though this one happens
+ * to live in the public `products.ts` module because it shares the exact
+ * query shape with the public page.
+ */
+export async function getProductBySlugForPreview(slug: string): Promise<ProductDetail | null> {
+  return findProductBySlug(slug, false);
 }
 
 /** Every active product slug, for the sitemap. */

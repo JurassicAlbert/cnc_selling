@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 
 import { formatPln } from '@/domain/money/money';
 import { formatMmAsCentimetres } from '@/domain/text/numeric-input';
-import { getActiveProductBySlug, listAllActiveProductSlugs } from '@/server/repositories/products';
+import { getActiveProductBySlug, getProductBySlugForPreview, listAllActiveProductSlugs } from '@/server/repositories/products';
 import { getConfiguratorProductData } from '@/server/repositories/configurator';
 import { recordAnalyticsEvent } from '@/server/analytics/record-event';
 import { getSession } from '@/server/auth/session';
@@ -20,9 +20,19 @@ import { Configurator } from '@/ui/islands/configurator/Configurator';
 import { ThemeRegistry } from '@/ui/theme/ThemeRegistry';
 import { toSafeJsonLd } from '@/ui/seo/json-ld';
 import { SITE } from '@/content/pl/site';
+import { ADMIN } from '@/content/pl/admin';
 
 type ProductPageProps = {
   readonly params: Promise<{ readonly slug: string }>;
+  /**
+   * `?podglad=1` is the "Preview as customer" admin feature
+   * (§16A.5/`ARCHITECTURE.md`) — a staff-only bypass of the `isActive`
+   * gate so a not-yet-published product can be reviewed on this exact
+   * page before going live. A non-staff visitor (or a staff member
+   * without the query param) sees the same 404-on-inactive behavior as
+   * always; the flag alone grants nothing without a real staff session.
+   */
+  readonly searchParams: Promise<{ readonly podglad?: string }>;
 };
 
 function Chip({ children }: { readonly children: ReactNode }) {
@@ -49,22 +59,29 @@ function Chip({ children }: { readonly children: ReactNode }) {
  * untouched — it's freshly built, tested, and browser-verified this
  * session, and this pass only restyles the page chrome around it.
  */
-export default async function ProductPage({ params }: ProductPageProps) {
+export default async function ProductPage({ params, searchParams }: ProductPageProps) {
   const { slug } = await params;
-  const product = await getActiveProductBySlug(slug);
+  const { podglad } = await searchParams;
+
+  const [sessionToken, session] = await Promise.all([readGuestSessionToken(), getSession()]);
+  const isStaffPreview = podglad === '1' && (session?.role === 'STAFF' || session?.role === 'ADMIN');
+
+  const product = isStaffPreview ? await getProductBySlugForPreview(slug) : await getActiveProductBySlug(slug);
   if (product === null) {
     notFound();
   }
-  const configuratorData = await getConfiguratorProductData(slug);
+  const configuratorData = await getConfiguratorProductData(slug, !isStaffPreview);
   const primaryImage = product.images[0] ?? null;
 
-  const [sessionToken, session] = await Promise.all([readGuestSessionToken(), getSession()]);
-  void recordAnalyticsEvent({
-    name: 'product_view',
-    sessionToken,
-    userId: session?.userId ?? null,
-    productId: configuratorData?.productId ?? null,
-  });
+  // A staff preview hit is not real customer traffic — never counted.
+  if (!isStaffPreview) {
+    void recordAnalyticsEvent({
+      name: 'product_view',
+      sessionToken,
+      userId: session?.userId ?? null,
+      productId: configuratorData?.productId ?? null,
+    });
+  }
 
   const dimensionsPl =
     `${formatMmAsCentimetres(product.minWidthMm)}–${formatMmAsCentimetres(product.maxWidthMm)} × ` +
@@ -87,6 +104,20 @@ export default async function ProductPage({ params }: ProductPageProps) {
   return (
     <Section>
       <Container>
+        {isStaffPreview && (
+          <div
+            style={{
+              marginBlockEnd: 16,
+              padding: '10px 16px',
+              borderRadius: 2,
+              background: 'var(--mui-palette-warning-light, #fff3cd)',
+              color: 'var(--mui-palette-warning-dark, #7a5900)',
+              font: 'var(--mui-font-body2)',
+            }}
+          >
+            {ADMIN.productPreviewBannerPl}
+          </div>
+        )}
         <script
           type="application/ld+json"
           // biome-ignore lint/security/noDangerouslySetInnerHtml: only way to emit JSON-LD; toSafeJsonLd escapes `<` so it can't break out of the script tag — src/ui/seo/json-ld.ts
@@ -184,6 +215,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                     minHeightMm: product.minHeightMm,
                     maxHeightMm: product.maxHeightMm,
                   }}
+                  isPreview={isStaffPreview}
                 />
               </ThemeRegistry>
             </div>

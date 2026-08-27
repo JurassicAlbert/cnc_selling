@@ -432,7 +432,7 @@ Slice 6 (raw-HTML-form cleanup — two `<button>`s and six `<input type="file">`
 - [ ] Every disabled control explains why on hover
 - [ ] Validation messages name the fix, not the rule
 - [x] Activity timeline on every record, from the audit log — `RecordActivityTimeline` (shared server component), on all 14 admin detail pages that have one (built 2026-08-27, see `docs/HANDOVER.md` §9z23)
-- [ ] "Preview as customer" from every product and design
+- [ ] "Preview as customer" from every product and design — **Product half built** (`?podglad=1`, staff-gated `isActive` bypass reusing the real `/produkt/[slug]` page, 2026-08-27, see `docs/HANDOVER.md` §9z26); Design half deliberately deferred — no standalone design page exists, needs picking a product + deep-linking the configurator to that design, its own separate slice
 - [ ] Empty states say what to do next
 - [x] Duplicate action on products, designs, materials — copies the core scalar record (not relations), starts inactive, distinct `-kopia` slug/name (built 2026-08-27, see `docs/HANDOVER.md` §9z24)
 - [ ] Drag-drop image upload with reordering and inline alt text

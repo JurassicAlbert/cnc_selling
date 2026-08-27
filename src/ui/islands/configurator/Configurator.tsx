@@ -105,6 +105,8 @@ type ConfiguratorProps = {
     readonly minHeightMm: number;
     readonly maxHeightMm: number;
   };
+  /** The "Preview as customer" admin feature's `?podglad=1` flag, passed down so every `getConfiguratorSnapshot` call (not just the page's own initial SSR fetch) can keep bypassing the `isActive` gate. Re-verified server-side on every call — see `getConfiguratorSnapshot`'s own doc comment. */
+  readonly isPreview?: boolean;
 };
 
 export function Configurator({
@@ -113,6 +115,7 @@ export function Configurator({
   materialNotesPl,
   requiresExactSize,
   dimensionEnvelope,
+  isPreview = false,
 }: ConfiguratorProps) {
   const router = useRouter();
   const [selections, setSelections] = useState<Selections>(EMPTY_SELECTIONS);
@@ -177,7 +180,7 @@ export function Configurator({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    getConfiguratorSnapshot(productSlug, selections, QUANTITY).then((result) => {
+    getConfiguratorSnapshot(productSlug, selections, QUANTITY, isPreview).then((result) => {
       if (cancelled) return;
       setLoading(false);
       if (result.ok) {
@@ -191,12 +194,24 @@ export function Configurator({
         }
       }
     });
-    const query = writeSelectionsToSearch(selections);
+    // This is the only owner of the selection-encoding keys, but it isn't
+    // the only owner of the URL — the "Preview as customer" admin feature
+    // (`?podglad=1`) needs to survive every one of this effect's own
+    // `router.replace` calls, not just the very first render, or a staff
+    // preview would 404 the moment this effect first runs (an inactive
+    // product is only visible with the flag present on every request, not
+    // just the initial one).
+    const params = new URLSearchParams(writeSelectionsToSearch(selections));
+    const podgladParam = new URLSearchParams(window.location.search).get('podglad');
+    if (podgladParam !== null) {
+      params.set('podglad', podgladParam);
+    }
+    const query = params.toString();
     router.replace(query.length > 0 ? `?${query}` : '?', { scroll: false });
     return () => {
       cancelled = true;
     };
-  }, [selections, productSlug, router]);
+  }, [selections, productSlug, router, isPreview]);
 
   const steps = snapshot?.steps ?? [];
   stepsRef.current = steps;

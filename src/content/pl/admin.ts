@@ -85,6 +85,8 @@ export const ADMIN = {
   activeLabelPl: 'Aktywna',
   inactiveLabelPl: 'Nieaktywna',
   duplicatePl: 'Duplikuj',
+  previewAsCustomerPl: 'Zobacz jako klient',
+  productPreviewBannerPl: 'Podgląd administratora — ta odsłona strony nie jest liczona jako wizyta klienta.',
 
   categoriesHeadingPl: 'Kategorie',
   categoriesNewPl: 'Nowa kategoria',

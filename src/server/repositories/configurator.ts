@@ -62,12 +62,20 @@ export type ConfiguratorProductData = {
   readonly pricing: PricingSettingsRow;
 };
 
+/**
+ * `activeOnly` defaults to `true` (every existing call site's behavior,
+ * unchanged) — pass `false` only from a caller already gated behind
+ * `requireStaffSession()`, e.g. the "Preview as customer" admin feature
+ * previewing a not-yet-published product's configurator exactly as
+ * `/produkt/[slug]/page.tsx` renders it.
+ */
 export async function getConfiguratorProductData(
   slug: string,
+  activeOnly = true,
 ): Promise<ConfiguratorProductData | null> {
   const [product, machine, pricing] = await Promise.all([
     prisma.product.findFirst({
-      where: { slug, isActive: true },
+      where: activeOnly ? { slug, isActive: true } : { slug },
       select: {
         id: true,
         namePl: true,

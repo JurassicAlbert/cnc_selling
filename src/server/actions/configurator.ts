@@ -16,6 +16,7 @@ import { priceConfiguration } from '@/server/configurator/price-configuration';
 import type { ResolvedOptionAvailability, ResolvedOptions } from '@/server/configurator/resolve-options';
 import { resolveOptionAvailability, resolveOptions } from '@/server/configurator/resolve-options';
 import { getConfiguratorProductData } from '@/server/repositories/configurator';
+import { getSession } from '@/server/auth/session';
 
 export type ConfiguratorSnapshot = {
   readonly steps: readonly StepCode[];
@@ -41,8 +42,20 @@ export async function getConfiguratorSnapshot(
   productSlug: string,
   selections: Selections,
   quantity: number,
+  /**
+   * The client only ever sets this from the "Preview as customer" page's
+   * own `?podglad=1` flag — never trusted on its own. Re-verified against
+   * a real server-side session here, the same way `ProductPage` itself
+   * does, since a Server Action call carries no other proof of who's
+   * asking; a customer setting this to `true` by hand gets silently
+   * ignored, not an error, matching this repo's "404, not 403" discipline
+   * for anything that must not reveal whether a bypass exists.
+   */
+  isPreview = false,
 ): Promise<ConfiguratorSnapshotResult> {
-  const data = await getConfiguratorProductData(productSlug);
+  const session = isPreview ? await getSession() : null;
+  const activeOnly = !(isPreview && (session?.role === 'STAFF' || session?.role === 'ADMIN'));
+  const data = await getConfiguratorProductData(productSlug, activeOnly);
   if (data === null) {
     return { ok: false, code: 'PRODUCT_NOT_FOUND' };
   }
