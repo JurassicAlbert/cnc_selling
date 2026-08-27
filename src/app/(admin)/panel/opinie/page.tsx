@@ -1,9 +1,9 @@
 import Link from 'next/link';
-import { Button, Chip, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+import { Button, Stack, Typography } from '@mui/material';
 
 import { ADMIN, adminReviewStatusLabel } from '@/content/pl/admin';
 import { listReviewsForAdmin } from '@/server/repositories/admin-reviews';
-import { setReviewStatus } from '@/server/actions/admin-reviews';
+import { OpinieDataGrid } from '@/ui/islands/admin/OpinieDataGrid';
 import type { ReviewStatus } from '@/generated/prisma/enums';
 
 type AdminReviewsPageProps = {
@@ -41,49 +41,7 @@ export default async function AdminReviewsPage({ searchParams }: AdminReviewsPag
       {reviews.length === 0 ? (
         <Typography color="text.secondary">{ADMIN.reviewsEmptyPl}</Typography>
       ) : (
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>{ADMIN.reviewsColumnOrderPl}</TableCell>
-              <TableCell>{ADMIN.reviewsColumnAuthorPl}</TableCell>
-              <TableCell align="right">{ADMIN.reviewsColumnRatingPl}</TableCell>
-              <TableCell>{ADMIN.reviewsColumnBodyPl}</TableCell>
-              <TableCell>{ADMIN.reviewsColumnDatePl}</TableCell>
-              <TableCell>{ADMIN.reviewsFilterStatusPl}</TableCell>
-              <TableCell />
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {reviews.map((review) => (
-              <TableRow key={review.id} hover>
-                <TableCell>{review.orderNumber}</TableCell>
-                <TableCell>{review.authorNamePl}</TableCell>
-                <TableCell align="right">{review.rating}</TableCell>
-                <TableCell sx={{ maxWidth: 320 }}>{review.bodyPl}</TableCell>
-                <TableCell>{review.createdAt.toLocaleDateString('pl-PL')}</TableCell>
-                <TableCell>
-                  <Chip size="small" label={adminReviewStatusLabel(review.status)} color={review.status === 'APPROVED' ? 'success' : review.status === 'REJECTED' ? 'default' : 'warning'} />
-                </TableCell>
-                <TableCell>
-                  {review.status !== 'APPROVED' && (
-                    <form action={setReviewStatus.bind(null, review.id, 'APPROVED')} style={{ display: 'inline' }}>
-                      <Button type="submit" size="small">
-                        {ADMIN.reviewApprovePl}
-                      </Button>
-                    </form>
-                  )}
-                  {review.status !== 'REJECTED' && (
-                    <form action={setReviewStatus.bind(null, review.id, 'REJECTED')} style={{ display: 'inline' }}>
-                      <Button type="submit" size="small" color="error">
-                        {ADMIN.reviewRejectPl}
-                      </Button>
-                    </form>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <OpinieDataGrid rows={reviews} />
       )}
     </>
   );

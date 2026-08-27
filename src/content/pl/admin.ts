@@ -578,3 +578,8 @@ const AUDIT_ACTION_LABELS_PL: Record<string, string> = {
 export function adminAuditActionLabel(action: string): string {
   return AUDIT_ACTION_LABELS_PL[action] ?? action;
 }
+
+/** Only `STAFF`/`ADMIN` ever reach this — `listStaffUsers()` never returns a `CUSTOMER` row — but takes a plain string (matching `UserRole`'s real type) so a client-island column definition can call it without importing the enum type just for this. */
+export function adminStaffRoleLabel(role: string): string {
+  return role === 'ADMIN' ? ADMIN.staffRoleAdminPl : ADMIN.staffRoleStaffPl;
+}

@@ -2720,6 +2720,24 @@ Documented this in `docs/CHECKLIST.md` explicitly, rather than letting five un-m
 
 `npm test` (542/542, unchanged), `npm run typecheck`, `npm run lint`, `npm run build` all clean; no schema/dependency change. Dev server restarted before live-verifying, per §9z2's standing rule. Live-verified in the browser: Klienci's real `search` filter narrowed correctly and a row click navigated to the exact right customer (confirmed even for a customer with an empty `name` field, where only the email cell has visible link text) → FAQ, Strony, and Weryfikacja each confirmed rendering real rows with correct Polish headers and pagination chrome, network requests all clean 200s.
 
+## 9z13. P7c, slice 5 — `DataGrid` with per-row actions (Opinie, Personel) — 2026-08-27
+
+Sixth P7c slice, covering two of the five pages deliberately deferred from slices 3-4: Opinie and Personel, both driven by per-row action buttons (approve/reject a review; revoke a staff member) rather than a click-to-navigate row. A genuinely different shape from `EntityDataGrid`'s own — designed once here for both pages, rather than forced into the navigate-to-detail primitive.
+
+### Not `EntityDataGrid` — hand-rolled again, on purpose
+
+`EntityDataGrid` is built around `onRowClick` + `basePath` navigation. Neither review nor staff rows have a detail page to navigate to, so bending that primitive to support an optional/no-op navigation mode would have made it worse for its actual job, not better. Two small, standalone `<DataGrid>` wrappers instead — the same shape `OrdersDataGrid` was before slice 3 extracted the shared piece. The real lesson repeated a third time this session: extract a shared primitive only once the *same* boilerplate shows up on genuinely homogeneous cases (slice 3's six catalogue pages) — don't force a fourth, fifth, and sixth case into an earlier abstraction just because it's already there.
+
+### The mutation mechanism didn't change at all
+
+Both pages' real `<form action={setReviewStatus.bind(...)}>` / `<form action={changeStaffRole.bind(...)}>` — the same zero-extra-JS mutation pattern every action in this codebase uses — moved into a `DataGrid` cell's `renderCell` completely unchanged. `changeStaffRole`/`setReviewStatus` themselves, and the pages' own conditional logic (hide "Zatwierdź" once already `APPROVED`; hide the revoke button on the acting admin's own row), are byte-for-byte the same checks that were already in the plain `<Table>` version — just relocated.
+
+One small real refactor: `panel/ustawienia/personel/page.tsx`'s page-local `roleLabel` helper became a real exported `adminStaffRoleLabel()` in `content/pl/admin.ts`, since a client-island column definition can't reach a Server Component's local function. The only server-side change this slice needed.
+
+### Verified
+
+`npm test` (542/542, unchanged), `npm run typecheck`, `npm run lint`, `npm run build` all clean; no schema/dependency change. Dev server restarted before live-verifying, per §9z2's standing rule. Live-verified in the browser against real mutations, not just rendering: on Opinie, clicked the real "Odrzuć" button on the one genuine approved review from P7b slice 5 (`2026/08/0001`) — the row updated to `Odrzucona` with only a "Zatwierdź" button remaining, exactly the existing conditional logic — then clicked "Zatwierdź" to restore it to `Zatwierdzona`, its real prior state, before finishing. On Personel, invited a real disposable test staff account, confirmed its row appeared with a revoke button (and the acting admin's own row still correctly has none), clicked "Cofnij dostęp" and confirmed the row disappeared from the grid, then deleted the disposable account from the database.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

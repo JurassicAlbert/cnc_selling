@@ -398,6 +398,20 @@ real design decision for its own future slice, recorded in
 `docs/CHECKLIST.md` so it reads as deliberate, not forgotten. See
 `docs/HANDOVER.md` §9z12.
 
+**P7c, `DataGrid` with per-row actions (slice 5) — built 2026-08-27.**
+Covers two of the three still-deferred pages — Opinie and Personel —
+both driven by per-row action buttons (approve/reject a review; revoke a
+staff member) rather than a click-to-navigate row, a genuinely different
+shape from `EntityDataGrid`'s own. Two small, standalone `DataGrid`
+wrappers instead of forcing that primitive to support a case it wasn't
+built for. The real `<form action={...}>` mutations underneath — the
+same zero-extra-JS pattern every action in this codebase uses — moved
+into a grid cell completely unchanged. Live-verified against real
+mutations, not just rendering: rejected then re-approved the one genuine
+review from P7b slice 5 (restored to its real prior state before
+finishing), and invited/revoked a real disposable test staff account.
+See `docs/HANDOVER.md` §9z13.
+
 ---
 
 ## Getting set up
@@ -487,20 +501,19 @@ audit-log viewer are all built
 bank account number have now replaced P5's placeholders. **P7c has
 started, also as vertical slices** — global search (Ctrl/⌘+K, §9z9),
 `@mui/x-data-grid` on Orders (§9z10), `DataGrid` on the six catalogue
-list pages (§9z11), and on Klienci/FAQ/Strony/Weryfikacja (§9z12) are
-built; the rest of its 23-item UX-polish list is still open. See
-`docs/CHECKLIST.md` for the itemised state of every phase. Next:
+list pages (§9z11), on Klienci/FAQ/Strony/Weryfikacja (§9z12), and with
+per-row actions on Opinie/Personel (§9z13) are built; the rest of its
+23-item UX-polish list is still open. See `docs/CHECKLIST.md` for the
+itemised state of every phase. Next:
 
-- **P7c, the rest of it** — the five remaining `<Table>` pages each need
-  their own design, not a mechanical `EntityDataGrid` repeat: Opinie and
-  Personel have per-row action buttons with no detail page to navigate
-  to; Produkcja's rows link to a different entity's page; Szablony e-mail
-  is a fixed two-row list; Dziennik zdarzeń's diff column holds
-  variable-height JSON `DataGrid` doesn't suit. Then bulk actions, inline
-  editing, column/density persistence, saved filters, keyboard nav, and
-  the rest of the list, one slice at a time. See `docs/ARCHITECTURE.md`'s
-  note near §16A for the Materio direction already recorded for this
-  work.
+- **P7c, the rest of it** — the three remaining `<Table>` pages each need
+  their own design: Produkcja's rows link to a different entity's page;
+  Szablony e-mail is a fixed two-row list; Dziennik zdarzeń's diff column
+  holds variable-height JSON `DataGrid` doesn't suit. Then bulk actions,
+  inline editing, column/density persistence, saved filters, keyboard
+  nav, and the rest of the list, one slice at a time. See
+  `docs/ARCHITECTURE.md`'s note near §16A for the Materio direction
+  already recorded for this work.
 - **P2's remaining piece** — the homepage's hero/craftsmanship narrative
   sections, once the owner's actual words exist for them (reviews and FAQ
   are now real, see above).
