@@ -19,6 +19,7 @@ import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import type { GridColDef, GridRowParams } from '@mui/x-data-grid';
 
 import { ADMIN, adminOrderStatusLabel } from '@/content/pl/admin';
+import { comparePl } from '@/domain/text/collation';
 import { formatPln } from '@/domain/money/money';
 import type { AdminOrderListItem } from '@/server/repositories/admin-orders';
 import { useGridPreferences } from '@/ui/islands/admin/useGridPreferences';
@@ -44,6 +45,7 @@ export function OrdersDataGrid({ rows }: { readonly rows: readonly AdminOrderLis
       headerName: ADMIN.ordersColumnCustomerPl,
       flex: 1.4,
       minWidth: 200,
+      sortComparator: comparePl,
       renderCell: (params) => (
         <div>
           {params.row.customerName}

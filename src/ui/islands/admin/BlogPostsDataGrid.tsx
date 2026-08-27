@@ -5,6 +5,7 @@ import { Chip } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN } from '@/content/pl/admin';
+import { comparePl } from '@/domain/text/collation';
 import type { AdminBlogPostListItem } from '@/server/repositories/admin-blog';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
 
@@ -25,6 +26,7 @@ export function BlogPostsDataGrid({ rows }: { readonly rows: readonly AdminBlogP
       headerName: ADMIN.blogPostsColumnTitlePl,
       flex: 1.4,
       minWidth: 220,
+      sortComparator: comparePl,
       renderCell: (params) => (
         <Link href={`/panel/blog/${params.row.id}`} onClick={(e) => e.stopPropagation()}>
           {params.value}

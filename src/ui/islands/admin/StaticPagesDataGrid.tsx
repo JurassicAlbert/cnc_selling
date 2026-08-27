@@ -5,6 +5,7 @@ import { Chip } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN } from '@/content/pl/admin';
+import { comparePl } from '@/domain/text/collation';
 import type { AdminStaticPageListItem } from '@/server/repositories/admin-static-pages';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
 
@@ -15,6 +16,7 @@ export function StaticPagesDataGrid({ rows }: { readonly rows: readonly AdminSta
       headerName: ADMIN.staticPagesColumnTitlePl,
       flex: 1.2,
       minWidth: 200,
+      sortComparator: comparePl,
       renderCell: (params) => (
         <Link href={`/panel/strony/${params.row.id}`} onClick={(e) => e.stopPropagation()}>
           {params.value}

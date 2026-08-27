@@ -468,20 +468,20 @@ Pricing admin built 2026-08-27, autonomously (standing owner authorization to ke
 - [ ] Polish used throughout the customer-facing UI
 - [ ] Code identifiers, tables and tests in English throughout
 - [ ] No accidental English UI strings remain
-- [ ] Web fonts loaded with `latin-ext` subset — ą ć ę ł ń ó ś ź ż render everywhere
+- [x] Web fonts loaded with `latin-ext` subset — `src/ui/theme/fonts.ts`: `subsets: ['latin', 'latin-ext']` on every house font, verified 2026-08-27
 - [ ] Engraving fonts: cmap coverage parsed and stored; uncovered characters rejected
 - [ ] Preview renders the same font file production uses
-- [ ] Polish plurals correct at 1 / 2 / 4 / 5 / 12 / 22 / 25 / 112
-- [ ] Dates use genitive month form ("23 sierpnia 2026")
-- [ ] Currency formats as `1 234,56 zł`
-- [ ] Numeric inputs accept comma decimals ("1,2")
-- [ ] Lists sorted with Polish collation (ą after a, ł after l, ż last)
-- [ ] Search is diacritic-insensitive ("dab" finds "dąb")
-- [ ] Slugs transliterated, no percent-encoded diacritics
-- [ ] Postal code, NIP checksum, +48 phone validated
-- [ ] Address form in Polish order (street, number, postal code, city)
-- [ ] Polish quotation marks „ … " in copy
-- [ ] No line break after single-letter words (w, i, z, o, a)
+- [ ] Polish plurals correct at 1 / 2 / 4 / 5 / 12 / 22 / 25 / 112 — no dedicated pluralization helper found; genuinely unverified, not yet audited
+- [x] Dates use genitive month form ("23 sierpnia 2026") — `Intl.DateTimeFormat('pl-PL', {dateStyle:'long'})` (blog listing/detail/homepage teaser), confirmed against real ICU output 2026-08-27
+- [x] Currency formats as `1 234,56 zł` — `formatPln()` (`domain/money/money.ts`), real `Intl.NumberFormat('pl-PL', {style:'currency', currency:'PLN'})`; verified 2026-08-27 — Polish CLDR only groups from 5 digits, so a 4-digit amount renders `1234,56 zł` (no space) rather than the checklist's own literal example, which is correct real Polish formatting, not a gap (already documented in the function's own comment)
+- [x] Numeric inputs accept comma decimals ("1,2") — `parseDecimalPl()` (`domain/text/numeric-input.ts`), tested in `tests/unit/text.test.ts`, verified 2026-08-27
+- [x] Lists sorted with Polish collation (ą after a, ł after l, ż last) — `comparePl()`/`sortByPl()` (`domain/text/collation.ts`) existed since P1 but were never wired into any real list; **fixed 2026-08-27**: `sortComparator: comparePl` added to every Polish-text column across all 13 admin `DataGrid`s (see `docs/HANDOVER.md` §9z27), new `tests/unit/collation.test.ts`
+- [x] Search is diacritic-insensitive ("dab" finds "dąb") — `matchesPl()` (`domain/text/collation.ts`), used by the real storefront product search (`server/repositories/products.ts`), verified 2026-08-27
+- [x] Slugs transliterated, no percent-encoded diacritics — no auto-transliteration UX exists (staff type slugs by hand), but every `applyCreateX` action's `SLUG_PATTERN` (`^[a-z0-9]+(-[a-z0-9]+)*$`) rejects any diacritic outright, so a percent-encoded/diacritic slug can never be created; verified by inspection 2026-08-27, satisfies the requirement's intent though not its "convenience" framing
+- [x] Postal code, NIP checksum, +48 phone validated — `domain/checkout/validate.ts`: `validateNip()` is a real weighted-digit checksum (not a format guess), `validatePostalCode()`, `validatePhone()`; 8 tests in `tests/unit/checkout-validate.test.ts`, verified 2026-08-27
+- [x] Address form in Polish order (street, number, postal code, city) — `CheckoutForm.tsx` field order confirmed street → postalCode → city 2026-08-27; house number is not a separate field (one "ulica i numer" text field, a deliberate simplification, not a 4-field split)
+- [ ] Polish quotation marks „ … " in copy — not audited; would need a full content-file sweep
+- [ ] No line break after single-letter words (w, i, z, o, a) — not audited; would need a full content-file sweep
 - [~] Mobile layout verified — a real sitewide overflow bug (unresponsive h1-h3, found via the P3 mobile check) was fixed 2026-08-23, see the P3 section. Checked on the product page and configurator only, not category pages, the homepage, or the admin panel (which doesn't exist yet)
 - [ ] Tablet layout verified
 - [ ] Desktop layout verified

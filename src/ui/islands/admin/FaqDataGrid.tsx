@@ -5,6 +5,7 @@ import { Chip } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN } from '@/content/pl/admin';
+import { comparePl } from '@/domain/text/collation';
 import type { AdminFaqListItem } from '@/server/repositories/admin-faq';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
 
@@ -15,6 +16,7 @@ export function FaqDataGrid({ rows }: { readonly rows: readonly AdminFaqListItem
       headerName: ADMIN.faqColumnQuestionPl,
       flex: 2,
       minWidth: 260,
+      sortComparator: comparePl,
       renderCell: (params) => (
         <Link href={`/panel/faq/${params.row.id}`} onClick={(e) => e.stopPropagation()}>
           {params.value}

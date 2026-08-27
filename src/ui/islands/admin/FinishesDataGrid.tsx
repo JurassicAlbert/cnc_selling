@@ -6,6 +6,7 @@ import { Switch } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN, adminFinishKindLabel } from '@/content/pl/admin';
+import { comparePl } from '@/domain/text/collation';
 import { setFinishAvailable, setFinishSortOrder } from '@/server/actions/admin-finishes';
 import type { AdminFinishListItem } from '@/server/repositories/admin-finishes';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
@@ -19,6 +20,7 @@ export function FinishesDataGrid({ rows }: { readonly rows: readonly AdminFinish
       headerName: ADMIN.finishesColumnNamePl,
       flex: 1.2,
       minWidth: 180,
+      sortComparator: comparePl,
       renderCell: (params) => (
         <Link href={`/panel/wykonczenia/${params.row.id}`} onClick={(e) => e.stopPropagation()}>
           {params.value}

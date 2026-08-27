@@ -15,6 +15,7 @@ import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN, adminReviewStatusLabel } from '@/content/pl/admin';
+import { comparePl } from '@/domain/text/collation';
 import { setReviewStatus } from '@/server/actions/admin-reviews';
 import type { AdminReviewListItem } from '@/server/repositories/admin-reviews';
 import { useGridPreferences } from '@/ui/islands/admin/useGridPreferences';
@@ -23,7 +24,7 @@ export function OpinieDataGrid({ rows }: { readonly rows: readonly AdminReviewLi
   const gridPreferences = useGridPreferences('opinie');
   const columns: GridColDef<AdminReviewListItem>[] = [
     { field: 'orderNumber', headerName: ADMIN.reviewsColumnOrderPl, flex: 0.8, minWidth: 130 },
-    { field: 'authorNamePl', headerName: ADMIN.reviewsColumnAuthorPl, flex: 0.8, minWidth: 140 },
+    { field: 'authorNamePl', headerName: ADMIN.reviewsColumnAuthorPl, flex: 0.8, minWidth: 140, sortComparator: comparePl },
     { field: 'rating', headerName: ADMIN.reviewsColumnRatingPl, flex: 0.4, minWidth: 80, align: 'right', headerAlign: 'right' },
     { field: 'bodyPl', headerName: ADMIN.reviewsColumnBodyPl, flex: 2, minWidth: 260 },
     {

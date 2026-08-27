@@ -6,6 +6,7 @@ import { Switch } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN } from '@/content/pl/admin';
+import { comparePl } from '@/domain/text/collation';
 import { setCollectionActive, setCollectionSortOrder } from '@/server/actions/admin-designs';
 import type { AdminCollectionListItem } from '@/server/repositories/admin-designs';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
@@ -19,6 +20,7 @@ export function CollectionsDataGrid({ rows }: { readonly rows: readonly AdminCol
       headerName: ADMIN.collectionsColumnNamePl,
       flex: 1.2,
       minWidth: 180,
+      sortComparator: comparePl,
       renderCell: (params) => (
         <Link href={`/panel/kolekcje/${params.row.id}`} onClick={(e) => e.stopPropagation()}>
           {params.value}

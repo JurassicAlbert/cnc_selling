@@ -6,6 +6,7 @@ import { Chip, Switch } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN, adminDesignRightsStatusLabel } from '@/content/pl/admin';
+import { comparePl } from '@/domain/text/collation';
 import { setDesignActive, setDesignSortOrder } from '@/server/actions/admin-designs';
 import type { AdminDesignListItem } from '@/server/repositories/admin-designs';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
@@ -27,7 +28,7 @@ export function DesignsDataGrid({ rows }: { readonly rows: readonly AdminDesignL
         </Link>
       ),
     },
-    { field: 'namePl', headerName: ADMIN.designsColumnNamePl, flex: 1.2, minWidth: 180 },
+    { field: 'namePl', headerName: ADMIN.designsColumnNamePl, flex: 1.2, minWidth: 180, sortComparator: comparePl },
     {
       field: 'rightsStatus',
       headerName: ADMIN.designsColumnRightsPl,

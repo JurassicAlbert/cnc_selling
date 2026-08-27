@@ -14,6 +14,7 @@ import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN, adminStaffRoleLabel } from '@/content/pl/admin';
+import { comparePl } from '@/domain/text/collation';
 import { changeStaffRole } from '@/server/actions/admin-staff';
 import type { StaffListItem } from '@/server/repositories/admin-staff';
 import { useGridPreferences } from '@/ui/islands/admin/useGridPreferences';
@@ -21,7 +22,7 @@ import { useGridPreferences } from '@/ui/islands/admin/useGridPreferences';
 export function StaffDataGrid({ rows, currentUserId }: { readonly rows: readonly StaffListItem[]; readonly currentUserId: string }) {
   const gridPreferences = useGridPreferences('personel');
   const columns: GridColDef<StaffListItem>[] = [
-    { field: 'name', headerName: ADMIN.staffColumnNamePl, flex: 1, minWidth: 160 },
+    { field: 'name', headerName: ADMIN.staffColumnNamePl, flex: 1, minWidth: 160, sortComparator: comparePl },
     { field: 'email', headerName: ADMIN.staffColumnEmailPl, flex: 1.2, minWidth: 200 },
     {
       field: 'role',

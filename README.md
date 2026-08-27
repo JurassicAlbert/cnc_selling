@@ -572,6 +572,24 @@ was active at all. The Design half — no standalone design page exists
 to deep-link — is deliberately deferred as its own slice. See
 `docs/HANDOVER.md` §9z26.
 
+**Cross-cutting Polish-correctness verification sweep — built/verified
+2026-08-27, autonomously.** Checked every "Cross-cutting verification"
+Polish-locale line in `docs/CHECKLIST.md` against real behavior instead
+of assuming. Found and fixed one genuine gap: `comparePl`/`sortByPl`
+(real Polish collation, `ą` sorts next to `a` not after `z`) has
+existed since P1 but was never actually wired into any list — every
+real list in the app sorts by a curated `sortOrder`, so the gap was
+invisible until a column header got clicked to sort alphabetically.
+Now wired into every Polish-text column across all 13 admin
+`DataGrid`s, with the module's first-ever test file. Verified true
+without changes: `latin-ext` fonts, genitive-form dates, comma-decimal
+numeric parsing, diacritic-insensitive search, real NIP-checksum/
+postal-code/phone validation, and slug safety (no diacritic can ever
+enter a slug, by validation not by auto-transliteration). Left
+honestly unchecked where genuinely unaudited: Polish plural forms,
+typographic quote/line-break rules in copy. See `docs/HANDOVER.md`
+§9z27.
+
 ---
 
 ## Getting set up
@@ -685,7 +703,10 @@ built** (§9z22) — the last open item from P2's blog scaffold — and
 audit log (§9z23), **Products/Designs/Materials each have a real
 "Duplikuj" action** (§9z24), **the packing-list print view closes
 out the "print views" checklist line** alongside the production brief
-(§9z25), and **"Preview as customer" is built for Products** (§9z26).
+(§9z25), **"Preview as customer" is built for Products** (§9z26), and
+**a cross-cutting Polish-correctness sweep verified most of the
+locale-correctness checklist true and fixed the one real gap it
+found** — Polish collation, now wired into every admin grid (§9z27).
 See `docs/CHECKLIST.md` for the itemised state of every phase. Next,
 continuing autonomously per the owner's standing direction to close
 remaining gaps toward "no missing pages, functionality, design and UI":

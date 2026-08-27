@@ -6,6 +6,7 @@ import { Switch } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN, adminMaterialFamilyLabel } from '@/content/pl/admin';
+import { comparePl } from '@/domain/text/collation';
 import { setMaterialAvailable, setMaterialSortOrder } from '@/server/actions/admin-materials';
 import type { AdminMaterialListItem } from '@/server/repositories/admin-materials';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
@@ -19,6 +20,7 @@ export function MaterialsDataGrid({ rows }: { readonly rows: readonly AdminMater
       headerName: ADMIN.materialsColumnNamePl,
       flex: 1.2,
       minWidth: 180,
+      sortComparator: comparePl,
       renderCell: (params) => (
         <Link href={`/panel/materialy/${params.row.id}`} onClick={(e) => e.stopPropagation()}>
           {params.value}

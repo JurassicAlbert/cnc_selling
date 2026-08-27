@@ -5,6 +5,7 @@ import { Chip } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN } from '@/content/pl/admin';
+import { comparePl } from '@/domain/text/collation';
 import type { AdminCustomerListItem } from '@/server/repositories/admin-customers';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
 
@@ -15,6 +16,7 @@ export function CustomersDataGrid({ rows }: { readonly rows: readonly AdminCusto
       headerName: ADMIN.customersColumnNamePl,
       flex: 1.1,
       minWidth: 170,
+      sortComparator: comparePl,
       renderCell: (params) => (
         <Link href={`/panel/klienci/${params.row.id}`} onClick={(e) => e.stopPropagation()}>
           {params.value}

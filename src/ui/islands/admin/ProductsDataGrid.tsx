@@ -6,6 +6,7 @@ import { Switch } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN } from '@/content/pl/admin';
+import { comparePl } from '@/domain/text/collation';
 import { setProductActive, setProductSortOrder } from '@/server/actions/admin-products';
 import type { AdminProductListItem } from '@/server/repositories/admin-products';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
@@ -19,6 +20,7 @@ export function ProductsDataGrid({ rows }: { readonly rows: readonly AdminProduc
       headerName: ADMIN.productsColumnNamePl,
       flex: 1.4,
       minWidth: 200,
+      sortComparator: comparePl,
       renderCell: (params) => (
         <Link href={`/panel/produkty/${params.row.id}`} onClick={(e) => e.stopPropagation()}>
           {params.value}
@@ -26,7 +28,13 @@ export function ProductsDataGrid({ rows }: { readonly rows: readonly AdminProduc
       ),
     },
     { field: 'slug', headerName: ADMIN.productsColumnSlugPl, flex: 1, minWidth: 160 },
-    { field: 'categoryNamePl', headerName: ADMIN.productsColumnCategoryPl, flex: 1, minWidth: 160 },
+    {
+      field: 'categoryNamePl',
+      headerName: ADMIN.productsColumnCategoryPl,
+      flex: 1,
+      minWidth: 160,
+      sortComparator: comparePl,
+    },
     {
       field: 'sortOrder',
       headerName: ADMIN.productFieldSortOrderPl,

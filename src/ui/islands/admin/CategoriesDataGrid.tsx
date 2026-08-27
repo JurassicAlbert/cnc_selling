@@ -6,6 +6,7 @@ import { Switch } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN } from '@/content/pl/admin';
+import { comparePl } from '@/domain/text/collation';
 import { setCategoryActive, setCategorySortOrder } from '@/server/actions/admin-categories';
 import type { AdminCategoryListItem } from '@/server/repositories/admin-categories';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
@@ -19,6 +20,7 @@ export function CategoriesDataGrid({ rows }: { readonly rows: readonly AdminCate
       headerName: ADMIN.categoriesColumnNamePl,
       flex: 1.2,
       minWidth: 180,
+      sortComparator: comparePl,
       renderCell: (params) => (
         <Link href={`/panel/kategorie/${params.row.id}`} onClick={(e) => e.stopPropagation()}>
           {params.value}
