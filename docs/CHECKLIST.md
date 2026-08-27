@@ -387,7 +387,7 @@ Deliberately out of this pass, per `docs/ARCHITECTURE.md` §16A.6 and decision D
 
 ### P7b — management
 
-Built as vertical slices per §16A.6, not one pass — slice 1 (categories + products) shipped 2026-08-27, the rest is still open.
+Built as vertical slices per §16A.6, not one pass — slice 1 (categories + products), slice 2 (materials + finishes), and slice 3 (designs + collections) all shipped 2026-08-27; customers+RODO, content, production queue, settings, and the audit-log viewer are still open.
 
 - [x] Categories CRUD — `/panel/kategorie`, no hard delete (soft-delete invariant, §16A.2 — `Category` is a real FK target)
 - [x] Products CRUD incl. dimension envelope, SEO fields, activate/deactivate — `/panel/produkty`, same soft-delete-only rule
@@ -395,9 +395,9 @@ Built as vertical slices per §16A.6, not one pass — slice 1 (categories + pro
 - [x] Product↔material compatibility editor — associates existing `Material` rows with a per-product `priceFactorBp`; does not author new materials (that's materials CRUD, still open below)
 - [x] Product↔design assignment — same association-only scope, against existing `Design` rows
 - [x] Product image upload, ordering, alt text — real files written to `public/images/products/...` (`src/server/storage/public-images.ts`, a new adapter — deliberately NOT `local-disk.ts`'s private/gated storage, since catalogue photos must be plain public URLs), MIME-sniffed via `file-type`, live-verified rendering on the real storefront product page
-- [ ] Designs CRUD incl. production metadata
-- [ ] Design rights status + provenance fields; new designs default to non-sellable
-- [ ] Design collections CRUD
+- [x] Designs CRUD incl. production metadata — `/panel/wzory`; `thumbnailUrl`/`previewUrl` are both required and distinct (two real uploaded files, not one derived from the other); includes a design↔material compatibility editor (`DesignMaterial`, plain toggle — "no rows means every material the product allows," per the schema's own comment)
+- [x] Design rights status + provenance fields; new designs default to non-sellable — `rightsStatus` defaults to `REQUIRES_PERMISSION` (the Prisma column default), never silently sellable; regression-tested directly (a design created with no explicit override lands non-sellable); the actual `APPROVED_COMMERCIAL`/`PUBLIC_DOMAIN`-only enforcement already existed pre-P7 (`domain/compatibility/resolve.ts`) and wasn't rebuilt
+- [x] Design collections CRUD — `/panel/kolekcje`
 - [x] Materials CRUD incl. sheet limits, min line width, grain direction, CNC/laser flags — `/panel/materialy`; `imageUrl` is required on this model (unlike `Category`'s), so create/update take `FormData` and the upload must succeed before the record can be saved
 - [x] Finishes CRUD — `/panel/wykonczenia`, same required-image discipline
 - [x] Material↔finish compatibility matrix editor — plain toggle (`MaterialFinish` carries no extra fields, unlike `ProductMaterial`'s `priceFactorBp`), live-verified: deactivating a material removes it from the real material-picker query without deleting the row

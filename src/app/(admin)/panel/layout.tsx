@@ -37,6 +37,8 @@ export default async function PanelLayout({ children }: { readonly children: Rea
             <Link href="/panel/produkty">{ADMIN.navProductsPl}</Link>
             <Link href="/panel/materialy">{ADMIN.navMaterialsPl}</Link>
             <Link href="/panel/wykonczenia">{ADMIN.navFinishesPl}</Link>
+            <Link href="/panel/wzory">{ADMIN.navDesignsPl}</Link>
+            <Link href="/panel/kolekcje">{ADMIN.navCollectionsPl}</Link>
           </Stack>
           <form action={logout}>
             <Button type="submit" size="small" variant="text">

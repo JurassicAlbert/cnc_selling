@@ -6,6 +6,7 @@
  */
 
 import type {
+  DesignRightsStatus,
   FinishKind,
   GrainDirection,
   InstallationVariantCode,
@@ -21,6 +22,8 @@ export const ADMIN = {
   navProductsPl: 'Produkty',
   navMaterialsPl: 'Materiały',
   navFinishesPl: 'Wykończenia',
+  navDesignsPl: 'Wzory',
+  navCollectionsPl: 'Kolekcje',
   logoutPl: 'Wyloguj się',
 
   savePl: 'Zapisz',
@@ -212,6 +215,61 @@ export const ADMIN = {
   finishFieldExtraDaysMinPl: 'Dodatkowy czas od (dni)',
   finishFieldExtraDaysMaxPl: 'Dodatkowy czas do (dni)',
   finishFieldSortOrderPl: 'Kolejność wyświetlania',
+
+  collectionsHeadingPl: 'Kolekcje',
+  collectionsNewPl: 'Nowa kolekcja',
+  collectionsEmptyPl: 'Brak kolekcji.',
+  collectionsColumnNamePl: 'Nazwa',
+  collectionsColumnDesignsPl: 'Wzory',
+  collectionsColumnStatusPl: 'Status',
+  collectionNotFoundPl: 'Nie znaleziono kolekcji.',
+  collectionFieldSlugPl: 'Identyfikator URL (slug)',
+  collectionFieldNamePl: 'Nazwa',
+  collectionFieldDescPl: 'Opis',
+  collectionFieldSortOrderPl: 'Kolejność wyświetlania',
+
+  designsHeadingPl: 'Wzory',
+  designsNewPl: 'Nowy wzór',
+  designsEmptyPl: 'Brak wzorów.',
+  designsColumnCodePl: 'Kod',
+  designsColumnNamePl: 'Nazwa',
+  designsColumnRightsPl: 'Prawa',
+  designsColumnStatusPl: 'Status',
+  designNotFoundPl: 'Nie znaleziono wzoru.',
+  designSectionCorePl: 'Dane podstawowe',
+  designSectionProductionPl: 'Metadane produkcyjne',
+  designSectionRightsPl: 'Prawa i pochodzenie',
+  designFieldSlugPl: 'Identyfikator URL (slug)',
+  designFieldCodePl: 'Kod (stały identyfikator na hali)',
+  designFieldNamePl: 'Nazwa',
+  designFieldDescPl: 'Opis',
+  designFieldCollectionPl: 'Kolekcja',
+  designFieldCollectionNonePl: '— brak —',
+  designFieldTagsPl: 'Tagi (oddzielone przecinkami)',
+  designFieldThumbnailPl: 'Miniatura',
+  designFieldThumbnailReplacePl: 'Nowa miniatura (opcjonalnie, zastąpi obecną)',
+  designFieldPreviewPl: 'Obraz podglądu',
+  designFieldPreviewReplacePl: 'Nowy obraz podglądu (opcjonalnie, zastąpi obecny)',
+  designFieldReferenceWidthPl: 'Szerokość referencyjna (mm)',
+  designFieldMinLineWidthPl: 'Min. szerokość linii (µm)',
+  designFieldMinDetailSpacingPl: 'Min. odstęp detali (µm)',
+  designFieldMinEngraveDepthPl: 'Min. głębokość grawerowania (µm)',
+  designFieldRecommendedMethodPl: 'Zalecana metoda produkcji',
+  designFieldMinRecommendedWidthPl: 'Min. zalecana szerokość (mm)',
+  designFieldMaxRecommendedWidthPl: 'Maks. zalecana szerokość (mm)',
+  designFieldDetailLevelPl: 'Poziom szczegółowości (1–5)',
+  designFieldMachiningTimePl: 'Czas obróbki (tysięczne minuty/m²)',
+  designFieldRightsStatusPl: 'Status praw',
+  designFieldSourceArtistPl: 'Autor',
+  designFieldSourceTitlePl: 'Tytuł źródłowy',
+  designFieldSourceYearPl: 'Rok powstania',
+  designFieldArtistDeathYearPl: 'Rok śmierci autora',
+  designFieldSourceRefPl: 'Źródło / odnośnik',
+  designFieldRightsNotesPl: 'Uwagi dot. praw',
+  designFieldSortOrderPl: 'Kolejność wyświetlania',
+  designMaterialsHeadingPl: 'Zgodne materiały',
+  designMaterialsEmptyPl: 'Żaden materiał nie jest jeszcze przypisany — brak wpisów oznacza, że dostępny jest każdy materiał dopuszczony przez produkt.',
+  designMaterialFieldPl: 'Materiał',
 } as const;
 
 const ORDER_STATUS_LABELS_PL: Record<OrderStatus, string> = {
@@ -299,4 +357,16 @@ const FINISH_KIND_LABELS_PL: Record<FinishKind, string> = {
 
 export function adminFinishKindLabel(kind: FinishKind): string {
   return FINISH_KIND_LABELS_PL[kind];
+}
+
+const DESIGN_RIGHTS_STATUS_LABELS_PL: Record<DesignRightsStatus, string> = {
+  APPROVED_COMMERCIAL: 'Zatwierdzone komercyjnie',
+  REQUIRES_PERMISSION: 'Wymaga zgody',
+  PUBLIC_DOMAIN: 'Domena publiczna',
+  CUSTOMER_SUPPLIED: 'Dostarczone przez klienta',
+  RESTRICTED: 'Zastrzeżone (nigdy nieoferowane)',
+};
+
+export function adminDesignRightsStatusLabel(status: DesignRightsStatus): string {
+  return DESIGN_RIGHTS_STATUS_LABELS_PL[status];
 }

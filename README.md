@@ -233,6 +233,16 @@ inside `Link` instead of passing `Link` as a prop value. See
 should now be treated as suspect anywhere else it appears in this
 codebase.
 
+**P7b, designs & collections CRUD (slice 3) — built 2026-08-27.**
+`/panel/wzory` and `/panel/kolekcje` — authoring for the engraved-artwork
+catalogue, including the rights-status/provenance fields the brief treats
+as load-bearing. `Design.thumbnailUrl`/`previewUrl` are both required and
+distinct, so create takes two genuinely separate uploaded images, not one
+derived from the other. New designs default to `REQUIRES_PERMISSION`
+(never silently sellable, §12) — backed by an actual regression test, not
+just a form default, since the real enforcement (`APPROVED_COMMERCIAL`/
+`PUBLIC_DOMAIN`-only) already existed pre-P7. See `docs/HANDOVER.md` §9z3.
+
 ---
 
 ## Getting set up
@@ -247,7 +257,7 @@ npm install
 npm run db:up
 npm run db:deploy      # applies the initial migration
 
-npm test               # 487 assertions across twenty-nine files, unit + integration
+npm test               # 495 assertions across thirty files, unit + integration
 npm run typecheck      # TypeScript strict, noUncheckedIndexedAccess, no emit
 npm run lint             # Biome + the Polish-literal check
 npm run build           # Next.js production build
@@ -312,15 +322,15 @@ order history, saved configurations, a real mailer, RODO consent +
 legal content, and sitewide loading/empty/error states. **P7a, the admin
 panel's operational minimum, is built** (§9y) — role-gated order
 management with staff-driven status transitions, marking bank-transfer
-orders paid, and a design-review queue, all audited. **P7b's first two
-slices, catalogue admin (categories + products) and materials & finishes
-CRUD, are built** (§9z/§9z2). See `docs/CHECKLIST.md` for the itemised
-state of every phase. Next:
+orders paid, and a design-review queue, all audited. **P7b's first three
+slices, catalogue admin (categories + products), materials & finishes
+CRUD, and designs & collections CRUD, are built** (§9z/§9z2/§9z3). See
+`docs/CHECKLIST.md` for the itemised state of every phase. Next:
 
-- **P7b, the rest of it** — designs/collections CRUD, customers + RODO
-  tooling, content, production queue, settings (also where real shipping
-  rates and a real bank account number finally replace P5's
-  placeholders), audit-log viewer — each its own slice, per §16A.6.
+- **P7b, the rest of it** — customers + RODO tooling, content, production
+  queue, settings (also where real shipping rates and a real bank account
+  number finally replace P5's placeholders), audit-log viewer — each its
+  own slice, per §16A.6.
 - **P7c** — `@mui/x-data-grid` adoption, dashboards, global search, bulk
   actions. See `docs/ARCHITECTURE.md`'s note near §16A for the Materio
   direction already recorded for when it starts.

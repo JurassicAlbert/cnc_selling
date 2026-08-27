@@ -2512,6 +2512,26 @@ Third P7b vertical slice. Owner picked materials/finishes over designs/collectio
 
 `npm test` (487/487 — 476 prior + 11 new integration), `npm run typecheck`, `npm run lint`, `npm run build` all clean; no schema migration needed. Live-verified in the browser end to end (after the dev-server restart above, which is what surfaced the `component={Link}` bug in the first place — worth restarting once mid-verification rather than trusting a long-lived dev process): created a material and a finish (the actual multipart upload was proven via a standalone script — `tsx -r dotenv/config` calling `applyCreateMaterial`/`applyCreateFinish` directly, since this browser tooling cannot drive a native OS file picker, same limitation §9z already noted) → linked them via the compatibility editor, visible immediately on the material's real edit page → confirmed the uploaded photo actually loads (`naturalWidth: 800`, not a broken image) → deactivated the material → confirmed it genuinely disappears from the real material-picker dropdown on a product's edit page (`listMaterialOptionsForAdmin`, the same query slice 1's product-material editor depends on) without deleting the row → confirmed `AuditLog` rows for every mutation including the deactivation done for real through the browser, not the script.
 
+## 9z3. P7b, slice 3 — Designs & collections CRUD — 2026-08-27
+
+Fourth P7b vertical slice (owner picked this over customers+RODO, settings, and content). Authoring for `Design`/`DesignCollection` — the actual engraved-artwork catalogue, including the rights-status/provenance fields the brief treats as load-bearing (§12). Slice 1 already let staff assign an *existing* design to a product; this is where those designs get created.
+
+### Two required images, not one
+
+`Design.thumbnailUrl`/`previewUrl` are both required AND distinct columns — same "no fake/derived asset" discipline as everywhere else in this codebase, so the create form takes two real separate file inputs (`thumbnailFile`/`previewFile`), each independently optional-on-replace during an update, exactly extending slice 2's single-required-image pattern (`admin-materials.ts`) rather than introducing a new one.
+
+### The rights-default invariant got an actual regression test, not just a form default
+
+§12: a new design must default to non-sellable and be *deliberately* promoted. The Prisma column default (`@default(REQUIRES_PERMISSION)`) already enforces this at the schema level, and the real `APPROVED_COMMERCIAL`/`PUBLIC_DOMAIN`-only filter that makes it matter already existed pre-P7 (`domain/compatibility/resolve.ts`, untouched this pass). What this slice adds is a test that would actually fail if someone later "simplified" the create form to default to something sellable: `tests/integration/admin-designs.test.ts` creates a design with no explicit `rightsStatus` override and asserts it lands `REQUIRES_PERMISSION` — the one invariant this whole slice exists to protect, made concrete instead of just trusted.
+
+### `DesignCollection`'s FK is safe to hard-delete; kept soft-delete-only anyway
+
+Checked the actual migration SQL before deciding (not assumed, matching this project's own standing discipline): `Design_collectionId_fkey ... ON DELETE SET NULL` — genuinely safe to delete a collection, no cascade, no orphaned data. `Design` itself is not (`ProductDesign_designId_fkey ... ON DELETE CASCADE`, `Configuration_designId_fkey ... ON DELETE SET NULL` — a hard delete would silently drop product assignments and orphan in-progress carts). Gave both the same `isActive`-toggle-only treatment anyway: a consistent "nothing in this panel is ever hard-deleted" rule across all three slices is worth more than exploiting the one relation where it happens to be technically safe.
+
+### Verified, dev server restarted first per §9z2's new standing rule
+
+`npm test` (495/495 — 487 prior + 8 new integration), `npm run typecheck`, `npm run lint`, `npm run build` all clean; no schema migration needed. Restarted the dev server before live-verifying (the rule §9z2 itself established, after the `Button`/`Link` bug that slice masked for an entire prior slice) — came up clean, confirming that fix holds under a fresh compile. Live-verified in the browser end to end: created a collection → created a design under it via the same standalone-script workaround (`tsx -r dotenv/config`, this browser tooling still can't drive a native file picker) with two real, distinct uploaded images (confirmed different `naturalWidth`s, not the same file twice) → confirmed `rightsStatus` landed `REQUIRES_PERMISSION` without ever specifying it → linked a material via the compatibility editor → deactivated the design → confirmed it disappears from the real `listDesignOptionsForAdmin`-backed product-design picker without deleting the row → confirmed `AuditLog` rows for every mutation, including the deactivation done for real through the browser.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous
