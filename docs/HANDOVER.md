@@ -2903,6 +2903,10 @@ First draft's subject was `Aktualizacja statusu zamówienia {orderNumber}` — t
 
 `npm run typecheck && npm run lint && npm test && npm run build` clean (571/571 tests — 2 new in `mailer.test.ts` covering the new template's rendering and DB-override behavior, matching `order-confirmation`'s own existing test pattern exactly). Re-ran `npm run db:seed` against both the dev and test databases to add the new `EmailTemplate` row (create-only-if-absent, confirmed idempotent — every other row logged "already exists, leaving it alone"). Live-verified end to end as the real admin account: transitioned a real order (`2026/08/0065`, `AWAITING_PAYMENT → CONFIRMED`) and confirmed the dev server's own log showed a real send attempt — `Zamówienie 2026/08/0065: Potwierdzone` — to that order's real customer email, and the panel's Szablony e-mail list now shows "Zmiana statusu zamówienia" as a real, editable row.
 
+## 9z21. Soft-delete invariant, audited and proven — 2026-08-27
+
+Small, quick follow-up while surveying remaining gaps: `docs/CHECKLIST.md`'s "Soft delete enforced for entities referenced by orders" (§16A.2 invariant #2) was unchecked, but turned out to already be true by construction, not a real gap to build — the value here was in *proving* it rather than leaving it as an architectural claim. `grep`'d the whole codebase for a hard-delete call on any of the 6 core catalogue entities: zero real matches, only Prisma's own generated JSDoc examples. Went one level deeper than "no delete button exists," though: `OrderItem` has no live FK to Product/Material/Design/Finish at all — checked the schema directly. New `tests/integration/soft-delete-invariant.test.ts` proves this at the DB level, not just by absence: hard-deletes a `Material` a real order's snapshot references (bypassing the app entirely — it has no path to do this itself) and confirms the order's stored data is byte-identical afterward. 572/572 tests, build clean; no UI/page change, so no browser verification needed for this one.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous
