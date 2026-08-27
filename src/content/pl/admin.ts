@@ -32,6 +32,7 @@ export const ADMIN = {
   navStaticPagesPl: 'Strony',
   navReviewsPl: 'Opinie',
   navSettingsPl: 'Ustawienia',
+  navAuditLogPl: 'Dziennik zdarzeń',
   logoutPl: 'Wyloguj się',
 
   savePl: 'Zapisz',
@@ -377,6 +378,18 @@ export const ADMIN = {
   customerAnonymizeButtonPl: 'Zanonimizuj konto',
   customerAnonymizedNoticePl: 'Konto zanonimizowane',
 
+  auditLogHeadingPl: 'Dziennik zdarzeń',
+  auditLogFilterEntityPl: 'Encja',
+  auditLogFilterActionPl: 'Akcja',
+  auditLogFilterSearchPl: 'E-mail osoby lub identyfikator rekordu',
+  auditLogEmptyPl: 'Brak zdarzeń spełniających kryteria.',
+  auditLogColumnDatePl: 'Data',
+  auditLogColumnActorPl: 'Kto',
+  auditLogColumnEntityPl: 'Encja',
+  auditLogColumnActionPl: 'Akcja',
+  auditLogColumnDiffPl: 'Szczegóły',
+  auditLogNoDiffPl: '—',
+
   settingsHeadingPl: 'Ustawienia',
   settingsStoreSectionHeadingPl: 'Sklep',
   settingsFieldBankAccountNumberPl: 'Numer konta bankowego',
@@ -543,3 +556,16 @@ export const EMAIL_TEMPLATE_PLACEHOLDERS_PL: Record<string, readonly string[]> =
   'order-confirmation': ['orderNumber', 'totalGrossZloty', 'paymentMethodPl'],
   'verification-otp': ['otp', 'otpPurposePl'],
 };
+
+const AUDIT_ACTION_LABELS_PL: Record<string, string> = {
+  create: 'Utworzenie',
+  update: 'Aktualizacja',
+  delete: 'Usunięcie',
+  transition: 'Zmiana statusu',
+  export: 'Eksport',
+};
+
+/** Falls back to the raw value for any future `AuditAction` this map hasn't been updated for yet — `AuditLog.action` is a plain string column, not an enum, so this can't be exhaustive at the type level. */
+export function adminAuditActionLabel(action: string): string {
+  return AUDIT_ACTION_LABELS_PL[action] ?? action;
+}

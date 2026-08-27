@@ -2632,6 +2632,26 @@ Running `npm run db:seed` against `TEST_DATABASE_URL` for the first time (needed
 
 `npm test` (537/537 — 521 prior + 16 new integration), `npm run typecheck`, `npm run lint`, `npm run build` all clean; migration applied to both dev and test DBs, seed run on both. Dev server restarted before live-verifying, per §9z2's standing rule. Live-verified in the browser end to end: set a real bank account number and shipping rate in `/panel/ustawienia`, confirmed the checkout page and a real order's confirmation page picked up the real values, then reverted both back to the honest "not configured"/original placeholder state → invited a real disposable `STAFF` account, signed in as them via a real OTP round trip (no password), confirmed full panel access except a genuine 404 on the ADMIN-only personnel screen, then revoked their access from the real admin session and confirmed they dropped out of the staff list → edited the real `order-confirmation` email template, confirmed the live `mailer` singleton actually used the edited text against the dev database, reverted it to the original copy → cleaned up every piece of disposable verification state (the test staffer, temp scripts) before finishing.
 
+## 9z8. P7b, slice 8 — Audit log viewer — 2026-08-27
+
+Ninth and final P7b vertical slice — **P7b is now complete**. No schema, no new writes: `AuditLog` and `writeAuditLog()` have existed since P7a, and every mutation across every slice since has been writing to it. This slice is purely the read side, `docs/ARCHITECTURE.md` §16A.1 module 11's last unbuilt half.
+
+### The smallest slice, deliberately built without a formal plan round
+
+Every other P7b slice this session went through `EnterPlanMode` — genuine architectural or scope decisions were involved each time (staff-invite mechanism, ADMIN-only gating, singleton schema shapes, RODO deletion semantics). This one had none: a filterable read-only list over data that already exists, in a shape every prior admin list page (`/panel/zamowienia`, `/panel/klienci`) already established. Built directly, proportionate to the actual size of the decision space.
+
+### The entity filter is self-updating on purpose
+
+`listAuditLogEntities()` queries `DISTINCT entity FROM "AuditLog"` rather than shipping a hardcoded list of every entity name ever audit-logged. A hardcoded list would silently go stale the moment a future slice adds a new entity (exactly the kind of drift this project has avoided everywhere else — `ORDER_STATUSES` read from the real state machine, `listCustomersForAdmin`'s search matching real columns, etc.). The action filter, by contrast, IS a small hardcoded list (`create`/`update`/`delete`/`transition`/`export`) — safe to hardcode since it mirrors `AuditAction`, a closed type union in `write-audit-log.ts` that only changes when a developer edits that file directly, unlike `entity`, which is a free-form string any future `writeAuditLog()` call can introduce.
+
+### Diffs are rendered as plain JSON, not reformatted per entity
+
+`AuditLog.diff` is a `Json?` column with no fixed shape — every mutation across this whole project has written whatever `diff` object made sense for that specific action (`{ before, after }`, `{ fromStatus, toStatus, notePl }`, `{ addFinish: id }`, etc.). Building a human-readable formatter for every distinct shape across a dozen entities would be real scope beyond what "audit log viewer" asks for. A plain `JSON.stringify(diff, null, 2)` in a monospace block is honest — it shows exactly what was recorded, never an interpretation that could drift from the real data — and reads perfectly well in practice, confirmed live against the genuine mutation history this entire session's work produced.
+
+### Verified
+
+`npm test` (539/539 — 537 prior + 2 new integration), `npm run typecheck`, `npm run lint`, `npm run build` all clean; no migration. Dev server restarted before live-verifying (the browser context itself had reset since the prior slice, requiring a fresh OTP sign-in — same mechanism verified in §9z7, worked identically). Live-verified in the browser: `/panel/dziennik-zdarzen` showed the real, complete mutation history of every P7a/P7b slice built this session — real actors (including the `script-test-*@example.test` accounts from earlier scripted E2E work), real diffs, real timestamps, nothing fabricated → filtered by entity (`Review`) and confirmed only that entity's real rows showed → filtered by action (`export`) and confirmed the three real RODO export events from slice 6 → searched by a real actor email and confirmed exactly that actor's rows → combined an entity + action filter that legitimately has zero matching rows and confirmed the honest empty state, not an error.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

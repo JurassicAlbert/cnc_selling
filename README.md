@@ -314,6 +314,21 @@ end to end, including a real invite → OTP sign-in → ADMIN-only 404 →
 revoke → lockout round trip, and a real template edit picked up by the
 live `mailer` singleton. See `docs/HANDOVER.md` §9z7.
 
+**P7b, audit log viewer (slice 8) — built 2026-08-27. P7b is complete.**
+No schema, no new writes — `AuditLog` and `writeAuditLog()` have existed
+since P7a, and every mutation across every slice since has been writing
+to it; this is purely the read side. `/panel/dziennik-zdarzen` is
+filterable by entity (a dropdown populated from what's actually been
+logged, self-updating as future work adds new entities, never a
+hardcoded list that would go stale), action, and a search box matching
+either the actor's email or a record id. Diffs render as plain
+`JSON.stringify` — honest, since `AuditLog.diff` has no fixed shape
+across a dozen different entities, and a per-entity formatter would be
+real scope beyond what this slice asks for. Live-verified against the
+genuine, complete mutation history this entire session's admin work
+produced — real actors, real diffs, real timestamps, filters composing
+correctly together. See `docs/HANDOVER.md` §9z8.
+
 ---
 
 ## Getting set up
@@ -393,16 +408,16 @@ order history, saved configurations, a real mailer, RODO consent +
 legal content, and sitewide loading/empty/error states. **P7a, the admin
 panel's operational minimum, is built** (§9y) — role-gated order
 management with staff-driven status transitions, marking bank-transfer
-orders paid, and a design-review queue, all audited. **P7b's first seven
-slices, catalogue admin (categories + products), materials & finishes
-CRUD, designs & collections CRUD, the production queue, content (FAQ,
-static pages, real customer reviews), customers + RODO tooling, and
-settings (staff users & roles, bank details, shipping rate, email
-templates), are built** (§9z/§9z2/§9z3/§9z4/§9z5/§9z6/§9z7). Real shipping
-rates and a real bank account number have now replaced P5's placeholders.
-See `docs/CHECKLIST.md` for the itemised state of every phase. Next:
+orders paid, and a design-review queue, all audited. **P7b is complete**
+— catalogue admin (categories + products), materials & finishes CRUD,
+designs & collections CRUD, the production queue, content (FAQ, static
+pages, real customer reviews), customers + RODO tooling, settings (staff
+users & roles, bank details, shipping rate, email templates), and the
+audit-log viewer are all built
+(§9z/§9z2/§9z3/§9z4/§9z5/§9z6/§9z7/§9z8). Real shipping rates and a real
+bank account number have now replaced P5's placeholders. See
+`docs/CHECKLIST.md` for the itemised state of every phase. Next:
 
-- **P7b's last piece** — the audit-log viewer, per §16A.6.
 - **P7c** — `@mui/x-data-grid` adoption, dashboards, global search, bulk
   actions. See `docs/ARCHITECTURE.md`'s note near §16A for the Materio
   direction already recorded for when it starts.

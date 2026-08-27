@@ -388,7 +388,7 @@ Deliberately out of this pass, per `docs/ARCHITECTURE.md` §16A.6 and decision D
 
 ### P7b — management
 
-Built as vertical slices per §16A.6, not one pass — slice 1 (categories + products), slice 2 (materials + finishes), slice 3 (designs + collections), slice 4 (production queue), slice 5 (content: FAQ, static pages, reviews), slice 6 (customers + RODO tooling), and slice 7 (settings: staff users & roles, bank details, shipping rate, email templates) all shipped 2026-08-27; only the audit-log viewer is still open.
+Built as vertical slices per §16A.6, not one pass — slice 1 (categories + products), slice 2 (materials + finishes), slice 3 (designs + collections), slice 4 (production queue), slice 5 (content: FAQ, static pages, reviews), slice 6 (customers + RODO tooling), slice 7 (settings: staff users & roles, bank details, shipping rate, email templates), and slice 8 (audit-log viewer) all shipped 2026-08-27. **P7b is complete.**
 
 - [x] Categories CRUD — `/panel/kategorie`, no hard delete (soft-delete invariant, §16A.2 — `Category` is a real FK target)
 - [x] Products CRUD incl. dimension envelope, SEO fields, activate/deactivate — `/panel/produkty`, same soft-delete-only rule
@@ -409,7 +409,7 @@ Built as vertical slices per §16A.6, not one pass — slice 1 (categories + pro
 - [x] Production queue grouped by status, module manifest, capacity view — `/panel/produkcja`, read-only (no new mutations); capacity is queued m²/machine-minutes against `MachineSettings.weeklyCapacityMinutes` (already existed, seeded `0`; shows an honest "not configured" note rather than a fake percentage until Settings ships); module manifest also added to the existing order detail page, not just the queue
 - [x] Printable production brief, clearly labelled not a production file — `/panel/zamowienia/[orderNumber]/karta-produkcyjna`, the exact warning text on screen (and in print), panel chrome hidden via `@media print`
 - [x] Settings: staff users, bank details, shipping rates, email templates — `/panel/ustawienia`; staff invite is real (`applyInviteStaffUser` creates a bare `User` row, no password needed — the existing OTP sign-in path already works for any account), ADMIN-only (`requireAdminSession()`, new); bank details and shipping rate are a `StoreSettings` singleton, replacing the `SHIPPING_FLAT_GROSZE` constant and the "we'll send the account number separately" placeholder everywhere both were used; email templates are DB-editable overrides (`EmailTemplate`) for `mailer.ts`'s hardcoded copy, falling back to it when unconfigured — live-verified end to end including a real staff invite → OTP sign-in → ADMIN-only 404 → revoke → lockout round trip
-- [ ] Audit log viewer
+- [x] Audit log viewer — `/panel/dziennik-zdarzen`, read-only over the real `AuditLog` rows every mutation across every P7b slice has been writing since P7a; filterable by entity (dropdown populated from what's actually been logged, never a hardcoded list), action, and a search box matching either actor email or record id; diffs rendered as plain JSON — live-verified showing the genuine, complete mutation history of this entire project's admin work, filters composing correctly together
 - [ ] Soft delete enforced for entities referenced by orders
 
 ### P7c — admin UX
