@@ -2652,6 +2652,26 @@ Every other P7b slice this session went through `EnterPlanMode` — genuine arch
 
 `npm test` (539/539 — 537 prior + 2 new integration), `npm run typecheck`, `npm run lint`, `npm run build` all clean; no migration. Dev server restarted before live-verifying (the browser context itself had reset since the prior slice, requiring a fresh OTP sign-in — same mechanism verified in §9z7, worked identically). Live-verified in the browser: `/panel/dziennik-zdarzen` showed the real, complete mutation history of every P7a/P7b slice built this session — real actors (including the `script-test-*@example.test` accounts from earlier scripted E2E work), real diffs, real timestamps, nothing fabricated → filtered by entity (`Review`) and confirmed only that entity's real rows showed → filtered by action (`export`) and confirmed the three real RODO export events from slice 6 → searched by a real actor email and confirmed exactly that actor's rows → combined an entity + action filter that legitimately has zero matching rows and confirmed the honest empty state, not an error.
 
+## 9z9. P7c, slice 1 — Global search (Ctrl/⌘+K) — 2026-08-27
+
+First P7c slice — P7b's own vertical-slice discipline (§16A.6) carried over, since P7c's 23-item list is just as clearly not a single pass. Picked as the starting point specifically because it's the one item in that list with no dependency on migrating every existing list page to `@mui/x-data-grid` first — a standalone feature, not a foundation-laying refactor.
+
+### Reused three-quarters of the search logic; the other quarter was a two-line addition
+
+`listOrdersForAdmin`/`listCustomersForAdmin` already had exactly the right `search` semantics from their own list pages (`/panel/zamowienia`, `/panel/klienci`). `listDesignsForAdmin`/`listProductsForAdmin` didn't take a search filter at all — added one to each, optional and backward-compatible (both had exactly one existing call site, neither passes the new parameter, both keep working unchanged). No new matching strategy invented — deliberately not the storefront's diacritic-folding `matchesPl`/`foldPl`, since staff searching their own catalogue by code/name/email is a different problem than a customer searching product copy, and every existing admin search box already uses plain `contains`/`insensitive`.
+
+### The first read that needed the same "re-derive the session inside the action" discipline as every write
+
+Every mutating Server Action in this codebase already re-derives `requireStaffSession()` itself rather than trusting the page that rendered its trigger, because a Server Action is directly POSTable once its id is known. `searchGlobal` (`src/server/actions/admin-global-search.ts`) is the first *read* action that needed the same treatment — it's invoked via `fetch`-as-you-type from a client island, not rendered server-side inside an already-gated Server Component the way every other admin read has been until now. Applied the same pattern rather than treating reads as exempt.
+
+### A browser-tooling quirk, not a feature bug — worth remembering
+
+Live-verifying, the very first attempt (type a full order number immediately after opening the dialog) produced a stray navigation to the homepage instead of showing search results — and a later attempt using `ctrl+a` then typing to replace an existing query concatenated the new text onto the old instead of replacing it (`triple_click` also didn't select-all in this MUI `TextField`). Neither reproduces from a real keyboard in a real browser; both are this browser tool's own keystroke-simulation timing/selection quirks (`[[feedback_browser_tooling_quirks]]`), not bugs in `GlobalSearch.tsx`. Confirmed by: (a) waiting for a screenshot to confirm the dialog was genuinely open and focused before typing, which then worked cleanly every time after; (b) avoiding `/` characters in typed queries specifically (searched `jan.kowalski`/`accounts-order-...`/design and product names instead of a slash-bearing order number) and getting clean, correct results throughout. Worth remembering for any future live verification of a freshly-opened modal/dialog in this environment: screenshot-confirm focus before the first keystroke, and prefer `Escape` + reopen over trying to clear-and-retype an existing value.
+
+### Verified
+
+`npm test` (542/542 — 539 prior + 3 new integration), `npm run typecheck`, `npm run lint`, `npm run build` all clean; no schema change, no migration. Dev server restarted before live-verifying, per §9z2's standing rule. Live-verified in the browser: the "Szukaj (Ctrl+K)" trigger opens the dialog, autofocused, with the honest "start typing" hint on an empty query → real order, customer, design, and product searches each returned genuine matching rows grouped under the right Polish heading with the right sublabel, and clicking each one navigated to that exact record's real detail page, closing the dialog → confirmed `Escape` closes without navigating.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

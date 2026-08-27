@@ -329,6 +329,24 @@ genuine, complete mutation history this entire session's admin work
 produced — real actors, real diffs, real timestamps, filters composing
 correctly together. See `docs/HANDOVER.md` §9z8.
 
+**P7c, global search (slice 1) — built 2026-08-27.** First slice of the
+23-item admin UX-polish list, picked as the starting point because it's
+the one standalone feature — everything else in that list depends on
+migrating the panel's tables to `@mui/x-data-grid` first, or is a
+cross-cutting polish pass over screens already built. Ctrl/⌘+K opens a
+command palette (a client island mounted once in the panel layout) that
+searches orders, customers, designs, and products in parallel, reusing
+each entity's own existing admin list query — two of the four
+(`listDesignsForAdmin`/`listProductsForAdmin`) gained an optional,
+backward-compatible `search` filter for this; the other two already had
+one. The Server Action re-derives `requireStaffSession()` itself, the
+first *read* in the panel that needed the same "don't trust the caller"
+discipline every mutation already has, since it's invoked via
+`fetch`-as-you-type rather than rendered inside an already-gated page.
+Live-verified finding a real order, customer, design, and product by
+typing a real fragment of each, and navigating to each one's real detail
+page. See `docs/HANDOVER.md` §9z9.
+
 ---
 
 ## Getting set up
@@ -415,12 +433,16 @@ pages, real customer reviews), customers + RODO tooling, settings (staff
 users & roles, bank details, shipping rate, email templates), and the
 audit-log viewer are all built
 (§9z/§9z2/§9z3/§9z4/§9z5/§9z6/§9z7/§9z8). Real shipping rates and a real
-bank account number have now replaced P5's placeholders. See
+bank account number have now replaced P5's placeholders. **P7c has
+started, also as vertical slices** — global search (Ctrl/⌘+K) is built
+(§9z9); the rest of its 23-item UX-polish list is still open. See
 `docs/CHECKLIST.md` for the itemised state of every phase. Next:
 
-- **P7c** — `@mui/x-data-grid` adoption, dashboards, global search, bulk
-  actions. See `docs/ARCHITECTURE.md`'s note near §16A for the Materio
-  direction already recorded for when it starts.
+- **P7c, the rest of it** — `@mui/x-data-grid` adoption (the next slice
+  most other remaining items depend on), bulk actions, inline editing,
+  saved filters, and the rest of the list, one slice at a time. See
+  `docs/ARCHITECTURE.md`'s note near §16A for the Materio direction
+  already recorded for when the DataGrid work starts.
 - **P2's remaining piece** — the homepage's hero/craftsmanship narrative
   sections, once the owner's actual words exist for them (reviews and FAQ
   are now real, see above).

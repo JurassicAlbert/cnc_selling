@@ -6,6 +6,7 @@ import { ADMIN } from '@/content/pl/admin';
 import { requireStaffSession } from '@/server/auth/session';
 import { logout } from '@/server/actions/auth';
 import { ThemeRegistry } from '@/ui/theme/ThemeRegistry';
+import { GlobalSearch } from '@/ui/islands/admin/GlobalSearch';
 
 /**
  * `/panel/*` shell — `requireStaffSession()` is the real authorization
@@ -33,7 +34,8 @@ export default async function PanelLayout({ children }: { readonly children: Rea
           <Typography variant="subtitle2" sx={{ mb: 2 }}>
             {staff.email}
           </Typography>
-          <Stack spacing={1} sx={{ mb: 3 }}>
+          <GlobalSearch />
+          <Stack spacing={1} sx={{ mb: 3, mt: 1 }}>
             <Link href="/panel/zamowienia">{ADMIN.navOrdersPl}</Link>
             <Link href="/panel/klienci">{ADMIN.navCustomersPl}</Link>
             <Link href="/panel/weryfikacja">{ADMIN.navDesignReviewPl}</Link>

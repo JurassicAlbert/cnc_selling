@@ -57,8 +57,15 @@ export type AdminDesignListItem = {
   readonly isActive: boolean;
 };
 
-export async function listDesignsForAdmin(): Promise<readonly AdminDesignListItem[]> {
+export type AdminDesignListFilters = { readonly search?: string };
+
+/** `search` (new, optional) matches `code` or `namePl`, case-insensitive — added for global search; every existing caller passes no filters and is unaffected. */
+export async function listDesignsForAdmin(filters: AdminDesignListFilters = {}): Promise<readonly AdminDesignListItem[]> {
   return prisma.design.findMany({
+    where:
+      filters.search !== undefined && filters.search.length > 0
+        ? { OR: [{ code: { contains: filters.search, mode: 'insensitive' } }, { namePl: { contains: filters.search, mode: 'insensitive' } }] }
+        : undefined,
     orderBy: { sortOrder: 'asc' },
     select: { id: true, code: true, namePl: true, rightsStatus: true, isActive: true },
   });

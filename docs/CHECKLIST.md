@@ -414,8 +414,10 @@ Built as vertical slices per §16A.6, not one pass — slice 1 (categories + pro
 
 ### P7c — admin UX
 
+Started as vertical slices, same discipline as P7b (§16A.6) — slice 1 (global search) shipped 2026-08-27; the rest of the 23-item list is still open, picked one at a time.
+
 - [ ] MUI `plPL` locale applied to core, DataGrid and Pickers
-- [ ] Global search (Ctrl/⌘+K) across orders, customers, designs, products
+- [x] Global search (Ctrl/⌘+K) across orders, customers, designs, products — a client island (`GlobalSearch.tsx`) mounted once in `panel/layout.tsx`, live on every `/panel/*` page; reuses the four entities' own existing admin list queries (`listOrdersForAdmin`/`listCustomersForAdmin`'s `search` filters already existed, `listDesignsForAdmin`/`listProductsForAdmin` gained one, optional and backward-compatible); the Server Action re-derives `requireStaffSession()` itself since it's the first *read* invoked via `fetch`-as-you-type from a client rather than rendered inside an already-gated page — live-verified finding a real order, customer, design, and product and navigating to each one's real detail page
 - [ ] Keyboard navigation in grids; J/K between records without returning to the list
 - [ ] Saved filters as pinned tabs
 - [ ] Bulk actions with selection toolbar

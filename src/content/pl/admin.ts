@@ -35,6 +35,15 @@ export const ADMIN = {
   navAuditLogPl: 'Dziennik zdarzeń',
   logoutPl: 'Wyloguj się',
 
+  globalSearchTriggerPl: 'Szukaj (Ctrl+K)',
+  globalSearchPlaceholderPl: 'Szukaj zamówień, klientów, wzorów, produktów…',
+  globalSearchHintPl: 'Zacznij pisać, aby wyszukać.',
+  globalSearchNoResultsPl: 'Brak wyników.',
+  globalSearchOrdersHeadingPl: 'Zamówienia',
+  globalSearchCustomersHeadingPl: 'Klienci',
+  globalSearchDesignsHeadingPl: 'Wzory',
+  globalSearchProductsHeadingPl: 'Produkty',
+
   savePl: 'Zapisz',
   cancelPl: 'Anuluj',
   addPl: 'Dodaj',

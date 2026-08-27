@@ -10,6 +10,8 @@ import type { InstallationVariantCode, JoineryTechniqueCode, ProductTypeCode } f
 export type AdminProductListFilters = {
   readonly categoryId?: string;
   readonly typeCode?: ProductTypeCode;
+  /** Matches `namePl`, case-insensitive — new, optional, added for global search. Every existing caller omits it and is unaffected. */
+  readonly search?: string;
 };
 
 export type AdminProductListItem = {
@@ -23,7 +25,13 @@ export type AdminProductListItem = {
 
 export async function listProductsForAdmin(filters: AdminProductListFilters): Promise<readonly AdminProductListItem[]> {
   const products = await prisma.product.findMany({
-    where: { categoryId: filters.categoryId, typeCode: filters.typeCode },
+    where: {
+      categoryId: filters.categoryId,
+      typeCode: filters.typeCode,
+      ...(filters.search !== undefined && filters.search.length > 0
+        ? { namePl: { contains: filters.search, mode: 'insensitive' } }
+        : {}),
+    },
     orderBy: [{ categoryId: 'asc' }, { sortOrder: 'asc' }],
     select: {
       id: true,
