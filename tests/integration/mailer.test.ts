@@ -55,3 +55,35 @@ describe('mailer — EmailTemplate DB override', () => {
     }
   });
 });
+
+describe('mailer — order-status-update (P6, staff order transitions)', () => {
+  it('renders the real customer-facing status label, not the admin one', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    await mailer.send('order-status-update', 'customer@example.test', {
+      orderNumber: '2026/08/9997',
+      statusPl: 'W produkcji',
+    });
+    const logged = logSpy.mock.calls.map((call) => String(call[0])).join('\n');
+    expect(logged).toContain('Zamówienie 2026/08/9997: W produkcji');
+  });
+
+  it('uses the DB-stored template text when a row exists for the key, interpolating real placeholder values', async () => {
+    const original = await prisma.emailTemplate.findUniqueOrThrow({ where: { key: 'order-status-update' } });
+    await prisma.emailTemplate.update({
+      where: { key: 'order-status-update' },
+      data: { subjectPl: 'TEST-OVERRIDE {{orderNumber}} / {{statusPl}}' },
+    });
+
+    try {
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+      await mailer.send('order-status-update', 'customer@example.test', {
+        orderNumber: '2026/08/9996',
+        statusPl: 'Wysłane',
+      });
+      const logged = logSpy.mock.calls.map((call) => String(call[0])).join('\n');
+      expect(logged).toContain('TEST-OVERRIDE 2026/08/9996 / Wysłane');
+    } finally {
+      await prisma.emailTemplate.update({ where: { key: 'order-status-update' }, data: { subjectPl: original.subjectPl } });
+    }
+  });
+});

@@ -462,6 +462,7 @@ export const ADMIN = {
   emailTemplatePlaceholdersHintPl: 'Dostępne znaczniki',
   emailTemplateKeyOrderConfirmationPl: 'Potwierdzenie zamówienia',
   emailTemplateKeyVerificationOtpPl: 'Kod weryfikacyjny',
+  emailTemplateKeyOrderStatusUpdatePl: 'Zmiana statusu zamówienia',
 
   pricingHeadingPl: 'Cennik',
   pricingIntroPl:
@@ -629,6 +630,7 @@ export function adminUploadKindLabel(kind: UploadKind): string {
 const EMAIL_TEMPLATE_KEY_LABELS_PL: Record<string, string> = {
   'order-confirmation': ADMIN.emailTemplateKeyOrderConfirmationPl,
   'verification-otp': ADMIN.emailTemplateKeyVerificationOtpPl,
+  'order-status-update': ADMIN.emailTemplateKeyOrderStatusUpdatePl,
 };
 
 /** Falls back to the raw key for any future `MailTemplate` this map hasn't been updated for yet — never throws. */
@@ -640,6 +642,7 @@ export function adminEmailTemplateKeyLabel(key: string): string {
 export const EMAIL_TEMPLATE_PLACEHOLDERS_PL: Record<string, readonly string[]> = {
   'order-confirmation': ['orderNumber', 'totalGrossZloty', 'paymentMethodPl'],
   'verification-otp': ['otp', 'otpPurposePl'],
+  'order-status-update': ['orderNumber', 'statusPl'],
 };
 
 const AUDIT_ACTION_LABELS_PL: Record<string, string> = {

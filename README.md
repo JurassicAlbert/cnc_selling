@@ -494,6 +494,18 @@ must be a genuine catch-all) that didn't exist before. The
 directly against a seeded order, not just an architectural claim. See
 `docs/HANDOVER.md` §9z19.
 
+**Transactional order-status emails (P6's last open item) — built
+2026-08-27, autonomously.** One generic `'order-status-update'` mail
+template, DB-editable through the existing Szablony e-mail screen,
+fired after every real staff order-status transition — customers now
+get notified in Polish as their order actually progresses, not just at
+checkout. Uses the real customer-facing status label
+(`orderStatusMessage()`), not the staff-facing one. Deliberately
+excludes the staff's free-text transition note from the email (never
+vetted as customer-safe) rather than silently forwarding it. Live-
+verified: a real transition produced a real logged send to the order's
+real customer email. See `docs/HANDOVER.md` §9z20.
+
 ---
 
 ## Getting set up

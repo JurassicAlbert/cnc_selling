@@ -235,6 +235,11 @@ async function seedEmailTemplates(): Promise<void> {
       bodyPl:
         'Kod {{otpPurposePl}}: {{otp}}\n\nKod jest ważny przez 5 minut. Jeśli to nie Ty prosiłeś/aś o ten kod, zignoruj tę wiadomość.',
     },
+    {
+      key: 'order-status-update',
+      subjectPl: 'Zamówienie {{orderNumber}}: {{statusPl}}',
+      bodyPl: 'Status Twojego zamówienia {{orderNumber}} zmienił się na: {{statusPl}}.',
+    },
   ];
   for (const template of templates) {
     const existing = await prisma.emailTemplate.findUnique({ where: { key: template.key } });

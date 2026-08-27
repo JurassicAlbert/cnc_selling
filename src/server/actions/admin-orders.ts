@@ -15,10 +15,12 @@ import { revalidatePath } from 'next/cache';
 
 import { checkOrderStatusTransition } from '@/domain/order-status/transitions';
 import type { OrderStatus } from '@/domain/order-status/transitions';
+import { orderStatusMessage } from '@/content/pl/messages';
 import { prisma } from '@/server/db/client';
 import { requireStaffSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
+import { mailer } from '@/server/mail/mailer';
 
 export type TransitionOrderStatusResult =
   | { readonly ok: true }
@@ -35,6 +37,7 @@ export async function applyOrderStatusTransition(
     select: {
       id: true,
       status: true,
+      email: true,
       items: { select: { customerDesign: { select: { status: true } } } },
     },
   });
@@ -84,6 +87,15 @@ export async function applyOrderStatusTransition(
     action: 'transition',
     diff: { fromStatus: order.status, toStatus, notePl },
   });
+
+  // Fire-and-forget, after the transaction has committed — same reasoning
+  // as `create-order.ts`'s own order-confirmation send: a mailer failure
+  // must never undo a status change that has already, correctly, happened.
+  void mailer
+    .send('order-status-update', order.email, { orderNumber, statusPl: orderStatusMessage(toStatus) })
+    .catch(() => {
+      // Logged inside the mailer itself; nothing else to do here.
+    });
 
   return { ok: true };
 }

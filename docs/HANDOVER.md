@@ -2879,6 +2879,30 @@ The simulator runs on mount inside its own client island (`PricingSimulator.tsx`
 
 `npm run typecheck && npm run lint && npm test && npm run build` clean (569/569 tests; one unrelated transient 5s timeout in `upload.test.ts` under heavy parallel load, reproduced as passing cleanly in isolation, not a real regression — ran the full suite three times total to confirm). Live-verified end to end as the real admin account: created a draft doubling the CNC rate, watched the simulator resolve with real differentiated numbers, published it, confirmed `/panel/ceny` showed the new version active and the old one archived. Restored the dev DB's real active pricing back to the original seed rates afterward via the same real versioned-publish mechanism (a third version, same rates, a note explaining why) rather than leaving the doubled test rate live for the owner's own testing — the audit trail records all three versions honestly rather than hiding the detour.
 
+## 9z20. Transactional order-status emails (P6's last open item) — 2026-08-27
+
+Built autonomously, continuing straight from the pricing admin slice. P6's checklist had one open item left: "Transactional messages in Polish for each order status" — only `order-confirmation` and `verification-otp` were ever wired; nothing sent mail when a staff member moved an order forward.
+
+### One generic template, not one per status
+
+`docs/ARCHITECTURE.md` §14 doesn't specify a template per status — a single `'order-status-update'` `MailTemplate` (`mailer.ts`), parameterised by `{orderNumber, statusPl}`, covers "each order status" literally via interpolation rather than ten near-identical hardcoded templates. DB-editable through the existing `EmailTemplate` admin screen (P7b slice 7) for free — no new admin UI needed, just a new seeded row (`prisma/seed.ts`'s `seedEmailTemplates()`, same create-only-if-absent discipline as every other singleton/reference row this project seeds).
+
+### The right status label, not the nearby one
+
+`applyOrderStatusTransition` (`admin-orders.ts`) already had `adminOrderStatusLabel()` (`content/pl/admin.ts`) sitting right there, imported for the staff UI — using it for the customer email would have been the easy, wrong choice. `content/pl/messages.ts`'s `orderStatusMessage()` is the real customer-facing label (already used on the customer's own `/moje-konto/zamowienia` page) — the two are deliberately allowed to diverge (staff copy can be terser/more internal), so reusing the admin one would silently couple customer wording to whatever the staff screen happens to say.
+
+### A real privacy call, made deliberately, not by omission
+
+Designed the mail data type with a `notePl` field at first — `applyOrderStatusTransition`'s own `notePl` parameter (the CANCELLED-mandatory audit note, shown in the staff order-event timeline) was right there to forward. Caught before writing the email-rendering code: that field has never been vetted as customer-safe — a staff member typing an internal-only reason into "why cancelled" has no signal today that it might land in a customer's inbox. Removed the field entirely rather than shipping a privacy footgun; `OrderStatusUpdateMailData` only carries `{orderNumber, statusPl}`. Spawned a background task suggesting a real, separate customer-facing message field (distinct from the audit note, clearly labelled) as a genuine future improvement — not something to silently skip without a trace.
+
+### The subject line got better because a test caught a real gap
+
+First draft's subject was `Aktualizacja statusu zamówienia {orderNumber}` — the status itself only appeared in the body. `UnconfiguredMailer` (this dev environment's real mailer, no `RESEND_API_KEY` set) only logs the *subject*, not the body — so a test asserting the log contained the new status name genuinely failed, for a real reason: a customer scanning their inbox would see "Aktualizacja statusu zamówienia 2026/08/0065" and have to open the email to learn anything. Changed the subject to `Zamówienie {orderNumber}: {statusPl}` — a real, if small, UX improvement a plain "add a mailer call" pass wouldn't have surfaced, found because the test infrastructure happens to only see what a real inbox preview would show too.
+
+### Verified
+
+`npm run typecheck && npm run lint && npm test && npm run build` clean (571/571 tests — 2 new in `mailer.test.ts` covering the new template's rendering and DB-override behavior, matching `order-confirmation`'s own existing test pattern exactly). Re-ran `npm run db:seed` against both the dev and test databases to add the new `EmailTemplate` row (create-only-if-absent, confirmed idempotent — every other row logged "already exists, leaving it alone"). Live-verified end to end as the real admin account: transitioned a real order (`2026/08/0065`, `AWAITING_PAYMENT → CONFIRMED`) and confirmed the dev server's own log showed a real send attempt — `Zamówienie 2026/08/0065: Potwierdzone` — to that order's real customer email, and the panel's Szablony e-mail list now shows "Zmiana statusu zamówienia" as a real, editable row.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

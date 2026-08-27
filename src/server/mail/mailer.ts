@@ -22,12 +22,32 @@
 
 import { prisma } from '@/server/db/client';
 
-export type MailTemplate = 'order-confirmation' | 'verification-otp';
+export type MailTemplate = 'order-confirmation' | 'verification-otp' | 'order-status-update';
 
 export type OrderConfirmationMailData = {
   readonly orderNumber: string;
   readonly totalGrossGrosze: number;
   readonly paymentMethod: 'BANK_TRANSFER' | 'CONTACT_ARRANGED';
+};
+
+/**
+ * `statusPl` — the real customer-facing Polish label, `content/pl/
+ * messages.ts`'s own `orderStatusMessage()`, not `content/pl/admin.ts`'s
+ * staff-facing one. Deliberate: this text goes to a customer, and the two
+ * copies are allowed to diverge (the admin one can afford to be terser/more
+ * internal) — reusing the wrong one would silently couple customer-facing
+ * wording to whatever staff-screen phrasing happens to exist.
+ *
+ * Deliberately no free-text note field: `applyOrderStatusTransition`'s
+ * `notePl` is an internal staff/audit note (shown in the admin order-event
+ * timeline), not vetted as customer-safe — forwarding it verbatim into a
+ * real customer email risks leaking internal-only commentary. A genuine
+ * customer-facing reason field, if wanted, needs its own explicit UI
+ * distinct from the audit note, not a silent reuse of it.
+ */
+export type OrderStatusUpdateMailData = {
+  readonly orderNumber: string;
+  readonly statusPl: string;
 };
 
 export type VerificationOtpPurpose = 'sign-in' | 'email-verification' | 'forget-password' | 'change-email';
@@ -41,7 +61,9 @@ export type MailDataFor<T extends MailTemplate> = T extends 'order-confirmation'
   ? OrderConfirmationMailData
   : T extends 'verification-otp'
     ? VerificationOtpMailData
-    : never;
+    : T extends 'order-status-update'
+      ? OrderStatusUpdateMailData
+      : never;
 
 export type MailSendResult = { readonly sent: boolean };
 
@@ -81,6 +103,13 @@ function renderSubjectAndText<T extends MailTemplate>(template: T, data: MailDat
       text: `Dziękujemy za zamówienie ${d.orderNumber}.\n\nKwota do zapłaty: ${formatGrossZloty(d.totalGrossGrosze)}.\nSposób płatności: ${paymentMethodPl(d.paymentMethod)}.\n\nO dalszych krokach poinformujemy Cię osobnym e-mailem.`,
     };
   }
+  if (template === 'order-status-update') {
+    const d = data as OrderStatusUpdateMailData;
+    return {
+      subject: `Zamówienie ${d.orderNumber}: ${d.statusPl}`,
+      text: `Status Twojego zamówienia ${d.orderNumber} zmienił się na: ${d.statusPl}.`,
+    };
+  }
   const d = data as VerificationOtpMailData;
   return {
     subject: `Twój kod ${otpPurposePl(d.purpose)}: ${d.otp}`,
@@ -94,12 +123,16 @@ function renderSubjectAndText<T extends MailTemplate>(template: T, data: MailDat
  * `MailDataFor<T>` shape `renderSubjectAndText` already consumes, never
  * arbitrary object properties. The admin edit screen shows these key names
  * as a hint, sourced from `content/pl/admin.ts`'s own static copy of this
- * same set — kept in sync by hand, not derived, since there are only two.
+ * same set — kept in sync by hand, not derived.
  */
 function buildPlaceholders<T extends MailTemplate>(template: T, data: MailDataFor<T>): Record<string, string> {
   if (template === 'order-confirmation') {
     const d = data as OrderConfirmationMailData;
     return { orderNumber: d.orderNumber, totalGrossZloty: formatGrossZloty(d.totalGrossGrosze), paymentMethodPl: paymentMethodPl(d.paymentMethod) };
+  }
+  if (template === 'order-status-update') {
+    const d = data as OrderStatusUpdateMailData;
+    return { orderNumber: d.orderNumber, statusPl: d.statusPl };
   }
   const d = data as VerificationOtpMailData;
   return { otp: d.otp, otpPurposePl: otpPurposePl(d.purpose) };
