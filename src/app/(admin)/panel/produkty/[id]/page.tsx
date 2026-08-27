@@ -16,6 +16,7 @@ import { MaterialCompatEditor } from '@/ui/islands/admin/MaterialCompatEditor';
 import { DesignAssignEditor } from '@/ui/islands/admin/DesignAssignEditor';
 import { InstallVariantsEditor } from '@/ui/islands/admin/InstallVariantsEditor';
 import { ProductImagesEditor } from '@/ui/islands/admin/ProductImagesEditor';
+import { RecordActivityTimeline } from '@/ui/islands/admin/RecordActivityTimeline';
 
 type ProductDetailPageProps = {
   readonly params: Promise<{ readonly id: string }>;
@@ -59,6 +60,7 @@ export default async function AdminProductDetailPage({ params }: ProductDetailPa
 
       <Divider sx={{ my: 4 }} />
       <ProductImagesEditor productId={product.id} images={product.images} />
+      <RecordActivityTimeline entity="Product" entityId={product.id} />
     </>
   );
 }

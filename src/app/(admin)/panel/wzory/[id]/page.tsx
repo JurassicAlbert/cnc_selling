@@ -7,6 +7,7 @@ import { setDesignActive } from '@/server/actions/admin-designs';
 import { ActiveToggleButton } from '@/ui/primitives/ActiveToggleButton';
 import { DesignForm } from '@/ui/islands/admin/DesignForm';
 import { DesignMaterialEditor } from '@/ui/islands/admin/DesignMaterialEditor';
+import { RecordActivityTimeline } from '@/ui/islands/admin/RecordActivityTimeline';
 
 type DesignDetailPageProps = {
   readonly params: Promise<{ readonly id: string }>;
@@ -34,6 +35,7 @@ export default async function AdminDesignDetailPage({ params }: DesignDetailPage
 
       <Divider sx={{ my: 4 }} />
       <DesignMaterialEditor designId={design.id} materials={design.materials} options={materialOptions} />
+      <RecordActivityTimeline entity="Design" entityId={design.id} />
     </>
   );
 }

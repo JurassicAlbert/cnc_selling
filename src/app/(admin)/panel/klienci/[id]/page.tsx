@@ -11,6 +11,7 @@ import {
 import { listOrdersForUser } from '@/server/repositories/orders';
 import { listConfigurationsForUser } from '@/server/repositories/cart';
 import { CustomerAnonymizeForm } from '@/ui/islands/admin/CustomerAnonymizeForm';
+import { RecordActivityTimeline } from '@/ui/islands/admin/RecordActivityTimeline';
 
 type CustomerDetailPageProps = {
   readonly params: Promise<{ readonly id: string }>;
@@ -152,6 +153,8 @@ export default async function AdminCustomerDetailPage({ params }: CustomerDetail
           )}
         </Grid>
       </Grid>
+
+      <RecordActivityTimeline entity="User" entityId={customer.id} />
     </>
   );
 }

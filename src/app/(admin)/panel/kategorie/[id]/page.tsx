@@ -5,6 +5,7 @@ import { findCategoryForAdmin } from '@/server/repositories/admin-categories';
 import { setCategoryActive } from '@/server/actions/admin-categories';
 import { ActiveToggleButton } from '@/ui/primitives/ActiveToggleButton';
 import { CategoryForm } from '@/ui/islands/admin/CategoryForm';
+import { RecordActivityTimeline } from '@/ui/islands/admin/RecordActivityTimeline';
 
 type CategoryDetailPageProps = {
   readonly params: Promise<{ readonly id: string }>;
@@ -24,6 +25,7 @@ export default async function AdminCategoryDetailPage({ params }: CategoryDetail
         <ActiveToggleButton isActive={category.isActive} action={setCategoryActive.bind(null, category.id, !category.isActive)} />
       </Stack>
       <CategoryForm category={category} />
+      <RecordActivityTimeline entity="Category" entityId={category.id} />
     </>
   );
 }

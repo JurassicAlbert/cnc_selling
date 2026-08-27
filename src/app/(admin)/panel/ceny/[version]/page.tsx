@@ -7,6 +7,7 @@ import { formatPln } from '@/domain/money/money';
 import { requireAdminSession } from '@/server/auth/session';
 import { getPricingVersionByNumber } from '@/server/repositories/admin-pricing';
 import { PricingSimulator } from '@/ui/islands/admin/PricingSimulator';
+import { RecordActivityTimeline } from '@/ui/islands/admin/RecordActivityTimeline';
 
 type PricingVersionPageProps = {
   readonly params: Promise<{ readonly version: string }>;
@@ -72,6 +73,7 @@ export default async function AdminPricingVersionPage({ params }: PricingVersion
       <PackagingTiersReadout tiers={row.packagingTiers} />
 
       <PricingSimulator version={row.version} alreadyActive={row.isActive} />
+      <RecordActivityTimeline entity="PricingSettings" entityId={String(row.version)} />
     </>
   );
 }

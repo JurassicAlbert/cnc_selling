@@ -431,7 +431,7 @@ Slice 6 (raw-HTML-form cleanup — two `<button>`s and six `<input type="file">`
 - [ ] Autosaved drafts on long forms
 - [ ] Every disabled control explains why on hover
 - [ ] Validation messages name the fix, not the rule
-- [ ] Activity timeline on every record, from the audit log
+- [x] Activity timeline on every record, from the audit log — `RecordActivityTimeline` (shared server component), on all 14 admin detail pages that have one (built 2026-08-27, see `docs/HANDOVER.md` §9z23)
 - [ ] "Preview as customer" from every product and design
 - [ ] Empty states say what to do next
 - [ ] Duplicate action on products, designs, materials

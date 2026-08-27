@@ -524,6 +524,19 @@ Live-verified end to end: a real disposable draft post was invisible on
 the public `/blog` page, then appeared correctly once published. See
 `docs/HANDOVER.md` §9z22.
 
+**Activity timeline on every record — built 2026-08-27, autonomously.**
+A shared `RecordActivityTimeline` (a plain async Server Component, no
+new writes — reuses the `AuditLog` table every mutation already writes
+to) now sits on all 14 admin detail pages that have one, showing that
+exact record's own mutation history. Caught a real gap along the way:
+`AdminOrderView` never carried `order.id`, which the audit log actually
+keys `Order` entries by (not `orderNumber`) — fixed, and live-verified
+that a real seeded order's new timeline surfaces a payment-status
+change the existing "Historia statusów" section never showed. Found a
+real, unrelated, pre-existing hydration bug on the product photo
+upload form along the way (`encType` mismatch) — flagged as a separate
+follow-up rather than fixed inline. See `docs/HANDOVER.md` §9z23.
+
 ---
 
 ## Getting set up
@@ -631,9 +644,11 @@ dropped) — and **P8's pricing admin is now built too** (§9z19):
 versioned rates, a mandatory price simulator reusing the real
 configurator pricing path, atomic publish, and a real test proving
 existing orders stay unaffected. The **soft-delete invariant is now
-proven, not just claimed** (§9z21), and **blog admin/authoring is now
-built** (§9z22) — the last open item from P2's blog scaffold. See
-`docs/CHECKLIST.md` for the itemised state of every phase. Next,
+proven, not just claimed** (§9z21), **blog admin/authoring is now
+built** (§9z22) — the last open item from P2's blog scaffold — and
+**every admin detail page now shows a real activity timeline** from the
+audit log (§9z23). See `docs/CHECKLIST.md` for the itemised state of
+every phase. Next,
 continuing autonomously per the owner's standing direction to close
 remaining gaps toward "no missing pages, functionality, design and UI":
 

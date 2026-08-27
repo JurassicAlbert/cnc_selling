@@ -5,6 +5,7 @@ import { findFinishForAdmin } from '@/server/repositories/admin-finishes';
 import { setFinishAvailable } from '@/server/actions/admin-finishes';
 import { ActiveToggleButton } from '@/ui/primitives/ActiveToggleButton';
 import { FinishForm } from '@/ui/islands/admin/FinishForm';
+import { RecordActivityTimeline } from '@/ui/islands/admin/RecordActivityTimeline';
 
 type FinishDetailPageProps = {
   readonly params: Promise<{ readonly id: string }>;
@@ -25,6 +26,7 @@ export default async function AdminFinishDetailPage({ params }: FinishDetailPage
       </Stack>
 
       <FinishForm finish={finish} />
+      <RecordActivityTimeline entity="Finish" entityId={finish.id} />
     </>
   );
 }

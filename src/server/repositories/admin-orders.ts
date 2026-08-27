@@ -82,6 +82,7 @@ export type AdminOrderEventView = {
 };
 
 export type AdminOrderView = {
+  readonly id: string;
   readonly orderNumber: string;
   readonly status: OrderStatus;
   readonly paymentMethod: PaymentMethod;
@@ -110,6 +111,7 @@ export async function findOrderForAdmin(orderNumber: string): Promise<AdminOrder
   const order = await prisma.order.findUnique({
     where: { orderNumber },
     select: {
+      id: true,
       orderNumber: true,
       status: true,
       paymentMethod: true,
@@ -147,6 +149,7 @@ export async function findOrderForAdmin(orderNumber: string): Promise<AdminOrder
   }
 
   return {
+    id: order.id,
     orderNumber: order.orderNumber,
     status: order.status,
     paymentMethod: order.paymentMethod,

@@ -12,6 +12,7 @@ import { OrderModuleManifest } from '@/ui/primitives/OrderModuleManifest';
 import { OrderSummary } from '@/ui/primitives/OrderSummary';
 import { OrderStatusActions } from '@/ui/islands/admin/OrderStatusActions';
 import type { StatusCandidate } from '@/ui/islands/admin/OrderStatusActions';
+import { RecordActivityTimeline } from '@/ui/islands/admin/RecordActivityTimeline';
 
 type OrderDetailPageProps = {
   readonly params: Promise<{ readonly orderNumber: string }>;
@@ -95,6 +96,8 @@ export default async function AdminOrderDetailPage({ params }: OrderDetailPagePr
           <OrderEventTimeline events={order.events} />
 
           <OrderStatusActions orderNumber={order.orderNumber} candidates={candidates} canMarkPaid={canMarkPaid} />
+
+          <RecordActivityTimeline entity="Order" entityId={order.id} />
         </Grid>
       </Grid>
     </>

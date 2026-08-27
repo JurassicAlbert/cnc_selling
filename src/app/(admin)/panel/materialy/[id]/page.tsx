@@ -7,6 +7,7 @@ import { setMaterialAvailable } from '@/server/actions/admin-materials';
 import { ActiveToggleButton } from '@/ui/primitives/ActiveToggleButton';
 import { MaterialForm } from '@/ui/islands/admin/MaterialForm';
 import { MaterialFinishEditor } from '@/ui/islands/admin/MaterialFinishEditor';
+import { RecordActivityTimeline } from '@/ui/islands/admin/RecordActivityTimeline';
 
 type MaterialDetailPageProps = {
   readonly params: Promise<{ readonly id: string }>;
@@ -30,6 +31,7 @@ export default async function AdminMaterialDetailPage({ params }: MaterialDetail
 
       <Divider sx={{ my: 4 }} />
       <MaterialFinishEditor materialId={material.id} finishes={material.finishes} options={finishOptions} />
+      <RecordActivityTimeline entity="Material" entityId={material.id} />
     </>
   );
 }

@@ -2931,6 +2931,26 @@ Blog posts are not yet a 5th entity type in the Ctrl+K global search (`admin-glo
 
 `npm run typecheck && npm run lint && npm test && npm run build` all clean (577/577 tests — 5 new in `tests/integration/admin-blog.test.ts`, mirroring `admin-static-pages.test.ts`'s pattern). Live-verified in the browser end to end: "Blog" nav entry appears in the Treść group and opens the real list of the 4 seeded posts (all correctly "Opublikowany"/"Aktywna") → created a real disposable test post via `/panel/blog/nowy` with `publishedAt` left empty → confirmed the grid showed "Wersja robocza" and the post was genuinely absent from the public `/blog` page → edited it to set a past `publishedAt` → confirmed the grid flipped to "Opublikowany" and the post appeared live on `/blog` (correctly sorted by publish date) and at `/blog/test-wpis-blog-e2e` with the real body text → deleted the disposable post and its audit-log rows directly from the dev DB afterward, restoring the exact original 4-post state.
 
+## 9z23. Activity timeline on every record, from the audit log — 2026-08-27
+
+Continuing autonomously through §16A's admin-UX checklist: `AuditLog` has captured every mutation since P7a, and the cross-entity `/panel/dziennik-zdarzen` viewer (§9z8) already surfaces it — but nothing showed a single record's *own* history on that record's own page. A staff member investigating "why is this material unavailable" had to go filter the global log by hand.
+
+### One shared component, no new writes
+
+New `listAuditLogsForEntity(entity, entityId)` (`admin-audit-log.ts`) — same `AuditLog` table, same shape as the existing `listAuditLogs`, just scoped `where: {entity, entityId}` instead of the cross-entity filters. `RecordActivityTimeline.tsx` (new, `src/ui/islands/admin`) is a plain **async Server Component**, not a client island — it takes `{entity, entityId}` and fetches internally; no interactivity needed, so no reason to ship it to the client. Reuses the existing `adminAuditActionLabel()` for the action label, same diff-as-`<pre>`-JSON rendering `dziennik-zdarzen`'s own table already uses.
+
+### Wired into all 14 detail pages that have a single-record identity
+
+Every admin route with a real `[id]`/`[slug]`/`[key]`/`[version]`/`[designId]`/`[orderNumber]` detail page: Kategorie, Produkty, Materiały, Wykończenia, Wzory, Kolekcje, Strony, FAQ, Blog, Klienci, Weryfikacja projektów, Zamówienia, Cennik, Szablony e-mail. (Left out, correctly: Opinie and Personel — both are flat lists with inline row actions and no detail sub-page to embed a timeline on.) One `<RecordActivityTimeline entity="X" entityId={record.id} />` line per page, placed after that page's existing form/editors.
+
+### The one real gap this surfaced: `AdminOrderView` never carried `order.id`
+
+Every other entity's admin detail-page loader already selects `id`. `findOrderForAdmin` (`admin-orders.ts`) never did — the order page is keyed by the human `orderNumber`, and every `writeAuditLog` call for `Order` uses the real `order.id` (a cuid) as `entityId`, not `orderNumber`. Added `id` to `AdminOrderView` and its `select`/return — a genuinely necessary, narrowly-scoped repository change, not scope creep. Verified this exact path live: `/panel/zamowienia/2026%2F08%2F0001` now shows a *fuller* history than the existing "Historia statusów" section (which only reflects `OrderEvent` rows) — the new timeline also surfaces the `paymentStatus: AWAITING → PAID` audit entry that `OrderEvent` never recorded, a real, previously-invisible piece of that order's history now visible for the first time.
+
+### Verified
+
+`npm run typecheck && npm run lint && npm test && npm run build` all clean (579/579 tests — 2 new in `admin-audit-log.test.ts` covering `listAuditLogsForEntity`'s scoping and its empty-history case). Live-verified in the browser across entity shapes, not just one: a `Material` with real prior mutations (§9z18's own sortOrder/availability edits) rendered its correct, ordered diff history → the real seeded order `2026/08/0001` rendered its full mutation history including the payment-status update the existing status timeline doesn't show → a fresh `Category`/`Customer`/`EmailTemplate` (string-keyed, not a cuid) each correctly rendered the honest empty state, confirming the component works across `entityId` shapes (cuid, order id, template key). Found and flagged, not fixed inline (out of this slice's scope, spawned as a background task): a real, pre-existing hydration mismatch on `ProductImagesEditor`'s upload form (`encType` differs server/client), reproduced on a fresh tab, unrelated to this change.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

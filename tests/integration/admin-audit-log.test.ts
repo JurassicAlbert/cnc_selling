@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { listAuditLogEntities, listAuditLogs } from '@/server/repositories/admin-audit-log';
+import { listAuditLogEntities, listAuditLogs, listAuditLogsForEntity } from '@/server/repositories/admin-audit-log';
 import { prisma } from '@/server/db/client';
 
 const PREFIX = 'test-admin-audit-log-';
@@ -52,5 +52,23 @@ describe('listAuditLogEntities', () => {
     await seedLog({ entity: 'TestOnlyEntity' });
     const entities = await listAuditLogEntities();
     expect(entities).toContain('TestOnlyEntity');
+  });
+});
+
+describe('listAuditLogsForEntity', () => {
+  it('returns only the given record\'s own history, newest first, ignoring other records of the same entity', async () => {
+    const entityId = uid();
+    const older = await seedLog({ entity: 'TestRecordEntity', entityId, action: 'create' });
+    const newer = await seedLog({ entity: 'TestRecordEntity', entityId, action: 'update' });
+    await seedLog({ entity: 'TestRecordEntity', entityId: uid(), action: 'update' }); // a different record, same entity
+    await seedLog({ entity: 'TestOtherEntity', entityId, action: 'update' }); // same entityId, different entity
+
+    const timeline = await listAuditLogsForEntity('TestRecordEntity', entityId);
+    expect(timeline.map((l) => l.id)).toEqual([newer.id, older.id]);
+  });
+
+  it('returns an empty list for a record with no history', async () => {
+    const timeline = await listAuditLogsForEntity('TestRecordEntity', uid());
+    expect(timeline).toEqual([]);
   });
 });

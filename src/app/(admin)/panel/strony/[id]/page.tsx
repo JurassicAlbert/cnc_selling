@@ -5,6 +5,7 @@ import { findStaticPageForAdmin } from '@/server/repositories/admin-static-pages
 import { setStaticPageActive } from '@/server/actions/admin-static-pages';
 import { ActiveToggleButton } from '@/ui/primitives/ActiveToggleButton';
 import { StaticPageForm } from '@/ui/islands/admin/StaticPageForm';
+import { RecordActivityTimeline } from '@/ui/islands/admin/RecordActivityTimeline';
 
 type StaticPageDetailPageProps = {
   readonly params: Promise<{ readonly id: string }>;
@@ -24,6 +25,7 @@ export default async function AdminStaticPageDetailPage({ params }: StaticPageDe
         <ActiveToggleButton isActive={page.isActive} action={setStaticPageActive.bind(null, page.id, !page.isActive)} />
       </Stack>
       <StaticPageForm page={page} />
+      <RecordActivityTimeline entity="StaticPage" entityId={page.id} />
     </>
   );
 }

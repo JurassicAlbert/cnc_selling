@@ -5,6 +5,7 @@ import { findCollectionForAdmin } from '@/server/repositories/admin-designs';
 import { setCollectionActive } from '@/server/actions/admin-designs';
 import { ActiveToggleButton } from '@/ui/primitives/ActiveToggleButton';
 import { CollectionForm } from '@/ui/islands/admin/CollectionForm';
+import { RecordActivityTimeline } from '@/ui/islands/admin/RecordActivityTimeline';
 
 type CollectionDetailPageProps = {
   readonly params: Promise<{ readonly id: string }>;
@@ -24,6 +25,7 @@ export default async function AdminCollectionDetailPage({ params }: CollectionDe
         <ActiveToggleButton isActive={collection.isActive} action={setCollectionActive.bind(null, collection.id, !collection.isActive)} />
       </Stack>
       <CollectionForm collection={collection} />
+      <RecordActivityTimeline entity="DesignCollection" entityId={collection.id} />
     </>
   );
 }

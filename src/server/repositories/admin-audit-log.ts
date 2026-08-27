@@ -49,3 +49,20 @@ export async function listAuditLogEntities(): Promise<readonly string[]> {
   const rows = await prisma.auditLog.findMany({ distinct: ['entity'], select: { entity: true }, orderBy: { entity: 'asc' } });
   return rows.map((r) => r.entity);
 }
+
+const RECORD_ACTIVITY_LIMIT = 100;
+
+/**
+ * A single record's full mutation history — the "activity timeline"
+ * embedded on each entity's own admin detail page, distinct from
+ * `listAuditLogs`'s cross-entity Dziennik zdarzeń view. Same underlying
+ * table, scoped to one `(entity, entityId)` pair.
+ */
+export async function listAuditLogsForEntity(entity: string, entityId: string): Promise<readonly AdminAuditLogListItem[]> {
+  return prisma.auditLog.findMany({
+    where: { entity, entityId },
+    orderBy: { createdAt: 'desc' },
+    take: RECORD_ACTIVITY_LIMIT,
+    select: { id: true, actorEmail: true, entity: true, entityId: true, action: true, diff: true, createdAt: true },
+  });
+}

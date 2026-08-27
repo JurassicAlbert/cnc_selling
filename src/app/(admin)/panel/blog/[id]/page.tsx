@@ -5,6 +5,7 @@ import { findBlogPostForAdmin } from '@/server/repositories/admin-blog';
 import { setBlogPostActive } from '@/server/actions/admin-blog';
 import { ActiveToggleButton } from '@/ui/primitives/ActiveToggleButton';
 import { BlogPostForm } from '@/ui/islands/admin/BlogPostForm';
+import { RecordActivityTimeline } from '@/ui/islands/admin/RecordActivityTimeline';
 
 type BlogPostDetailPageProps = {
   readonly params: Promise<{ readonly id: string }>;
@@ -24,6 +25,7 @@ export default async function AdminBlogPostDetailPage({ params }: BlogPostDetail
         <ActiveToggleButton isActive={post.isActive} action={setBlogPostActive.bind(null, post.id, !post.isActive)} />
       </Stack>
       <BlogPostForm post={post} />
+      <RecordActivityTimeline entity="BlogPost" entityId={post.id} />
     </>
   );
 }

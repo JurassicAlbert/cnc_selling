@@ -453,6 +453,9 @@ export const ADMIN = {
   auditLogColumnDiffPl: 'Szczegóły',
   auditLogNoDiffPl: '—',
 
+  activityTimelineHeadingPl: 'Historia zmian',
+  activityTimelineEmptyPl: 'Brak zarejestrowanych zmian dla tego rekordu.',
+
   settingsHeadingPl: 'Ustawienia',
   settingsStoreSectionHeadingPl: 'Sklep',
   settingsFieldBankAccountNumberPl: 'Numer konta bankowego',

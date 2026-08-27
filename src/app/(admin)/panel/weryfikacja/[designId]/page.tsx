@@ -5,6 +5,7 @@ import { ADMIN } from '@/content/pl/admin';
 import { uploadWarningMessage } from '@/content/pl/messages';
 import { findDesignReviewForAdmin } from '@/server/repositories/admin-design-review';
 import { DesignReviewDecisionForm } from '@/ui/islands/admin/DesignReviewDecisionForm';
+import { RecordActivityTimeline } from '@/ui/islands/admin/RecordActivityTimeline';
 
 type DesignReviewDetailPageProps = {
   readonly params: Promise<{ readonly designId: string }>;
@@ -70,6 +71,7 @@ export default async function AdminDesignReviewDetailPage({ params }: DesignRevi
       )}
 
       <DesignReviewDecisionForm designId={design.id} />
+      <RecordActivityTimeline entity="CustomerDesign" entityId={design.id} />
     </>
   );
 }
