@@ -2738,6 +2738,48 @@ One small real refactor: `panel/ustawienia/personel/page.tsx`'s page-local `role
 
 `npm test` (542/542, unchanged), `npm run typecheck`, `npm run lint`, `npm run build` all clean; no schema/dependency change. Dev server restarted before live-verifying, per §9z2's standing rule. Live-verified in the browser against real mutations, not just rendering: on Opinie, clicked the real "Odrzuć" button on the one genuine approved review from P7b slice 5 (`2026/08/0001`) — the row updated to `Odrzucona` with only a "Zatwierdź" button remaining, exactly the existing conditional logic — then clicked "Zatwierdź" to restore it to `Zatwierdzona`, its real prior state, before finishing. On Personel, invited a real disposable test staff account, confirmed its row appeared with a revoke button (and the acting admin's own row still correctly has none), clicked "Cofnij dostęp" and confirmed the row disappeared from the grid, then deleted the disposable account from the database.
 
+## 9z14. P7c, slice 6 — raw-HTML-form cleanup — 2026-08-27
+
+Direct owner feedback: "if you create or use any form it should match the mui/nextjs classes - so its not raw html/css." A `grep -rln "<button\|<input\b"` across the panel found exactly 7 files with real instances (one false positive: `OrderStatusActions.tsx`'s `<input type="hidden">`, invisible plumbing with no MUI equivalent, correctly left alone).
+
+Two raw `<button>` filter-submit elements (Orders, Products list pages) → `<Button variant="contained">`, trivial.
+
+Six raw `<input type="file">` elements (product image upload, design thumbnail/preview × 2, finish image, material image) were the real work — MUI has no native file-input component. Built a shared `FileInputButton.tsx` using MUI's own documented recipe: a real `<Button component="label">` wrapping a **visually-hidden** (not `display:none` — that drops it from the tab order and breaks screen readers; the CSS is the standard `clip-path: inset(50%); position: absolute; width: 1px; height: 1px; overflow: hidden` pattern) native `<input type="file">` inside it, with local `useState` tracking the picked filename to show on the button (the native input's own "chosen file" text disappears once visually hidden, so this replaces it). The input keeps its real `name`/`accept`/`required`, so the enclosing `<form>`'s `FormData` — and every existing Server Action reading it — needed zero changes.
+
+Verified: `npm run typecheck && npm run lint && npm test && npm run build` clean (549/549 tests, unchanged count — no logic touched, purely a component swap).
+
+## 9z15. P7c, slice 7 — Dashboard + Materio-style visual shell — 2026-08-27
+
+The big one. Owner feedback, quoted directly: the panel should "resemble materio," use "more advanced charts," and support "a lot of support functionalities for admin observability and management." Chose to build the Dashboard module (§16A.1 module 1) and the visual shell (Materio-style sidebar/theme, §16A's own recorded-but-unbuilt note) **together, in one slice**, per the owner's explicit answer to an `AskUserQuestion` — building the Dashboard on the old flat-sidebar/storefront-theme shell would have meant redoing its chrome immediately after.
+
+### Researched the real Materio repo before building anything
+
+Fetched [themeselection/materio-mui-nextjs-admin-template-free](https://github.com/themeselection/materio-mui-nextjs-admin-template-free) directly rather than building from memory of the name. Confirmed: Next 14 + MUI 5 **+ Tailwind CSS** running alongside it, charts via **ApexCharts/react-apexcharts** — not MUI-native. Deliberately did not copy either: this project stays MUI-only (§1, and the owner's own "match mui/nextjs classes" ask cuts the other way from adding Tailwind), and `@mui/x-charts` was already the named intent in `docs/ARCHITECTURE.md` §16A. Adopted Materio's *structure and visual language only* — grouped icon sidebar, bento-grid soft-shadow stat cards — reimplemented in real MUI.
+
+### A second, admin-only theme — and the real bug in wiring it up
+
+`src/ui/theme/theme.ts` (the storefront theme) exists specifically to *flatten* shadows and avoid accent colour — the opposite of what a real admin dashboard needs. Built `src/ui/theme/adminTheme.ts` as a genuinely separate `Theme` object: real Material elevation, an indigo accent + success/warning/error/info palette, `MuiCard` `styleOverrides` for the rounded soft-shadow look. Kept `theme.ts` completely untouched — the storefront's own `formatPln` Szukaj-button colour (`rgb(46, 42, 38)`, `#2E2A26`) was checked live after this slice to confirm zero bleed.
+
+**The real bug, twice**, both the same root cause: a genuine MUI `Theme` object — or any object holding functions, including an `sx` prop with a `(theme) => ...` callback — crashes at runtime if it crosses a **Server → Client Component** prop boundary ("Functions cannot be passed directly to Client Components unless you explicitly expose it by marking it with 'use server'"). `npx tsc`/lint/tests all stayed green through both; only live browser verification caught them (and only on a **fresh** tab — a reused tab's stale console history showed the exact same crash *after* both fixes landed, which cost real time chasing a already-fixed bug before the "stale console" quirk was remembered — see `docs/HANDOVER.md`'s own browser-tooling notes and the `feedback_browser_tooling_quirks.md` memory file).
+
+1. First instance: `ThemeRegistry`'s original `theme?: Theme` prop, with `panel/layout.tsx` (a Server Component) passing `theme={adminTheme}` directly. Fixed by changing the prop to a plain string `variant?: 'storefront' | 'admin'` — fully serializable — and moving the actual `Theme` object lookup (`THEMES[variant]`) *inside* `ThemeRegistry`'s own client module, never crossing the boundary as a prop.
+2. Second instance: `StatCard.tsx` (a Server Component, deliberately — it's static, no client state needed) used `sx={{ bgcolor: (theme) => theme.palette[color].main, color: (theme) => theme.palette[color].contrastText }}` to resolve its colour prop against the theme — but that `sx` object crosses into `Stack`/`Card` (Client Components internally in MUI) as a prop. Fixed with MUI's own dot-path string resolution instead: `bgcolor: `${color}.main`` — no callback, same result, fully serializable.
+
+General lesson, now in the `feedback_nextjs_testing_gotchas.md` memory file: never pass a constructed `Theme` (or any function-holding object) as a prop from a Server Component into a Client Component; resolve it from a serializable key inside the client module instead, and use theme dot-path strings in `sx` rather than `(theme) => ...` callbacks whenever the component authoring the `sx` might itself be a Server Component.
+
+### The Dashboard itself
+
+New `src/server/repositories/admin-dashboard.ts` — `getDashboardKpis`, `getRevenueOverTime`, `getOrdersByStatus`, `getTopEntities`, real new aggregation logic (unlike the pure-UI DataGrid slices, this got real tests). Two more real things worth recording:
+
+- **"Revenue" is a named, deliberate definition** (an e-commerce dashboard could reasonably mean either): every order NOT `CANCELLED`, regardless of payment status — booked revenue, not collected revenue. Documented inline in the repository, not left implicit.
+- **A real UTC-vs-local-time bug, caught by the test suite before it ever reached the browser**: `getRevenueOverTime`'s day-bucketing built its key from `order.createdAt.toISOString()` (always UTC) but originally walked the fill-loop using `Date`'s local `setHours`/`setDate` — on this server (`Europe/Warsaw`, UTC+1/+2), that misaligns the loop's day boundaries against the UTC keys by an hour, silently dropping or duplicating a day at each end of the range. Fixed by making the whole loop UTC-consistent (`setUTCDate`, UTC-anchored cursor). The `admin-dashboard.test.ts` test that catches this asserts on real UTC ISO date strings (`'2026-01-01T00:00:00.000Z'`) crossing a day boundary — it would have failed on the original code on this machine, and passed by accident on a UTC-timezone CI runner, which is exactly the kind of bug that's invisible until someone in the "wrong" timezone runs it for real.
+
+Production load reuses `getProductionCapacity()` (already existed, P7b) verbatim — no new logic, just a `LinearProgress` on the dashboard matching `/panel/produkcja`'s own existing display.
+
+### Verified
+
+`npm run typecheck && npm run lint && npm test && npm run build` clean (549/549 tests, 7 new). Dev server restarted, live-verified logged in as a real admin account (`panel@example.com`, via the existing OTP sign-in flow — the OTP code was read from the dev server's log since Resend isn't configured in this environment): grouped sidebar renders with icons and correct active-route highlighting (confirmed on `/panel/zamowienia`), the 9 stat cards show real numbers matching the seeded dev data, both charts render with real data and Polish labels, the date-range form works, the production-load section correctly shows "not configured" (matching `/panel/produkcja`'s own state — `MachineSettings.weeklyCapacityMinutes` is 0 in this dev DB). Storefront theme confirmed unaffected. One benign, cosmetic MUI X Charts console warning noted and left alone: a `<clipPath>` defs `<rect>` (not a visible painted shape) sometimes gets a transient negative width on initial layout inside a CSS Grid item — known library timing quirk, doesn't affect what's rendered, not worth contorting the responsive layout to silence.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

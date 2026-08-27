@@ -412,6 +412,30 @@ review from P7b slice 5 (restored to its real prior state before
 finishing), and invited/revoked a real disposable test staff account.
 See `docs/HANDOVER.md` §9z13.
 
+**P7c, raw-HTML-form cleanup (slice 6) — built 2026-08-27.** Direct owner
+feedback: any form in the panel should use real MUI, not raw HTML. Two
+raw `<button>`s became `Button`; six raw `<input type="file">`s became a
+new shared `FileInputButton` — MUI's own documented pattern of a real
+`Button component="label"` wrapping a visually-hidden (not
+`display:none`, so it stays accessible) native file input. See
+`docs/HANDOVER.md` §9z14.
+
+**P7c, Dashboard + Materio-style visual shell (slice 7) — built
+2026-08-27.** The big one: a real Dashboard landing page at `/panel`
+(9 KPI stat cards, `@mui/x-charts` revenue/orders-by-status/top-entities
+charts, a date-range picker, production load) built together with a
+Materio-style visual shell — a second, admin-only theme
+(`adminTheme.ts`, real elevation and an accent palette, unlike the
+storefront's deliberately flattened one) and a grouped icon-led sidebar
+(`AdminSidebarNav.tsx`) — per the owner's explicit direction to build
+both together rather than redo the chrome twice. Researched the real
+Materio template first (Next 14 + MUI 5 + Tailwind + ApexCharts) and
+deliberately adopted only its structure/visual language, in real MUI
+throughout. Hit and fixed a genuine, non-obvious Next.js bug twice along
+the way — a real MUI `Theme` object (or a function-valued `sx` prop)
+crashes if it crosses a Server→Client Component boundary as a prop — now
+recorded as a general lesson. See `docs/HANDOVER.md` §9z15.
+
 ---
 
 ## Getting set up
@@ -501,19 +525,28 @@ audit-log viewer are all built
 bank account number have now replaced P5's placeholders. **P7c has
 started, also as vertical slices** — global search (Ctrl/⌘+K, §9z9),
 `@mui/x-data-grid` on Orders (§9z10), `DataGrid` on the six catalogue
-list pages (§9z11), on Klienci/FAQ/Strony/Weryfikacja (§9z12), and with
-per-row actions on Opinie/Personel (§9z13) are built; the rest of its
-23-item UX-polish list is still open. See `docs/CHECKLIST.md` for the
+list pages (§9z11), on Klienci/FAQ/Strony/Weryfikacja (§9z12), with
+per-row actions on Opinie/Personel (§9z13), raw-HTML-form cleanup
+(§9z14), and the Dashboard + Materio-style visual shell — a real `/panel`
+landing page with KPI stat cards and `@mui/x-charts` charts, a second
+admin-only theme, and a grouped icon sidebar (§9z15) — are built; the
+rest of its UX-polish list is still open. **P8's Dashboard module is
+correspondingly checked off in `docs/CHECKLIST.md`**, except the
+configurator funnel (needs a new `AnalyticsEvent` model, deliberately
+deferred, not silently dropped). See `docs/CHECKLIST.md` for the
 itemised state of every phase. Next:
 
-- **P7c, the rest of it** — the three remaining `<Table>` pages each need
-  their own design: Produkcja's rows link to a different entity's page;
-  Szablony e-mail is a fixed two-row list; Dziennik zdarzeń's diff column
-  holds variable-height JSON `DataGrid` doesn't suit. Then bulk actions,
-  inline editing, column/density persistence, saved filters, keyboard
-  nav, and the rest of the list, one slice at a time. See
-  `docs/ARCHITECTURE.md`'s note near §16A for the Materio direction
-  already recorded for this work.
+- **P7c, the rest of it** — three list pages still use a plain `<Table>`,
+  each needing its own design: Produkcja's rows link to a different
+  entity's page; Szablony e-mail is a fixed two-row list; Dziennik
+  zdarzeń's diff column holds variable-height JSON `DataGrid` doesn't
+  suit. Then bulk actions, inline editing, column/density persistence,
+  saved filters, keyboard nav, and the rest of the list, one slice at a
+  time.
+- **P8, the rest of it** — pricing admin (versioned saves, price
+  simulator, audit diff — highest-risk screen in the app) and the
+  configurator funnel (needs `AnalyticsEvent` + instrumenting every
+  configurator step).
 - **P2's remaining piece** — the homepage's hero/craftsmanship narrative
   sections, once the owner's actual words exist for them (reviews and FAQ
   are now real, see above).

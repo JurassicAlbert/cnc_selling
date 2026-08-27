@@ -5,6 +5,9 @@ import { AppRouterCacheProvider } from '@mui/material-nextjs/v13-appRouter';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 
 import { theme } from './theme';
+import { adminTheme } from './adminTheme';
+
+const THEMES = { storefront: theme, admin: adminTheme } as const;
 
 /**
  * NOT mounted at the root layout — see `src/app/theme-vars.css`'s header
@@ -17,11 +20,20 @@ import { theme } from './theme';
  * `AppRouterCacheProvider` is what makes Emotion emit its styles as a
  * single collected `<style>` tag during SSR instead of one per component —
  * without it MUI still works, it just ships more HTML for no reason.
+ *
+ * `variant`, not a `Theme` object prop: every call site of this component
+ * lives in a Server Component (`panel/layout.tsx`, the Configurator's host
+ * page, the product page), and a real MUI `Theme` object is full of
+ * functions (`sx`, `alpha`, transition helpers, ...) — passing one as a
+ * prop across the Server→Client Component boundary crashes at runtime
+ * ("Functions cannot be passed directly to Client Components"), confirmed
+ * live. A plain string variant is serializable; the actual `Theme` object
+ * is picked from `THEMES` here, entirely inside this client module.
  */
-export function ThemeRegistry({ children }: { children: ReactNode }) {
+export function ThemeRegistry({ children, variant = 'storefront' }: { children: ReactNode; variant?: keyof typeof THEMES }) {
   return (
     <AppRouterCacheProvider options={{ key: 'mui' }}>
-      <ThemeProvider theme={theme}>
+      <ThemeProvider theme={THEMES[variant]}>
         <CssBaseline />
         {children}
       </ThemeProvider>

@@ -1061,19 +1061,25 @@ There is no self-service path to `STAFF`/`ADMIN`. The first admin is created by 
 
 Route group `src/app/(admin)/panel/`, gated by middleware on role. Full MUI, `@mui/x-data-grid` for tables, `@mui/x-charts` for statistics. This is a separate visual world from the storefront — standard Material, dense layout, no brand theming investment.
 
-> **Visual reference, recorded 2026-08-24, not yet built.** The owner named
+> **Visual reference, recorded 2026-08-24, built 2026-08-27 (P7c slice 7).**
+> The owner named
 > [Materio](https://github.com/themeselection/materio-mui-nextjs-admin-template-free)
 > (MIT-licensed, MUI-based — [live demo](https://demos.themeselection.com/materio-mui-nextjs-admin-template-free/demo))
 > as the admin panel's visual direction: a grouped, icon+label sidebar nav
 > (Dashboards / Apps & Pages / User Interface / Forms & Tables / Charts /
 > Others — map to this section's modules 1-11), a bento-grid dashboard of
 > soft-shadow, rounded, colour-accented stat cards, `@mui/x-data-grid` for
-> every table. Adopt the **structure and visual language only**, reimplemented
-> in plain MUI `sx`/theme, not Materio's Tailwind utility classes (it ships
-> both; this project stays MUI-only per §1). No code from this pass — P7
-> hasn't started, and this section's own module list, invariants, and models
-> below are unaffected. This note exists so whoever builds P7 doesn't have to
-> re-ask what "modern admin dashboard" means.
+> every table. Adopted the **structure and visual language only**, reimplemented
+> in plain MUI `sx`/theme (`src/ui/theme/adminTheme.ts`), not Materio's Tailwind
+> utility classes (it ships both; this project stays MUI-only per §1) —
+> confirmed by actually fetching the real Materio repo before building: it's
+> Next 14 + MUI 5 + Tailwind, charts via ApexCharts (non-MUI); this project
+> uses `@mui/x-charts` instead, same reasoning. Grouped icon sidebar:
+> `AdminSidebarNav.tsx`. Stat cards: `StatCard.tsx`, used by the new `/panel`
+> Dashboard landing page (module 1, minus the configurator funnel — deferred,
+> needs a new `AnalyticsEvent` model, tracked separately in §16A.1/`docs/CHECKLIST.md`).
+> This section's own module list, invariants, and models below are otherwise
+> unaffected by that build.
 
 ### 16A.1 Modules
 

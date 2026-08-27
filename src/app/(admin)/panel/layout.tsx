@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react';
-import Link from 'next/link';
-import { Box, Button, Stack, Typography } from '@mui/material';
+import { AppBar, Box, Button, Stack, Toolbar, Typography } from '@mui/material';
 
 import { ADMIN } from '@/content/pl/admin';
 import { requireStaffSession } from '@/server/auth/session';
 import { logout } from '@/server/actions/auth';
 import { ThemeRegistry } from '@/ui/theme/ThemeRegistry';
 import { GlobalSearch } from '@/ui/islands/admin/GlobalSearch';
+import { AdminSidebarNav } from '@/ui/islands/admin/AdminSidebarNav';
+
+const SIDEBAR_WIDTH = 260;
 
 /**
  * `/panel/*` shell — `requireStaffSession()` is the real authorization
@@ -15,51 +17,62 @@ import { GlobalSearch } from '@/ui/islands/admin/GlobalSearch';
  *
  * Wrapped in `ThemeRegistry` deliberately, unlike the rest of the app
  * (`theme-vars.css`'s header explains why it's normally kept OUT of the
- * root layout — shipping MUI+Emotion to pages with no interactive MUI
- * costs real LCP). The panel is the one part of this app meant to be
- * built in real MUI throughout (`docs/ARCHITECTURE.md` §16A: "Full MUI...
- * standard Material, dense layout, no brand theming investment"), so it
- * gets its own registry the same way the configurator island does.
+ * root layout). Unlike the rest of the app it also uses its OWN theme
+ * (`adminTheme`, not the storefront `theme`) — see that file's header for
+ * why the panel deliberately does NOT share the storefront's flattened,
+ * accent-free look. `docs/ARCHITECTURE.md` §16A: "Full MUI... standard
+ * Material, dense layout, no brand theming investment" — refined
+ * 2026-08-27 into an explicit Materio-style bento dashboard.
+ *
+ * Top `AppBar` (search + identity + logout) plus a grouped icon sidebar
+ * (`AdminSidebarNav`) — closer to Materio's actual layout than the old
+ * flat text-link list that used to live entirely in the nav column.
  */
 export default async function PanelLayout({ children }: { readonly children: ReactNode }) {
   const staff = await requireStaffSession();
 
   return (
-    <ThemeRegistry>
-      <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <ThemeRegistry variant="admin">
+      <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
         <Box
           component="nav"
-          sx={{ width: 220, borderRight: 1, borderColor: 'divider', p: 2, flexShrink: 0, '@media print': { display: 'none' } }}
+          sx={{
+            width: SIDEBAR_WIDTH,
+            flexShrink: 0,
+            borderRight: 1,
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+            '@media print': { display: 'none' },
+          }}
         >
-          <Typography variant="subtitle2" sx={{ mb: 2 }}>
-            {staff.email}
-          </Typography>
-          <GlobalSearch />
-          <Stack spacing={1} sx={{ mb: 3, mt: 1 }}>
-            <Link href="/panel/zamowienia">{ADMIN.navOrdersPl}</Link>
-            <Link href="/panel/klienci">{ADMIN.navCustomersPl}</Link>
-            <Link href="/panel/weryfikacja">{ADMIN.navDesignReviewPl}</Link>
-            <Link href="/panel/kategorie">{ADMIN.navCategoriesPl}</Link>
-            <Link href="/panel/produkty">{ADMIN.navProductsPl}</Link>
-            <Link href="/panel/materialy">{ADMIN.navMaterialsPl}</Link>
-            <Link href="/panel/wykonczenia">{ADMIN.navFinishesPl}</Link>
-            <Link href="/panel/wzory">{ADMIN.navDesignsPl}</Link>
-            <Link href="/panel/kolekcje">{ADMIN.navCollectionsPl}</Link>
-            <Link href="/panel/produkcja">{ADMIN.navProductionPl}</Link>
-            <Link href="/panel/faq">{ADMIN.navFaqPl}</Link>
-            <Link href="/panel/strony">{ADMIN.navStaticPagesPl}</Link>
-            <Link href="/panel/opinie">{ADMIN.navReviewsPl}</Link>
-            <Link href="/panel/ustawienia">{ADMIN.navSettingsPl}</Link>
-            <Link href="/panel/dziennik-zdarzen">{ADMIN.navAuditLogPl}</Link>
-          </Stack>
-          <form action={logout}>
-            <Button type="submit" size="small" variant="text">
-              {ADMIN.logoutPl}
-            </Button>
-          </form>
+          <Toolbar sx={{ minHeight: '64px !important' }}>
+            <Typography variant="h6" component="span" sx={{ fontWeight: 700, color: 'primary.main' }}>
+              RYT
+            </Typography>
+          </Toolbar>
+          <AdminSidebarNav />
         </Box>
-        <Box component="main" sx={{ flex: 1, p: 3 }}>
-          {children}
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <AppBar position="sticky" sx={{ '@media print': { display: 'none' } }}>
+            <Toolbar sx={{ gap: 2 }}>
+              <Box sx={{ flex: 1, maxWidth: 480 }}>
+                <GlobalSearch />
+              </Box>
+              <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+                <Typography variant="body2" color="text.secondary">
+                  {staff.email}
+                </Typography>
+                <form action={logout}>
+                  <Button type="submit" size="small" variant="outlined">
+                    {ADMIN.logoutPl}
+                  </Button>
+                </form>
+              </Stack>
+            </Toolbar>
+          </AppBar>
+          <Box component="main" sx={{ flex: 1, p: 3 }}>
+            {children}
+          </Box>
         </Box>
       </Box>
     </ThemeRegistry>
