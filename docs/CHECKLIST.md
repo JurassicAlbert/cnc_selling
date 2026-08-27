@@ -217,7 +217,7 @@ regression.
 - [x] Background — bolder grain + blueprint-grid wash on `body`, a permanent gradient tint on every `Section`, real decorative corner accents on 3 sections
 - [x] Product cards — real production-time and size-range facts row (`AccessTimeIcon`, new), a material chip; explicitly no fabricated popularity/urgency badge
 - [x] `BlogPost` model + migration, `src/server/repositories/blog.ts`, `/blog` + `/blog/[slug]` pages, footer link, sitemap entry — zero seeded posts, confirmed against the live DB
-- [ ] Blog admin/authoring — not started; needs P7 or a manual DB insert for now
+- [x] Blog admin/authoring — `/panel/blog` list + create/edit forms, `applyCreateBlogPost`/`applyUpdateBlogPost`/`applySetBlogPostActive`, draft/scheduled/published status via `publishedAt`, `requireStaffSession()`-gated (built 2026-08-27, see `docs/HANDOVER.md` §9z22)
 
 **A fourth design pass, same day, 2026-08-25.** The blog never actually
 appeared on the homepage, and the owner wanted a hexagonal "material

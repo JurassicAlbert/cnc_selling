@@ -24,6 +24,7 @@ import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
 import CollectionsBookmarkOutlinedIcon from '@mui/icons-material/CollectionsBookmarkOutlined';
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined';
+import NewspaperOutlinedIcon from '@mui/icons-material/NewspaperOutlined';
 import StarBorderOutlinedIcon from '@mui/icons-material/StarBorderOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import SellOutlinedIcon from '@mui/icons-material/SellOutlined';
@@ -71,6 +72,7 @@ const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       { href: '/panel/faq', label: ADMIN.navFaqPl, icon: <HelpOutlineOutlinedIcon fontSize="small" /> },
       { href: '/panel/strony', label: ADMIN.navStaticPagesPl, icon: <ArticleOutlinedIcon fontSize="small" /> },
+      { href: '/panel/blog', label: ADMIN.navBlogPl, icon: <NewspaperOutlinedIcon fontSize="small" /> },
       { href: '/panel/opinie', label: ADMIN.navReviewsPl, icon: <StarBorderOutlinedIcon fontSize="small" /> },
     ],
   },

@@ -2907,6 +2907,30 @@ First draft's subject was `Aktualizacja statusu zamówienia {orderNumber}` — t
 
 Small, quick follow-up while surveying remaining gaps: `docs/CHECKLIST.md`'s "Soft delete enforced for entities referenced by orders" (§16A.2 invariant #2) was unchecked, but turned out to already be true by construction, not a real gap to build — the value here was in *proving* it rather than leaving it as an architectural claim. `grep`'d the whole codebase for a hard-delete call on any of the 6 core catalogue entities: zero real matches, only Prisma's own generated JSDoc examples. Went one level deeper than "no delete button exists," though: `OrderItem` has no live FK to Product/Material/Design/Finish at all — checked the schema directly. New `tests/integration/soft-delete-invariant.test.ts` proves this at the DB level, not just by absence: hard-deletes a `Material` a real order's snapshot references (bypassing the app entirely — it has no path to do this itself) and confirms the order's stored data is byte-identical afterward. 572/572 tests, build clean; no UI/page change, so no browser verification needed for this one.
 
+## 9z22. Blog admin CRUD — 2026-08-27
+
+Continuing autonomously: `docs/CHECKLIST.md`'s "Blog admin/authoring" line had been open since §9o (the blog itself shipped with 4 seeded placeholder posts and zero way to manage them beyond a manual DB insert). Built the missing admin screen.
+
+### Mirrors `admin-static-pages.ts`, not a new pattern
+
+`BlogPost` and `StaticPage` are structurally close (slug, title/body, SEO fields, `isActive`, `sortOrder`) — `admin-blog.ts` (repository + actions) and `BlogPostForm.tsx`/`BlogPostsDataGrid.tsx` copy that existing, already-proven CRUD shape directly: `requireStaffSession()`-gated (not admin-only — matches `admin-static-pages.ts`'s own choice, blog authorship is a staff task), `applyCreateBlogPost`/`applyUpdateBlogPost`/`applySetBlogPostActive` (no hard delete, same as every other catalogue entity), plain-text `imageUrl` field rather than the heavier Material/Design upload widget (mirrors `CategoryForm.tsx`'s precedent — low-frequency content, a pasted URL is enough).
+
+### The one genuinely new piece: `publishedAt` as a real draft/scheduled/published control
+
+`blog.ts`'s public query already encoded draft/scheduled/published semantics via `publishedAt` (`null` = draft; future = scheduled; past + `isActive` = live) — but until now only the seed script could ever set it. `BlogPostForm`'s date input is the first UI to expose this, with an explicit hint (`blogPostPublishedAtHintPl`) rather than leaving the null-means-draft behavior undiscoverable. `BlogPostsDataGrid`'s `publishStatus()` helper renders the matching chip (Wersja robocza / Zaplanowany / Opublikowany) client-side from the same three-way rule.
+
+### Applied the P7c slice-9 tiebreaker lesson proactively
+
+`listBlogPostsForAdmin`'s `orderBy: [{sortOrder:'asc'}, {id:'asc'}]` was written with the `id` tiebreaker from the start — no repeat of the non-deterministic-ordering bug that slice 9 (§9z18) had to discover and fix after the fact on the other 5 entities.
+
+### Deliberately deferred, not dropped
+
+Blog posts are not yet a 5th entity type in the Ctrl+K global search (`admin-global-search.ts`/`GlobalSearch.tsx`, §9z12) — a real, scoped follow-up, left unchecked rather than silently expanded into this slice.
+
+### Verified
+
+`npm run typecheck && npm run lint && npm test && npm run build` all clean (577/577 tests — 5 new in `tests/integration/admin-blog.test.ts`, mirroring `admin-static-pages.test.ts`'s pattern). Live-verified in the browser end to end: "Blog" nav entry appears in the Treść group and opens the real list of the 4 seeded posts (all correctly "Opublikowany"/"Aktywna") → created a real disposable test post via `/panel/blog/nowy` with `publishedAt` left empty → confirmed the grid showed "Wersja robocza" and the post was genuinely absent from the public `/blog` page → edited it to set a past `publishedAt` → confirmed the grid flipped to "Opublikowany" and the post appeared live on `/blog` (correctly sorted by publish date) and at `/blog/test-wpis-blog-e2e` with the real body text → deleted the disposable post and its audit-log rows directly from the dev DB afterward, restoring the exact original 4-post state.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

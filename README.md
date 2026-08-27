@@ -506,6 +506,24 @@ vetted as customer-safe) rather than silently forwarding it. Live-
 verified: a real transition produced a real logged send to the order's
 real customer email. See `docs/HANDOVER.md` §9z20.
 
+**Soft-delete invariant, audited and proven — built 2026-08-27,
+autonomously.** `docs/CHECKLIST.md`'s "soft delete enforced for
+entities referenced by orders" was true by construction already, but
+unchecked — a real DB-level test now proves it: hard-deletes a
+`Material` a real order's snapshot references and confirms the order's
+stored price/data is byte-identical afterward. See `docs/HANDOVER.md`
+§9z21.
+
+**Blog admin CRUD — built 2026-08-27, autonomously.** `/panel/blog`,
+mirroring `admin-static-pages.ts`'s already-proven pattern (staff-gated,
+no hard delete, plain-text image URL). The one new piece: `publishedAt`
+is now actually settable from the UI — `null` = draft, a future date =
+scheduled, a past date + active = live — matching semantics `blog.ts`'s
+public query already had but only the seed script could previously set.
+Live-verified end to end: a real disposable draft post was invisible on
+the public `/blog` page, then appeared correctly once published. See
+`docs/HANDOVER.md` §9z22.
+
 ---
 
 ## Getting set up
@@ -612,10 +630,12 @@ checked off in `docs/CHECKLIST.md`**, except the configurator funnel
 dropped) — and **P8's pricing admin is now built too** (§9z19):
 versioned rates, a mandatory price simulator reusing the real
 configurator pricing path, atomic publish, and a real test proving
-existing orders stay unaffected. See `docs/CHECKLIST.md` for the
-itemised state of every phase. Next, continuing autonomously per the
-owner's standing direction to close remaining gaps toward "no missing
-pages, functionality, design and UI":
+existing orders stay unaffected. The **soft-delete invariant is now
+proven, not just claimed** (§9z21), and **blog admin/authoring is now
+built** (§9z22) — the last open item from P2's blog scaffold. See
+`docs/CHECKLIST.md` for the itemised state of every phase. Next,
+continuing autonomously per the owner's standing direction to close
+remaining gaps toward "no missing pages, functionality, design and UI":
 
 - **P7c, the rest of it** — three list pages still use a plain `<Table>`,
   each needing its own design: Produkcja's rows link to a different
@@ -623,6 +643,8 @@ pages, functionality, design and UI":
   zdarzeń's diff column holds variable-height JSON `DataGrid` doesn't
   suit. Then bulk actions, saved filters, keyboard nav (J/K between
   records), and the rest of the list, one slice at a time.
+- **Blog admin's own remaining piece** — not yet a 5th entity type in
+  the Ctrl+K global search, a scoped follow-up.
 - **P8's configurator funnel** — needs `AnalyticsEvent` + instrumenting
   every configurator step to write events, its own substantial slice.
 - **P2's remaining piece** — the homepage's hero/craftsmanship narrative
