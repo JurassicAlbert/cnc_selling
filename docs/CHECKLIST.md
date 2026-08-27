@@ -398,9 +398,9 @@ Built as vertical slices per §16A.6, not one pass — slice 1 (categories + pro
 - [ ] Designs CRUD incl. production metadata
 - [ ] Design rights status + provenance fields; new designs default to non-sellable
 - [ ] Design collections CRUD
-- [ ] Materials CRUD incl. sheet limits, min line width, grain direction, CNC/laser flags
-- [ ] Finishes CRUD
-- [ ] Material↔finish compatibility matrix editor
+- [x] Materials CRUD incl. sheet limits, min line width, grain direction, CNC/laser flags — `/panel/materialy`; `imageUrl` is required on this model (unlike `Category`'s), so create/update take `FormData` and the upload must succeed before the record can be saved
+- [x] Finishes CRUD — `/panel/wykonczenia`, same required-image discipline
+- [x] Material↔finish compatibility matrix editor — plain toggle (`MaterialFinish` carries no extra fields, unlike `ProductMaterial`'s `priceFactorBp`), live-verified: deactivating a material removes it from the real material-picker query without deleting the row
 - [ ] Customers list and detail
 - [ ] RODO export and deletion (anonymise user, retain order records)
 - [ ] Content: FAQ, static pages, homepage sections

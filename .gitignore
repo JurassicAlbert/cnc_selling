@@ -29,6 +29,8 @@ Thumbs.db
 # /uploads-dev/ above, just for the public path instead of the private one.
 /public/images/products/
 /public/images/categories/
+/public/images/materials/
+/public/images/finishes/
 /playwright-report/
 /test-results/
 .vitest/

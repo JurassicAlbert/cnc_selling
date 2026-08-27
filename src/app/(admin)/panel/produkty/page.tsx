@@ -33,9 +33,11 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
     <>
       <Typography variant="h5" sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         {ADMIN.productsHeadingPl}
-        <Button component={Link} href="/panel/produkty/nowy" variant="contained" size="small">
-          {ADMIN.productsNewPl}
-        </Button>
+        <Link href="/panel/produkty/nowy" style={{ textDecoration: 'none' }}>
+          <Button variant="contained" size="small">
+            {ADMIN.productsNewPl}
+          </Button>
+        </Link>
       </Typography>
 
       <form style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>

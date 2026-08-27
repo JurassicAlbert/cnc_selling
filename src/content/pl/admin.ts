@@ -5,13 +5,22 @@
  * subject to `scripts/check-polish-literals.mjs`.
  */
 
-import type { InstallationVariantCode, OrderStatus, ProductTypeCode } from '@/generated/prisma/enums';
+import type {
+  FinishKind,
+  GrainDirection,
+  InstallationVariantCode,
+  MaterialFamily,
+  OrderStatus,
+  ProductTypeCode,
+} from '@/generated/prisma/enums';
 
 export const ADMIN = {
   navOrdersPl: 'Zamówienia',
   navDesignReviewPl: 'Weryfikacja projektów',
   navCategoriesPl: 'Kategorie',
   navProductsPl: 'Produkty',
+  navMaterialsPl: 'Materiały',
+  navFinishesPl: 'Wykończenia',
   logoutPl: 'Wyloguj się',
 
   savePl: 'Zapisz',
@@ -155,6 +164,54 @@ export const ADMIN = {
   designReviewApprovePl: 'Zatwierdź',
   designReviewRequestChangesPl: 'Poproś o zmiany',
   designReviewRejectPl: 'Odrzuć',
+
+  materialsHeadingPl: 'Materiały',
+  materialsNewPl: 'Nowy materiał',
+  materialsEmptyPl: 'Brak materiałów.',
+  materialsColumnNamePl: 'Nazwa',
+  materialsColumnFamilyPl: 'Rodzina',
+  materialsColumnStatusPl: 'Status',
+  materialNotFoundPl: 'Nie znaleziono materiału.',
+  materialFieldSlugPl: 'Identyfikator URL (slug)',
+  materialFieldNamePl: 'Nazwa',
+  materialFieldFamilyPl: 'Rodzina materiału',
+  materialFieldShortDescPl: 'Krótki opis',
+  materialFieldCharacteristicsPl: 'Charakterystyka',
+  materialFieldImagePl: 'Zdjęcie',
+  materialFieldImageReplacePl: 'Nowe zdjęcie (opcjonalnie, zastąpi obecne)',
+  materialFieldPricePl: 'Cena za m² (zł)',
+  materialFieldMaxSheetWidthPl: 'Maks. szerokość arkusza (mm)',
+  materialFieldMaxSheetHeightPl: 'Maks. wysokość arkusza (mm)',
+  materialFieldMinLineWidthPl: 'Min. szerokość linii (µm)',
+  materialFieldMinDetailSpacingPl: 'Min. odstęp detali (µm)',
+  materialFieldMinTextHeightPl: 'Min. wysokość tekstu (µm)',
+  materialFieldGrainDirectionPl: 'Kierunek usłojenia',
+  materialFieldSupportsCncPl: 'Obsługuje CNC',
+  materialFieldSupportsLaserPl: 'Obsługuje laser',
+  materialFieldNaturalVariablePl: 'Naturalna zmienność (rysunek, sęki, kolor)',
+  materialFieldSortOrderPl: 'Kolejność wyświetlania',
+  materialFinishesHeadingPl: 'Zgodne wykończenia',
+  materialFinishesEmptyPl: 'Żadne wykończenie nie jest jeszcze przypisane.',
+  materialFinishFieldPl: 'Wykończenie',
+
+  finishesHeadingPl: 'Wykończenia',
+  finishesNewPl: 'Nowe wykończenie',
+  finishesEmptyPl: 'Brak wykończeń.',
+  finishesColumnNamePl: 'Nazwa',
+  finishesColumnKindPl: 'Rodzaj',
+  finishesColumnStatusPl: 'Status',
+  finishNotFoundPl: 'Nie znaleziono wykończenia.',
+  finishFieldSlugPl: 'Identyfikator URL (slug)',
+  finishFieldNamePl: 'Nazwa',
+  finishFieldKindPl: 'Rodzaj wykończenia',
+  finishFieldDescPl: 'Opis',
+  finishFieldImagePl: 'Zdjęcie',
+  finishFieldImageReplacePl: 'Nowe zdjęcie (opcjonalnie, zastąpi obecne)',
+  finishFieldPricePl: 'Cena za m² (zł)',
+  finishFieldSetupFeePl: 'Opłata przygotowawcza (zł)',
+  finishFieldExtraDaysMinPl: 'Dodatkowy czas od (dni)',
+  finishFieldExtraDaysMaxPl: 'Dodatkowy czas do (dni)',
+  finishFieldSortOrderPl: 'Kolejność wyświetlania',
 } as const;
 
 const ORDER_STATUS_LABELS_PL: Record<OrderStatus, string> = {
@@ -208,4 +265,38 @@ const INSTALLATION_VARIANT_LABELS_PL: Record<InstallationVariantCode, string> = 
 
 export function adminInstallationVariantLabel(code: InstallationVariantCode): string {
   return INSTALLATION_VARIANT_LABELS_PL[code];
+}
+
+const MATERIAL_FAMILY_LABELS_PL: Record<MaterialFamily, string> = {
+  SOLID_WOOD: 'Drewno lite',
+  PLYWOOD: 'Sklejka',
+  MDF: 'MDF',
+  CERAMIC: 'Ceramika',
+  LEATHER: 'Skóra',
+  OTHER: 'Inne',
+};
+
+export function adminMaterialFamilyLabel(family: MaterialFamily): string {
+  return MATERIAL_FAMILY_LABELS_PL[family];
+}
+
+const GRAIN_DIRECTION_LABELS_PL: Record<GrainDirection, string> = {
+  NONE: 'Brak (dowolny obrót)',
+  LENGTHWISE: 'Wzdłużny',
+};
+
+export function adminGrainDirectionLabel(direction: GrainDirection): string {
+  return GRAIN_DIRECTION_LABELS_PL[direction];
+}
+
+const FINISH_KIND_LABELS_PL: Record<FinishKind, string> = {
+  NATURAL: 'Naturalne',
+  OIL: 'Olejowanie',
+  HARDWAX_OIL: 'Olejowosk',
+  STAIN: 'Bejcowanie',
+  VARNISH: 'Lakierowanie',
+};
+
+export function adminFinishKindLabel(kind: FinishKind): string {
+  return FINISH_KIND_LABELS_PL[kind];
 }

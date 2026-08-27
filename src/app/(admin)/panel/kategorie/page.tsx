@@ -11,9 +11,11 @@ export default async function AdminCategoriesPage() {
     <>
       <Typography variant="h5" sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         {ADMIN.categoriesHeadingPl}
-        <Button component={Link} href="/panel/kategorie/nowa" variant="contained" size="small">
-          {ADMIN.categoriesNewPl}
-        </Button>
+        <Link href="/panel/kategorie/nowa" style={{ textDecoration: 'none' }}>
+          <Button variant="contained" size="small">
+            {ADMIN.categoriesNewPl}
+          </Button>
+        </Link>
       </Typography>
 
       {categories.length === 0 ? (

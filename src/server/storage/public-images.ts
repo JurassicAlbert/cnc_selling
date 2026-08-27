@@ -26,7 +26,7 @@ const ALLOWED_MIME_EXTENSIONS: Readonly<Record<string, string>> = {
   'image/webp': 'webp',
 };
 
-export type PublicImageKind = 'products' | 'categories';
+export type PublicImageKind = 'products' | 'categories' | 'materials' | 'finishes';
 
 export type SavePublicImageResult =
   | { readonly ok: true; readonly url: string }
@@ -53,8 +53,10 @@ export async function savePublicImage(
 }
 
 /** `url` must be one this module produced (`/images/{kind}/{ownerId}/...`) — refuses anything else, same defense-in-depth `local-disk.ts`'s `resolveKeyPath` applies. */
+const DELETABLE_PREFIXES: readonly PublicImageKind[] = ['products', 'categories', 'materials', 'finishes'];
+
 export async function deletePublicImage(url: string): Promise<void> {
-  if (!url.startsWith('/images/products/') && !url.startsWith('/images/categories/')) {
+  if (!DELETABLE_PREFIXES.some((kind) => url.startsWith(`/images/${kind}/`))) {
     return;
   }
   const relative = url.slice('/images/'.length);

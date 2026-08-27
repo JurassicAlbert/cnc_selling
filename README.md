@@ -218,6 +218,21 @@ each a later slice. See `docs/HANDOVER.md` §9z, including a second
 `revalidatePath`-in-the-wrong-half mistake caught immediately by the new
 integration tests.
 
+**P7b, materials & finishes CRUD (slice 2) — built 2026-08-27.** The
+authoring side slice 1 deliberately skipped: `/panel/materialy` and
+`/panel/wykonczenia`, real CRUD for `Material`/`Finish`, plus the
+`MaterialFinish` compatibility toggle between them. Both models require a
+real image (unlike `Category`'s nullable one), so create can't succeed
+without a genuine uploaded photo. Also fixed a real, previously-shipped
+bug: `<Button component={Link}>` — the standard MUI-in-Next.js styled-link
+pattern, used identically on all four `/panel/*` list pages — only
+happened to serialize correctly by accident of stale dev-server state; a
+routine restart broke all four identically. Fixed by nesting `Button`
+inside `Link` instead of passing `Link` as a prop value. See
+`docs/HANDOVER.md` §9z2 for the full account, including why this pattern
+should now be treated as suspect anywhere else it appears in this
+codebase.
+
 ---
 
 ## Getting set up
@@ -232,7 +247,7 @@ npm install
 npm run db:up
 npm run db:deploy      # applies the initial migration
 
-npm test               # 476 assertions across twenty-seven files, unit + integration
+npm test               # 487 assertions across twenty-nine files, unit + integration
 npm run typecheck      # TypeScript strict, noUncheckedIndexedAccess, no emit
 npm run lint             # Biome + the Polish-literal check
 npm run build           # Next.js production build
@@ -297,15 +312,15 @@ order history, saved configurations, a real mailer, RODO consent +
 legal content, and sitewide loading/empty/error states. **P7a, the admin
 panel's operational minimum, is built** (§9y) — role-gated order
 management with staff-driven status transitions, marking bank-transfer
-orders paid, and a design-review queue, all audited. **P7b's first slice,
-catalogue admin (categories + products), is built** (§9z). See
-`docs/CHECKLIST.md` for the itemised state of every phase. Next:
+orders paid, and a design-review queue, all audited. **P7b's first two
+slices, catalogue admin (categories + products) and materials & finishes
+CRUD, are built** (§9z/§9z2). See `docs/CHECKLIST.md` for the itemised
+state of every phase. Next:
 
-- **P7b, the rest of it** — designs/collections CRUD, materials/finishes
-  CRUD, customers + RODO tooling, content, production queue, settings
-  (also where real shipping rates and a real bank account number finally
-  replace P5's placeholders), audit-log viewer — each its own slice, per
-  §16A.6.
+- **P7b, the rest of it** — designs/collections CRUD, customers + RODO
+  tooling, content, production queue, settings (also where real shipping
+  rates and a real bank account number finally replace P5's
+  placeholders), audit-log viewer — each its own slice, per §16A.6.
 - **P7c** — `@mui/x-data-grid` adoption, dashboards, global search, bulk
   actions. See `docs/ARCHITECTURE.md`'s note near §16A for the Materio
   direction already recorded for when it starts.
