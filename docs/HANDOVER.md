@@ -2806,6 +2806,14 @@ Deliberately loads from `localStorage` inside a `useEffect`, not a lazy `useStat
 
 `npm run typecheck && npm run lint && npm test && npm run build` clean (549/549 tests — same count as before, since this rewrote existing dashboard tests rather than adding new ones; ran the suite twice to confirm the flakiness fix actually held). Dev server restarted twice (once mid-slice after the toolbar fix), live-verified in a fresh browser tab each time.
 
+## 9z17. Bugfix — STAFF/ADMIN land on `/panel` after sign-in, not `/moje-konto` — 2026-08-27
+
+Found live by the owner, not by testing: signed in with a real staff OTP and landed on the plain customer account page with no indication `/panel` was a separate destination. `mergeAndGetRedirectTarget()` (`src/server/actions/auth.ts`, the shared tail of `submitLogin`/`submitRegister`/`submitOtpLogin`) always returned `/moje-konto` regardless of role.
+
+Fixed with a small role lookup, not a read off Better Auth's own sign-in result — `tsc` caught that `signInEmailOTP`'s returned `user` doesn't carry the custom `role` field, unlike `signInEmail`/`signUpEmail`'s (an inconsistency across Better Auth's own methods, not something to rely on). `mergeAndGetRedirectTarget(userId)` now does one extra `prisma.user.findUnique({select: {role: true}})` and returns `/panel` for `STAFF`/`ADMIN`, `/moje-konto` otherwise — registration is unaffected (a fresh signup is always `CUSTOMER`, `role` is `input: false`).
+
+Verified: `npm run typecheck/lint/test/build` clean; live end-to-end in a fresh browser tab — logged out, requested a fresh OTP for `panel@example.com`, read the code from the dev server log, signed in, landed directly on `/panel` with the real dashboard rendered.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

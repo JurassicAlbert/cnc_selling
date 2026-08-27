@@ -22,6 +22,7 @@ import { APIError } from 'better-auth';
 import type { AuthFieldIssueCode, AuthFormErrorCode } from '@/content/pl/messages';
 import { auth } from '@/server/auth/auth';
 import { mergeGuestCartIntoUser } from '@/server/cart/merge-guest-cart';
+import { prisma } from '@/server/db/client';
 import { readGuestSessionToken } from '@/server/session/read-guest-session';
 
 function field(formData: FormData, name: string): string {
@@ -65,11 +66,22 @@ function mapAuthError(
  * exactly that and getting "Function lacks ending return statement" at each
  * of the three call sites below. `checkout.ts`'s `submitCheckout` ends with
  * a bare `redirect(...)` for the same reason.
+ *
+ * `STAFF`/`ADMIN` land on `/panel` directly, not `/moje-konto` — found live
+ * (2026-08-27): the owner signed in with a real staff OTP and landed on the
+ * plain customer account page with no indication the admin panel was a
+ * separate destination, genuinely confusing. A small extra `role` lookup,
+ * not read off Better Auth's own result — `signInEmailOTP`'s returned
+ * `user` doesn't carry the custom `role` field (confirmed by `tsc`:
+ * `signInEmail`/`signUpEmail`'s results do, `signInEmailOTP`'s doesn't),
+ * so this queries it directly rather than relying on an inconsistent shape
+ * across Better Auth's own sign-in methods.
  */
 async function mergeAndGetRedirectTarget(userId: string): Promise<string> {
   const guestSessionToken = await readGuestSessionToken();
   await mergeGuestCartIntoUser(userId, guestSessionToken);
-  return '/moje-konto';
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  return user?.role === 'STAFF' || user?.role === 'ADMIN' ? '/panel' : '/moje-konto';
 }
 
 export type LoginFormState = {
