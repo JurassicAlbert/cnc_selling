@@ -13,6 +13,7 @@
  */
 
 import { headers as nextHeaders } from 'next/headers';
+import { notFound, redirect } from 'next/navigation';
 
 import { auth } from './auth';
 
@@ -49,6 +50,28 @@ export async function requireSession(): Promise<CurrentSession> {
   const session = await getSession();
   if (session === null) {
     throw new Error('No active session — this action requires being logged in');
+  }
+  return session;
+}
+
+/**
+ * Gate for `/panel/*` pages and their Server Actions. `redirect()`/
+ * `notFound()` both work from a Server Action, not just a Server Component
+ * — Next.js recognizes the control-flow error they throw either way — so
+ * this is safe to call from both the panel layout and `src/server/actions/
+ * admin-*.ts`.
+ *
+ * A `CUSTOMER` gets `notFound()`, never a 403 — the same "don't reveal
+ * existence" rule already applied to `/api/plik/[fileId]` and the owned-
+ * resource lookups in `design-review.ts` (`docs/ARCHITECTURE.md` §16.2).
+ */
+export async function requireStaffSession(): Promise<CurrentSession> {
+  const session = await getSession();
+  if (session === null) {
+    redirect('/logowanie');
+  }
+  if (session.role === 'CUSTOMER') {
+    notFound();
   }
   return session;
 }

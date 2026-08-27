@@ -188,6 +188,22 @@ account, including a hand-authored migration (never `prisma migrate dev`
 in this project — §9u/§9x explain why) and a real error-mapping bug found
 live in the browser, not by code review.
 
+**P7a, admin panel operational minimum — built 2026-08-27.** Not the full
+P7 scope — this project's own `docs/ARCHITECTURE.md` §16A.6 and decision D2b
+say the shop launches on P7a alone, with the rest of the panel (catalogue
+CRUD, dashboards, `@mui/x-data-grid`) built afterward against a proven
+schema. `/panel/*`, gated by role (`STAFF`/`ADMIN` only — a `CUSTOMER`
+genuinely gets a 404, not a redirect): a real order list and detail view
+with staff-driven status transitions (built on the order-status state
+machine that already existed from P5, not reimplemented), marking a
+bank-transfer order paid, and a design-review queue with approve/request-
+changes/reject. Every mutation writes to `AuditLog` — the model existed
+since before P6 but nothing had ever written to it until now. See
+`docs/HANDOVER.md` §9y for the full account, including why `middleware.ts`
+doesn't exist in this Next.js version (renamed to `proxy.ts`) and why the
+panel is the one part of this app built in real MUI components rather than
+this codebase's usual CSS-variable convention.
+
 ---
 
 ## Getting set up
@@ -202,7 +218,7 @@ npm install
 npm run db:up
 npm run db:deploy      # applies the initial migration
 
-npm test               # 453 assertions across twenty-three files, unit + integration
+npm test               # 464 assertions across twenty-five files, unit + integration
 npm run typecheck      # TypeScript strict, noUncheckedIndexedAccess, no emit
 npm run lint             # Biome + the Polish-literal check
 npm run build           # Next.js production build
@@ -264,13 +280,19 @@ design and check out today, verified live end to end including the
 order landing in `DESIGN_REVIEW` automatically. **P6, accounts &
 polish, is built** (§9x) — real accounts, guest-cart-merge-on-login,
 order history, saved configurations, a real mailer, RODO consent +
-legal content, and sitewide loading/empty/error states. See
+legal content, and sitewide loading/empty/error states. **P7a, the admin
+panel's operational minimum, is built** (§9y) — role-gated order
+management with staff-driven status transitions, marking bank-transfer
+orders paid, and a design-review queue, all audited. See
 `docs/CHECKLIST.md` for the itemised state of every phase. Next:
 
-- **P7, admin panel** — not started. Needed before shipping rates and a
-  real bank account number can be anything but the placeholders P5 uses
-  today; see `docs/ARCHITECTURE.md`'s note near §16A for the Materio
-  direction already recorded for when this starts.
+- **P7b/P7c, the rest of the admin panel** — not started. Catalogue/
+  designs/materials/finishes/customers-RODO/content/production-queue/
+  settings CRUD (P7b — also where real shipping rates and a real bank
+  account number finally replace P5's placeholders), then
+  `@mui/x-data-grid` adoption, dashboards, global search, bulk actions
+  (P7c). See `docs/ARCHITECTURE.md`'s note near §16A for the Materio
+  direction already recorded for when P7c starts.
 - **P2's remaining piece** — the homepage's hero/craftsmanship/reviews/FAQ
   sections, once real content exists for them.
 

@@ -1,0 +1,87 @@
+import { notFound } from 'next/navigation';
+import { Chip, Grid, Typography } from '@mui/material';
+
+import { ADMIN, adminOrderStatusLabel } from '@/content/pl/admin';
+import { ORDER_STATUSES, checkOrderStatusTransition } from '@/domain/order-status/transitions';
+import { findOrderForAdmin } from '@/server/repositories/admin-orders';
+import { OrderEventTimeline } from '@/ui/primitives/OrderEventTimeline';
+import { OrderSummary } from '@/ui/primitives/OrderSummary';
+import { OrderStatusActions } from '@/ui/islands/admin/OrderStatusActions';
+import type { StatusCandidate } from '@/ui/islands/admin/OrderStatusActions';
+
+type OrderDetailPageProps = {
+  readonly params: Promise<{ readonly orderNumber: string }>;
+};
+
+export default async function AdminOrderDetailPage({ params }: OrderDetailPageProps) {
+  const { orderNumber } = await params;
+  const order = await findOrderForAdmin(decodeURIComponent(orderNumber));
+  if (order === null) {
+    notFound();
+  }
+
+  const candidates: StatusCandidate[] = ORDER_STATUSES.filter((status) => status !== order.status)
+    .map((status) => {
+      const result = checkOrderStatusTransition({
+        fromStatus: order.status,
+        toStatus: status,
+        actorType: 'staff',
+        hasUnapprovedCustomDesign: order.hasUnapprovedCustomDesign,
+      });
+      if (result.ok) {
+        return { status, blockedByDesignReview: false };
+      }
+      if (result.code === 'DESIGN_REVIEW_GATE_BLOCKED') {
+        return { status, blockedByDesignReview: true };
+      }
+      return null;
+    })
+    .filter((c): c is StatusCandidate => c !== null);
+
+  const canMarkPaid = order.paymentMethod === 'BANK_TRANSFER' && order.paymentStatus !== 'PAID';
+
+  return (
+    <>
+      <Typography variant="h5" sx={{ mb: 1 }}>
+        {order.orderNumber}
+      </Typography>
+      <Chip size="small" label={adminOrderStatusLabel(order.status)} sx={{ mb: 3 }} />
+
+      <Grid container spacing={4}>
+        <Grid size={{ xs: 12, md: 7 }}>
+          <OrderSummary order={order} />
+
+          <Typography variant="h6" sx={{ mt: 4 }}>
+            {ADMIN.orderBuyerHeadingPl}
+          </Typography>
+          <Typography>
+            {order.firstName} {order.lastName}
+            {order.companyName !== null && ` (${order.companyName})`}
+          </Typography>
+          <Typography>{order.email}</Typography>
+          {order.phone !== null && <Typography>{order.phone}</Typography>}
+          <Typography>
+            {order.street}, {order.postalCode} {order.city}
+          </Typography>
+          {order.nip !== null && <Typography>NIP: {order.nip}</Typography>}
+
+          <Typography variant="h6" sx={{ mt: 4 }}>
+            {ADMIN.orderProductionNotesHeadingPl}
+          </Typography>
+          <Typography color={order.productionNotes === null ? 'text.secondary' : undefined}>
+            {order.productionNotes ?? ADMIN.orderProductionNotesEmptyPl}
+          </Typography>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 5 }}>
+          <Typography variant="h6" sx={{ mb: 1 }}>
+            {ADMIN.orderEventsHeadingPl}
+          </Typography>
+          <OrderEventTimeline events={order.events} />
+
+          <OrderStatusActions orderNumber={order.orderNumber} candidates={candidates} canMarkPaid={canMarkPaid} />
+        </Grid>
+      </Grid>
+    </>
+  );
+}

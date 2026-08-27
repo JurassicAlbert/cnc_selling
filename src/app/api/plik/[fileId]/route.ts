@@ -11,11 +11,18 @@
  *
  * `?preview=1` serves the EXIF-stripped preview instead of the original
  * (raster only — PDF has no preview, see `inspect-file.ts`'s header).
+ *
+ * P7a: staff/admin can fetch ANY file (the design-review queue needs the
+ * original, not just the owner's own copy) — checked first, since a real
+ * session role read is cheaper than the owner query and most panel
+ * requests will hit it. Falls back to the owner check for every
+ * non-staff request, unchanged from P4.
  */
 
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/server/db/client';
+import { getSession } from '@/server/auth/session';
 import { requireOwnedUploadedFile } from '@/server/repositories/design-review';
 import { storage } from '@/server/storage/local-disk';
 
@@ -25,7 +32,14 @@ type RouteContext = {
 
 export async function GET(request: Request, context: RouteContext): Promise<NextResponse> {
   const { fileId } = await context.params;
-  const file = await requireOwnedUploadedFile(fileId);
+  const session = await getSession();
+  const file =
+    session !== null && session.role !== 'CUSTOMER'
+      ? await prisma.uploadedFile.findUnique({
+          where: { id: fileId },
+          select: { id: true, storageKey: true, mimeType: true, originalName: true },
+        })
+      : await requireOwnedUploadedFile(fileId);
   if (file === null) {
     return new NextResponse(null, { status: 404 });
   }

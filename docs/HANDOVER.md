@@ -2444,6 +2444,38 @@ Every `catch (error) { if (error instanceof APIError) { return {formError: 'X'} 
 
 `npm test` (453/453 — 446 prior + 7 new integration), `npm run typecheck`, `npm run lint`, `npm run build` all clean. Live-verified in the browser: register → real session cookie → header shows "Moje konto" → order history/saved-configs empty states → logout → login with password → wrong-password shows the correct (now-fixed) error → consent banner → legal pages → a real `product_view` `AnalyticsEvent` row post-consent. `npx playwright test` (both browsers): 12/12 green in isolation/serial; the full suite showed the same "passes serially, flakes somewhat under full parallel load against one shared dev server" pattern §9w already documented — not a regression, reconfirmed by running `checkout.spec.ts` alone (passed) immediately after it failed in the parallel batch.
 
+## 9y. P7a — Admin panel operational minimum — 2026-08-27
+
+`docs/CHECKLIST.md`'s own P7 is explicitly split into three sub-phases, and `docs/ARCHITECTURE.md` §16A.6 plus decision D2b are explicit the shop launches on **P7a alone** ("Launch on P7a. Taking real orders while the rest of the panel is built is how you find out what the panel actually needs") — not the full P7 scope in one pass, unlike P6. This pass built exactly P7a: role gating, an audit log that actually gets written to, staff order management, and the design-review queue. P7b (catalogue/designs/materials/customers-RODO/content/production-queue/settings CRUD) and P7c (`@mui/x-data-grid` adoption, dashboards, global search, bulk actions, CSV, print views — none of it buildable without that package, which isn't installed) are deliberately not started.
+
+### What P6 had already half-built
+
+`AuditLog` (the model) and `User.role`/`SEED_ADMIN_EMAIL` seeding both existed before this pass — the model was defined but nothing ever wrote to it, and nothing ever read `role` for an authorization decision. The entire order-status state machine (`domain/order-status/transitions.ts` — legal edges, per-edge actor permissions, the DESIGN_REVIEW gate) also already existed from P5, fully built and (per its own module) already tested; this pass is the first thing that actually calls it from a staff-facing surface. None of that was rebuilt — `checkOrderStatusTransition` is called as-is.
+
+### `middleware.ts` doesn't exist in this Next.js version
+
+Checked `node_modules/next/dist/docs` before writing it, per this repo's own `AGENTS.md` rule, and it's a good thing: Next.js 16 renamed `middleware.ts` to `proxy.ts` (`export function proxy`, not `middleware`) — the old name is not a deprecated-but-working alias, it does nothing at all. `src/proxy.ts` matches `/panel/:path*` and does only the cheap half: `better-auth/cookies`'s `getSessionCookie(request)` (existence-only, no DB read, genuinely edge-safe) redirects the unauthenticated case. The real role check — `CUSTOMER` gets a genuine 404, not a redirect, not a client-rendered fake one — lives in `src/app/(admin)/panel/layout.tsx`'s `requireStaffSession()` (`src/server/auth/session.ts`), because that needs a real DB read and proxy's own docs warn that authorization must never live only in proxy (a matcher change silently drops coverage). Both halves live-verified separately, including checking the actual HTTP status code on the 404 case (`read_network_requests` showed a genuine `404 Not Found`, not a 200 serving a not-found-looking page).
+
+### Testability required the same `find*`/`require*`-style split P4 established
+
+`requireStaffSession()` calls `getSession()`, which reads `next/headers` — throws outside a real request, same as every other session helper in this codebase. So `admin-orders.ts`/`admin-design-review.ts`'s Server Actions are each split: `applyOrderStatusTransition`/`applyMarkOrderPaid`/`applyDesignReviewDecision` take the staff `CurrentSession` as an explicit parameter (real DB logic, directly callable from Vitest against real Postgres), while `transitionOrderStatus`/`markOrderPaid`/`decideDesignReview` — the actual exported Server Actions the UI calls — derive it via `requireStaffSession()` and delegate. First attempt at this also called `revalidatePath` inside the pure half, which fails the same way outside a request (`Invariant: static generation store missing in revalidatePath`) — moved to the outer wrapper, only on success.
+
+### The order-status graph has no cycles
+
+Worth stating plainly since the checklist's own wording ("mandatory note on backwards moves") implies a graph with backward edges, and this one doesn't have any — every edge in `transitions.ts` either moves forward or to the terminal `CANCELLED`. So "backwards" concretely means exactly that one edge; `applyOrderStatusTransition` requires a non-empty `notePl` only when `toStatus === 'CANCELLED'`, and the UI only renders a note field there (optional everywhere else). The status-transition buttons themselves are computed from `checkOrderStatusTransition`'s own result, not a re-derived copy of the graph — a candidate shows as a disabled, hover-explained button (§16A.5: "explain every disabled control") specifically when the only blocker is `DESIGN_REVIEW_GATE_BLOCKED`, and doesn't show at all when the actor genuinely isn't permitted on that edge.
+
+### The design-review queue needed a staff exception to the file-serving route
+
+`/api/plik/[fileId]` (P4) only ever checked file ownership (`requireOwnedUploadedFile`) — a design a customer uploaded is not "owned" by the staff member reviewing it, so the original file/preview would 404 for them unchanged. Extended the route to check `getSession()` first: `STAFF`/`ADMIN` get the file unconditionally, everyone else falls through to the unchanged owner check. Still 404-not-403 throughout.
+
+### Full MUI, deliberately, unlike the rest of this app
+
+Every other page in this codebase avoids real `@mui/material` React components (CSS variables mirroring the theme tokens instead — `ThemeRegistry` is kept OUT of the root layout on purpose, `theme-vars.css`'s own header explains the Lighthouse/LCP cost of shipping MUI+Emotion+React to pages with no interactive MUI). The panel is the one place `docs/ARCHITECTURE.md` §16A explicitly wants "Full MUI... standard Material, dense layout, no brand theming investment" — so `src/app/(admin)/panel/layout.tsx` wraps its children in `ThemeRegistry` (same pattern the configurator island already uses locally, just applied to the whole route group), and every panel page uses real `Table`/`Button`/`TextField`/`Chip` etc.
+
+### Verified
+
+`npm test` (464/464 — 453 prior + 11 new integration), `npm run typecheck`, `npm run lint`, `npm run build` all clean; no schema migration needed (`AuditLog` already existed). Live-verified in the browser end to end: unauthenticated → `/panel/zamowienia` redirects to `/logowanie`; logged in as the seeded admin (`SEED_ADMIN_EMAIL`, via the existing OTP path — no password exists for that seeded row) → real order list with filters → order detail → "Oznacz jako opłacone" (confirmed in Postgres: `paymentStatus: PAID` + an `AuditLog` row) → transition to `CONFIRMED` (event timeline updated with the real staff actor and timestamp) → design-review queue → approve without a production method (rejected with a real Polish message) → approve with one (confirmed in Postgres: `status: APPROVED`, `productionMethod` set, audit row) → logged in as an existing `CUSTOMER`-role account → `/panel/zamowienia` returned a genuine `404 Not Found` (checked via `read_network_requests`, not just the rendered page).
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

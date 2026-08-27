@@ -354,7 +354,7 @@ to skip anything within P5's real scope. Full detail in `docs/HANDOVER.md`
 - [x] Saved configurations — `/moje-konto/projekty`, real "Edytuj"/"Dodaj do koszyka" actions over `Configuration` rows a logged-in user already has
 - [x] Customer file access restricted to owner — every `UploadedFile`/`CustomerDesign`/`Configuration`/`Cart` ownership check extended from `sessionToken`-only to `userId` **or** `sessionToken` (`src/server/session/ownership.ts`), matching §16.1's rule literally for the first time
 - [x] Mailer adapter; unconfigured mailer logs and does not claim delivery — `ResendMailer`/`UnconfiguredMailer` behind one `Mailer` interface (`src/server/mail/mailer.ts`), same safe-fallback contract as before, now genuine over Resend's HTTP API once `RESEND_API_KEY`/`EMAIL_FROM` are set
-- [ ] Transactional messages in Polish for each order status — only `order-confirmation` (NEW) and `verification-otp` (login) are wired. Status-change emails (confirmed/in production/shipped/etc.) need a real trigger for those transitions, which is P7's admin panel (no way to move an order past NEW today) — genuinely blocked on that, not skipped
+- [ ] Transactional messages in Polish for each order status — only `order-confirmation` (NEW) and `verification-otp` (login) are wired. P7a now provides the real trigger (staff status transitions, `transitionOrderStatus`), but nothing calls the mailer from it yet — still open, no longer blocked
 - [x] Analytics events implemented — real, consent-gated `AnalyticsEvent` writes (`src/server/analytics/record-event.ts`) for the 4 of 13 §_.4-named events that have a natural SERVER-side trigger already: `product_view`, `add_to_cart`, `checkout_started`, `purchase`. The remaining named events (`configurator_step_completed`, `design_selected`, etc.) fire from client-side state deep inside `Configurator.tsx` — wiring those needs a client-to-server event channel this polish pass didn't build; the infrastructure here is what a later pass (or P8) wires them into unchanged
 - [x] Analytics fire only after consent — `readConsentChoice()` gates every write; verified live (a `product_view` row only appeared in the DB after clicking "Akceptuję")
 - [x] Cookie/consent banner (RODO) — first-party `consent` cookie (`src/server/session/consent.ts`), deliberately separate from the guest-session and Better Auth cookies; live-verified (shows on first visit, disappears and stays gone after a choice)
@@ -372,16 +372,18 @@ Also done this pass, not in the brief's own P6 checklist but load-bearing for th
 
 ### P7a — operational minimum (unblocks launch)
 
-- [ ] Role model: CUSTOMER / STAFF / ADMIN; first admin seeded
-- [ ] `/panel` middleware: unauthenticated redirected, customers 404
-- [ ] AuditLog model and write-on-mutation helper
-- [ ] Order list with filters
-- [ ] Order detail: full snapshot, line breakdown, module layout, event timeline
-- [ ] Status transitions with audit and mandatory note on backwards moves
-- [ ] Mark bank transfer as paid
-- [ ] Design review queue: preview, warnings, original file, comments
-- [ ] Approve / request changes / reject; internal production method assigned
-- [ ] Design-review gate blocks production until resolved
+- [x] Role model: CUSTOMER / STAFF / ADMIN; first admin seeded — both already existed since P6 (`User.role`, `prisma/seed.ts`'s `seedFirstAdmin`); this pass is what actually reads the role for something
+- [x] `/panel` middleware: unauthenticated redirected, customers 404 — split in two, deliberately: `src/proxy.ts` (Next.js 16 renamed `middleware.ts`; `getSessionCookie` from `better-auth/cookies`, a cheap edge-safe cookie-presence check, no DB read) redirects the unauthenticated case; `src/app/(admin)/panel/layout.tsx`'s `requireStaffSession()` does the real DB-backed role check and returns a genuine HTTP 404 (not a client-rendered fake one) for `CUSTOMER` — both live-verified in the browser, including the network response code
+- [x] AuditLog model and write-on-mutation helper — the model existed since before P6 but nothing ever wrote to it; `src/server/audit/write-audit-log.ts` now does, from every mutation below, live-verified against real rows (`actorEmail`, `entity`, `action`, `diff`)
+- [x] Order list with filters — `/panel/zamowienia`, plain MUI `Table` (not `@mui/x-data-grid` — not installed, deliberately deferred to P7c), filters by status/payment status/search
+- [x] Order detail: full snapshot, line breakdown, module layout, event timeline — `/panel/zamowienia/[orderNumber]`, reuses the customer-facing `OrderSummary` component for the line-item/snapshot rendering (module layout is part of that snapshot), adds buyer/invoice data and a new `OrderEventTimeline`
+- [x] Status transitions with audit and mandatory note on backwards moves — built directly on the order-status state machine that already existed (`domain/order-status/transitions.ts`, from P5); only UI-legal edges are rendered as buttons. The graph has no cycles — every edge moves forward or to the terminal `CANCELLED` — so "backwards" concretely means that one edge, and a note is mandatory only there
+- [x] Mark bank transfer as paid — live-verified end to end (button → DB `paymentStatus: PAID` → audit row)
+- [x] Design review queue: preview, warnings, original file, comments — `/panel/weryfikacja`, reuses `uploadWarningMessage` (P4) for warning text; `/api/plik/[fileId]` extended to also authorize staff/admin (previously owner-only), not just the customer who uploaded it
+- [x] Approve / request changes / reject; internal production method assigned — live-verified (approval without a method is rejected with a real message; approval with one sets `CustomerDesign.status` + `productionMethod` and is audited)
+- [x] Design-review gate blocks production until resolved — not re-implemented: the existing gate in `transitions.ts` already blocks `DESIGN_REVIEW → CONFIRMED` while any linked design isn't `APPROVED`; integration-tested that approving the design is what unblocks the same order's transition
+
+Deliberately out of this pass, per `docs/ARCHITECTURE.md` §16A.6 and decision D2b ("launch on P7a, the rest of the panel ships after against a proven schema") — not gaps, scope: P7b (catalogue/designs/materials/finishes/customers-RODO/content/production-queue/settings CRUD, audit log **viewer**) and P7c (`@mui/x-data-grid`/`@mui/x-charts` adoption, dashboard/statistics, global search, keyboard grid nav, saved filters, bulk actions, CSV, print views). Also not built this pass: transactional status-change emails (P6's checklist line above still applies — only `order-confirmation`/`verification-otp` are wired; the panel can now move an order past `NEW`, but nothing sends mail when it does).
 
 ### P7b — management
 
