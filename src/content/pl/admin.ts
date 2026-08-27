@@ -204,6 +204,9 @@ export const ADMIN = {
   orderMarkPaidPl: 'Oznacz jako opłacone',
   orderMarkPaidDonePl: 'Opłacone',
   orderCancelNoteLabelPl: 'Notatka (wymagana przy anulowaniu)',
+  orderCancelConfirmTitlePl: 'Anulować zamówienie?',
+  orderCancelConfirmMessagePl: 'Tej operacji nie można cofnąć — status "Anulowane" jest ostateczny.',
+  orderCancelConfirmButtonPl: 'Tak, anuluj zamówienie',
   orderTransitionNotePl: 'Notatka (opcjonalna)',
   orderDesignBlockedPl: 'Projekt klienta oczekuje na weryfikację — nie można przejść dalej, dopóki nie zostanie zatwierdzony.',
 
@@ -455,6 +458,9 @@ export const ADMIN = {
     'Nieodwracalne: dane osobowe klienta zostaną usunięte, a konto nie będzie już dostępne. Historia zamówień pozostanie zachowana zgodnie z przepisami rachunkowymi.',
   customerAnonymizeNoteLabelPl: 'Notatka (wymagana)',
   customerAnonymizeButtonPl: 'Zanonimizuj konto',
+  customerAnonymizeConfirmTitlePl: 'Zanonimizować konto?',
+  customerAnonymizeConfirmMessagePl: 'Tej operacji nie można cofnąć. Dane osobowe klienta zostaną trwale usunięte.',
+  customerAnonymizeConfirmButtonPl: 'Tak, zanonimizuj konto',
   customerAnonymizedNoticePl: 'Konto zanonimizowane',
 
   auditLogHeadingPl: 'Dziennik zdarzeń',
@@ -545,7 +551,9 @@ export const ADMIN = {
   pricingSimulatorUnpriceablePl: 'nie udało się wycenić',
   pricingPublishPl: 'Publikuj tę wersję',
   pricingPublishBlockedHintPl: 'Poczekaj na wynik symulacji przed publikacją.',
-  pricingPublishConfirmPl: 'Ta zmiana natychmiast wpłynie na ceny w całym sklepie. Czy na pewno chcesz opublikować tę wersję cennika?',
+  pricingPublishConfirmTitlePl: 'Opublikować tę wersję cennika?',
+  pricingPublishConfirmPl: 'Ta zmiana natychmiast wpłynie na ceny w całym sklepie. Tej operacji nie można cofnąć — poprzednio aktywna wersja przestanie obowiązywać.',
+  pricingPublishConfirmButtonPl: 'Tak, opublikuj',
   pricingAlreadyActivePl: 'Ta wersja jest już aktywna.',
   pricingBackToListPl: 'Wróć do listy wersji',
 } as const;

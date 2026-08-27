@@ -601,6 +601,20 @@ wrong. Produkty's own filter needed a genuine distinction between
 guidance to adjust it) — live-verified both paths render correctly.
 See `docs/HANDOVER.md` §9z28.
 
+**Real confirmation dialogs for irreversible actions — built
+2026-08-27, autonomously.** New shared `ConfirmSubmitButton` (a real
+MUI `Dialog`) replaces a `window.confirm()` placeholder on pricing
+publish and adds a confirmation step to two other genuinely-terminal
+actions that previously had none at all: order cancellation and
+customer anonymization. Keeps every existing real `<form
+action={serverAction}>` submission intact — the dialog's confirm
+button uses `form={id}`, the plain HTML mechanism for a submit button
+that isn't a DOM descendant of the form it submits (MUI's `Dialog`
+portals to `document.body`). Live-verified all three real dialogs end
+to end, including a real pricing-version publish (identical rates, so
+no actual price change) to prove the confirm path, not just cancel.
+See `docs/HANDOVER.md` §9z29.
+
 ---
 
 ## Getting set up
@@ -720,8 +734,9 @@ locale-correctness checklist true and fixed the one real gap it
 found** — Polish collation, now wired into every admin grid (§9z27) —
 and **empty states across the 9 top-level catalogue/content lists now
 say what to do next**, with a real action button, not just prose
-(§9z28). See `docs/CHECKLIST.md` for the itemised state of every
-phase. Next,
+(§9z28). **Irreversible actions now get a real confirmation dialog**
+— pricing publish, order cancellation, customer anonymization (§9z29).
+See `docs/CHECKLIST.md` for the itemised state of every phase. Next,
 continuing autonomously per the owner's standing direction to close
 remaining gaps toward "no missing pages, functionality, design and UI":
 

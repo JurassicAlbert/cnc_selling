@@ -6,20 +6,22 @@
  * there must be no path to Publish that skips ever seeing this table. The
  * Publish button below only becomes enabled once this fetch has resolved
  * (success or error — an error is still "reviewed," it just means don't
- * publish yet). A real confirmation step gates the actual publish call —
- * this changes every price on the site, matching the "confirmation dialogs
- * only for irreversible actions" principle already used elsewhere in this
- * panel.
+ * publish yet). A real `ConfirmSubmitButton` dialog gates the actual publish
+ * call — this changes every price on the site, and is genuinely
+ * irreversible (publishing flips the previously-active version inactive in
+ * the same atomic transaction, no path back). Replaced a `window.confirm()`
+ * placeholder — see `ConfirmSubmitButton`'s own doc comment.
  */
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Alert, Button, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+import { Alert, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 
 import { ADMIN } from '@/content/pl/admin';
 import { formatPln } from '@/domain/money/money';
 import { publishPricingVersion, simulatePricingDraft } from '@/server/actions/admin-pricing';
 import type { SimulatePricingResult } from '@/server/actions/admin-pricing';
+import { ConfirmSubmitButton } from '@/ui/primitives/ConfirmSubmitButton';
 
 function delta(current: number | null, draft: number | null): string {
   if (current === null || draft === null) {
@@ -51,15 +53,6 @@ export function PricingSimulator({ version, alreadyActive }: { readonly version:
   }, [version]);
 
   async function handlePublish() {
-    // A real, deliberate blocking confirm for an irreversible, site-wide
-    // price change — no MUI Dialog-based confirmation pattern exists
-    // anywhere in this codebase yet ("Confirmation dialogs only for
-    // irreversible actions" is still an open `docs/CHECKLIST.md` item),
-    // so this is the honest choice for now rather than skipping the
-    // confirmation or inventing a one-off styled dialog for a single call site.
-    if (!window.confirm(ADMIN.pricingPublishConfirmPl)) {
-      return;
-    }
     setPublishState({ pending: true, error: null });
     const publishResult = await publishPricingVersion(version);
     if (publishResult.ok) {
@@ -124,9 +117,17 @@ export function PricingSimulator({ version, alreadyActive }: { readonly version:
         </Alert>
       ) : (
         <>
-          <Button variant="contained" color="warning" disabled={result === null || publishState.pending} onClick={handlePublish}>
-            {ADMIN.pricingPublishPl}
-          </Button>
+          <ConfirmSubmitButton
+            label={ADMIN.pricingPublishPl}
+            confirmTitle={ADMIN.pricingPublishConfirmTitlePl}
+            confirmMessage={ADMIN.pricingPublishConfirmPl}
+            confirmLabel={ADMIN.pricingPublishConfirmButtonPl}
+            cancelLabel={ADMIN.cancelPl}
+            color="warning"
+            disabled={result === null}
+            pending={publishState.pending}
+            onConfirm={handlePublish}
+          />
           {result === null && (
             <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>
               {ADMIN.pricingPublishBlockedHintPl}

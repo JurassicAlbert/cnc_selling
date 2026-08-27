@@ -8,7 +8,7 @@
  * never re-derives the graph.
  */
 
-import { useActionState, useState } from 'react';
+import { useActionState, useId, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Alert, Button, Stack, TextField, Typography } from '@mui/material';
 
@@ -16,6 +16,7 @@ import { ADMIN, adminOrderStatusLabel } from '@/content/pl/admin';
 import type { OrderStatus } from '@/domain/order-status/transitions';
 import { markOrderPaid, transitionOrderStatus } from '@/server/actions/admin-orders';
 import type { MarkOrderPaidResult, TransitionOrderStatusResult } from '@/server/actions/admin-orders';
+import { ConfirmSubmitButton } from '@/ui/primitives/ConfirmSubmitButton';
 
 export type StatusCandidate = {
   readonly status: OrderStatus;
@@ -36,6 +37,7 @@ export function OrderStatusActions({
   readonly canMarkPaid: boolean;
 }) {
   const [noteByStatus, setNoteByStatus] = useState<Record<string, string>>({});
+  const formIdPrefix = useId();
   const boundTransition = async (_prev: TransitionOrderStatusResult, formData: FormData) => {
     const toStatus = formData.get('toStatus') as OrderStatus;
     const notePl = formData.get('notePl');
@@ -58,7 +60,7 @@ export function OrderStatusActions({
 
       <Stack spacing={1}>
         {candidates.map((candidate) => (
-          <form key={candidate.status} action={transitionAction}>
+          <form key={candidate.status} id={`${formIdPrefix}-${candidate.status}`} action={transitionAction}>
             <input type="hidden" name="toStatus" value={candidate.status} />
             {candidate.status === 'CANCELLED' && (
               <TextField
@@ -82,12 +84,26 @@ export function OrderStatusActions({
                 onChange={(e) => setNoteByStatus((prev) => ({ ...prev, [candidate.status]: e.target.value }))}
               />
             )}
-            <SubmitButton
-              label={adminOrderStatusLabel(candidate.status)}
-              variant={candidate.status === 'CANCELLED' ? 'text' : 'contained'}
-              disabled={candidate.blockedByDesignReview}
-              title={candidate.blockedByDesignReview ? ADMIN.orderDesignBlockedPl : undefined}
-            />
+            {candidate.status === 'CANCELLED' ? (
+              <ConfirmSubmitButton
+                label={adminOrderStatusLabel(candidate.status)}
+                confirmTitle={ADMIN.orderCancelConfirmTitlePl}
+                confirmMessage={ADMIN.orderCancelConfirmMessagePl}
+                confirmLabel={ADMIN.orderCancelConfirmButtonPl}
+                cancelLabel={ADMIN.cancelPl}
+                variant="text"
+                color="error"
+                disabled={(noteByStatus[candidate.status] ?? '').trim().length === 0}
+                formId={`${formIdPrefix}-${candidate.status}`}
+              />
+            ) : (
+              <SubmitButton
+                label={adminOrderStatusLabel(candidate.status)}
+                variant="contained"
+                disabled={candidate.blockedByDesignReview}
+                title={candidate.blockedByDesignReview ? ADMIN.orderDesignBlockedPl : undefined}
+              />
+            )}
             {candidate.blockedByDesignReview && (
               <Typography variant="caption" color="text.secondary" component="p">
                 {ADMIN.orderDesignBlockedPl}
