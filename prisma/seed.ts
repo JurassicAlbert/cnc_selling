@@ -101,6 +101,8 @@ const STOCK_PHOTO = (slug: string) => `/images/photos/${slug}.jpg`;
 async function main(): Promise<void> {
   await seedMachineSettings();
   await seedPricingSettings();
+  await seedStoreSettings();
+  await seedEmailTemplates();
   await seedFirstAdmin();
 
   const materials = await seedMaterials();
@@ -189,6 +191,60 @@ async function seedPricingSettings(): Promise<void> {
     },
   });
   console.log(`PricingSettings: created version ${created.version} (TODO_PRICING placeholders)`);
+}
+
+/**
+ * `StoreSettings` (P7b Settings slice, 2026-08-27) — real bank-transfer
+ * details and the shipping rate, admin-editable from `/panel/ustawienia`.
+ * Create-only, unlike `seedMachineSettings`' always-overwrite `upsert`:
+ * once this row exists it is real admin-owned data, and re-running this
+ * script must never stomp on an admin's actual configured rate/account
+ * number back to placeholders. `shippingFlatRateGrosze: 2000` preserves the
+ * exact amount the old hardcoded `SHIPPING_FLAT_GROSZE` constant charged;
+ * bank fields start `null`, preserving the exact existing "not configured
+ * yet" placeholder text shown to customers.
+ */
+async function seedStoreSettings(): Promise<void> {
+  const existing = await prisma.storeSettings.findUnique({ where: { id: 1 } });
+  if (existing !== null) {
+    console.log('StoreSettings: row already exists, leaving it alone');
+    return;
+  }
+  await prisma.storeSettings.create({ data: { id: 1, shippingFlatRateGrosze: 2_000 } });
+  console.log('StoreSettings: created (shipping 20,00 zł, bank details not yet configured)');
+}
+
+/**
+ * `EmailTemplate` rows (P7b Settings slice) — DB-editable overrides for
+ * `mailer.ts`'s hardcoded subject/body text, `{{placeholder}}`-ified
+ * versions of the exact existing copy so behavior is unchanged until an
+ * admin edits them. Create-only per key, same non-destructive reasoning as
+ * `seedStoreSettings` above.
+ */
+async function seedEmailTemplates(): Promise<void> {
+  const templates: ReadonlyArray<{ readonly key: string; readonly subjectPl: string; readonly bodyPl: string }> = [
+    {
+      key: 'order-confirmation',
+      subjectPl: 'Potwierdzenie zamówienia {{orderNumber}}',
+      bodyPl:
+        'Dziękujemy za zamówienie {{orderNumber}}.\n\nKwota do zapłaty: {{totalGrossZloty}}.\nSposób płatności: {{paymentMethodPl}}.\n\nO dalszych krokach poinformujemy Cię osobnym e-mailem.',
+    },
+    {
+      key: 'verification-otp',
+      subjectPl: 'Twój kod {{otpPurposePl}}: {{otp}}',
+      bodyPl:
+        'Kod {{otpPurposePl}}: {{otp}}\n\nKod jest ważny przez 5 minut. Jeśli to nie Ty prosiłeś/aś o ten kod, zignoruj tę wiadomość.',
+    },
+  ];
+  for (const template of templates) {
+    const existing = await prisma.emailTemplate.findUnique({ where: { key: template.key } });
+    if (existing !== null) {
+      console.log(`EmailTemplate: "${template.key}" already exists, leaving it alone`);
+      continue;
+    }
+    await prisma.emailTemplate.create({ data: template });
+    console.log(`EmailTemplate: created "${template.key}"`);
+  }
 }
 
 /**

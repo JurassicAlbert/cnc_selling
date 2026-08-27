@@ -75,3 +75,17 @@ export async function requireStaffSession(): Promise<CurrentSession> {
   }
   return session;
 }
+
+/**
+ * Gate for the panel's highest-privilege screens (staff-user management,
+ * `/panel/ustawienia/personel`) — everything `requireStaffSession()` does,
+ * plus `notFound()` for `STAFF` too. Same "don't reveal existence" reasoning
+ * for a `STAFF` here as for a `CUSTOMER` on `requireStaffSession()`.
+ */
+export async function requireAdminSession(): Promise<CurrentSession> {
+  const session = await requireStaffSession();
+  if (session.role !== 'ADMIN') {
+    notFound();
+  }
+  return session;
+}

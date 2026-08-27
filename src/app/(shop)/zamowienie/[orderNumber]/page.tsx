@@ -5,6 +5,7 @@ import { SITE } from '@/content/pl/site';
 import { COPY } from '@/content/pl/messages';
 import { findOrderForConfirmation } from '@/server/repositories/orders';
 import { findReviewStatusForOrder } from '@/server/repositories/reviews';
+import { getStoreSettings } from '@/server/repositories/store-settings';
 import { submitGuestReview } from '@/server/actions/reviews';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
@@ -48,7 +49,10 @@ export default async function OrderConfirmationPage({ params, searchParams }: Or
     notFound();
   }
 
-  const reviewStatus = order.status === 'COMPLETED' ? await findReviewStatusForOrder(order.orderNumber) : null;
+  const [reviewStatus, storeSettings] = await Promise.all([
+    order.status === 'COMPLETED' ? findReviewStatusForOrder(order.orderNumber) : Promise.resolve(null),
+    getStoreSettings(),
+  ]);
 
   return (
     <Section>
@@ -61,7 +65,7 @@ export default async function OrderConfirmationPage({ params, searchParams }: Or
           </Text>
         </div>
 
-        <OrderSummary order={order} />
+        <OrderSummary order={order} bankDetails={storeSettings} />
 
         <div style={{ marginBlockStart: 24 }}>
           <Text muted>{SITE.orderEmailFollowUpNoticePl}</Text>

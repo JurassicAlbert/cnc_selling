@@ -1095,3 +1095,35 @@ model Review {
 
   @@index([status, createdAt])
 }
+
+/// True singleton (`id = 1`, same shape as `MachineSettings`): the real
+/// bank-transfer account and the flat shipping rate, both previously
+/// honest placeholders (`site.ts`'s "we'll send the account number
+/// separately" text; `create-order.ts`'s `SHIPPING_FLAT_GROSZE` constant).
+/// Bank fields stay nullable — NULL means "not configured yet," and every
+/// caller keeps showing the same honest placeholder text until an admin
+/// fills them in. `shippingFlatRateGrosze` is NOT nullable: checkout has
+/// always charged a real number, so this column must always hold one too.
+model StoreSettings {
+  id                     Int      @id @default(1)
+  bankAccountNumber      String?
+  bankAccountHolderPl    String?
+  shippingFlatRateGrosze Int
+  updatedAt              DateTime @updatedAt
+  updatedByEmail         String?
+}
+
+/// DB-editable override for `mailer.ts`'s hardcoded subject/body text.
+/// `key` matches `MailTemplate` there ('order-confirmation' |
+/// 'verification-otp') — a fixed, closed set, so this is edit-only, never
+/// create/delete from the panel. Absence of a row for a given key is not an
+/// error: `mailer.ts` falls back to its own hardcoded default, which is
+/// also where these rows' seeded values came from.
+model EmailTemplate {
+  id             String   @id @default(cuid())
+  key            String   @unique
+  subjectPl      String
+  bodyPl         String   @db.Text
+  updatedAt      DateTime @updatedAt
+  updatedByEmail String?
+}

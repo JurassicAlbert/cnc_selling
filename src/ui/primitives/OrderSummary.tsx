@@ -12,7 +12,18 @@ import { Text } from '@/ui/primitives/Text';
  * `OrderConfirmationView` shape, same display, extracted once a second real
  * caller needed it rather than duplicated.
  */
-export function OrderSummary({ order }: { readonly order: OrderConfirmationView }) {
+export type OrderSummaryBankDetails = {
+  readonly bankAccountNumber: string | null;
+  readonly bankAccountHolderPl: string | null;
+};
+
+export function OrderSummary({
+  order,
+  bankDetails,
+}: {
+  readonly order: OrderConfirmationView;
+  readonly bankDetails: OrderSummaryBankDetails;
+}) {
   return (
     <>
       <div style={{ marginBlockStart: 24 }}>
@@ -52,7 +63,16 @@ export function OrderSummary({ order }: { readonly order: OrderConfirmationView 
           <Text>
             {SITE.orderBankTransferTitlePl}: {order.orderNumber}
           </Text>
-          <Text muted>{SITE.orderBankTransferAccountPendingPl}</Text>
+          {bankDetails.bankAccountNumber !== null ? (
+            <>
+              <Text>
+                {SITE.orderBankTransferAccountLabelPl}: {bankDetails.bankAccountNumber}
+              </Text>
+              {bankDetails.bankAccountHolderPl !== null && <Text muted>{bankDetails.bankAccountHolderPl}</Text>}
+            </>
+          ) : (
+            <Text muted>{SITE.orderBankTransferAccountPendingPl}</Text>
+          )}
         </div>
       ) : (
         <div style={{ marginBlockStart: 24 }}>

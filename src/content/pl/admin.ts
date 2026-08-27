@@ -31,6 +31,7 @@ export const ADMIN = {
   navFaqPl: 'FAQ',
   navStaticPagesPl: 'Strony',
   navReviewsPl: 'Opinie',
+  navSettingsPl: 'Ustawienia',
   logoutPl: 'Wyloguj się',
 
   savePl: 'Zapisz',
@@ -375,6 +376,38 @@ export const ADMIN = {
   customerAnonymizeNoteLabelPl: 'Notatka (wymagana)',
   customerAnonymizeButtonPl: 'Zanonimizuj konto',
   customerAnonymizedNoticePl: 'Konto zanonimizowane',
+
+  settingsHeadingPl: 'Ustawienia',
+  settingsStoreSectionHeadingPl: 'Sklep',
+  settingsFieldBankAccountNumberPl: 'Numer konta bankowego',
+  settingsFieldBankAccountHolderPl: 'Odbiorca przelewu',
+  settingsFieldShippingRatePl: 'Stawka wysyłki (zł)',
+  settingsSavedNoticePl: 'Zapisano.',
+  settingsPersonnelLinkPl: 'Personel',
+  settingsEmailTemplatesLinkPl: 'Szablony e-mail',
+
+  staffHeadingPl: 'Personel',
+  staffEmptyPl: 'Brak kont personelu.',
+  staffColumnNamePl: 'Imię i nazwisko',
+  staffColumnEmailPl: 'E-mail',
+  staffColumnRolePl: 'Rola',
+  staffInviteHeadingPl: 'Zaproś nowego pracownika',
+  staffInviteFieldNamePl: 'Imię i nazwisko',
+  staffInviteFieldEmailPl: 'E-mail',
+  staffInviteFieldRolePl: 'Rola',
+  staffInviteSubmitPl: 'Zaproś',
+  staffInviteHintPl: 'Nowy pracownik zaloguje się kodem e-mail na stronie logowania — nie ustawia się dla niego hasła.',
+  staffRevokeButtonPl: 'Cofnij dostęp',
+  staffRoleAdminPl: 'Administrator',
+  staffRoleStaffPl: 'Pracownik',
+
+  emailTemplatesHeadingPl: 'Szablony e-mail',
+  emailTemplatesColumnKeyPl: 'Szablon',
+  emailTemplateFieldSubjectPl: 'Temat',
+  emailTemplateFieldBodyPl: 'Treść',
+  emailTemplatePlaceholdersHintPl: 'Dostępne znaczniki',
+  emailTemplateKeyOrderConfirmationPl: 'Potwierdzenie zamówienia',
+  emailTemplateKeyVerificationOtpPl: 'Kod weryfikacyjny',
 } as const;
 
 const ORDER_STATUS_LABELS_PL: Record<OrderStatus, string> = {
@@ -494,3 +527,19 @@ const UPLOAD_KIND_LABELS_PL: Record<UploadKind, string> = {
 export function adminUploadKindLabel(kind: UploadKind): string {
   return UPLOAD_KIND_LABELS_PL[kind];
 }
+
+const EMAIL_TEMPLATE_KEY_LABELS_PL: Record<string, string> = {
+  'order-confirmation': ADMIN.emailTemplateKeyOrderConfirmationPl,
+  'verification-otp': ADMIN.emailTemplateKeyVerificationOtpPl,
+};
+
+/** Falls back to the raw key for any future `MailTemplate` this map hasn't been updated for yet — never throws. */
+export function adminEmailTemplateKeyLabel(key: string): string {
+  return EMAIL_TEMPLATE_KEY_LABELS_PL[key] ?? key;
+}
+
+/** Mirrors `mailer.ts`'s own `buildPlaceholders` key set — kept in sync by hand, shown as a read-only hint on the template edit screen. */
+export const EMAIL_TEMPLATE_PLACEHOLDERS_PL: Record<string, readonly string[]> = {
+  'order-confirmation': ['orderNumber', 'totalGrossZloty', 'paymentMethodPl'],
+  'verification-otp': ['otp', 'otpPurposePl'],
+};

@@ -6,6 +6,7 @@ import { ADMIN, adminOrderStatusLabel } from '@/content/pl/admin';
 import { ORDER_STATUSES, checkOrderStatusTransition } from '@/domain/order-status/transitions';
 import { findOrderForAdmin } from '@/server/repositories/admin-orders';
 import { listOrderModuleManifest } from '@/server/repositories/admin-production';
+import { getStoreSettings } from '@/server/repositories/store-settings';
 import { OrderEventTimeline } from '@/ui/primitives/OrderEventTimeline';
 import { OrderModuleManifest } from '@/ui/primitives/OrderModuleManifest';
 import { OrderSummary } from '@/ui/primitives/OrderSummary';
@@ -19,9 +20,10 @@ type OrderDetailPageProps = {
 export default async function AdminOrderDetailPage({ params }: OrderDetailPageProps) {
   const { orderNumber } = await params;
   const decodedOrderNumber = decodeURIComponent(orderNumber);
-  const [order, manifest] = await Promise.all([
+  const [order, manifest, storeSettings] = await Promise.all([
     findOrderForAdmin(decodedOrderNumber),
     listOrderModuleManifest(decodedOrderNumber),
+    getStoreSettings(),
   ]);
   if (order === null) {
     notFound();
@@ -56,7 +58,7 @@ export default async function AdminOrderDetailPage({ params }: OrderDetailPagePr
 
       <Grid container spacing={4}>
         <Grid size={{ xs: 12, md: 7 }}>
-          <OrderSummary order={order} />
+          <OrderSummary order={order} bankDetails={storeSettings} />
 
           <Typography variant="h6" sx={{ mt: 4 }}>
             {ADMIN.orderBuyerHeadingPl}

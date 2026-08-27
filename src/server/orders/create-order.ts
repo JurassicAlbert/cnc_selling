@@ -28,18 +28,9 @@ import { priceAndValidateSelections } from '@/server/configurator/validate-and-p
 import type { ValidatedPricing } from '@/server/configurator/validate-and-price';
 import { recordAnalyticsEvent } from '@/server/analytics/record-event';
 import { mailer } from '@/server/mail/mailer';
+import { getStoreSettings } from '@/server/repositories/store-settings';
 import { SITE } from '@/content/pl/site';
 import type { OrderItemSnapshot } from './snapshot';
-
-/**
- * No `ShippingMethod` model exists — `docs/ARCHITECTURE.md` puts "shipping
- * methods and rates" under P7 (admin panel) configuration, not P5. One
- * flat placeholder, `TODO_PRICING`-tagged exactly like every other invented
- * number in this codebase (`prisma/seed.ts`'s `PricingSettings`,
- * `PersonalizationSpec`), stands in until that exists.
- */
-/** Exported so the checkout page displays the exact number that will actually be charged — never a second, possibly-drifted guess. */
-export const SHIPPING_FLAT_GROSZE = 2_000; // TODO_PRICING
 
 /** A real placeholder, same discipline as the withdrawal-exemption text — versioned so a later real Regulamin can supersede it traceably. */
 const TERMS_VERSION = '1.0-draft';
@@ -77,7 +68,10 @@ function toJsonInput<T>(value: T): Prisma.InputJsonValue {
 }
 
 export async function createOrder(input: CreateOrderInput): Promise<CreateOrderResult> {
-  const cart = await findCartForRequest({ userId: input.userId, sessionToken: input.sessionToken });
+  const [cart, storeSettings] = await Promise.all([
+    findCartForRequest({ userId: input.userId, sessionToken: input.sessionToken }),
+    getStoreSettings(),
+  ]);
   if (cart.items.length === 0) {
     return { ok: false, code: 'CART_EMPTY' };
   }
@@ -104,7 +98,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
 
   const subtotalNetGrosze = sumGrosze(revalidated.map((r) => r.lineNetGrosze));
   const vatGrosze = sumGrosze(revalidated.map((r) => r.lineVatGrosze));
-  const shippingGrosze = SHIPPING_FLAT_GROSZE;
+  const shippingGrosze = storeSettings.shippingFlatRateGrosze;
   const totalGrossGrosze = subtotalNetGrosze + vatGrosze + shippingGrosze;
 
   const accessToken = randomBytes(32).toString('base64url');

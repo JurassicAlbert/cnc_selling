@@ -294,6 +294,26 @@ Server Components/Actions have a boundary for them) — fixed by using
 `getSession()` directly, the same way `/api/plik/[fileId]` already had to.
 See `docs/HANDOVER.md` §9z6.
 
+**P7b, settings (slice 7) — built 2026-08-27.** Closes three real
+placeholders: the hardcoded `SHIPPING_FLAT_GROSZE` constant, the "we'll
+send the account number separately" bank-details text, and `User.role`'s
+own `input: false` comment noting staff have to be invited from a panel
+that didn't exist until now. Inviting staff needed no password-setting
+flow at all — Better Auth's existing OTP sign-in path already works for
+any `User` row regardless of whether it has an `Account`, so
+`/panel/ustawienia/personel` just creates the row; the new staffer signs
+in with a code, exactly like a real customer already can. That screen is
+the first in the panel gated `ADMIN`-only (`requireAdminSession()`, new),
+not just staff. Bank details and the shipping rate are a `StoreSettings`
+singleton now read everywhere the old constant/placeholder text was.
+Email templates are a genuine new capability: `EmailTemplate` rows
+DB-override `mailer.ts`'s hardcoded subject/body, falling back to the
+original hardcoded copy when unconfigured — `renderSubjectAndText` itself
+is untouched, still the seed source and the safe fallback. Live-verified
+end to end, including a real invite → OTP sign-in → ADMIN-only 404 →
+revoke → lockout round trip, and a real template edit picked up by the
+live `mailer` singleton. See `docs/HANDOVER.md` §9z7.
+
 ---
 
 ## Getting set up
@@ -373,16 +393,16 @@ order history, saved configurations, a real mailer, RODO consent +
 legal content, and sitewide loading/empty/error states. **P7a, the admin
 panel's operational minimum, is built** (§9y) — role-gated order
 management with staff-driven status transitions, marking bank-transfer
-orders paid, and a design-review queue, all audited. **P7b's first six
+orders paid, and a design-review queue, all audited. **P7b's first seven
 slices, catalogue admin (categories + products), materials & finishes
 CRUD, designs & collections CRUD, the production queue, content (FAQ,
-static pages, real customer reviews), and customers + RODO tooling, are
-built** (§9z/§9z2/§9z3/§9z4/§9z5/§9z6). See `docs/CHECKLIST.md` for the
-itemised state of every phase. Next:
+static pages, real customer reviews), customers + RODO tooling, and
+settings (staff users & roles, bank details, shipping rate, email
+templates), are built** (§9z/§9z2/§9z3/§9z4/§9z5/§9z6/§9z7). Real shipping
+rates and a real bank account number have now replaced P5's placeholders.
+See `docs/CHECKLIST.md` for the itemised state of every phase. Next:
 
-- **P7b, the rest of it** — settings (also where real shipping rates and a
-  real bank account number finally replace P5's placeholders), audit-log
-  viewer — each its own slice, per §16A.6.
+- **P7b's last piece** — the audit-log viewer, per §16A.6.
 - **P7c** — `@mui/x-data-grid` adoption, dashboards, global search, bulk
   actions. See `docs/ARCHITECTURE.md`'s note near §16A for the Materio
   direction already recorded for when it starts.

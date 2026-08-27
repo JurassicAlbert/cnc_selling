@@ -7,7 +7,7 @@ import { getSession } from '@/server/auth/session';
 import { readGuestSessionToken } from '@/server/session/read-guest-session';
 import { findCartForRequest } from '@/server/repositories/cart';
 import { recordAnalyticsEvent } from '@/server/analytics/record-event';
-import { SHIPPING_FLAT_GROSZE } from '@/server/orders/create-order';
+import { getStoreSettings } from '@/server/repositories/store-settings';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
 import { Section } from '@/ui/primitives/Section';
@@ -25,7 +25,10 @@ export const metadata: Metadata = {
  */
 export default async function CheckoutPage() {
   const [sessionToken, session] = await Promise.all([readGuestSessionToken(), getSession()]);
-  const cart = await findCartForRequest({ userId: session?.userId ?? null, sessionToken });
+  const [cart, storeSettings] = await Promise.all([
+    findCartForRequest({ userId: session?.userId ?? null, sessionToken }),
+    getStoreSettings(),
+  ]);
 
   if (cart.items.length === 0) {
     redirect('/koszyk');
@@ -33,7 +36,7 @@ export default async function CheckoutPage() {
 
   void recordAnalyticsEvent({ name: 'checkout_started', sessionToken, userId: session?.userId ?? null });
 
-  const totalGrossGrosze = cart.subtotalGrossGrosze + SHIPPING_FLAT_GROSZE;
+  const totalGrossGrosze = cart.subtotalGrossGrosze + storeSettings.shippingFlatRateGrosze;
 
   return (
     <Section>
@@ -53,7 +56,7 @@ export default async function CheckoutPage() {
           ))}
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <Text muted>{SITE.checkoutShippingLabelPl}</Text>
-            <Text muted>{formatPln(SHIPPING_FLAT_GROSZE)}</Text>
+            <Text muted>{formatPln(storeSettings.shippingFlatRateGrosze)}</Text>
           </div>
           <div
             style={{

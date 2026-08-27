@@ -20,6 +20,8 @@
  * POST, not worth a package for.
  */
 
+import { prisma } from '@/server/db/client';
+
 export type MailTemplate = 'order-confirmation' | 'verification-otp';
 
 export type OrderConfirmationMailData = {
@@ -87,6 +89,48 @@ function renderSubjectAndText<T extends MailTemplate>(template: T, data: MailDat
 }
 
 /**
+ * Placeholder values available to a DB-stored `EmailTemplate` override for
+ * each template — deliberately only ever built from the same typed
+ * `MailDataFor<T>` shape `renderSubjectAndText` already consumes, never
+ * arbitrary object properties. The admin edit screen shows these key names
+ * as a hint, sourced from `content/pl/admin.ts`'s own static copy of this
+ * same set — kept in sync by hand, not derived, since there are only two.
+ */
+function buildPlaceholders<T extends MailTemplate>(template: T, data: MailDataFor<T>): Record<string, string> {
+  if (template === 'order-confirmation') {
+    const d = data as OrderConfirmationMailData;
+    return { orderNumber: d.orderNumber, totalGrossZloty: formatGrossZloty(d.totalGrossGrosze), paymentMethodPl: paymentMethodPl(d.paymentMethod) };
+  }
+  const d = data as VerificationOtpMailData;
+  return { otp: d.otp, otpPurposePl: otpPurposePl(d.purpose) };
+}
+
+/** `{{key}}` substitution. An unmatched token is left as literal text — a safe no-op, not an error, since an admin typo shouldn't ever throw mid-send. */
+function interpolate(text: string, placeholders: Record<string, string>): string {
+  return text.replace(/\{\{(\w+)\}\}/g, (match, key: string) => placeholders[key] ?? match);
+}
+
+/**
+ * Looks up a DB-stored override for `template` before falling back to the
+ * hardcoded default — the one place both `Mailer` implementations share
+ * this logic, so it can't drift between them. A missing row (nothing
+ * configured, or the DB is unreachable) is not an error: `renderSubjectAndText`
+ * is always a safe, complete fallback.
+ */
+async function resolveSubjectAndText<T extends MailTemplate>(template: T, data: MailDataFor<T>): Promise<{ subject: string; text: string }> {
+  try {
+    const override = await prisma.emailTemplate.findUnique({ where: { key: template }, select: { subjectPl: true, bodyPl: true } });
+    if (override !== null) {
+      const placeholders = buildPlaceholders(template, data);
+      return { subject: interpolate(override.subjectPl, placeholders), text: interpolate(override.bodyPl, placeholders) };
+    }
+  } catch (error) {
+    console.error(`[mailer] EmailTemplate lookup failed for "${template}", using the hardcoded default:`, error);
+  }
+  return renderSubjectAndText(template, data);
+}
+
+/**
  * Logs and reports "not sent" — never throws, never blocks whatever called
  * it. Order creation's own caller treats a failed/unsent email as a
  * non-fatal side effect (`docs/ARCHITECTURE.md` §15.3), and Better Auth's
@@ -95,7 +139,7 @@ function renderSubjectAndText<T extends MailTemplate>(template: T, data: MailDat
  */
 class UnconfiguredMailer implements Mailer {
   async send<T extends MailTemplate>(template: T, to: string, data: MailDataFor<T>): Promise<MailSendResult> {
-    const { subject } = renderSubjectAndText(template, data);
+    const { subject } = await resolveSubjectAndText(template, data);
     console.log(`[mailer] unconfigured — would have sent "${template}" (${subject}) to ${to}`);
     return { sent: false };
   }
@@ -115,7 +159,7 @@ class ResendMailer implements Mailer {
   ) {}
 
   async send<T extends MailTemplate>(template: T, to: string, data: MailDataFor<T>): Promise<MailSendResult> {
-    const { subject, text } = renderSubjectAndText(template, data);
+    const { subject, text } = await resolveSubjectAndText(template, data);
     try {
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',

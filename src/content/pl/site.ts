@@ -162,6 +162,7 @@ export const SITE = {
   orderTotalLabelPl: 'Do zapłaty',
   orderBankTransferHeadingPl: 'Dane do przelewu',
   orderBankTransferTitlePl: 'Tytuł przelewu',
+  orderBankTransferAccountLabelPl: 'Numer konta',
   orderBankTransferAccountPendingPl:
     'Numer konta do przelewu prześlemy osobno — e-mailem lub podczas kontaktu. Nie zawiera go to potwierdzenie.',
   orderContactArrangedNoticePl: 'Skontaktujemy się, aby ustalić szczegóły zamówienia.',

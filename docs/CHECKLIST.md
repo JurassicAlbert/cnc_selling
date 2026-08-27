@@ -25,8 +25,9 @@ cookie silently dropped by WebKit over plain HTTP), real NIP/postal-code validat
 order-creation transaction with a race-free per-month order-number counter, real immutable order
 snapshots (verified by mutating a live catalogue row and confirming an existing order's display
 didn't change), and a real guest order-lookup/confirmation flow — see `docs/HANDOVER.md` §9l for
-the full account, including what's honestly still deferred (shipping rates and guest-cart-merge-
-on-login, both blocked on phases that haven't started, not skipped by choice). **P4 (upload,
+the full account, including what's honestly still deferred at the time (shipping rates, blocked on
+a phase that hadn't started — since made real in P7b slice 7 — and guest-cart-merge-on-login,
+closed by P6). **P4 (upload,
 design review, IP) was built 2026-08-26** — the full validation pipeline, IP consent, the review
 state machine, and a real configurator step, wired into a real seeded `CUSTOM` product; two real
 pre-existing bugs found and fixed along the way (CUSTOM products could never actually be priced;
@@ -387,7 +388,7 @@ Deliberately out of this pass, per `docs/ARCHITECTURE.md` §16A.6 and decision D
 
 ### P7b — management
 
-Built as vertical slices per §16A.6, not one pass — slice 1 (categories + products), slice 2 (materials + finishes), slice 3 (designs + collections), slice 4 (production queue), slice 5 (content: FAQ, static pages, reviews), and slice 6 (customers + RODO tooling) all shipped 2026-08-27; settings and the audit-log viewer are still open.
+Built as vertical slices per §16A.6, not one pass — slice 1 (categories + products), slice 2 (materials + finishes), slice 3 (designs + collections), slice 4 (production queue), slice 5 (content: FAQ, static pages, reviews), slice 6 (customers + RODO tooling), and slice 7 (settings: staff users & roles, bank details, shipping rate, email templates) all shipped 2026-08-27; only the audit-log viewer is still open.
 
 - [x] Categories CRUD — `/panel/kategorie`, no hard delete (soft-delete invariant, §16A.2 — `Category` is a real FK target)
 - [x] Products CRUD incl. dimension envelope, SEO fields, activate/deactivate — `/panel/produkty`, same soft-delete-only rule
@@ -407,7 +408,7 @@ Built as vertical slices per §16A.6, not one pass — slice 1 (categories + pro
 - [x] Reviews moderation — no facility to author a testimonial in a customer's name — `/panel/opinie`; `admin-reviews.ts` contains exactly one mutation (`setReviewStatus`, approve/reject), no update-content action exists anywhere in the codebase. Real minimal submission flow built alongside moderation (owner's explicit choice, since there was nothing honest to moderate otherwise): one `Review` per genuine `COMPLETED` `Order`, guest via constant-time `accessToken` comparison or logged-in via session `userId`, both re-verified server-side; lands `PENDING`, invisible on the storefront until approved — live-verified end to end (submit → invisible → approve → appears on homepage; second submission on the same order refused)
 - [x] Production queue grouped by status, module manifest, capacity view — `/panel/produkcja`, read-only (no new mutations); capacity is queued m²/machine-minutes against `MachineSettings.weeklyCapacityMinutes` (already existed, seeded `0`; shows an honest "not configured" note rather than a fake percentage until Settings ships); module manifest also added to the existing order detail page, not just the queue
 - [x] Printable production brief, clearly labelled not a production file — `/panel/zamowienia/[orderNumber]/karta-produkcyjna`, the exact warning text on screen (and in print), panel chrome hidden via `@media print`
-- [ ] Settings: staff users, bank details, shipping rates, email templates
+- [x] Settings: staff users, bank details, shipping rates, email templates — `/panel/ustawienia`; staff invite is real (`applyInviteStaffUser` creates a bare `User` row, no password needed — the existing OTP sign-in path already works for any account), ADMIN-only (`requireAdminSession()`, new); bank details and shipping rate are a `StoreSettings` singleton, replacing the `SHIPPING_FLAT_GROSZE` constant and the "we'll send the account number separately" placeholder everywhere both were used; email templates are DB-editable overrides (`EmailTemplate`) for `mailer.ts`'s hardcoded copy, falling back to it when unconfigured — live-verified end to end including a real staff invite → OTP sign-in → ADMIN-only 404 → revoke → lockout round trip
 - [ ] Audit log viewer
 - [ ] Soft delete enforced for entities referenced by orders
 
