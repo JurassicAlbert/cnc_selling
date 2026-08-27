@@ -639,6 +639,23 @@ cases. The other 5 catalogue entities can follow the same pattern —
 deliberately left as a mechanical follow-up rather than done all at
 once. See `docs/HANDOVER.md` §9z31.
 
+**The authorization matrix, genuinely tested — built 2026-08-27,
+autonomously.** A stale comment claimed this coverage already existed
+in a `tests/e2e/admin.spec.ts` that, checked directly against the full
+git history, never once existed. New `tests/e2e/admin-authz.spec.ts`
+is the real thing: unauthenticated → redirected to `/logowanie`,
+`CUSTOMER` → a genuine 404 on `/panel` (not a redirect, not a 403),
+`STAFF` → real access to ordinary panel pages but 404 on the
+`ADMIN`-only staff-management screen, `ADMIN` → real access
+everywhere — all four read directly from `requireStaffSession()`/
+`requireAdminSession()`'s own code before writing anything. Fixing the
+stale comment along the way, en route caught a genuine bug in the
+*test itself*, not the app: the `STAFF`/`ADMIN` re-login step assumed
+every login lands on `/moje-konto`, and failed immediately by landing
+on `/panel` instead — exactly the staff/admin-lands-on-panel redirect
+fix from earlier in this session, re-proven by an unrelated test. See
+`docs/HANDOVER.md` §9z32.
+
 ---
 
 ## Getting set up
@@ -764,7 +781,10 @@ Tablet layout at 1024px and CSV export were both confirmed **already
 correct** by real verification, no code needed (§9z30), and **CSV
 import is now built as a real pilot on Categories** — every other
 catalogue entity can follow the same `CsvImportForm` pattern (§9z31).
-See `docs/CHECKLIST.md` for the itemised state of every phase. Next,
+**The authorization matrix is now genuinely tested** by a real
+Playwright spec, replacing a stale comment that claimed coverage which
+never actually existed (§9z32). See `docs/CHECKLIST.md` for the
+itemised state of every phase. Next,
 continuing autonomously per the owner's standing direction to close
 remaining gaps toward "no missing pages, functionality, design and UI":
 

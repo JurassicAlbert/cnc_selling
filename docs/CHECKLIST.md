@@ -487,7 +487,7 @@ Pricing admin built 2026-08-27, autonomously (standing owner authorization to ke
 - [ ] Desktop layout verified
 - [ ] No critical console errors
 - [ ] Backend validation on every action; frontend values never trusted
-- [ ] Authorization matrix fully tested
+- [x] Authorization matrix fully tested — new `tests/e2e/admin-authz.spec.ts` (built 2026-08-27, see `docs/HANDOVER.md` §9z32): real Playwright coverage of `requireStaffSession()`/`requireAdminSession()`'s actual behavior — unauthenticated → redirect to `/logowanie`, `CUSTOMER` → real 404 on `/panel`, `STAFF` → 404 on the `ADMIN`-only screen but real access elsewhere, `ADMIN` → real access everywhere. A stale comment elsewhere in the suite had claimed this coverage already existed in a `tests/e2e/admin.spec.ts` that, checked directly against git history, never once existed — this is the real thing that comment should have pointed at
 - [ ] Structured logging in place
 - [ ] Backup strategy documented
 - [ ] No fake payment, email, production files, or status updates anywhere in the codebase

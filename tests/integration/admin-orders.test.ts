@@ -11,7 +11,7 @@ import { prisma } from '@/server/db/client';
  * Server Actions themselves (`transitionOrderStatus`/`markOrderPaid`) call
  * `requireStaffSession()`, which reads `next/headers` and can only run
  * inside a real request — proven end-to-end instead by
- * `tests/e2e/admin.spec.ts`, including the `CUSTOMER` → 404 case.
+ * `tests/e2e/admin-authz.spec.ts`, including the `CUSTOMER` → 404 case.
  */
 
 const PREFIX = 'test-admin-orders-';

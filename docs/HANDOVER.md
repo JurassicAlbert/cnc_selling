@@ -3110,6 +3110,30 @@ Added `papaparse` (+ `@types/papaparse`) rather than writing a parser — RFC 41
 
 `npm run typecheck && npm run lint && npm test && npm run build` all clean (604/604 — 5 new tests in `admin-categories.test.ts`: every valid row created, a bad row reported without aborting the batch, an in-file duplicate slug caught on its second occurrence, an empty CSV rejected, and — a real, not hypothetical, check given this session's own Polish-correctness theme — genuine Polish diacritics (`Żółw i dąb — ćma łąka źrebię`) round-tripping correctly through `Papa.parse` and into Postgres unchanged). Also confirmed directly in a throwaway Node script (`papaparse` imported the same way the app does) that parsing preserves all 9 diacritic characters from a UTF-8 string. Restarted the dev server before live-verifying, per §9z2's standing rule. Live-verified the form itself renders correctly on `/panel/kategorie` (file input, "Importuj" button, the expected-columns hint) on a fresh tab with zero console errors — did not attempt a real click-through file upload, since this browser tooling cannot drive a native OS file picker (a known, previously-documented limitation); the actual import logic is proven by the 5 real DB-backed tests instead, which exercise the exact same `applyImportCategoriesFromCsv` function the real form submission calls.
 
+## 9z32. The authorization matrix, genuinely tested — 2026-08-27
+
+Continuing autonomously: `docs/CHECKLIST.md`'s "Authorization matrix fully tested" led to a real, concrete finding. `tests/integration/admin-orders.test.ts`'s own header comment claimed this coverage already existed, end to end, in `tests/e2e/admin.spec.ts` — checked directly (`git log -- tests/e2e/admin.spec.ts` against the full history, not just the working tree) and that file has **never once existed** in this repository. Grepped the whole codebase for any other reference: exactly one, the same stale comment. Not a renamed file, not a removed one — the coverage was claimed and never actually built.
+
+### Why this genuinely needed Playwright, not another Vitest file
+
+`requireStaffSession()`/`requireAdminSession()` (`src/server/auth/session.ts`) call `getSession()`, which reads `next/headers` — throws outside a real request scope, the same constraint this project has hit and documented repeatedly (`docs/HANDOVER.md` §9). `authz.test.ts` already covers the *ownership* half of §16.2's matrix (`UploadedFile`/`CustomerDesign`, via the pure `find*` functions that take a session token as an explicit parameter) — but the *role* half (`CUSTOMER`/`STAFF`/`ADMIN` against `/panel/*`) has no pure-function escape hatch; the gate itself is the thing under test, and it only exists inside a real request. New `tests/e2e/admin-authz.spec.ts` is the first e2e spec to import `prisma` directly — needed because promoting a fresh account to `STAFF`/`ADMIN` has no UI path that doesn't already require being signed in as an `ADMIN` (the real invite flow, already covered elsewhere) — and the first to need `.env` loaded into the Playwright test-runner process itself (`import 'dotenv/config'`, since unlike the `webServer` subprocess, the runner doesn't get it for free).
+
+### Four real cases, matching the gate's own documented behavior exactly
+
+Read `requireStaffSession()`/`requireAdminSession()` directly before writing anything, rather than assuming: unauthenticated → `redirect('/logowanie')`; `CUSTOMER` → `notFound()`; `STAFF` on the `ADMIN`-only screen (`requireAdminSession()`, called specifically in `/panel/ustawienia/personel/page.tsx`, not the shared layout) → `notFound()`; `ADMIN` → real access. Confirmed the layout itself (`(admin)/panel/layout.tsx`) is where `requireStaffSession()` actually runs, so every one of the ~50 panel routes is covered by the same gate this spec exercises directly on two representative pages, not a reimplementation.
+
+### A genuine, useful accident: re-proving §9z17 through an unrelated test
+
+The `STAFF`/`ADMIN` promotion flow re-logs in after the role change (a fresh session has to be issued to pick up the new role). First draft assumed every login lands on `/moje-konto` (copied from `accounts.spec.ts`, which only ever logs in `CUSTOMER`s) — it failed immediately, landing on `/panel` instead, which is exactly §9z17's own staff/admin-lands-on-panel fix working correctly, caught by a completely different test than the one that originally verified it. Fixed the assertion, not the app — the failure was the test being wrong, not a regression.
+
+### The stale comment, fixed at the source
+
+`admin-orders.test.ts`'s own header comment now points at the real file (`tests/e2e/admin-authz.spec.ts`) instead of the phantom one — a two-line fix, but worth doing precisely because leaving a false "already covered elsewhere" claim in place is exactly how this gap stayed invisible for as long as it did.
+
+### Verified
+
+`npm run typecheck && npm run lint && npm run build` all clean. All 4 tests pass reliably on both configured browsers when run serially (`--workers=1`): 8/8 across desktop-chromium and mobile-safari. Under the suite's default full-parallel run, some of these (and, confirmed by running the *entire* pre-existing e2e suite the same way, several of `accounts.spec.ts`/`checkout.spec.ts`/`custom-upload.spec.ts`/`shell.spec.ts`'s own tests too) flake — the exact same "passes serially, flakes under full parallel load against one shared dev server" characteristic already documented for this project's e2e suite before this file existed (§9w), not a new problem this spec introduced. Left the disposable `e2e-authz-*@example.test` accounts this created in the shared dev DB, matching this directory's own established convention (every other e2e spec's test users are left in place too, never cleaned up per-run).
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous
