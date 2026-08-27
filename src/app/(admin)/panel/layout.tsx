@@ -35,6 +35,7 @@ export default async function PanelLayout({ children }: { readonly children: Rea
           </Typography>
           <Stack spacing={1} sx={{ mb: 3 }}>
             <Link href="/panel/zamowienia">{ADMIN.navOrdersPl}</Link>
+            <Link href="/panel/klienci">{ADMIN.navCustomersPl}</Link>
             <Link href="/panel/weryfikacja">{ADMIN.navDesignReviewPl}</Link>
             <Link href="/panel/kategorie">{ADMIN.navCategoriesPl}</Link>
             <Link href="/panel/produkty">{ADMIN.navProductsPl}</Link>

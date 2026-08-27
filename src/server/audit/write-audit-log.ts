@@ -10,7 +10,7 @@ import { prisma } from '@/server/db/client';
 import type { CurrentSession } from '@/server/auth/session';
 import { Prisma } from '@/generated/prisma/client';
 
-export type AuditAction = 'create' | 'update' | 'delete' | 'transition';
+export type AuditAction = 'create' | 'update' | 'delete' | 'transition' | 'export';
 
 export type WriteAuditLogInput = {
   readonly actor: CurrentSession;

@@ -278,6 +278,22 @@ every status to `COMPLETED`, a real review submitted, confirmed pending
 and hidden, approved, confirmed live on the homepage, second submission
 on the same order refused. See `docs/HANDOVER.md` §9z5.
 
+**P7b, customers + RODO tooling (slice 6) — built 2026-08-27.** No schema
+migration — `User.anonymizedAt` had sat unused since before P7, and `Order`
+already denormalizes its own `email`/`firstName`/`lastName`, so preserving
+order records was already true of the schema. `/panel/klienci` (list +
+detail, scoped to real customer accounts only) reuses the existing
+customer-facing order-history and saved-configuration queries directly
+rather than rebuilding them. RODO export is a genuine downloadable JSON
+file from a real route handler; anonymization scrubs identity fields and
+revokes sign-in (deletes `Session`/`Account` rows) while leaving orders
+and configurations untouched, matching the legal copy's own RODO clause.
+Live verification caught a real bug: `requireStaffSession()`'s
+`notFound()`/`redirect()` calls don't work inside a Route Handler (only
+Server Components/Actions have a boundary for them) — fixed by using
+`getSession()` directly, the same way `/api/plik/[fileId]` already had to.
+See `docs/HANDOVER.md` §9z6.
+
 ---
 
 ## Getting set up
@@ -357,16 +373,16 @@ order history, saved configurations, a real mailer, RODO consent +
 legal content, and sitewide loading/empty/error states. **P7a, the admin
 panel's operational minimum, is built** (§9y) — role-gated order
 management with staff-driven status transitions, marking bank-transfer
-orders paid, and a design-review queue, all audited. **P7b's first five
+orders paid, and a design-review queue, all audited. **P7b's first six
 slices, catalogue admin (categories + products), materials & finishes
-CRUD, designs & collections CRUD, the production queue, and content (FAQ,
-static pages, real customer reviews), are built**
-(§9z/§9z2/§9z3/§9z4/§9z5). See `docs/CHECKLIST.md` for the itemised state
-of every phase. Next:
+CRUD, designs & collections CRUD, the production queue, content (FAQ,
+static pages, real customer reviews), and customers + RODO tooling, are
+built** (§9z/§9z2/§9z3/§9z4/§9z5/§9z6). See `docs/CHECKLIST.md` for the
+itemised state of every phase. Next:
 
-- **P7b, the rest of it** — customers + RODO tooling, settings (also where
-  real shipping rates and a real bank account number finally replace P5's
-  placeholders), audit-log viewer — each its own slice, per §16A.6.
+- **P7b, the rest of it** — settings (also where real shipping rates and a
+  real bank account number finally replace P5's placeholders), audit-log
+  viewer — each its own slice, per §16A.6.
 - **P7c** — `@mui/x-data-grid` adoption, dashboards, global search, bulk
   actions. See `docs/ARCHITECTURE.md`'s note near §16A for the Materio
   direction already recorded for when it starts.

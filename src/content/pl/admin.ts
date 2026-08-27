@@ -14,10 +14,12 @@ import type {
   OrderStatus,
   ProductTypeCode,
   ReviewStatus,
+  UploadKind,
 } from '@/generated/prisma/enums';
 
 export const ADMIN = {
   navOrdersPl: 'Zamówienia',
+  navCustomersPl: 'Klienci',
   navDesignReviewPl: 'Weryfikacja projektów',
   navCategoriesPl: 'Kategorie',
   navProductsPl: 'Produkty',
@@ -339,6 +341,40 @@ export const ADMIN = {
   reviewsColumnDatePl: 'Data',
   reviewApprovePl: 'Zatwierdź',
   reviewRejectPl: 'Odrzuć',
+
+  customersHeadingPl: 'Klienci',
+  customersFilterSearchPl: 'Imię i nazwisko lub e-mail',
+  customersEmptyPl: 'Brak klientów spełniających kryteria.',
+  customersColumnNamePl: 'Imię i nazwisko',
+  customersColumnEmailPl: 'E-mail',
+  customersColumnOrdersPl: 'Zamówienia',
+  customersColumnRegisteredPl: 'Data rejestracji',
+  customerAnonymizedChipPl: 'Zanonimizowany',
+  customerNotFoundPl: 'Nie znaleziono klienta.',
+
+  customerProfileHeadingPl: 'Dane klienta',
+  customerFieldEmailPl: 'E-mail',
+  customerFieldPhonePl: 'Telefon',
+  customerFieldRegisteredPl: 'Data rejestracji',
+  customerOrdersHeadingPl: 'Zamówienia',
+  customerOrdersEmptyPl: 'Brak zamówień.',
+  customerConfigurationsHeadingPl: 'Zapisane konfiguracje',
+  customerConfigurationsEmptyPl: 'Brak zapisanych konfiguracji.',
+  customerFilesHeadingPl: 'Przesłane pliki',
+  customerFilesEmptyPl: 'Brak przesłanych plików.',
+  customerFilesColumnNamePl: 'Nazwa',
+  customerFilesColumnKindPl: 'Rodzaj',
+  customerFilesColumnSizePl: 'Rozmiar',
+  customerFilesColumnDatePl: 'Data',
+
+  customerRodoHeadingPl: 'RODO',
+  customerExportLinkPl: 'Pobierz dane (RODO)',
+  customerAnonymizeHeadingPl: 'Anonimizacja konta',
+  customerAnonymizeWarningPl:
+    'Nieodwracalne: dane osobowe klienta zostaną usunięte, a konto nie będzie już dostępne. Historia zamówień pozostanie zachowana zgodnie z przepisami rachunkowymi.',
+  customerAnonymizeNoteLabelPl: 'Notatka (wymagana)',
+  customerAnonymizeButtonPl: 'Zanonimizuj konto',
+  customerAnonymizedNoticePl: 'Konto zanonimizowane',
 } as const;
 
 const ORDER_STATUS_LABELS_PL: Record<OrderStatus, string> = {
@@ -448,4 +484,13 @@ const DESIGN_RIGHTS_STATUS_LABELS_PL: Record<DesignRightsStatus, string> = {
 
 export function adminDesignRightsStatusLabel(status: DesignRightsStatus): string {
   return DESIGN_RIGHTS_STATUS_LABELS_PL[status];
+}
+
+const UPLOAD_KIND_LABELS_PL: Record<UploadKind, string> = {
+  CUSTOMER_DESIGN: 'Własny projekt',
+  REFERENCE_PHOTO: 'Zdjęcie referencyjne',
+};
+
+export function adminUploadKindLabel(kind: UploadKind): string {
+  return UPLOAD_KIND_LABELS_PL[kind];
 }
