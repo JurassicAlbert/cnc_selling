@@ -58,7 +58,7 @@ export function SiteHeader({ categories, session }: SiteHeaderProps) {
             }}
           >
             <PrecisionManufacturingIcon size={22} style={{ color: 'var(--mui-palette-secondary-main)' }} />
-            CNC Selling
+            RYT
           </Link>
           {categories.map((category) => (
             <Link

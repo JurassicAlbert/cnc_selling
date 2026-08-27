@@ -204,6 +204,20 @@ doesn't exist in this Next.js version (renamed to `proxy.ts`) and why the
 panel is the one part of this app built in real MUI components rather than
 this codebase's usual CSS-variable convention.
 
+**P7b, catalogue admin (slice 1 of several) — built 2026-08-27.** P7b is
+built as vertical slices too, not one pass (§16A.6) — the owner chose
+categories + products first. Real CRUD for both (soft-delete only, per
+§16A.2 — both are FK targets), plus every one of a product's six related
+tables: preset sizes, thicknesses, material compatibility, design
+assignment, installation variants, and photo upload (a new, genuinely
+public storage adapter, `src/server/storage/public-images.ts` —
+deliberately not the same private path customer uploads use). This slice
+lets staff associate existing materials/designs to a product, not author
+new ones — that's materials/finishes CRUD and designs/collections CRUD,
+each a later slice. See `docs/HANDOVER.md` §9z, including a second
+`revalidatePath`-in-the-wrong-half mistake caught immediately by the new
+integration tests.
+
 ---
 
 ## Getting set up
@@ -218,7 +232,7 @@ npm install
 npm run db:up
 npm run db:deploy      # applies the initial migration
 
-npm test               # 464 assertions across twenty-five files, unit + integration
+npm test               # 476 assertions across twenty-seven files, unit + integration
 npm run typecheck      # TypeScript strict, noUncheckedIndexedAccess, no emit
 npm run lint             # Biome + the Polish-literal check
 npm run build           # Next.js production build
@@ -283,16 +297,18 @@ order history, saved configurations, a real mailer, RODO consent +
 legal content, and sitewide loading/empty/error states. **P7a, the admin
 panel's operational minimum, is built** (§9y) — role-gated order
 management with staff-driven status transitions, marking bank-transfer
-orders paid, and a design-review queue, all audited. See
+orders paid, and a design-review queue, all audited. **P7b's first slice,
+catalogue admin (categories + products), is built** (§9z). See
 `docs/CHECKLIST.md` for the itemised state of every phase. Next:
 
-- **P7b/P7c, the rest of the admin panel** — not started. Catalogue/
-  designs/materials/finishes/customers-RODO/content/production-queue/
-  settings CRUD (P7b — also where real shipping rates and a real bank
-  account number finally replace P5's placeholders), then
-  `@mui/x-data-grid` adoption, dashboards, global search, bulk actions
-  (P7c). See `docs/ARCHITECTURE.md`'s note near §16A for the Materio
-  direction already recorded for when P7c starts.
+- **P7b, the rest of it** — designs/collections CRUD, materials/finishes
+  CRUD, customers + RODO tooling, content, production queue, settings
+  (also where real shipping rates and a real bank account number finally
+  replace P5's placeholders), audit-log viewer — each its own slice, per
+  §16A.6.
+- **P7c** — `@mui/x-data-grid` adoption, dashboards, global search, bulk
+  actions. See `docs/ARCHITECTURE.md`'s note near §16A for the Materio
+  direction already recorded for when it starts.
 - **P2's remaining piece** — the homepage's hero/craftsmanship/reviews/FAQ
   sections, once real content exists for them.
 

@@ -15,7 +15,7 @@
  */
 
 export const SITE = {
-  homeSeoTitlePl: 'CNC Selling — meble i akcesoria z grawerem',
+  homeSeoTitlePl: 'RYT — meble i akcesoria z grawerem',
   homeSeoDescPl:
     'Meble, biżuteria i wykończenia wnętrz z drewna i gresu, z personalizowanym grawerem.',
 
@@ -177,7 +177,7 @@ export const SITE = {
   footerSearchLinkPl: 'Szukaj produktów',
   footerTermsLinkPl: 'Regulamin',
   footerPrivacyLinkPl: 'Polityka prywatności',
-  footerCopyrightPl: 'CNC Selling',
+  footerCopyrightPl: 'RYT',
   footerTaglinePl: 'Precyzja CNC. Ciepło rzemiosła.',
   footerBlogLinkPl: 'Blog',
 
@@ -230,7 +230,7 @@ export const SITE = {
   errorPageCorrelationIdLabelPl: 'Numer błędu',
 
   blogHeadingPl: 'Blog',
-  blogSeoTitlePl: 'Blog — CNC Selling',
+  blogSeoTitlePl: 'Blog — RYT',
   blogSeoDescPl: 'Artykuły o rzemiośle, materiałach i personalizacji grawerem.',
   blogEmptyStatePl: 'Wpisy pojawią się tutaj wkrótce.',
   blogPublishedLabelPl: 'Opublikowano',

@@ -58,7 +58,7 @@ export function Footer({ categories }: FooterProps) {
 
           <div>
             <div style={{ font: 'var(--mui-font-h6)', color: 'var(--mui-palette-text-primary)' }}>
-              CNC Selling
+              RYT
             </div>
             <div
               style={{

@@ -387,12 +387,14 @@ Deliberately out of this pass, per `docs/ARCHITECTURE.md` §16A.6 and decision D
 
 ### P7b — management
 
-- [ ] Categories CRUD
-- [ ] Products CRUD incl. dimension envelope, SEO fields, activate/deactivate
-- [ ] Preset sizes, thicknesses, installation variants
-- [ ] Product↔material compatibility editor
-- [ ] Product↔design assignment
-- [ ] Product image upload, ordering, alt text
+Built as vertical slices per §16A.6, not one pass — slice 1 (categories + products) shipped 2026-08-27, the rest is still open.
+
+- [x] Categories CRUD — `/panel/kategorie`, no hard delete (soft-delete invariant, §16A.2 — `Category` is a real FK target)
+- [x] Products CRUD incl. dimension envelope, SEO fields, activate/deactivate — `/panel/produkty`, same soft-delete-only rule
+- [x] Preset sizes, thicknesses, installation variants — nested editors on the product edit page, genuinely deletable (not FK-referenced from `Order`, which holds an immutable JSON snapshot)
+- [x] Product↔material compatibility editor — associates existing `Material` rows with a per-product `priceFactorBp`; does not author new materials (that's materials CRUD, still open below)
+- [x] Product↔design assignment — same association-only scope, against existing `Design` rows
+- [x] Product image upload, ordering, alt text — real files written to `public/images/products/...` (`src/server/storage/public-images.ts`, a new adapter — deliberately NOT `local-disk.ts`'s private/gated storage, since catalogue photos must be plain public URLs), MIME-sniffed via `file-type`, live-verified rendering on the real storefront product page
 - [ ] Designs CRUD incl. production metadata
 - [ ] Design rights status + provenance fields; new designs default to non-sellable
 - [ ] Design collections CRUD
