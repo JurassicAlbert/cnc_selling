@@ -537,6 +537,16 @@ real, unrelated, pre-existing hydration bug on the product photo
 upload form along the way (`encType` mismatch) — flagged as a separate
 follow-up rather than fixed inline. See `docs/HANDOVER.md` §9z23.
 
+**Duplicate action on Products, Designs, Materials — built 2026-08-27,
+autonomously.** A "Duplikuj" button, zero client JS (same
+`<form action>`-bound-to-a-Server-Action shape as the existing
+activate/deactivate button), copies the core scalar record — not
+relations, which are frequently record-specific — with a free `-kopia`
+slug variant, starting inactive with a visibly marked name so it's
+never confused with the original. Design/Material's existing images
+are reused by reference rather than re-uploaded. See
+`docs/HANDOVER.md` §9z24.
+
 ---
 
 ## Getting set up
@@ -647,10 +657,11 @@ existing orders stay unaffected. The **soft-delete invariant is now
 proven, not just claimed** (§9z21), **blog admin/authoring is now
 built** (§9z22) — the last open item from P2's blog scaffold — and
 **every admin detail page now shows a real activity timeline** from the
-audit log (§9z23). See `docs/CHECKLIST.md` for the itemised state of
-every phase. Next,
-continuing autonomously per the owner's standing direction to close
-remaining gaps toward "no missing pages, functionality, design and UI":
+audit log (§9z23), and **Products/Designs/Materials each have a real
+"Duplikuj" action** (§9z24). See `docs/CHECKLIST.md` for the itemised
+state of every phase. Next, continuing autonomously per the owner's
+standing direction to close remaining gaps toward "no missing pages,
+functionality, design and UI":
 
 - **P7c, the rest of it** — three list pages still use a plain `<Table>`,
   each needing its own design: Produkcja's rows link to a different

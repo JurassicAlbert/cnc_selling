@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyCreateMaterial, applySetMaterialAvailable, applySetMaterialSortOrder, applyUpdateMaterial } from '@/server/actions/admin-materials';
+import {
+  applyCreateMaterial,
+  applyDuplicateMaterial,
+  applySetMaterialAvailable,
+  applySetMaterialSortOrder,
+  applyUpdateMaterial,
+} from '@/server/actions/admin-materials';
 import { applyAddMaterialFinish } from '@/server/actions/admin-material-finishes';
 import { listMaterialOptionsForAdmin } from '@/server/repositories/admin-products';
 import type { CurrentSession } from '@/server/auth/session';
@@ -141,6 +147,34 @@ describe('applySetMaterialSortOrder', () => {
 
     const material = await prisma.material.findUniqueOrThrow({ where: { id: created.id } });
     expect(material.sortOrder).toBe(2);
+  });
+});
+
+describe('applyDuplicateMaterial', () => {
+  it('copies the core record and reuses the existing image, starting unavailable with a distinct slug/name', async () => {
+    const staff = staffActor();
+    const created = await applyCreateMaterial(staff, materialFormData({ namePl: 'Oryginalny materiał', sortOrder: '4' }));
+    if (!created.ok) throw new Error('setup failed');
+    await applySetMaterialAvailable(staff, created.id, true);
+    const original = await prisma.material.findUniqueOrThrow({ where: { id: created.id } });
+
+    const result = await applyDuplicateMaterial(staff, created.id);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.id).not.toBe(created.id);
+
+    const copy = await prisma.material.findUniqueOrThrow({ where: { id: result.id } });
+    expect(copy.slug).toBe(`${original.slug}-kopia`);
+    expect(copy.namePl).toBe('Oryginalny materiał (kopia)');
+    expect(copy.sortOrder).toBe(4);
+    expect(copy.isAvailable).toBe(false);
+    expect(copy.imageUrl).toBe(original.imageUrl);
+    expect(await prisma.auditLog.count({ where: { entity: 'Material', entityId: result.id, action: 'create', actorEmail: staff.email } })).toBe(1);
+  });
+
+  it('returns a failure result for a non-existent material', async () => {
+    const result = await applyDuplicateMaterial(staffActor(), 'does-not-exist');
+    expect(result.ok).toBe(false);
   });
 });
 

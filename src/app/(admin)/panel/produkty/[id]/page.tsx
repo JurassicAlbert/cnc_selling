@@ -7,8 +7,9 @@ import {
   listDesignOptionsForAdmin,
   listMaterialOptionsForAdmin,
 } from '@/server/repositories/admin-products';
-import { setProductActive } from '@/server/actions/admin-products';
+import { duplicateProductAndGo, setProductActive } from '@/server/actions/admin-products';
 import { ActiveToggleButton } from '@/ui/primitives/ActiveToggleButton';
+import { DuplicateButton } from '@/ui/primitives/DuplicateButton';
 import { ProductForm } from '@/ui/islands/admin/ProductForm';
 import { PresetSizesEditor } from '@/ui/islands/admin/PresetSizesEditor';
 import { ThicknessesEditor } from '@/ui/islands/admin/ThicknessesEditor';
@@ -38,7 +39,10 @@ export default async function AdminProductDetailPage({ params }: ProductDetailPa
     <>
       <Stack direction="row" sx={{ mb: 3, justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h5">{product.namePl}</Typography>
-        <ActiveToggleButton isActive={product.isActive} action={setProductActive.bind(null, product.id, !product.isActive)} />
+        <Stack direction="row" spacing={1}>
+          <DuplicateButton action={duplicateProductAndGo.bind(null, product.id)} />
+          <ActiveToggleButton isActive={product.isActive} action={setProductActive.bind(null, product.id, !product.isActive)} />
+        </Stack>
       </Stack>
 
       <ProductForm product={product} categories={categories} />

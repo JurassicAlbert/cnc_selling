@@ -434,7 +434,7 @@ Slice 6 (raw-HTML-form cleanup — two `<button>`s and six `<input type="file">`
 - [x] Activity timeline on every record, from the audit log — `RecordActivityTimeline` (shared server component), on all 14 admin detail pages that have one (built 2026-08-27, see `docs/HANDOVER.md` §9z23)
 - [ ] "Preview as customer" from every product and design
 - [ ] Empty states say what to do next
-- [ ] Duplicate action on products, designs, materials
+- [x] Duplicate action on products, designs, materials — copies the core scalar record (not relations), starts inactive, distinct `-kopia` slug/name (built 2026-08-27, see `docs/HANDOVER.md` §9z24)
 - [ ] Drag-drop image upload with reordering and inline alt text
 - [ ] Print views: production brief, packing list
 - [ ] CSV import/export on catalogue tables

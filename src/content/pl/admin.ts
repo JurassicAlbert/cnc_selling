@@ -84,6 +84,7 @@ export const ADMIN = {
   deactivatePl: 'Dezaktywuj',
   activeLabelPl: 'Aktywna',
   inactiveLabelPl: 'Nieaktywna',
+  duplicatePl: 'Duplikuj',
 
   categoriesHeadingPl: 'Kategorie',
   categoriesNewPl: 'Nowa kategoria',

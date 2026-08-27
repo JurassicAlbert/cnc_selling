@@ -2951,6 +2951,27 @@ Every other entity's admin detail-page loader already selects `id`. `findOrderFo
 
 `npm run typecheck && npm run lint && npm test && npm run build` all clean (579/579 tests — 2 new in `admin-audit-log.test.ts` covering `listAuditLogsForEntity`'s scoping and its empty-history case). Live-verified in the browser across entity shapes, not just one: a `Material` with real prior mutations (§9z18's own sortOrder/availability edits) rendered its correct, ordered diff history → the real seeded order `2026/08/0001` rendered its full mutation history including the payment-status update the existing status timeline doesn't show → a fresh `Category`/`Customer`/`EmailTemplate` (string-keyed, not a cuid) each correctly rendered the honest empty state, confirming the component works across `entityId` shapes (cuid, order id, template key). Found and flagged, not fixed inline (out of this slice's scope, spawned as a background task): a real, pre-existing hydration mismatch on `ProductImagesEditor`'s upload form (`encType` differs server/client), reproduced on a fresh tab, unrelated to this change.
 
+## 9z24. Duplicate action on Products, Designs, Materials — 2026-08-27
+
+Continuing autonomously through §16A's admin-UX checklist. Building a near-identical variant of an existing product/design/material (e.g. the same wooden material in a slightly different finish, or a design that only needs one detail changed) meant retyping every field from scratch — no "start from a copy" path existed anywhere in the panel.
+
+### Scoped deliberately: core record only, not relations
+
+Product has 5 related child tables (preset sizes, thicknesses, material/design compatibility, install variants, images); Design has material compatibility; Material has finish compatibility. All three are frequently specific to the *particular* record, not implied by a near-duplicate — copying them silently would misrepresent the new record as more "ready" than it is. `applyDuplicateProduct`/`applyDuplicateDesign`/`applyDuplicateMaterial` copy only the core scalar fields, matching the entity's own `applyCreateX` input shape exactly (built by reading the original row and re-assembling that same typed input, not a raw SQL clone). Design/Material's image files (`thumbnailUrl`/`previewUrl`/`imageUrl`) are reused by reference, not re-uploaded — the duplicate starts pointing at the same physical file until staff replaces it via the normal edit form, avoiding the complexity of a server-side file copy for a same-session convenience action.
+
+### Two small, real decisions, applied consistently across all three
+
+- **New slug is a free `-kopia`/`-kopia-2`/... variant**, not user-chosen — new shared `nextAvailableSlug()` (`src/server/util/unique-slug.ts`, the project's first `src/server/util/` module) takes the collision check as a callback rather than a Prisma model name, so the same function serves `Design`'s two independently-unique fields (`slug` AND `code`) as well as `Product`/`Material`'s single `slug`.
+- **The duplicate always starts inactive/unavailable**, regardless of the original's state — a half-set-up copy (no relations yet, no reviewed pricing) should never silently go live identical to its source. `namePl` gets a visible `(kopia)` suffix so it's never confused with the original in a list, even before a human renames it.
+
+### Zero-client-JS button, matching `ActiveToggleButton`'s own precedent
+
+New shared `DuplicateButton.tsx` (`src/ui/primitives`) is the same `<form action={...}>`-bound-to-a-Server-Action shape as the existing `ActiveToggleButton` — no client component needed for a single submit button. Because there's no form data to echo back on failure (the id comes from a record already loaded on the page, so a real failure isn't reachable from the button), the bound actions (`duplicateProductAndGo`/`duplicateDesignAndGo`/`duplicateMaterialAndGo`) call `redirect()` directly from inside the Server Action on success — no client-side `useActionState`/`router.push` round trip needed for this one, unlike the multi-field forms elsewhere in the panel that do need to echo validation errors.
+
+### Verified
+
+`npm run typecheck && npm run lint && npm test && npm run build` all clean (586/586 tests — 7 new: 3 in `admin-products.test.ts`, 2 each in `admin-designs.test.ts`/`admin-materials.test.ts`, covering the core-field copy, the `-kopia`/`-kopia-2` collision path, and the not-found case). Live-verified in the browser end to end, restarting the dev server first after a stale-compile artifact briefly showed an unrelated transient error that cleared on restart: clicked "Duplikuj" on the real seeded `Gres biały` material — landed on `Gres biały (kopia)` with `gres-bialy-kopia`, "Aktywuj" (correctly inactive), every core field copied, and a real audit-log `create` entry recording `duplicatedFromId` → same for the real seeded `WZR-001` design — landed on the copy with both `slug` and `code` suffixed `-kopia`, the same reused thumbnail/preview images. Both disposable duplicates deleted from the dev DB afterward, restoring the original 3-material/2-design state.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

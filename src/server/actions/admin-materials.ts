@@ -14,12 +14,14 @@
  */
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
 import { prisma } from '@/server/db/client';
 import { requireStaffSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 import { savePublicImage } from '@/server/storage/public-images';
+import { nextAvailableSlug } from '@/server/util/unique-slug';
 import type { GrainDirection, MaterialFamily } from '@/generated/prisma/enums';
 
 export type MaterialMutationResult =
@@ -212,4 +214,71 @@ export async function setMaterialSortOrder(id: string, sortOrder: number): Promi
   await applySetMaterialSortOrder(staff, id, sortOrder);
   revalidatePath('/panel/materialy');
   revalidatePath(`/panel/materialy/${id}`);
+}
+
+/**
+ * Copies the core scalar record plus the existing `imageUrl` (the file
+ * is reused, not re-uploaded — same "starts pointing at the same image
+ * until replaced" rule as `applyDuplicateDesign`), but not compatible-
+ * finish rows, which are frequently material-specific. Starts
+ * unavailable, same "review before it goes live" rule as every other
+ * duplicate action.
+ */
+export async function applyDuplicateMaterial(staff: CurrentSession, id: string): Promise<MaterialMutationResult> {
+  const original = await prisma.material.findUnique({ where: { id } });
+  if (original === null) {
+    return { ok: false, detail: 'Materiał nie istnieje.' };
+  }
+
+  const slug = await nextAvailableSlug(
+    original.slug,
+    async (candidate) => (await prisma.material.findUnique({ where: { slug: candidate }, select: { id: true } })) !== null,
+  );
+
+  const fields: MaterialFields = {
+    slug,
+    namePl: `${original.namePl} (kopia)`,
+    family: original.family,
+    shortDescPl: original.shortDescPl,
+    characteristicsPl: original.characteristicsPl,
+    pricePerM2Grosze: original.pricePerM2Grosze,
+    maxSheetWidthMm: original.maxSheetWidthMm,
+    maxSheetHeightMm: original.maxSheetHeightMm,
+    minLineWidthUm: original.minLineWidthUm,
+    minDetailSpacingUm: original.minDetailSpacingUm,
+    minTextHeightUm: original.minTextHeightUm,
+    grainDirection: original.grainDirection,
+    supportsCnc: original.supportsCnc,
+    supportsLaser: original.supportsLaser,
+    isNaturalVariable: original.isNaturalVariable,
+    sortOrder: original.sortOrder,
+  };
+
+  const created = await prisma.material.create({ data: { ...fields, imageUrl: original.imageUrl, isAvailable: false } });
+  await writeAuditLog({
+    actor: staff,
+    entity: 'Material',
+    entityId: created.id,
+    action: 'create',
+    diff: { ...fields, duplicatedFromId: id },
+  });
+
+  return { ok: true, id: created.id };
+}
+
+export async function duplicateMaterial(id: string): Promise<MaterialMutationResult> {
+  const staff = await requireStaffSession();
+  const result = await applyDuplicateMaterial(staff, id);
+  if (result.ok) {
+    revalidatePath('/panel/materialy');
+  }
+  return result;
+}
+
+/** See `duplicateProductAndGo`'s own comment — same zero-JS-button shape. */
+export async function duplicateMaterialAndGo(id: string): Promise<void> {
+  const result = await duplicateMaterial(id);
+  if (result.ok) {
+    redirect(`/panel/materialy/${result.id}`);
+  }
 }

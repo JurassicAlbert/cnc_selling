@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyCreateProduct, applySetProductActive, applySetProductSortOrder, applyUpdateProduct } from '@/server/actions/admin-products';
+import {
+  applyCreateProduct,
+  applyDuplicateProduct,
+  applySetProductActive,
+  applySetProductSortOrder,
+  applyUpdateProduct,
+} from '@/server/actions/admin-products';
 import type { ProductCoreInput } from '@/server/actions/admin-products';
 import { applySetProductMaterial } from '@/server/actions/admin-product-catalogue';
 import { listActiveProductsByCategorySlug } from '@/server/repositories/products';
@@ -170,6 +176,52 @@ describe('applySetProductSortOrder', () => {
 
     const product = await prisma.product.findUniqueOrThrow({ where: { id: created.id } });
     expect(product.sortOrder).toBe(4);
+  });
+});
+
+describe('applyDuplicateProduct', () => {
+  it('copies the core scalar record with a distinct slug/name, starting inactive', async () => {
+    const staff = staffActor();
+    const category = await seedCategory();
+    const input = productInput(category.id, { namePl: 'Oryginał', sortOrder: 3 });
+    const created = await applyCreateProduct(staff, input);
+    if (!created.ok) throw new Error('setup failed');
+    await applySetProductActive(staff, created.id, true);
+
+    const result = await applyDuplicateProduct(staff, created.id);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.id).not.toBe(created.id);
+
+    const copy = await prisma.product.findUniqueOrThrow({ where: { id: result.id } });
+    expect(copy.slug).toBe(`${input.slug}-kopia`);
+    expect(copy.namePl).toBe('Oryginał (kopia)');
+    expect(copy.categoryId).toBe(category.id);
+    expect(copy.sortOrder).toBe(3);
+    expect(copy.isActive).toBe(false);
+    expect(await prisma.auditLog.count({ where: { entity: 'Product', entityId: result.id, action: 'create', actorEmail: staff.email } })).toBe(1);
+  });
+
+  it('picks the next free -kopia-N slug when -kopia is already taken', async () => {
+    const staff = staffActor();
+    const category = await seedCategory();
+    const input = productInput(category.id);
+    const created = await applyCreateProduct(staff, input);
+    if (!created.ok) throw new Error('setup failed');
+
+    const first = await applyDuplicateProduct(staff, created.id);
+    if (!first.ok) throw new Error('setup failed');
+    const second = await applyDuplicateProduct(staff, created.id);
+    expect(second.ok).toBe(true);
+    if (!second.ok) throw new Error('unreachable');
+
+    const copy = await prisma.product.findUniqueOrThrow({ where: { id: second.id } });
+    expect(copy.slug).toBe(`${input.slug}-kopia-2`);
+  });
+
+  it('returns a failure result for a non-existent product', async () => {
+    const result = await applyDuplicateProduct(staffActor(), 'does-not-exist');
+    expect(result.ok).toBe(false);
   });
 });
 

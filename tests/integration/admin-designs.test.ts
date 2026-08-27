@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   applyCreateCollection,
   applyCreateDesign,
+  applyDuplicateDesign,
   applySetCollectionActive,
   applySetCollectionSortOrder,
   applySetDesignActive,
@@ -202,6 +203,36 @@ describe('applySetDesignSortOrder', () => {
 
     const design = await prisma.design.findUniqueOrThrow({ where: { id: created.id } });
     expect(design.sortOrder).toBe(3);
+  });
+});
+
+describe('applyDuplicateDesign', () => {
+  it('copies the core record and reuses the existing images, starting inactive with distinct slug/code/name', async () => {
+    const staff = staffActor();
+    const created = await applyCreateDesign(staff, designFormData({ namePl: 'Oryginalny wzór', sortOrder: '5' }));
+    if (!created.ok) throw new Error('setup failed');
+    await applySetDesignActive(staff, created.id, true);
+    const original = await prisma.design.findUniqueOrThrow({ where: { id: created.id } });
+
+    const result = await applyDuplicateDesign(staff, created.id);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.id).not.toBe(created.id);
+
+    const copy = await prisma.design.findUniqueOrThrow({ where: { id: result.id } });
+    expect(copy.slug).toBe(`${original.slug}-kopia`);
+    expect(copy.code).toBe(`${original.code}-kopia`);
+    expect(copy.namePl).toBe('Oryginalny wzór (kopia)');
+    expect(copy.sortOrder).toBe(5);
+    expect(copy.isActive).toBe(false);
+    expect(copy.thumbnailUrl).toBe(original.thumbnailUrl);
+    expect(copy.previewUrl).toBe(original.previewUrl);
+    expect(await prisma.auditLog.count({ where: { entity: 'Design', entityId: result.id, action: 'create', actorEmail: staff.email } })).toBe(1);
+  });
+
+  it('returns a failure result for a non-existent design', async () => {
+    const result = await applyDuplicateDesign(staffActor(), 'does-not-exist');
+    expect(result.ok).toBe(false);
   });
 });
 

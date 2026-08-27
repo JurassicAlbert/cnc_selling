@@ -16,12 +16,14 @@
  */
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
 import { prisma } from '@/server/db/client';
 import { requireStaffSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 import { savePublicImage } from '@/server/storage/public-images';
+import { nextAvailableSlug } from '@/server/util/unique-slug';
 import type { DesignRightsStatus, ProductionMethod } from '@/generated/prisma/enums';
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -403,4 +405,84 @@ export async function setDesignSortOrder(id: string, sortOrder: number): Promise
   await applySetDesignSortOrder(staff, id, sortOrder);
   revalidatePath('/panel/wzory');
   revalidatePath(`/panel/wzory/${id}`);
+}
+
+/**
+ * Copies the core scalar record plus the existing `thumbnailUrl`/
+ * `previewUrl` (both files are reused, not re-uploaded — a duplicate
+ * starts pointing at the same images until staff replaces them) but not
+ * the material-compatibility rows or any product assignment, both of
+ * which are frequently design-specific. Starts inactive, same "review
+ * before it goes live" rule as `applyDuplicateProduct`.
+ */
+export async function applyDuplicateDesign(staff: CurrentSession, id: string): Promise<DesignMutationResult> {
+  const original = await prisma.design.findUnique({ where: { id } });
+  if (original === null) {
+    return { ok: false, detail: 'Wzór nie istnieje.' };
+  }
+
+  const slug = await nextAvailableSlug(
+    original.slug,
+    async (candidate) => (await prisma.design.findUnique({ where: { slug: candidate }, select: { id: true } })) !== null,
+  );
+  const code = await nextAvailableSlug(
+    original.code,
+    async (candidate) => (await prisma.design.findUnique({ where: { code: candidate }, select: { id: true } })) !== null,
+  );
+
+  const fields: DesignFields = {
+    slug,
+    code,
+    namePl: `${original.namePl} (kopia)`,
+    descPl: original.descPl,
+    collectionId: original.collectionId,
+    tags: original.tags,
+    referenceWidthMm: original.referenceWidthMm,
+    minLineWidthUm: original.minLineWidthUm,
+    minDetailSpacingUm: original.minDetailSpacingUm,
+    minEngraveDepthUm: original.minEngraveDepthUm,
+    recommendedMethod: original.recommendedMethod,
+    minRecommendedWidthMm: original.minRecommendedWidthMm,
+    maxRecommendedWidthMm: original.maxRecommendedWidthMm,
+    detailLevel: original.detailLevel,
+    machiningMilliMinutesPerM2: original.machiningMilliMinutesPerM2,
+    rightsStatus: original.rightsStatus,
+    sourceArtist: original.sourceArtist,
+    sourceTitle: original.sourceTitle,
+    sourceYear: original.sourceYear,
+    artistDeathYear: original.artistDeathYear,
+    sourceRef: original.sourceRef,
+    rightsNotes: original.rightsNotes,
+    sortOrder: original.sortOrder,
+  };
+
+  const created = await prisma.design.create({
+    data: { ...fields, thumbnailUrl: original.thumbnailUrl, previewUrl: original.previewUrl, isActive: false },
+  });
+  await writeAuditLog({
+    actor: staff,
+    entity: 'Design',
+    entityId: created.id,
+    action: 'create',
+    diff: { ...fields, duplicatedFromId: id },
+  });
+
+  return { ok: true, id: created.id };
+}
+
+export async function duplicateDesign(id: string): Promise<DesignMutationResult> {
+  const staff = await requireStaffSession();
+  const result = await applyDuplicateDesign(staff, id);
+  if (result.ok) {
+    revalidatePath('/panel/wzory');
+  }
+  return result;
+}
+
+/** See `duplicateProductAndGo`'s own comment — same zero-JS-button shape. */
+export async function duplicateDesignAndGo(id: string): Promise<void> {
+  const result = await duplicateDesign(id);
+  if (result.ok) {
+    redirect(`/panel/wzory/${result.id}`);
+  }
 }
