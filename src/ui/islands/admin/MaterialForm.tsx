@@ -10,6 +10,7 @@ import type { AdminMaterialDetail } from '@/server/repositories/admin-materials'
 import { createMaterial, updateMaterial } from '@/server/actions/admin-materials';
 import type { MaterialMutationResult } from '@/server/actions/admin-materials';
 import type { GrainDirection, MaterialFamily } from '@/generated/prisma/enums';
+import { FileInputButton } from './FileInputButton';
 
 const FAMILIES: readonly MaterialFamily[] = ['SOLID_WOOD', 'PLYWOOD', 'MDF', 'CERAMIC', 'LEATHER', 'OTHER'];
 const GRAIN_DIRECTIONS: readonly GrainDirection[] = ['NONE', 'LENGTHWISE'];
@@ -70,7 +71,13 @@ export function MaterialForm({ material }: { readonly material?: AdminMaterialDe
           <Typography variant="body2" sx={{ mb: 0.5 }}>
             {material === undefined ? ADMIN.materialFieldImagePl : ADMIN.materialFieldImageReplacePl}
           </Typography>
-          <input type="file" name="file" accept="image/jpeg,image/png,image/webp" required={material === undefined} />
+          <FileInputButton
+            name="file"
+            accept="image/jpeg,image/png,image/webp"
+            required={material === undefined}
+            label={material === undefined ? ADMIN.materialFieldImagePl : ADMIN.materialFieldImageReplacePl}
+            chooseLabel={ADMIN.fileChoosePl}
+          />
         </div>
 
         <Grid container spacing={2}>

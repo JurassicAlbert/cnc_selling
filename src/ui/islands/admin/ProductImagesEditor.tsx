@@ -8,6 +8,7 @@ import { ADMIN } from '@/content/pl/admin';
 import type { AdminProductImage } from '@/server/repositories/admin-products';
 import { removeProductImage, setPrimaryProductImage, uploadProductImage } from '@/server/actions/admin-product-images';
 import type { ActionResult } from '@/server/actions/admin-product-images';
+import { FileInputButton } from './FileInputButton';
 
 const INITIAL_STATE: ActionResult = { ok: true };
 
@@ -45,7 +46,7 @@ export function ProductImagesEditor({ productId, images }: { readonly productId:
       <form action={formAction} encType="multipart/form-data">
         <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-end', mt: 1 }}>
           {!state.ok && <Alert severity="error">{state.detail}</Alert>}
-          <input type="file" name="file" accept="image/jpeg,image/png,image/webp" required />
+          <FileInputButton name="file" accept="image/jpeg,image/png,image/webp" required label={ADMIN.imageUploadPl} chooseLabel={ADMIN.fileChoosePl} />
           <TextField label={ADMIN.imageFieldAltPl} name="altPl" size="small" sx={{ width: 220 }} />
           <SubmitButton />
         </Stack>

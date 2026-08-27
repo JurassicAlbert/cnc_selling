@@ -10,6 +10,7 @@ import type { AdminCollectionOption, AdminDesignDetail } from '@/server/reposito
 import { createDesign, updateDesign } from '@/server/actions/admin-designs';
 import type { DesignMutationResult } from '@/server/actions/admin-designs';
 import type { DesignRightsStatus, ProductionMethod } from '@/generated/prisma/enums';
+import { FileInputButton } from './FileInputButton';
 
 const PRODUCTION_METHODS: readonly ProductionMethod[] = ['CNC_CARVE', 'CNC_ENGRAVE', 'LASER_ENGRAVE', 'MIXED', 'MANUAL_PREP'];
 const RIGHTS_STATUSES: readonly DesignRightsStatus[] = [
@@ -82,13 +83,25 @@ export function DesignForm({
           <Typography variant="body2" sx={{ mb: 0.5 }}>
             {design === undefined ? ADMIN.designFieldThumbnailPl : ADMIN.designFieldThumbnailReplacePl}
           </Typography>
-          <input type="file" name="thumbnailFile" accept="image/jpeg,image/png,image/webp" required={design === undefined} />
+          <FileInputButton
+            name="thumbnailFile"
+            accept="image/jpeg,image/png,image/webp"
+            required={design === undefined}
+            label={design === undefined ? ADMIN.designFieldThumbnailPl : ADMIN.designFieldThumbnailReplacePl}
+            chooseLabel={ADMIN.fileChoosePl}
+          />
         </div>
         <div>
           <Typography variant="body2" sx={{ mb: 0.5 }}>
             {design === undefined ? ADMIN.designFieldPreviewPl : ADMIN.designFieldPreviewReplacePl}
           </Typography>
-          <input type="file" name="previewFile" accept="image/jpeg,image/png,image/webp" required={design === undefined} />
+          <FileInputButton
+            name="previewFile"
+            accept="image/jpeg,image/png,image/webp"
+            required={design === undefined}
+            label={design === undefined ? ADMIN.designFieldPreviewPl : ADMIN.designFieldPreviewReplacePl}
+            chooseLabel={ADMIN.fileChoosePl}
+          />
         </div>
 
         <Typography variant="subtitle1">{ADMIN.designSectionProductionPl}</Typography>

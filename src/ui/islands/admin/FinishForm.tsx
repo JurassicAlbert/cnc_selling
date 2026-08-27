@@ -10,6 +10,7 @@ import type { AdminFinishDetail } from '@/server/repositories/admin-finishes';
 import { createFinish, updateFinish } from '@/server/actions/admin-finishes';
 import type { FinishMutationResult } from '@/server/actions/admin-finishes';
 import type { FinishKind } from '@/generated/prisma/enums';
+import { FileInputButton } from './FileInputButton';
 
 const KINDS: readonly FinishKind[] = ['NATURAL', 'OIL', 'HARDWAX_OIL', 'STAIN', 'VARNISH'];
 const INITIAL_STATE: FinishMutationResult = { ok: true, id: '' };
@@ -59,7 +60,13 @@ export function FinishForm({ finish }: { readonly finish?: AdminFinishDetail }) 
           <Typography variant="body2" sx={{ mb: 0.5 }}>
             {finish === undefined ? ADMIN.finishFieldImagePl : ADMIN.finishFieldImageReplacePl}
           </Typography>
-          <input type="file" name="file" accept="image/jpeg,image/png,image/webp" required={finish === undefined} />
+          <FileInputButton
+            name="file"
+            accept="image/jpeg,image/png,image/webp"
+            required={finish === undefined}
+            label={finish === undefined ? ADMIN.finishFieldImagePl : ADMIN.finishFieldImageReplacePl}
+            chooseLabel={ADMIN.fileChoosePl}
+          />
         </div>
 
         <Grid container spacing={2}>

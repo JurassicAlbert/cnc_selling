@@ -141,6 +141,7 @@ export const ADMIN = {
 
   imageFieldAltPl: 'Tekst alternatywny (alt)',
   imageUploadPl: 'Dodaj zdjęcie',
+  fileChoosePl: 'Wybierz plik',
   imageSetPrimaryPl: 'Ustaw jako główne',
   imagePrimaryLabelPl: 'Główne',
   imagesEmptyPl: 'Brak zdjęć.',

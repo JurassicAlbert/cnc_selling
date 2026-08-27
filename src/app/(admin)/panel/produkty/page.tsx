@@ -58,9 +58,9 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
             </MenuItem>
           ))}
         </TextField>
-        <button type="submit" style={{ alignSelf: 'flex-end' }}>
+        <Button type="submit" variant="contained" sx={{ alignSelf: 'flex-end' }}>
           {ADMIN.ordersFilterApplyPl}
-        </button>
+        </Button>
       </form>
 
       {products.length === 0 ? (

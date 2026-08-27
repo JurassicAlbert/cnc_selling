@@ -1,4 +1,4 @@
-import { MenuItem, TextField, Typography } from '@mui/material';
+import { Button, MenuItem, TextField, Typography } from '@mui/material';
 
 import { ADMIN, adminOrderStatusLabel } from '@/content/pl/admin';
 import { ORDER_STATUSES } from '@/domain/order-status/transitions';
@@ -55,9 +55,9 @@ export default async function AdminOrdersPage({ searchParams }: OrdersPageProps)
           ))}
         </TextField>
         <TextField name="search" label={ADMIN.ordersFilterSearchPl} defaultValue={search ?? ''} size="small" sx={{ minWidth: 240 }} />
-        <button type="submit" style={{ alignSelf: 'flex-end' }}>
+        <Button type="submit" variant="contained" sx={{ alignSelf: 'flex-end' }}>
           {ADMIN.ordersFilterApplyPl}
-        </button>
+        </Button>
       </form>
 
       {orders.length === 0 ? (
