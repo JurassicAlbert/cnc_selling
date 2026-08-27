@@ -2702,6 +2702,24 @@ One real, deliberate difference from `OrdersDataGrid`: no `encodeURIComponent` o
 
 `npm test` (542/542, unchanged — no repository/action logic touched across any of the six pages), `npm run typecheck`, `npm run lint`, `npm run build` all clean; no schema change, no migration, no new dependency (already installed in slice 2). Dev server restarted before live-verifying, per §9z2's standing rule — again saw the slow-first-request-after-a-dependency-change latency noted in §9z10 (this time from restarting onto the six-file diff), resolved by simply waiting longer before the first navigation. Live-verified in the browser: Kategorie and Produkty checked end to end — real rows, correct Polish column headers and the `dataGridPlPL` pagination chrome ("Wierszy na stronę:", "1–7 z 7"), a row click navigating to the real category detail page, Produkty's real `categoryId`/`typeCode` filter form still narrowing results correctly (confirmed both a real filtered match and the honest `Brak produktów.` empty state for a filter matching nothing) → Materiały, Wykończenia, Wzory, and Kolekcje each spot-checked and confirmed rendering real rows with correct labels (material family, finish kind, design rights status, all via their existing `admin*Label` functions) and no genuine console errors (network requests for each page all 200 OK; a batch of console 404s present was stale history from earlier navigations in the same long-lived tab, not from these pages — confirmed via `read_network_requests` showing nothing but 200s).
 
+## 9z12. P7c, slice 4 — `DataGrid` on the remaining navigate-to-detail lists — 2026-08-27
+
+Fifth P7c slice, extending `EntityDataGrid` (slice 3) to the four other list pages that turned out to share the exact same shape — Klienci, FAQ, Strony, Weryfikacja. Third reuse of the primitive with zero changes to it; each page only needed its own thin `columns` file, same as slice 3's six.
+
+### Scoping out the five pages that don't actually fit, on purpose
+
+Before building, read the remaining nine `<Table>`-using pages, not just the four that matched. Five don't share `EntityDataGrid`'s "click a row, navigate to that row's own detail page" shape, and forcing them in would mean bad design, not reuse:
+- **Opinie** and **Personel** have per-row action buttons (approve/reject a review; revoke a staff member) — no detail page for a review or a staff row to navigate to, so `onRowClick` has nothing correct to do.
+- **Produkcja**'s rows link to a *different* entity's detail page (the order), not their own — `EntityDataGrid`'s `basePath + row.id` navigation assumes the row's own id, which doesn't apply here.
+- **Szablony e-mail** is a fixed two-row list (the closed `MailTemplate` set) — sorting, pagination, and density controls would be pure decoration over two rows that will never grow.
+- **Dziennik zdarzeń**'s diff column holds pretty-printed, variable-height JSON — `DataGrid`'s fixed-row-height model actively fights that content shape.
+
+Documented this in `docs/CHECKLIST.md` explicitly, rather than letting five un-migrated pages read as five forgotten ones — each is a real, deliberate design decision for a future slice, not an oversight.
+
+### Verified
+
+`npm test` (542/542, unchanged), `npm run typecheck`, `npm run lint`, `npm run build` all clean; no schema/dependency change. Dev server restarted before live-verifying, per §9z2's standing rule. Live-verified in the browser: Klienci's real `search` filter narrowed correctly and a row click navigated to the exact right customer (confirmed even for a customer with an empty `name` field, where only the email cell has visible link text) → FAQ, Strony, and Weryfikacja each confirmed rendering real rows with correct Polish headers and pagination chrome, network requests all clean 200s.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

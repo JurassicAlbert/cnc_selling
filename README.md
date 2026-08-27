@@ -385,6 +385,19 @@ end (including Produkty's real filter form and empty state) and
 spot-checked the other four rendering real, correctly-labelled rows. See
 `docs/HANDOVER.md` §9z11.
 
+**P7c, `DataGrid` on the remaining navigate-to-detail lists (slice 4) —
+built 2026-08-27.** Extends `EntityDataGrid` to Klienci, FAQ, Strony, and
+Weryfikacja — a third reuse of slice 3's primitive with no changes to it.
+Deliberately does *not* touch the other five remaining `<Table>` pages:
+Opinie and Personel have per-row action buttons with no detail page to
+navigate to; Produkcja's rows link to a different entity's (an order's)
+detail page, not their own; Szablony e-mail is a fixed two-row list where
+`DataGrid` chrome adds nothing; Dziennik zdarzeń's diff column holds
+variable-height JSON that doesn't suit a fixed-row-height grid. Each is a
+real design decision for its own future slice, recorded in
+`docs/CHECKLIST.md` so it reads as deliberate, not forgotten. See
+`docs/HANDOVER.md` §9z12.
+
 ---
 
 ## Getting set up
@@ -473,14 +486,17 @@ audit-log viewer are all built
 (§9z/§9z2/§9z3/§9z4/§9z5/§9z6/§9z7/§9z8). Real shipping rates and a real
 bank account number have now replaced P5's placeholders. **P7c has
 started, also as vertical slices** — global search (Ctrl/⌘+K, §9z9),
-`@mui/x-data-grid` on Orders (§9z10), and `DataGrid` on the six catalogue
-list pages (§9z11) are built; the rest of its 23-item UX-polish list is
-still open. See `docs/CHECKLIST.md` for the itemised state of every
-phase. Next:
+`@mui/x-data-grid` on Orders (§9z10), `DataGrid` on the six catalogue
+list pages (§9z11), and on Klienci/FAQ/Strony/Weryfikacja (§9z12) are
+built; the rest of its 23-item UX-polish list is still open. See
+`docs/CHECKLIST.md` for the itemised state of every phase. Next:
 
-- **P7c, the rest of it** — `DataGrid` on the remaining ~9 admin list
-  pages (Klienci, Opinie, FAQ, Strony, Produkcja, Personel, Szablony
-  e-mail, Dziennik zdarzeń, Weryfikacja), then bulk actions, inline
+- **P7c, the rest of it** — the five remaining `<Table>` pages each need
+  their own design, not a mechanical `EntityDataGrid` repeat: Opinie and
+  Personel have per-row action buttons with no detail page to navigate
+  to; Produkcja's rows link to a different entity's page; Szablony e-mail
+  is a fixed two-row list; Dziennik zdarzeń's diff column holds
+  variable-height JSON `DataGrid` doesn't suit. Then bulk actions, inline
   editing, column/density persistence, saved filters, keyboard nav, and
   the rest of the list, one slice at a time. See `docs/ARCHITECTURE.md`'s
   note near §16A for the Materio direction already recorded for this
