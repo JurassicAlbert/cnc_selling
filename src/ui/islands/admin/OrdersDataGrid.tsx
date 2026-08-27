@@ -15,15 +15,17 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Chip, Typography } from '@mui/material';
-import { DataGrid } from '@mui/x-data-grid';
+import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import type { GridColDef, GridRowParams } from '@mui/x-data-grid';
 
 import { ADMIN, adminOrderStatusLabel } from '@/content/pl/admin';
 import { formatPln } from '@/domain/money/money';
 import type { AdminOrderListItem } from '@/server/repositories/admin-orders';
+import { useGridPreferences } from '@/ui/islands/admin/useGridPreferences';
 
 export function OrdersDataGrid({ rows }: { readonly rows: readonly AdminOrderListItem[] }) {
   const router = useRouter();
+  const gridPreferences = useGridPreferences('orders');
 
   const columns: GridColDef<AdminOrderListItem>[] = [
     {
@@ -88,13 +90,15 @@ export function OrdersDataGrid({ rows }: { readonly rows: readonly AdminOrderLis
       rows={rows}
       columns={columns}
       getRowId={(row) => row.orderNumber}
-      getRowHeight={() => 56}
       autoHeight
+      showToolbar
+      slots={{ toolbar: GridToolbar }}
       disableColumnMenu={false}
       onRowClick={(params: GridRowParams<AdminOrderListItem>) => router.push(`/panel/zamowienia/${encodeURIComponent(params.row.orderNumber)}`)}
       sx={{ cursor: 'pointer', border: 'none' }}
       initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
       pageSizeOptions={[25, 50, 100]}
+      {...gridPreferences}
     />
   );
 }

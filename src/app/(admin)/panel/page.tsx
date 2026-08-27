@@ -36,6 +36,21 @@ function toDateInputValue(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * Builds the "every dashboard number clicks through to the records behind
+ * it" hrefs (`docs/CHECKLIST.md`). Date windows here mirror
+ * `getDashboardKpis`'s own (today/7d/30d lookback from `now`) closely
+ * enough for a click-through — not byte-exact, since the KPI's "today" uses
+ * local server time while the Orders list's `dateFrom`/`dateTo` filter
+ * parses UTC dates (same convention as this page's own date-range form
+ * above); a user landing from the tile still sees the right list with the
+ * matching filter visible and adjustable.
+ */
+function ordersHref(from: Date, to: Date): string {
+  const dateParam = (d: Date) => d.toISOString().slice(0, 10);
+  return `/panel/zamowienia?dateFrom=${dateParam(from)}&dateTo=${dateParam(to)}`;
+}
+
 export default async function AdminDashboardPage({ searchParams }: DashboardPageProps) {
   const params = await searchParams;
   const now = new Date();
@@ -67,6 +82,10 @@ export default async function AdminDashboardPage({ searchParams }: DashboardPage
   const hasCapacityConfigured = capacity.weeklyCapacityMinutes > 0;
   const capacityPercent = hasCapacityConfigured ? Math.round((capacity.queuedMachineMinutes / capacity.weeklyCapacityMinutes) * 100) : null;
 
+  const ordersTodayHref = ordersHref(now, now);
+  const orders7dHref = ordersHref(new Date(now.getTime() - 7 * DAY_MS), now);
+  const orders30dHref = ordersHref(defaultFrom, now);
+
   return (
     <>
       <Typography variant="h5" sx={{ mb: 3 }}>
@@ -75,16 +94,16 @@ export default async function AdminDashboardPage({ searchParams }: DashboardPage
 
       <Grid container spacing={2} sx={{ mb: 4 }}>
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <StatCard icon={<TodayOutlinedIcon fontSize="small" />} label={ADMIN.dashboardKpiOrdersTodayPl} value={String(kpis.ordersToday)} color="primary" />
+          <StatCard icon={<TodayOutlinedIcon fontSize="small" />} label={ADMIN.dashboardKpiOrdersTodayPl} value={String(kpis.ordersToday)} color="primary" href={ordersTodayHref} />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <StatCard icon={<DateRangeOutlinedIcon fontSize="small" />} label={ADMIN.dashboardKpiOrders7dPl} value={String(kpis.orders7d)} color="info" />
+          <StatCard icon={<DateRangeOutlinedIcon fontSize="small" />} label={ADMIN.dashboardKpiOrders7dPl} value={String(kpis.orders7d)} color="info" href={orders7dHref} />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <StatCard icon={<CalendarMonthOutlinedIcon fontSize="small" />} label={ADMIN.dashboardKpiOrders30dPl} value={String(kpis.orders30d)} color="secondary" />
+          <StatCard icon={<CalendarMonthOutlinedIcon fontSize="small" />} label={ADMIN.dashboardKpiOrders30dPl} value={String(kpis.orders30d)} color="secondary" href={orders30dHref} />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <StatCard icon={<PaidOutlinedIcon fontSize="small" />} label={ADMIN.dashboardKpiRevenueNetPl} value={formatPln(kpis.revenueNet30dGrosze)} color="success" />
+          <StatCard icon={<PaidOutlinedIcon fontSize="small" />} label={ADMIN.dashboardKpiRevenueNetPl} value={formatPln(kpis.revenueNet30dGrosze)} color="success" href={orders30dHref} />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <StatCard
@@ -92,10 +111,17 @@ export default async function AdminDashboardPage({ searchParams }: DashboardPage
             label={ADMIN.dashboardKpiRevenueGrossPl}
             value={formatPln(kpis.revenueGross30dGrosze)}
             color="success"
+            href={orders30dHref}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <StatCard icon={<TrendingUpOutlinedIcon fontSize="small" />} label={ADMIN.dashboardKpiAovPl} value={formatPln(kpis.averageOrderValueGrosze)} color="info" />
+          <StatCard
+            icon={<TrendingUpOutlinedIcon fontSize="small" />}
+            label={ADMIN.dashboardKpiAovPl}
+            value={formatPln(kpis.averageOrderValueGrosze)}
+            color="info"
+            href={orders30dHref}
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <StatCard
@@ -103,6 +129,7 @@ export default async function AdminDashboardPage({ searchParams }: DashboardPage
             label={ADMIN.dashboardKpiAwaitingPaymentPl}
             value={String(kpis.ordersAwaitingPayment)}
             color="warning"
+            href="/panel/zamowienia?paymentStatus=AWAITING"
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
@@ -111,6 +138,7 @@ export default async function AdminDashboardPage({ searchParams }: DashboardPage
             label={ADMIN.dashboardKpiDesignsAwaitingReviewPl}
             value={String(kpis.designsAwaitingReview)}
             color="warning"
+            href="/panel/weryfikacja"
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
@@ -119,6 +147,7 @@ export default async function AdminDashboardPage({ searchParams }: DashboardPage
             label={ADMIN.dashboardKpiOrdersInProductionPl}
             value={String(kpis.ordersInProduction)}
             color="primary"
+            href="/panel/produkcja"
           />
         </Grid>
       </Grid>

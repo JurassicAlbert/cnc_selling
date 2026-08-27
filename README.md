@@ -436,6 +436,21 @@ the way — a real MUI `Theme` object (or a function-valued `sx` prop)
 crashes if it crosses a Server→Client Component boundary as a prop — now
 recorded as a general lesson. See `docs/HANDOVER.md` §9z15.
 
+**P7c, persisted dense grids + dashboard click-through (slice 8) — built
+2026-08-27.** A new `useGridPreferences` hook (`localStorage`-backed)
+wired into all 13 admin grid components: real `density` (compact by
+default, a toolbar toggle up to comfortable — MUI's default toolbar
+needed both `showToolbar` *and* `slots={{toolbar: GridToolbar}}`
+together to actually show the density control, confirmed live) plus
+persisted sort/column-visibility, replacing every grid's old hardcoded
+row height. Every Dashboard stat card now links through to its records
+— Orders gained `dateFrom`/`dateTo` filtering (the repository already
+supported it, just never wired at the page level). Caught and fixed a
+real test-flakiness bug along the way: the Dashboard KPI tests asserted
+absolute counts against an intentionally-unscoped, shared test database
+— rewritten as before/after deltas, race-proof under `npm test`'s
+parallel file execution. See `docs/HANDOVER.md` §9z16.
+
 ---
 
 ## Getting set up
@@ -529,20 +544,22 @@ list pages (§9z11), on Klienci/FAQ/Strony/Weryfikacja (§9z12), with
 per-row actions on Opinie/Personel (§9z13), raw-HTML-form cleanup
 (§9z14), and the Dashboard + Materio-style visual shell — a real `/panel`
 landing page with KPI stat cards and `@mui/x-charts` charts, a second
-admin-only theme, and a grouped icon sidebar (§9z15) — are built; the
-rest of its UX-polish list is still open. **P8's Dashboard module is
-correspondingly checked off in `docs/CHECKLIST.md`**, except the
-configurator funnel (needs a new `AnalyticsEvent` model, deliberately
-deferred, not silently dropped). See `docs/CHECKLIST.md` for the
-itemised state of every phase. Next:
+admin-only theme, and a grouped icon sidebar (§9z15) — are built, and so
+is slice 8 (§9z16) — persisted dense grids (density/sort/columns via a
+new `useGridPreferences` hook, `localStorage`-backed) across all 13 grid
+components, and every Dashboard stat card linking through to its real,
+correctly-filtered records. **P8's Dashboard module is correspondingly
+checked off in `docs/CHECKLIST.md`**, except the configurator funnel
+(needs a new `AnalyticsEvent` model, deliberately deferred, not silently
+dropped). See `docs/CHECKLIST.md` for the itemised state of every phase.
+Next:
 
 - **P7c, the rest of it** — three list pages still use a plain `<Table>`,
   each needing its own design: Produkcja's rows link to a different
   entity's page; Szablony e-mail is a fixed two-row list; Dziennik
   zdarzeń's diff column holds variable-height JSON `DataGrid` doesn't
-  suit. Then bulk actions, inline editing, column/density persistence,
-  saved filters, keyboard nav, and the rest of the list, one slice at a
-  time.
+  suit. Then bulk actions, inline editing, saved filters, keyboard nav
+  (J/K between records), and the rest of the list, one slice at a time.
 - **P8, the rest of it** — pricing admin (versioned saves, price
   simulator, audit diff — highest-risk screen in the app) and the
   configurator funnel (needs `AnalyticsEvent` + instrumenting every

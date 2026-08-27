@@ -13,16 +13,32 @@ type OrdersPageProps = {
     readonly status?: string;
     readonly paymentStatus?: string;
     readonly search?: string;
+    readonly dateFrom?: string;
+    readonly dateTo?: string;
   }>;
 };
+
+/** Same UTC-midnight convention the Dashboard's own date-range form uses (`panel/page.tsx`). */
+function parseDateParam(value: string | undefined): Date | undefined {
+  if (value === undefined || value.length === 0) {
+    return undefined;
+  }
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
 
 export default async function AdminOrdersPage({ searchParams }: OrdersPageProps) {
   const params = await searchParams;
   const status = isOrderStatus(params.status) ? params.status : undefined;
   const paymentStatus = isPaymentStatus(params.paymentStatus) ? params.paymentStatus : undefined;
   const search = params.search !== undefined && params.search.length > 0 ? params.search : undefined;
+  const dateFrom = parseDateParam(params.dateFrom);
+  // End-of-day, so "dateTo" is inclusive of the whole selected day — same
+  // reasoning as the Dashboard's own range form.
+  const dateToRaw = parseDateParam(params.dateTo);
+  const dateTo = dateToRaw === undefined ? undefined : new Date(dateToRaw.getTime() + 24 * 60 * 60 * 1000 - 1);
 
-  const orders = await listOrdersForAdmin({ status, paymentStatus, search });
+  const orders = await listOrdersForAdmin({ status, paymentStatus, search, dateFrom, dateTo });
 
   return (
     <>
@@ -55,6 +71,22 @@ export default async function AdminOrdersPage({ searchParams }: OrdersPageProps)
           ))}
         </TextField>
         <TextField name="search" label={ADMIN.ordersFilterSearchPl} defaultValue={search ?? ''} size="small" sx={{ minWidth: 240 }} />
+        <TextField
+          type="date"
+          name="dateFrom"
+          label={ADMIN.dashboardDateRangeFromPl}
+          defaultValue={params.dateFrom ?? ''}
+          size="small"
+          slotProps={{ inputLabel: { shrink: true } }}
+        />
+        <TextField
+          type="date"
+          name="dateTo"
+          label={ADMIN.dashboardDateRangeToPl}
+          defaultValue={params.dateTo ?? ''}
+          size="small"
+          slotProps={{ inputLabel: { shrink: true } }}
+        />
         <Button type="submit" variant="contained" sx={{ alignSelf: 'flex-end' }}>
           {ADMIN.ordersFilterApplyPl}
         </Button>

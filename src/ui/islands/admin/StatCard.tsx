@@ -6,6 +6,7 @@
  */
 
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 import { Card, CardContent, Stack, Typography } from '@mui/material';
 
 export type StatCardColor = 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info';
@@ -16,15 +17,47 @@ export function StatCard({
   value,
   subLabel,
   color = 'primary',
+  href,
 }: {
   readonly icon: ReactNode;
   readonly label: string;
   readonly value: string;
   readonly subLabel?: string;
   readonly color?: StatCardColor;
+  /** When set, the whole card links through to the records behind the number (`docs/CHECKLIST.md`'s "every dashboard number clicks through"). */
+  readonly href?: string;
+}) {
+  const card = <StatCardBody icon={icon} label={label} value={value} subLabel={subLabel} color={color} />;
+
+  if (href === undefined) {
+    return card;
+  }
+
+  // A plain wrapping `<Link>`, not MUI's polymorphic `component={Link}` —
+  // same reasoning as `AdminSidebarNav`: keeps the typing simple and
+  // avoids relying on MUI's `OverridableComponent` prop-forwarding.
+  return (
+    <Link href={href} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+      {card}
+    </Link>
+  );
+}
+
+function StatCardBody({
+  icon,
+  label,
+  value,
+  subLabel,
+  color,
+}: {
+  readonly icon: ReactNode;
+  readonly label: string;
+  readonly value: string;
+  readonly subLabel?: string;
+  readonly color: StatCardColor;
 }) {
   return (
-    <Card>
+    <Card sx={{ height: '100%' }}>
       <CardContent>
         <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
           <Stack

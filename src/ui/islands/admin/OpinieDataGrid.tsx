@@ -11,14 +11,16 @@
  */
 
 import { Button, Chip } from '@mui/material';
-import { DataGrid } from '@mui/x-data-grid';
+import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN, adminReviewStatusLabel } from '@/content/pl/admin';
 import { setReviewStatus } from '@/server/actions/admin-reviews';
 import type { AdminReviewListItem } from '@/server/repositories/admin-reviews';
+import { useGridPreferences } from '@/ui/islands/admin/useGridPreferences';
 
 export function OpinieDataGrid({ rows }: { readonly rows: readonly AdminReviewListItem[] }) {
+  const gridPreferences = useGridPreferences('opinie');
   const columns: GridColDef<AdminReviewListItem>[] = [
     { field: 'orderNumber', headerName: ADMIN.reviewsColumnOrderPl, flex: 0.8, minWidth: 130 },
     { field: 'authorNamePl', headerName: ADMIN.reviewsColumnAuthorPl, flex: 0.8, minWidth: 140 },
@@ -77,11 +79,13 @@ export function OpinieDataGrid({ rows }: { readonly rows: readonly AdminReviewLi
       rows={rows}
       columns={columns}
       getRowId={(row) => row.id}
-      getRowHeight={() => 56}
       autoHeight
+      showToolbar
+      slots={{ toolbar: GridToolbar }}
       sx={{ border: 'none' }}
       initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
       pageSizeOptions={[25, 50, 100]}
+      {...gridPreferences}
     />
   );
 }

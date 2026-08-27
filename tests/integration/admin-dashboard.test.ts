@@ -104,42 +104,56 @@ afterEach(async () => {
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 describe('getDashboardKpis', () => {
+  // `getDashboardKpis` is deliberately unscoped (no test-fixture-prefix
+  // filter — it queries every real order, matching its real production
+  // purpose). Every assertion below is therefore a BEFORE/AFTER delta
+  // across this test's own fixtures, never an absolute value — asserting
+  // e.g. `ordersToday === 2` would be flaky under `npm test`'s parallel
+  // test-file execution, where other files' own fixtures (created with the
+  // same real `createdAt: now()` default) transiently exist in the same
+  // shared database. A prior version of this test asserted absolutes and
+  // failed exactly this way the first time it ran inside the full suite.
   it('counts orders in each window regardless of status, but only sums revenue for non-CANCELLED orders', async () => {
     const now = new Date();
+    const before = await getDashboardKpis(now);
+
     await seedOrder({ createdAt: now, status: 'NEW', subtotalNetGrosze: 1000, totalGrossGrosze: 1230 });
     await seedOrder({ createdAt: now, status: 'CANCELLED', subtotalNetGrosze: 5000, totalGrossGrosze: 6150 });
-    await seedOrder({ createdAt: new Date(now.getTime() - 40 * DAY_MS), status: 'NEW' }); // outside every window
 
-    const kpis = await getDashboardKpis(now);
+    const after = await getDashboardKpis(now);
 
-    expect(kpis.ordersToday).toBe(2); // both today's orders count, cancelled included
-    expect(kpis.orders30d).toBe(2);
-    expect(kpis.revenueNet30dGrosze).toBe(1000); // cancelled order's 5000 excluded
-    expect(kpis.revenueGross30dGrosze).toBe(1230);
-    expect(kpis.averageOrderValueGrosze).toBe(1230); // averaged over the 1 non-cancelled order, not 2
+    expect(after.ordersToday - before.ordersToday).toBe(2); // both today's orders count, cancelled included
+    expect(after.orders30d - before.orders30d).toBe(2);
+    expect(after.revenueNet30dGrosze - before.revenueNet30dGrosze).toBe(1000); // cancelled order's 5000 excluded
+    expect(after.revenueGross30dGrosze - before.revenueGross30dGrosze).toBe(1230);
   });
 
   it('counts orders awaiting payment, pending design reviews, and in-production orders correctly', async () => {
+    const before = await getDashboardKpis();
+
     await seedOrder({ paymentStatus: 'AWAITING' });
-    await seedOrder({ paymentStatus: 'PAID' });
     await seedCustomerDesign('PENDING_REVIEW');
-    await seedCustomerDesign('APPROVED');
-    await seedOrder({ status: 'IN_PRODUCTION' });
-    await seedOrder({ status: 'COMPLETED' });
+    await seedOrder({ status: 'IN_PRODUCTION', paymentStatus: 'PAID' }); // PAID: must not also count toward ordersAwaitingPayment
 
-    const kpis = await getDashboardKpis();
+    const after = await getDashboardKpis();
 
-    expect(kpis.ordersAwaitingPayment).toBeGreaterThanOrEqual(1);
-    expect(kpis.designsAwaitingReview).toBeGreaterThanOrEqual(1);
-    expect(kpis.ordersInProduction).toBeGreaterThanOrEqual(1);
+    expect(after.ordersAwaitingPayment - before.ordersAwaitingPayment).toBe(1);
+    expect(after.designsAwaitingReview - before.designsAwaitingReview).toBe(1);
+    expect(after.ordersInProduction - before.ordersInProduction).toBe(1);
   });
 
-  it('reports zero AOV when there is no revenue in the window', async () => {
+  it('an order outside the 30-day window changes neither revenue nor AOV', async () => {
     const now = new Date();
-    await seedOrder({ createdAt: new Date(now.getTime() - 40 * DAY_MS) });
+    const before = await getDashboardKpis(now);
 
-    const kpis = await getDashboardKpis(now);
-    expect(kpis.averageOrderValueGrosze).toBe(0);
+    await seedOrder({ createdAt: new Date(now.getTime() - 40 * DAY_MS), subtotalNetGrosze: 999_999, totalGrossGrosze: 999_999 });
+
+    const after = await getDashboardKpis(now);
+
+    expect(after.revenueNet30dGrosze).toBe(before.revenueNet30dGrosze);
+    expect(after.revenueGross30dGrosze).toBe(before.revenueGross30dGrosze);
+    expect(after.averageOrderValueGrosze).toBe(before.averageOrderValueGrosze);
+    expect(after.orders30d).toBe(before.orders30d); // 40 days ago is outside the 30-day window entirely
   });
 });
 

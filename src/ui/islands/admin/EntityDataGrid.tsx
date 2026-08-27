@@ -16,8 +16,10 @@
  */
 
 import { useRouter } from 'next/navigation';
-import { DataGrid } from '@mui/x-data-grid';
+import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import type { GridColDef, GridRowParams } from '@mui/x-data-grid';
+
+import { useGridPreferences } from '@/ui/islands/admin/useGridPreferences';
 
 export function EntityDataGrid<T extends { readonly id: string }>({
   rows,
@@ -29,18 +31,21 @@ export function EntityDataGrid<T extends { readonly id: string }>({
   readonly basePath: string;
 }) {
   const router = useRouter();
+  const gridPreferences = useGridPreferences(basePath);
 
   return (
     <DataGrid
       rows={rows}
       columns={columns}
       getRowId={(row) => row.id}
-      getRowHeight={() => 52}
       autoHeight
+      showToolbar
+      slots={{ toolbar: GridToolbar }}
       onRowClick={(params: GridRowParams<T>) => router.push(`${basePath}/${params.row.id}`)}
       sx={{ cursor: 'pointer', border: 'none' }}
       initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
       pageSizeOptions={[25, 50, 100]}
+      {...gridPreferences}
     />
   );
 }
