@@ -8,11 +8,15 @@ import { ADMIN } from '@/content/pl/admin';
 import { updateEmailTemplate } from '@/server/actions/admin-email-templates';
 import type { UpdateEmailTemplateResult } from '@/server/actions/admin-email-templates';
 import type { AdminEmailTemplateDetail } from '@/server/repositories/admin-email-templates';
+import { usePreservedFormValues } from '@/ui/islands/admin/usePreservedFormValues';
 
 const INITIAL_STATE: UpdateEmailTemplateResult = { ok: true };
 
 export function EmailTemplateForm({ template, placeholders }: { readonly template: AdminEmailTemplateDetail; readonly placeholders: readonly string[] }) {
+  const { capture, fieldValue } = usePreservedFormValues();
+
   const action = async (_prev: UpdateEmailTemplateResult, formData: FormData) => {
+    capture(formData);
     return updateEmailTemplate(template.key, {
       subjectPl: String(formData.get('subjectPl') ?? ''),
       bodyPl: String(formData.get('bodyPl') ?? ''),
@@ -29,8 +33,16 @@ export function EmailTemplateForm({ template, placeholders }: { readonly templat
           {ADMIN.emailTemplatePlaceholdersHintPl}: {placeholders.map((p) => `{{${p}}}`).join(', ')}
         </Typography>
 
-        <TextField label={ADMIN.emailTemplateFieldSubjectPl} name="subjectPl" defaultValue={template.subjectPl} required size="small" />
-        <TextField label={ADMIN.emailTemplateFieldBodyPl} name="bodyPl" defaultValue={template.bodyPl} required multiline minRows={6} size="small" />
+        <TextField label={ADMIN.emailTemplateFieldSubjectPl} name="subjectPl" defaultValue={fieldValue('subjectPl', template.subjectPl)} required size="small" />
+        <TextField
+          label={ADMIN.emailTemplateFieldBodyPl}
+          name="bodyPl"
+          defaultValue={fieldValue('bodyPl', template.bodyPl)}
+          required
+          multiline
+          minRows={6}
+          size="small"
+        />
 
         <SubmitButton />
       </Stack>

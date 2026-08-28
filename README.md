@@ -727,6 +727,27 @@ pricing draft form's rates/VAT/tiers, review ratings) were rewritten
 the same way — each now names the actual submitted values instead of
 just the abstract rule. See `docs/HANDOVER.md` §9z36.
 
+**Form state survives validation errors — built 2026-08-28,
+autonomously.** Verifying the message above live surfaced that every
+admin form lost all its fields the moment an error appeared. Root
+cause, found by testing rather than guessing: React 19's
+`<form action={fn}>` calls the DOM's own `form.reset()` after *any*
+settled action — success or failure — snapping every uncontrolled
+field back to its `defaultValue`, which for a form's own record never
+changed. Fixed with a shared hook, `usePreservedFormValues`, that
+captures the just-submitted values before the reset fires and feeds
+them back as the new `defaultValue` — resetting "to itself" is
+invisible to the user, no need to convert 14 forms to fully controlled
+inputs. Caught and fixed a second bug the fix itself caused along the
+way: MUI's `Select`/`Checkbox` warn in the console when `defaultValue`/
+`defaultChecked` changes after mount, fixed with a `key` bump forcing
+a clean remount (the same pattern Next's own docs use for the opposite
+case). Wired into 14 of 16 panel forms — the other 2 needed nothing
+(one's a bare file input, one was already fully controlled). Live-
+verified on 3 forms across every field type — text, number, `select`,
+`Checkbox` — each surviving a real validation failure exactly as
+typed, with zero console warnings. See `docs/HANDOVER.md` §9z37.
+
 ---
 
 ## Getting set up
@@ -869,11 +890,21 @@ upload flow's file-size error shows the real size and limit instead of
 "Plik jest za duży.", and a real, more serious bug was found live while
 verifying it: a file just over `next.config`'s own body-size buffer
 hung the upload button forever with the error visible only in the
-console, fixed with a `try/catch` that was simply missing (§9z36). See
-`docs/CHECKLIST.md` for the itemised state of every phase. Next,
+console, fixed with a `try/catch` that was simply missing (§9z36).
+**Form state now survives validation errors** on 14 of the panel's 16
+forms — root-caused to a genuine React 19 behavior (`<form
+action={fn}>` resets uncontrolled fields after any settled action,
+failure included, not just success), fixed with a shared
+`usePreservedFormValues` hook rather than a 14-form rewrite to
+controlled inputs; also caught and fixed a `Select`/`Checkbox` console
+warning the fix itself introduced (§9z37). See `docs/CHECKLIST.md` for
+the itemised state of every phase. Next,
 continuing autonomously per the owner's standing direction to close
 remaining gaps toward "no missing pages, functionality, design and UI":
 
+- **Dirty-form navigation warning** — the other half of §9z37's
+  checklist line; warn before navigating away from an edited-but-
+  unsaved admin form, not attempted this pass.
 - **P7c, the rest of it** — three list pages still use a plain `<Table>`,
   each needing its own design: Produkcja's rows link to a different
   entity's page; Szablony e-mail is a fixed two-row list; Dziennik

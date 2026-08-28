@@ -9,6 +9,7 @@ import type { DesignReviewDecision } from '@/server/actions/admin-design-review'
 import { decideDesignReview } from '@/server/actions/admin-design-review';
 import type { DecideDesignReviewResult } from '@/server/actions/admin-design-review';
 import type { ProductionMethod } from '@/generated/prisma/enums';
+import { usePreservedFormValues } from '@/ui/islands/admin/usePreservedFormValues';
 
 const PRODUCTION_METHODS: readonly ProductionMethod[] = [
   'CNC_CARVE',
@@ -21,7 +22,10 @@ const PRODUCTION_METHODS: readonly ProductionMethod[] = [
 const INITIAL_STATE: DecideDesignReviewResult = { ok: true };
 
 export function DesignReviewDecisionForm({ designId }: { readonly designId: string }) {
+  const { capture, fieldValue, resetKey } = usePreservedFormValues();
+
   const action = async (_prev: DecideDesignReviewResult, formData: FormData) => {
+    capture(formData);
     const decision = formData.get('decision') as DesignReviewDecision;
     const productionMethod = formData.get('productionMethod');
     const commentPl = formData.get('commentPl');
@@ -39,9 +43,15 @@ export function DesignReviewDecisionForm({ designId }: { readonly designId: stri
       <Stack spacing={2} sx={{ mt: 2, maxWidth: 480 }}>
         {!state.ok && <Alert severity="error">{state.detail}</Alert>}
 
-        <TextField label={ADMIN.designReviewCommentLabelPl} name="commentPl" multiline minRows={2} />
+        <TextField label={ADMIN.designReviewCommentLabelPl} name="commentPl" defaultValue={fieldValue('commentPl', '')} multiline minRows={2} />
 
-        <TextField select label={ADMIN.designReviewProductionMethodLabelPl} name="productionMethod" defaultValue="">
+        <TextField
+          key={resetKey}
+          select
+          label={ADMIN.designReviewProductionMethodLabelPl}
+          name="productionMethod"
+          defaultValue={fieldValue('productionMethod', '')}
+        >
           <MenuItem value="">—</MenuItem>
           {PRODUCTION_METHODS.map((method) => (
             <MenuItem key={method} value={method}>

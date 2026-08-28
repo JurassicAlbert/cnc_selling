@@ -7,11 +7,15 @@ import { Alert, Button, MenuItem, Stack, TextField, Typography } from '@mui/mate
 import { ADMIN } from '@/content/pl/admin';
 import { inviteStaffUser } from '@/server/actions/admin-staff';
 import type { InviteStaffUserResult } from '@/server/actions/admin-staff';
+import { usePreservedFormValues } from '@/ui/islands/admin/usePreservedFormValues';
 
 const INITIAL_STATE: InviteStaffUserResult = { ok: true };
 
 export function StaffInviteForm() {
+  const { capture, fieldValue, resetKey } = usePreservedFormValues();
+
   const action = async (_prev: InviteStaffUserResult, formData: FormData) => {
+    capture(formData);
     return inviteStaffUser({
       name: String(formData.get('name') ?? ''),
       email: String(formData.get('email') ?? ''),
@@ -29,9 +33,9 @@ export function StaffInviteForm() {
         </Typography>
         {!state.ok && <Alert severity="error">{state.detail}</Alert>}
 
-        <TextField label={ADMIN.staffInviteFieldNamePl} name="name" required size="small" />
-        <TextField label={ADMIN.staffInviteFieldEmailPl} name="email" type="email" required size="small" />
-        <TextField select label={ADMIN.staffInviteFieldRolePl} name="role" defaultValue="STAFF" size="small">
+        <TextField label={ADMIN.staffInviteFieldNamePl} name="name" defaultValue={fieldValue('name', '')} required size="small" />
+        <TextField label={ADMIN.staffInviteFieldEmailPl} name="email" type="email" defaultValue={fieldValue('email', '')} required size="small" />
+        <TextField key={resetKey} select label={ADMIN.staffInviteFieldRolePl} name="role" defaultValue={fieldValue('role', 'STAFF')} size="small">
           <MenuItem value="STAFF">{ADMIN.staffRoleStaffPl}</MenuItem>
           <MenuItem value="ADMIN">{ADMIN.staffRoleAdminPl}</MenuItem>
         </TextField>

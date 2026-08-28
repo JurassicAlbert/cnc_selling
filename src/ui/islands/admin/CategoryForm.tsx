@@ -9,13 +9,16 @@ import { ADMIN } from '@/content/pl/admin';
 import type { AdminCategoryDetail } from '@/server/repositories/admin-categories';
 import { createCategory, updateCategory } from '@/server/actions/admin-categories';
 import type { CategoryMutationResult } from '@/server/actions/admin-categories';
+import { usePreservedFormValues } from '@/ui/islands/admin/usePreservedFormValues';
 
 const INITIAL_STATE: CategoryMutationResult = { ok: true, id: '' };
 
 export function CategoryForm({ category }: { readonly category?: AdminCategoryDetail }) {
   const router = useRouter();
+  const { capture, fieldValue } = usePreservedFormValues();
 
   const action = async (_prev: CategoryMutationResult, formData: FormData) => {
+    capture(formData);
     const input = {
       slug: String(formData.get('slug') ?? ''),
       namePl: String(formData.get('namePl') ?? ''),
@@ -38,31 +41,31 @@ export function CategoryForm({ category }: { readonly category?: AdminCategoryDe
       <Stack spacing={2} sx={{ maxWidth: 560 }}>
         {!state.ok && <Alert severity="error">{state.detail}</Alert>}
 
-        <TextField label={ADMIN.categoryFieldSlugPl} name="slug" defaultValue={category?.slug} required size="small" />
-        <TextField label={ADMIN.categoryFieldNamePl} name="namePl" defaultValue={category?.namePl} required size="small" />
+        <TextField label={ADMIN.categoryFieldSlugPl} name="slug" defaultValue={fieldValue('slug', category?.slug)} required size="small" />
+        <TextField label={ADMIN.categoryFieldNamePl} name="namePl" defaultValue={fieldValue('namePl', category?.namePl)} required size="small" />
         <TextField
           label={ADMIN.categoryFieldDescPl}
           name="descPl"
-          defaultValue={category?.descPl}
+          defaultValue={fieldValue('descPl', category?.descPl)}
           multiline
           minRows={3}
           size="small"
         />
-        <TextField label={ADMIN.categoryFieldSeoTitlePl} name="seoTitlePl" defaultValue={category?.seoTitlePl} size="small" />
+        <TextField label={ADMIN.categoryFieldSeoTitlePl} name="seoTitlePl" defaultValue={fieldValue('seoTitlePl', category?.seoTitlePl)} size="small" />
         <TextField
           label={ADMIN.categoryFieldSeoDescPl}
           name="seoDescPl"
-          defaultValue={category?.seoDescPl}
+          defaultValue={fieldValue('seoDescPl', category?.seoDescPl)}
           multiline
           minRows={2}
           size="small"
         />
-        <TextField label={ADMIN.categoryFieldImageUrlPl} name="imageUrl" defaultValue={category?.imageUrl ?? ''} size="small" />
+        <TextField label={ADMIN.categoryFieldImageUrlPl} name="imageUrl" defaultValue={fieldValue('imageUrl', category?.imageUrl ?? '')} size="small" />
         <TextField
           label={ADMIN.categoryFieldSortOrderPl}
           name="sortOrder"
           type="number"
-          defaultValue={category?.sortOrder ?? 0}
+          defaultValue={fieldValue('sortOrder', String(category?.sortOrder ?? 0))}
           size="small"
           sx={{ maxWidth: 200 }}
         />

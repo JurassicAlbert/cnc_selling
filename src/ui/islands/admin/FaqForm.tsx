@@ -9,13 +9,16 @@ import { ADMIN } from '@/content/pl/admin';
 import type { AdminFaqDetail } from '@/server/repositories/admin-faq';
 import { createFaq, updateFaq } from '@/server/actions/admin-faq';
 import type { FaqMutationResult } from '@/server/actions/admin-faq';
+import { usePreservedFormValues } from '@/ui/islands/admin/usePreservedFormValues';
 
 const INITIAL_STATE: FaqMutationResult = { ok: true, id: '' };
 
 export function FaqForm({ faq }: { readonly faq?: AdminFaqDetail }) {
   const router = useRouter();
+  const { capture, fieldValue } = usePreservedFormValues();
 
   const action = async (_prev: FaqMutationResult, formData: FormData) => {
+    capture(formData);
     const input = {
       questionPl: String(formData.get('questionPl') ?? ''),
       answerPl: String(formData.get('answerPl') ?? ''),
@@ -34,9 +37,24 @@ export function FaqForm({ faq }: { readonly faq?: AdminFaqDetail }) {
       <Stack spacing={2} sx={{ maxWidth: 640 }}>
         {!state.ok && <Alert severity="error">{state.detail}</Alert>}
 
-        <TextField label={ADMIN.faqFieldQuestionPl} name="questionPl" defaultValue={faq?.questionPl} required size="small" />
-        <TextField label={ADMIN.faqFieldAnswerPl} name="answerPl" defaultValue={faq?.answerPl} required multiline minRows={3} size="small" />
-        <TextField label={ADMIN.faqFieldSortOrderPl} name="sortOrder" type="number" defaultValue={faq?.sortOrder ?? 0} size="small" sx={{ maxWidth: 200 }} />
+        <TextField label={ADMIN.faqFieldQuestionPl} name="questionPl" defaultValue={fieldValue('questionPl', faq?.questionPl)} required size="small" />
+        <TextField
+          label={ADMIN.faqFieldAnswerPl}
+          name="answerPl"
+          defaultValue={fieldValue('answerPl', faq?.answerPl)}
+          required
+          multiline
+          minRows={3}
+          size="small"
+        />
+        <TextField
+          label={ADMIN.faqFieldSortOrderPl}
+          name="sortOrder"
+          type="number"
+          defaultValue={fieldValue('sortOrder', String(faq?.sortOrder ?? 0))}
+          size="small"
+          sx={{ maxWidth: 200 }}
+        />
 
         <SubmitButton />
       </Stack>

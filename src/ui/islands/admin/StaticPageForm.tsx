@@ -9,13 +9,16 @@ import { ADMIN } from '@/content/pl/admin';
 import type { AdminStaticPageDetail } from '@/server/repositories/admin-static-pages';
 import { createStaticPage, updateStaticPage } from '@/server/actions/admin-static-pages';
 import type { StaticPageMutationResult } from '@/server/actions/admin-static-pages';
+import { usePreservedFormValues } from '@/ui/islands/admin/usePreservedFormValues';
 
 const INITIAL_STATE: StaticPageMutationResult = { ok: true, id: '' };
 
 export function StaticPageForm({ page }: { readonly page?: AdminStaticPageDetail }) {
   const router = useRouter();
+  const { capture, fieldValue } = usePreservedFormValues();
 
   const action = async (_prev: StaticPageMutationResult, formData: FormData) => {
+    capture(formData);
     const input = {
       slug: String(formData.get('slug') ?? ''),
       titlePl: String(formData.get('titlePl') ?? ''),
@@ -37,12 +40,34 @@ export function StaticPageForm({ page }: { readonly page?: AdminStaticPageDetail
       <Stack spacing={2} sx={{ maxWidth: 640 }}>
         {!state.ok && <Alert severity="error">{state.detail}</Alert>}
 
-        <TextField label={ADMIN.staticPageFieldSlugPl} name="slug" defaultValue={page?.slug} required size="small" />
-        <TextField label={ADMIN.staticPageFieldTitlePl} name="titlePl" defaultValue={page?.titlePl} required size="small" />
-        <TextField label={ADMIN.staticPageFieldBodyPl} name="bodyPl" defaultValue={page?.bodyPl} required multiline minRows={8} size="small" />
-        <TextField label={ADMIN.staticPageFieldSeoTitlePl} name="seoTitlePl" defaultValue={page?.seoTitlePl} size="small" />
-        <TextField label={ADMIN.staticPageFieldSeoDescPl} name="seoDescPl" defaultValue={page?.seoDescPl} multiline minRows={2} size="small" />
-        <TextField label={ADMIN.staticPageFieldSortOrderPl} name="sortOrder" type="number" defaultValue={page?.sortOrder ?? 0} size="small" sx={{ maxWidth: 200 }} />
+        <TextField label={ADMIN.staticPageFieldSlugPl} name="slug" defaultValue={fieldValue('slug', page?.slug)} required size="small" />
+        <TextField label={ADMIN.staticPageFieldTitlePl} name="titlePl" defaultValue={fieldValue('titlePl', page?.titlePl)} required size="small" />
+        <TextField
+          label={ADMIN.staticPageFieldBodyPl}
+          name="bodyPl"
+          defaultValue={fieldValue('bodyPl', page?.bodyPl)}
+          required
+          multiline
+          minRows={8}
+          size="small"
+        />
+        <TextField label={ADMIN.staticPageFieldSeoTitlePl} name="seoTitlePl" defaultValue={fieldValue('seoTitlePl', page?.seoTitlePl)} size="small" />
+        <TextField
+          label={ADMIN.staticPageFieldSeoDescPl}
+          name="seoDescPl"
+          defaultValue={fieldValue('seoDescPl', page?.seoDescPl)}
+          multiline
+          minRows={2}
+          size="small"
+        />
+        <TextField
+          label={ADMIN.staticPageFieldSortOrderPl}
+          name="sortOrder"
+          type="number"
+          defaultValue={fieldValue('sortOrder', String(page?.sortOrder ?? 0))}
+          size="small"
+          sx={{ maxWidth: 200 }}
+        />
 
         <SubmitButton />
       </Stack>

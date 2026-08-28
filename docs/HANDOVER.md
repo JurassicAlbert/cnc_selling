@@ -3235,6 +3235,49 @@ Grepped every `src/server/actions/*.ts` file for `musi być`/`nie może` cross-f
 
 `npm run typecheck && npm run lint && npm test && npm run build` all clean (614/614 — 1 test updated to assert the real `params` values on the SVG-over-cap case, which a bare `toEqual` would otherwise fail against once `params` existed). Restarted the dev server before live-verifying, per §9z2's standing rule, fresh tab per the stale-console-history precedent. Live-verified the full range: a 25.5MB PNG (real magic bytes constructed via `DataTransfer`, since an all-zero buffer correctly fails the app's own magic-byte sniff as `UNSUPPORTED_TYPE` rather than reaching the size check — confirms that check is real, not a stub) showed the exact real-numbers message; a 26MB file (over Next's own framework limit) previously hung forever and now resolves with the same message and a working button; a Products form submission with `minWidthMm: 500` / `maxWidthMm: 300` showed "Minimalna szerokość (500 mm) nie może być większa od maksymalnej (300 mm)." at the top of the real form. **A genuine, separate, already-tracked gap re-confirmed as a side effect, not fixed here**: the Products form does not preserve any field value after a validation error — every field reset to blank, not just the two in conflict — exactly `docs/CHECKLIST.md`'s own "Form state survives validation errors; dirty-form navigation warning" line, still open, its own future slice.
 
+## 9z37. Form state survives validation errors — a real React 19 gotcha, root-caused not guessed at — 2026-08-28
+
+Continuing directly from §9z36's own finding: verifying Products' new "names the fix" message live surfaced that the form lost every field on the exact error it had just displayed. Checked before assuming it was a known, accepted limitation — it wasn't.
+
+### Root-causing it properly, not just patching the symptom
+
+First hypothesis (wrong, ruled out by evidence): a full page navigation. Disproved with a real experiment: set `window.__testMarker` before submitting, filled and submitted an invalid form, then read the marker back afterward. It survived — no navigation happened — yet every uncontrolled input's live DOM value had still reverted to its original `defaultValue`. That combination (same JS context, same window, yet DOM values reset) narrows the cause to something *inside* React's own reconciliation, not routing.
+
+Checked `node_modules/next/dist/docs/` per this repo's own AGENTS.md rule before writing anything — `interactive-apps.md` names it directly: `useActionState`'s underlying `<form action={fn}>` mechanism calls the DOM's own `form.reset()` after the action's promise settles. The doc's own example works around this deliberately (a `key` that only increments *on success*, to reset a form on purpose) — the crucial detail our code was missing is that the reset isn't conditional on success at all: it fires after *any* settled action, failure included. Every admin form's `defaultValue={record?.field}` is only correct for the pre-fill-on-edit case; after a failed submission, `record` never changed, so "reset to defaultValue" silently discarded exactly what the error message was asking the user to fix.
+
+### The fix: update what "default" means, don't fight the reset
+
+Converting every field in 14 forms to a fully controlled `value`+`onChange` pair was the "textbook" fix but a much larger, more error-prone rewrite. Since `form.reset()` reads whatever `defaultValue` is *currently rendered*, resetting to a value that already equals what the user typed is invisible to them. New shared hook, `src/ui/islands/admin/usePreservedFormValues.ts`:
+
+```ts
+function capture(formData: FormData): void {
+  const next: Record<string, string> = {};
+  for (const [key, value] of formData.entries()) {
+    if (typeof value === 'string') next[key] = value;
+  }
+  setValues(next);
+  setSubmitted(true);
+}
+```
+
+Called as the very first line of a form's action — synchronously, before the `await` — so the re-render carrying fresh `defaultValue`s always lands before `form.reset()` fires. `fieldValue(name, recordValue)` returns the just-submitted value once `capture` has run, the record's own value otherwise; `fieldChecked` does the same for checkboxes, with a `submitted` flag distinguishing "never submitted" from "submitted and this box was left unchecked" (a checkbox absent from `FormData` is otherwise ambiguous between those two).
+
+### A second bug the fix itself caused, caught before shipping
+
+Rolling this out to `MaterialForm` (select + 3 checkboxes) produced two real, fresh console warnings on the very first live test: "MUI: A component is changing the default value state of an uncontrolled Select after being initialized" and the same for `SwitchBase`/`Checkbox`. Unlike a plain `TextField`, MUI's `Select` and `Checkbox` track controlled-vs-uncontrolled status from their first render and warn if `defaultValue`/`defaultChecked` changes afterward — which is exactly what `capture` does on purpose. Fixed with a `resetKey` (a counter bumped inside `capture`) applied as `key={resetKey}` to every `select` `TextField` and `Checkbox` this hook feeds — the same `key`-forces-a-clean-remount pattern the Next.js doc itself uses for the opposite case (resetting on success). Re-verified on the same `MaterialForm` test afterward: zero MUI warnings, all fields still correctly preserved.
+
+### Scope: 14 of 16 forms, two correctly left alone
+
+`ProductForm`, `CategoryForm`, `CollectionForm`, `FaqForm`, `StaticPageForm`, `BlogPostForm`, `MaterialForm`, `FinishForm`, `DesignForm`, `StaffInviteForm`, `StoreSettingsForm`, `EmailTemplateForm`, `DesignReviewDecisionForm` got the full treatment. `PricingDraftForm` got only its top-level rate/VAT/note fields — its packaging-tier rows were deliberately left untouched: they're the exact surface of `task_43478539` (a separate, already-flagged hydration bug in a background session), and touching their `name`/`defaultValue` wiring risked colliding with that in-flight fix rather than helping it. `CsvImportForm` (a bare file input, nothing to preserve) and `CustomerAnonymizeForm` (already fully controlled via its own pre-existing `useState`, already immune to this class of bug) needed nothing.
+
+### A related bug found, explicitly not touched
+
+Live-testing `MaterialForm` also surfaced the same `encType="multipart/form-data"` SSR/client hydration mismatch already flagged as `task_6905e23d` on `ProductImagesEditor` — present on `MaterialForm`/`FinishForm`/`DesignForm` too (same root cause: a static `encType` prop alongside a function `action`). Noted here, not fixed — avoiding duplicate work on a background task already in flight.
+
+### Verified
+
+`npm run typecheck && npm run lint && npm test && npm run build` all clean (614/614 — no new test-worthy logic, this is client-side form-state wiring verified live rather than unit-tested, matching this session's own precedent for presentational changes). Restarted the dev server before every live-verification pass, fresh tabs throughout. Live-verified on three forms covering every field type the hook handles: `ProductForm` (text + number, a real dimension-conflict failure — slug, name, short description, and both width fields all survived intact); `CategoryForm` (text, an invalid-slug failure — slug, name, and description all survived); `MaterialForm`, twice — once catching the MUI warning, once confirming it gone — a `select` changed to a non-default option and a `Checkbox` unchecked from its `true` default both survived a real "price must be positive" failure exactly as set, with zero console warnings on the second pass. `CategoryForm`'s test data was never actually created (validation correctly blocked it both times); `MaterialForm`'s test files were injected via a `DataTransfer`-constructed `File` (the same technique used for §9z35/§9z36's file-upload tests — this browser tool can't drive a native OS file picker), and no rows were left in the DB since both submissions correctly failed validation.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

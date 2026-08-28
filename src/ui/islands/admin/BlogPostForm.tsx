@@ -9,6 +9,7 @@ import { ADMIN } from '@/content/pl/admin';
 import type { AdminBlogPostDetail } from '@/server/repositories/admin-blog';
 import { createBlogPost, updateBlogPost } from '@/server/actions/admin-blog';
 import type { BlogPostMutationResult } from '@/server/actions/admin-blog';
+import { usePreservedFormValues } from '@/ui/islands/admin/usePreservedFormValues';
 
 const INITIAL_STATE: BlogPostMutationResult = { ok: true, id: '' };
 
@@ -18,8 +19,10 @@ function toDateInputValue(date: Date | null): string {
 
 export function BlogPostForm({ post }: { readonly post?: AdminBlogPostDetail }) {
   const router = useRouter();
+  const { capture, fieldValue } = usePreservedFormValues();
 
   const action = async (_prev: BlogPostMutationResult, formData: FormData) => {
+    capture(formData);
     const imageUrl = String(formData.get('imageUrl') ?? '').trim();
     const publishedAtRaw = String(formData.get('publishedAt') ?? '').trim();
     const input = {
@@ -46,26 +49,41 @@ export function BlogPostForm({ post }: { readonly post?: AdminBlogPostDetail }) 
       <Stack spacing={2} sx={{ maxWidth: 720 }}>
         {!state.ok && <Alert severity="error">{state.detail}</Alert>}
 
-        <TextField label={ADMIN.blogPostFieldSlugPl} name="slug" defaultValue={post?.slug} required size="small" />
-        <TextField label={ADMIN.blogPostFieldTitlePl} name="titlePl" defaultValue={post?.titlePl} required size="small" />
+        <TextField label={ADMIN.blogPostFieldSlugPl} name="slug" defaultValue={fieldValue('slug', post?.slug)} required size="small" />
+        <TextField label={ADMIN.blogPostFieldTitlePl} name="titlePl" defaultValue={fieldValue('titlePl', post?.titlePl)} required size="small" />
         <TextField
           label={ADMIN.blogPostFieldShortDescPl}
           name="shortDescPl"
-          defaultValue={post?.shortDescPl}
+          defaultValue={fieldValue('shortDescPl', post?.shortDescPl)}
           required
           multiline
           minRows={2}
           size="small"
         />
-        <TextField label={ADMIN.blogPostFieldBodyPl} name="bodyPl" defaultValue={post?.bodyPl} required multiline minRows={10} size="small" />
-        <TextField label={ADMIN.blogPostFieldSeoTitlePl} name="seoTitlePl" defaultValue={post?.seoTitlePl} size="small" />
-        <TextField label={ADMIN.blogPostFieldSeoDescPl} name="seoDescPl" defaultValue={post?.seoDescPl} multiline minRows={2} size="small" />
-        <TextField label={ADMIN.blogPostFieldImageUrlPl} name="imageUrl" defaultValue={post?.imageUrl ?? ''} size="small" />
+        <TextField
+          label={ADMIN.blogPostFieldBodyPl}
+          name="bodyPl"
+          defaultValue={fieldValue('bodyPl', post?.bodyPl)}
+          required
+          multiline
+          minRows={10}
+          size="small"
+        />
+        <TextField label={ADMIN.blogPostFieldSeoTitlePl} name="seoTitlePl" defaultValue={fieldValue('seoTitlePl', post?.seoTitlePl)} size="small" />
+        <TextField
+          label={ADMIN.blogPostFieldSeoDescPl}
+          name="seoDescPl"
+          defaultValue={fieldValue('seoDescPl', post?.seoDescPl)}
+          multiline
+          minRows={2}
+          size="small"
+        />
+        <TextField label={ADMIN.blogPostFieldImageUrlPl} name="imageUrl" defaultValue={fieldValue('imageUrl', post?.imageUrl ?? '')} size="small" />
         <TextField
           label={ADMIN.blogPostFieldSortOrderPl}
           name="sortOrder"
           type="number"
-          defaultValue={post?.sortOrder ?? 0}
+          defaultValue={fieldValue('sortOrder', String(post?.sortOrder ?? 0))}
           size="small"
           sx={{ maxWidth: 200 }}
         />
@@ -74,7 +92,7 @@ export function BlogPostForm({ post }: { readonly post?: AdminBlogPostDetail }) 
           label={ADMIN.blogPostFieldPublishedAtPl}
           name="publishedAt"
           type="date"
-          defaultValue={toDateInputValue(post?.publishedAt ?? null)}
+          defaultValue={fieldValue('publishedAt', toDateInputValue(post?.publishedAt ?? null))}
           size="small"
           sx={{ maxWidth: 220 }}
           slotProps={{ inputLabel: { shrink: true } }}

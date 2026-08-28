@@ -8,6 +8,7 @@ import { ADMIN } from '@/content/pl/admin';
 import { updateStoreSettings } from '@/server/actions/admin-store-settings';
 import type { UpdateStoreSettingsResult } from '@/server/actions/admin-store-settings';
 import type { StoreSettingsView } from '@/server/repositories/store-settings';
+import { usePreservedFormValues } from '@/ui/islands/admin/usePreservedFormValues';
 
 const INITIAL_STATE: UpdateStoreSettingsResult = { ok: true };
 
@@ -17,7 +18,9 @@ function grosze(formData: FormData, key: string): number {
 
 export function StoreSettingsForm({ settings }: { readonly settings: StoreSettingsView }) {
   const [saved, setSaved] = useState(false);
+  const { capture, fieldValue } = usePreservedFormValues();
   const action = async (_prev: UpdateStoreSettingsResult, formData: FormData) => {
+    capture(formData);
     const result = await updateStoreSettings({
       bankAccountNumber: String(formData.get('bankAccountNumber') ?? ''),
       bankAccountHolderPl: String(formData.get('bankAccountHolderPl') ?? ''),
@@ -37,20 +40,20 @@ export function StoreSettingsForm({ settings }: { readonly settings: StoreSettin
         <TextField
           label={ADMIN.settingsFieldBankAccountNumberPl}
           name="bankAccountNumber"
-          defaultValue={settings.bankAccountNumber ?? ''}
+          defaultValue={fieldValue('bankAccountNumber', settings.bankAccountNumber ?? '')}
           size="small"
         />
         <TextField
           label={ADMIN.settingsFieldBankAccountHolderPl}
           name="bankAccountHolderPl"
-          defaultValue={settings.bankAccountHolderPl ?? ''}
+          defaultValue={fieldValue('bankAccountHolderPl', settings.bankAccountHolderPl ?? '')}
           size="small"
         />
         <TextField
           label={ADMIN.settingsFieldShippingRatePl}
           name="shippingFlatRatePln"
           type="number"
-          defaultValue={settings.shippingFlatRateGrosze / 100}
+          defaultValue={fieldValue('shippingFlatRatePln', String(settings.shippingFlatRateGrosze / 100))}
           size="small"
           sx={{ maxWidth: 200 }}
         />

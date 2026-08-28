@@ -10,6 +10,7 @@ import type { AdminFinishDetail } from '@/server/repositories/admin-finishes';
 import { createFinish, updateFinish } from '@/server/actions/admin-finishes';
 import type { FinishMutationResult } from '@/server/actions/admin-finishes';
 import type { FinishKind } from '@/generated/prisma/enums';
+import { usePreservedFormValues } from '@/ui/islands/admin/usePreservedFormValues';
 import { FileInputButton } from './FileInputButton';
 
 const KINDS: readonly FinishKind[] = ['NATURAL', 'OIL', 'HARDWAX_OIL', 'STAIN', 'VARNISH'];
@@ -17,8 +18,10 @@ const INITIAL_STATE: FinishMutationResult = { ok: true, id: '' };
 
 export function FinishForm({ finish }: { readonly finish?: AdminFinishDetail }) {
   const router = useRouter();
+  const { capture, fieldValue, resetKey } = usePreservedFormValues();
 
   const action = async (_prev: FinishMutationResult, formData: FormData) => {
+    capture(formData);
     const result = finish === undefined ? await createFinish(formData) : await updateFinish(finish.id, formData);
     if (result.ok && finish === undefined) {
       router.push(`/panel/wykonczenia/${result.id}`);
@@ -34,13 +37,13 @@ export function FinishForm({ finish }: { readonly finish?: AdminFinishDetail }) 
 
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField fullWidth label={ADMIN.finishFieldSlugPl} name="slug" defaultValue={finish?.slug} required size="small" />
+            <TextField fullWidth label={ADMIN.finishFieldSlugPl} name="slug" defaultValue={fieldValue('slug', finish?.slug)} required size="small" />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField fullWidth label={ADMIN.finishFieldNamePl} name="namePl" defaultValue={finish?.namePl} required size="small" />
+            <TextField fullWidth label={ADMIN.finishFieldNamePl} name="namePl" defaultValue={fieldValue('namePl', finish?.namePl)} required size="small" />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField fullWidth select label={ADMIN.finishFieldKindPl} name="kind" defaultValue={finish?.kind ?? KINDS[0]} size="small">
+            <TextField key={resetKey} fullWidth select label={ADMIN.finishFieldKindPl} name="kind" defaultValue={fieldValue('kind', finish?.kind ?? KINDS[0])} size="small">
               {KINDS.map((k) => (
                 <MenuItem key={k} value={k}>
                   {adminFinishKindLabel(k)}
@@ -50,7 +53,7 @@ export function FinishForm({ finish }: { readonly finish?: AdminFinishDetail }) 
           </Grid>
         </Grid>
 
-        <TextField label={ADMIN.finishFieldDescPl} name="descPl" defaultValue={finish?.descPl} multiline minRows={2} size="small" />
+        <TextField label={ADMIN.finishFieldDescPl} name="descPl" defaultValue={fieldValue('descPl', finish?.descPl)} multiline minRows={2} size="small" />
 
         {finish !== undefined && (
           // biome-ignore lint/performance/noImgElement: admin preview of the current catalogue photo, served straight from public/
@@ -71,20 +74,55 @@ export function FinishForm({ finish }: { readonly finish?: AdminFinishDetail }) 
 
         <Grid container spacing={2}>
           <Grid size={{ xs: 6, sm: 3 }}>
-            <TextField fullWidth type="number" label={ADMIN.finishFieldPricePl} name="pricePerM2Pln" defaultValue={finish !== undefined ? finish.pricePerM2Grosze / 100 : 0} size="small" />
+            <TextField
+              fullWidth
+              type="number"
+              label={ADMIN.finishFieldPricePl}
+              name="pricePerM2Pln"
+              defaultValue={fieldValue('pricePerM2Pln', finish !== undefined ? String(finish.pricePerM2Grosze / 100) : '0')}
+              size="small"
+            />
           </Grid>
           <Grid size={{ xs: 6, sm: 3 }}>
-            <TextField fullWidth type="number" label={ADMIN.finishFieldSetupFeePl} name="setupFeePln" defaultValue={finish !== undefined ? finish.setupFeeGrosze / 100 : 0} size="small" />
+            <TextField
+              fullWidth
+              type="number"
+              label={ADMIN.finishFieldSetupFeePl}
+              name="setupFeePln"
+              defaultValue={fieldValue('setupFeePln', finish !== undefined ? String(finish.setupFeeGrosze / 100) : '0')}
+              size="small"
+            />
           </Grid>
           <Grid size={{ xs: 6, sm: 3 }}>
-            <TextField fullWidth type="number" label={ADMIN.finishFieldExtraDaysMinPl} name="extraDaysMin" defaultValue={finish?.extraDaysMin ?? 0} size="small" />
+            <TextField
+              fullWidth
+              type="number"
+              label={ADMIN.finishFieldExtraDaysMinPl}
+              name="extraDaysMin"
+              defaultValue={fieldValue('extraDaysMin', String(finish?.extraDaysMin ?? 0))}
+              size="small"
+            />
           </Grid>
           <Grid size={{ xs: 6, sm: 3 }}>
-            <TextField fullWidth type="number" label={ADMIN.finishFieldExtraDaysMaxPl} name="extraDaysMax" defaultValue={finish?.extraDaysMax ?? 0} size="small" />
+            <TextField
+              fullWidth
+              type="number"
+              label={ADMIN.finishFieldExtraDaysMaxPl}
+              name="extraDaysMax"
+              defaultValue={fieldValue('extraDaysMax', String(finish?.extraDaysMax ?? 0))}
+              size="small"
+            />
           </Grid>
         </Grid>
 
-        <TextField label={ADMIN.finishFieldSortOrderPl} name="sortOrder" type="number" defaultValue={finish?.sortOrder ?? 0} size="small" sx={{ maxWidth: 200 }} />
+        <TextField
+          label={ADMIN.finishFieldSortOrderPl}
+          name="sortOrder"
+          type="number"
+          defaultValue={fieldValue('sortOrder', String(finish?.sortOrder ?? 0))}
+          size="small"
+          sx={{ maxWidth: 200 }}
+        />
 
         <SubmitButton />
       </Stack>

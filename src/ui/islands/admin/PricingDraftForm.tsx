@@ -20,6 +20,7 @@ import { createPricingDraft } from '@/server/actions/admin-pricing';
 import type { PackagingTierInput, PricingDraftResult } from '@/server/actions/admin-pricing';
 import type { AdminPricingVersion } from '@/server/repositories/admin-pricing';
 import { DisabledExplanation } from '@/ui/primitives/DisabledExplanation';
+import { usePreservedFormValues } from '@/ui/islands/admin/usePreservedFormValues';
 
 const INITIAL_STATE: PricingDraftResult = { ok: true, version: 0 };
 
@@ -43,8 +44,15 @@ export function PricingDraftForm({ active }: { readonly active: AdminPricingVers
   const [tiers, setTiers] = useState<readonly { readonly key: number; readonly tier: PackagingTierInput }[]>(
     seedTiers.map((tier) => ({ key: newTierKey(), tier })),
   );
+  // Only the top-level rate/VAT/note fields use `fieldValue` here — the
+  // packaging-tier rows below are deliberately left untouched, they're the
+  // exact surface of a separate, already-flagged hydration bug (background
+  // task) being fixed independently; touching their `name`/`defaultValue`
+  // wiring here risks colliding with that in-flight fix.
+  const { capture, fieldValue } = usePreservedFormValues();
 
   const action = async (_prev: PricingDraftResult, formData: FormData): Promise<PricingDraftResult> => {
+    capture(formData);
     const packagingTiers = tiers.map(({ key }) => ({
       maxAreaM2: toOptionalNumber(formData.get(`tierMaxAreaM2-${key}`)),
       maxModules: toOptionalNumber(formData.get(`tierMaxModules-${key}`)),
@@ -75,7 +83,7 @@ export function PricingDraftForm({ active }: { readonly active: AdminPricingVers
           label={ADMIN.pricingFieldMachineRateCncPl}
           name="machineRateCncPln"
           type="number"
-          defaultValue={toPln(active.machineRateCncGrosze)}
+          defaultValue={fieldValue('machineRateCncPln', String(toPln(active.machineRateCncGrosze)))}
           size="small"
           slotProps={{ htmlInput: { step: '0.01', min: 0 } }}
         />
@@ -83,7 +91,7 @@ export function PricingDraftForm({ active }: { readonly active: AdminPricingVers
           label={ADMIN.pricingFieldMachineRateLaserPl}
           name="machineRateLaserPln"
           type="number"
-          defaultValue={toPln(active.machineRateLaserGrosze)}
+          defaultValue={fieldValue('machineRateLaserPln', String(toPln(active.machineRateLaserGrosze)))}
           size="small"
           slotProps={{ htmlInput: { step: '0.01', min: 0 } }}
         />
@@ -91,7 +99,7 @@ export function PricingDraftForm({ active }: { readonly active: AdminPricingVers
           label={ADMIN.pricingFieldModuleSurchargePl}
           name="moduleSurchargePln"
           type="number"
-          defaultValue={toPln(active.moduleSurchargeGrosze)}
+          defaultValue={fieldValue('moduleSurchargePln', String(toPln(active.moduleSurchargeGrosze)))}
           size="small"
           slotProps={{ htmlInput: { step: '0.01', min: 0 } }}
         />
@@ -99,7 +107,7 @@ export function PricingDraftForm({ active }: { readonly active: AdminPricingVers
           label={ADMIN.pricingFieldVatRatePl}
           name="vatRatePercent"
           type="number"
-          defaultValue={active.vatRateBp / 100}
+          defaultValue={fieldValue('vatRatePercent', String(active.vatRateBp / 100))}
           size="small"
           sx={{ maxWidth: 200 }}
           slotProps={{ htmlInput: { step: '0.01', min: 0, max: 100 } }}
@@ -166,7 +174,7 @@ export function PricingDraftForm({ active }: { readonly active: AdminPricingVers
         </Button>
 
         <Divider />
-        <TextField label={ADMIN.pricingFieldNotePl} name="notePl" multiline minRows={2} size="small" />
+        <TextField label={ADMIN.pricingFieldNotePl} name="notePl" defaultValue={fieldValue('notePl', '')} multiline minRows={2} size="small" />
 
         <SubmitButton />
       </Stack>

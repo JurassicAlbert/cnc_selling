@@ -9,13 +9,16 @@ import { ADMIN } from '@/content/pl/admin';
 import type { AdminCollectionDetail } from '@/server/repositories/admin-designs';
 import { createCollection, updateCollection } from '@/server/actions/admin-designs';
 import type { CollectionMutationResult } from '@/server/actions/admin-designs';
+import { usePreservedFormValues } from '@/ui/islands/admin/usePreservedFormValues';
 
 const INITIAL_STATE: CollectionMutationResult = { ok: true, id: '' };
 
 export function CollectionForm({ collection }: { readonly collection?: AdminCollectionDetail }) {
   const router = useRouter();
+  const { capture, fieldValue } = usePreservedFormValues();
 
   const action = async (_prev: CollectionMutationResult, formData: FormData) => {
+    capture(formData);
     const input = {
       slug: String(formData.get('slug') ?? ''),
       namePl: String(formData.get('namePl') ?? ''),
@@ -35,14 +38,21 @@ export function CollectionForm({ collection }: { readonly collection?: AdminColl
       <Stack spacing={2} sx={{ maxWidth: 560 }}>
         {!state.ok && <Alert severity="error">{state.detail}</Alert>}
 
-        <TextField label={ADMIN.collectionFieldSlugPl} name="slug" defaultValue={collection?.slug} required size="small" />
-        <TextField label={ADMIN.collectionFieldNamePl} name="namePl" defaultValue={collection?.namePl} required size="small" />
-        <TextField label={ADMIN.collectionFieldDescPl} name="descPl" defaultValue={collection?.descPl} multiline minRows={3} size="small" />
+        <TextField label={ADMIN.collectionFieldSlugPl} name="slug" defaultValue={fieldValue('slug', collection?.slug)} required size="small" />
+        <TextField label={ADMIN.collectionFieldNamePl} name="namePl" defaultValue={fieldValue('namePl', collection?.namePl)} required size="small" />
+        <TextField
+          label={ADMIN.collectionFieldDescPl}
+          name="descPl"
+          defaultValue={fieldValue('descPl', collection?.descPl)}
+          multiline
+          minRows={3}
+          size="small"
+        />
         <TextField
           label={ADMIN.collectionFieldSortOrderPl}
           name="sortOrder"
           type="number"
-          defaultValue={collection?.sortOrder ?? 0}
+          defaultValue={fieldValue('sortOrder', String(collection?.sortOrder ?? 0))}
           size="small"
           sx={{ maxWidth: 200 }}
         />
