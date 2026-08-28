@@ -9,13 +9,25 @@
 import { timingSafeEqual } from 'node:crypto';
 
 import { prisma } from '@/server/db/client';
-import type { OrderStatus, PaymentMethod } from '@/generated/prisma/enums';
+import type { OrderStatus, PaymentMethod, ShipmentStatus } from '@/generated/prisma/enums';
 import type { OrderItemSnapshot } from '@/server/orders/snapshot';
 
 export type OrderConfirmationItemView = {
   readonly quantity: number;
   readonly lineGrossGrosze: number;
   readonly snapshot: OrderItemSnapshot;
+};
+
+/** P9 phase 7: the customer-facing slice of `Shipment` — no `internalNotesPl`/`issueResolutionPl`, staff-only fields. */
+export type OrderShipmentView = {
+  readonly carrier: string | null;
+  readonly trackingNumber: string | null;
+  readonly status: ShipmentStatus;
+  readonly shippedAt: Date | null;
+  readonly estimatedDeliveryAt: Date | null;
+  readonly deliveredAt: Date | null;
+  readonly issueDescriptionPl: string | null;
+  readonly customerNotesPl: string | null;
 };
 
 export type OrderConfirmationView = {
@@ -25,7 +37,19 @@ export type OrderConfirmationView = {
   readonly totalGrossGrosze: number;
   readonly email: string;
   readonly items: readonly OrderConfirmationItemView[];
+  readonly shipment: OrderShipmentView | null;
 };
+
+const SHIPMENT_CUSTOMER_SELECT = {
+  carrier: true,
+  trackingNumber: true,
+  status: true,
+  shippedAt: true,
+  estimatedDeliveryAt: true,
+  deliveredAt: true,
+  issueDescriptionPl: true,
+  customerNotesPl: true,
+} as const;
 
 export type OrderSummaryView = {
   readonly orderNumber: string;
@@ -76,6 +100,7 @@ export async function findOrderForUser(orderNumber: string, userId: string): Pro
       items: {
         select: { quantity: true, lineGrossGrosze: true, snapshot: true },
       },
+      shipment: { select: SHIPMENT_CUSTOMER_SELECT },
     },
   });
   if (order === null || order.userId !== userId) {
@@ -93,6 +118,7 @@ export async function findOrderForUser(orderNumber: string, userId: string): Pro
       lineGrossGrosze: item.lineGrossGrosze,
       snapshot: item.snapshot as unknown as OrderItemSnapshot,
     })),
+    shipment: order.shipment,
   };
 }
 
@@ -112,6 +138,7 @@ export async function findOrderForConfirmation(
       items: {
         select: { quantity: true, lineGrossGrosze: true, snapshot: true },
       },
+      shipment: { select: SHIPMENT_CUSTOMER_SELECT },
     },
   });
   if (order === null) {
@@ -139,5 +166,6 @@ export async function findOrderForConfirmation(
       lineGrossGrosze: item.lineGrossGrosze,
       snapshot: item.snapshot as unknown as OrderItemSnapshot,
     })),
+    shipment: order.shipment,
   };
 }

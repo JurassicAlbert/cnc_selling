@@ -9,6 +9,7 @@ import { getStoreSettings } from '@/server/repositories/store-settings';
 import { submitGuestReview } from '@/server/actions/reviews';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
+import { OrderShipmentInfo } from '@/ui/primitives/OrderShipmentInfo';
 import { OrderSummary } from '@/ui/primitives/OrderSummary';
 import { Section } from '@/ui/primitives/Section';
 import { Text } from '@/ui/primitives/Text';
@@ -66,6 +67,7 @@ export default async function OrderConfirmationPage({ params, searchParams }: Or
         </div>
 
         <OrderSummary order={order} bankDetails={storeSettings} />
+        <OrderShipmentInfo shipment={order.shipment} />
 
         <div style={{ marginBlockStart: 24 }}>
           <Text muted>{SITE.orderEmailFollowUpNoticePl}</Text>

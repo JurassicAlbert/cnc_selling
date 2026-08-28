@@ -925,6 +925,26 @@ checkout — fetched the real rendered checkout HTML and confirmed
 "Przelewy24" is absent while the two connected methods are present.
 See `docs/HANDOVER.md` §9z47.
 
+**Phase 7, shipped — 2026-08-28.** Shipment tracking — real, manual,
+honestly not-live. New `Shipment` model, genuinely one-to-one with
+`Order`. Staff-only fields (internal notes, issue resolution) are
+kept out of the customer-facing repository type by construction, not
+by template discipline alone. Admin side is one nested upsert editor
+on the existing order detail page, not a new top-level section — a
+shipment only ever exists in the context of its one order. Reused
+the existing shared customer-order-view plumbing (`findOrderForUser`/
+`findOrderForConfirmation`, `OrderSummary`) rather than building two
+separate displays. Along the way, fixed a real coupling issue this
+change exposed: `OrderSummary`'s prop type named the full shared view
+type directly, so adding a field there would have silently forced
+the admin page's separate order type to grow a matching field —
+narrowed it to a `Pick` of the four fields it actually uses. Every
+customer-facing surface shows an explicit "updated manually" notice
+whenever a shipment exists, and an honest "not yet prepared" state
+before one does. 8 new test cases, full suite 686/686. Live-verified
+on a real order end to end, including confirming the two staff-only
+fields never reach the customer view. See `docs/HANDOVER.md` §9z48.
+
 ---
 
 ## Getting set up

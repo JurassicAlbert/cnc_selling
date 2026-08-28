@@ -8,6 +8,7 @@ import { findReviewStatusForOrder } from '@/server/repositories/reviews';
 import { getStoreSettings } from '@/server/repositories/store-settings';
 import { submitAccountReview } from '@/server/actions/reviews';
 import { Heading } from '@/ui/primitives/Heading';
+import { OrderShipmentInfo } from '@/ui/primitives/OrderShipmentInfo';
 import { OrderSummary } from '@/ui/primitives/OrderSummary';
 import { Text } from '@/ui/primitives/Text';
 import { ReviewForm } from '@/ui/islands/ReviewForm';
@@ -38,6 +39,7 @@ export default async function AccountOrderDetailPage({ params }: AccountOrderDet
       <Heading level={1}>{SITE.orderNumberLabelPl}: {order.orderNumber}</Heading>
       <Text muted>{order.email}</Text>
       <OrderSummary order={order} bankDetails={storeSettings} />
+      <OrderShipmentInfo shipment={order.shipment} />
 
       {order.status === 'COMPLETED' &&
         (reviewStatus !== null ? (

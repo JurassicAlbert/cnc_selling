@@ -15,6 +15,7 @@ import type {
   PaymentMethod,
   ProductTypeCode,
   ReviewStatus,
+  ShipmentStatus,
   UploadKind,
 } from '@/generated/prisma/enums';
 import { countPl } from '@/domain/text/plural';
@@ -460,6 +461,20 @@ export const ADMIN = {
   paymentMethodConnectedHelperPl:
     'To pole jest ustawiane wyłącznie przez rzeczywistą integrację techniczną, nie z tego formularza — dzięki temu żadna metoda płatności nie może zostać omyłkowo „włączona” bez faktycznego podłączenia.',
 
+  shipmentHeadingPl: 'Wysyłka',
+  shipmentSavePl: 'Zapisz wysyłkę',
+  shipmentFieldStatusPl: 'Status',
+  shipmentFieldCarrierPl: 'Przewoźnik',
+  shipmentFieldTrackingNumberPl: 'Numer przesyłki',
+  shipmentFieldShippedAtPl: 'Data nadania',
+  shipmentFieldEstimatedDeliveryAtPl: 'Przewidywana data dostawy',
+  shipmentFieldDeliveredAtPl: 'Data dostarczenia',
+  shipmentFieldCustomerNotesPl: 'Uwagi widoczne dla klienta',
+  shipmentFieldIssueDescriptionPl: 'Opis problemu (wewnętrzny i widoczny dla klienta)',
+  shipmentFieldIssueResolutionPl: 'Rozwiązanie problemu (wewnętrzne)',
+  shipmentFieldInternalNotesPl: 'Notatki wewnętrzne',
+  shipmentManualNoticePl: 'Status jest ustawiany ręcznie — brak integracji z API przewoźnika w tym projekcie.',
+
   staticPagesHeadingPl: 'Strony',
   staticPagesNewPl: 'Nowa strona',
   staticPagesEmptyPl: 'Brak stron. Dodaj pierwszą, aby pojawiła się pod adresem /strony/...',
@@ -724,6 +739,19 @@ const PAYMENT_METHOD_LABELS_PL: Record<PaymentMethod, string> = {
 
 export function adminPaymentMethodLabel(provider: PaymentMethod): string {
   return PAYMENT_METHOD_LABELS_PL[provider];
+}
+
+const SHIPMENT_STATUS_LABELS_PL: Record<ShipmentStatus, string> = {
+  PREPARING: 'Przygotowywanie paczki',
+  SHIPPED: 'Nadane',
+  IN_TRANSIT: 'W drodze',
+  DELIVERED: 'Dostarczone',
+  ISSUE: 'Problem z przesyłką',
+  RETURNED: 'Zwrócone do nadawcy',
+};
+
+export function adminShipmentStatusLabel(status: ShipmentStatus): string {
+  return SHIPMENT_STATUS_LABELS_PL[status];
 }
 
 const FINISH_KIND_LABELS_PL: Record<FinishKind, string> = {

@@ -17,11 +17,19 @@ export type OrderSummaryBankDetails = {
   readonly bankAccountHolderPl: string | null;
 };
 
+/**
+ * Only the fields this component actually reads — deliberately narrower
+ * than `OrderConfirmationView` so a field added there for one caller (e.g.
+ * P9 phase 7's `shipment`) never forces every other caller's own view type
+ * (`AdminOrderView` here) to grow a matching field it has no use for.
+ */
+type OrderSummaryOrderView = Pick<OrderConfirmationView, 'orderNumber' | 'paymentMethod' | 'totalGrossGrosze' | 'items'>;
+
 export function OrderSummary({
   order,
   bankDetails,
 }: {
-  readonly order: OrderConfirmationView;
+  readonly order: OrderSummaryOrderView;
   readonly bankDetails: OrderSummaryBankDetails;
 }) {
   return (

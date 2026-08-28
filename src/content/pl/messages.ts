@@ -17,7 +17,7 @@ import type { PersonalizationIssue } from '@/domain/personalization/validate';
 import type { ParseErrorCode } from '@/domain/text/numeric-input';
 import type { UploadWarning } from '@/domain/upload/inspect';
 import type { UnavailabilityReason } from '@/server/configurator/resolve-options';
-import type { DesignReviewStatus, OrderStatus } from '@/generated/prisma/enums';
+import type { DesignReviewStatus, OrderStatus, ShipmentStatus } from '@/generated/prisma/enums';
 import { formatMmAsCentimetres } from '@/domain/text/numeric-input';
 import { countPl } from '@/domain/text/plural';
 import { NOUNS } from '@/domain/text/nouns';
@@ -277,6 +277,24 @@ export function orderStatusMessage(status: OrderStatus): string {
       return 'Zrealizowane';
     case 'CANCELLED':
       return 'Anulowane';
+  }
+}
+
+/** P9 phase 7 — customer-facing shipment status labels. Manually set by staff; never implies a live carrier feed. */
+export function shipmentStatusMessage(status: ShipmentStatus): string {
+  switch (status) {
+    case 'PREPARING':
+      return 'Przygotowywanie paczki';
+    case 'SHIPPED':
+      return 'Nadane';
+    case 'IN_TRANSIT':
+      return 'W drodze';
+    case 'DELIVERED':
+      return 'Dostarczone';
+    case 'ISSUE':
+      return 'Problem z przesyłką';
+    case 'RETURNED':
+      return 'Zwrócone do nadawcy';
   }
 }
 

@@ -865,12 +865,15 @@ model Order {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  items   OrderItem[]
-  events  OrderEvent[]
+  items    OrderItem[]
+  events   OrderEvent[]
   /// At most one — `Review.orderId` is `@unique`. A real customer testimonial
   /// requires a genuine `COMPLETED` order behind it (§16A.1 module 9: "no
   /// facility to author a testimonial in a customer's name").
-  reviews Review[]
+  reviews  Review[]
+  /// P9 phase 7: one order → one package (real reality here, not a
+  /// modelling shortcut) — manually managed, never a live carrier API.
+  shipment Shipment?
 
   @@index([userId])
   @@index([status])
@@ -911,6 +914,48 @@ model OrderItem {
 
   @@index([orderId])
   @@index([customerDesignId])
+}
+
+enum ShipmentStatus {
+  PREPARING
+  SHIPPED
+  IN_TRANSIT
+  DELIVERED
+  ISSUE
+  RETURNED
+}
+
+/// P9 phase 7: manually-managed shipment tracking — one order, one package
+/// (real reality, not a modelling shortcut). No carrier API is integrated
+/// anywhere in this project; every field here is set by a staff member
+/// looking at a real package, not fetched live. `trackingNumber` may still
+/// be given to the customer as a real reference to check on the carrier's
+/// own site — this project just never claims to poll it (§9/§15's "no
+/// fake carrier tracking" rule).
+model Shipment {
+  id      String @id @default(cuid())
+  orderId String @unique
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  carrier        String?
+  trackingNumber String?
+  status         ShipmentStatus @default(PREPARING)
+
+  shippedAt           DateTime?
+  estimatedDeliveryAt DateTime?
+  deliveredAt         DateTime?
+
+  /// Staff-only — a real problem (damaged in transit, lost, address issue).
+  issueDescriptionPl String? @db.Text
+  /// Staff-only — how it was actually resolved (reshipped, refunded, etc.).
+  issueResolutionPl  String? @db.Text
+  /// Staff-only, never shown to the customer.
+  internalNotesPl    String? @db.Text
+  /// Shown to the customer alongside the status — e.g. "paczka czeka w punkcie odbioru".
+  customerNotesPl    String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model OrderEvent {

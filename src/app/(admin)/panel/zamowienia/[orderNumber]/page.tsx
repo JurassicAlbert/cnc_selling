@@ -6,6 +6,7 @@ import { ADMIN, adminOrderStatusLabel } from '@/content/pl/admin';
 import { ORDER_STATUSES, checkOrderStatusTransition } from '@/domain/order-status/transitions';
 import { findOrderForAdmin } from '@/server/repositories/admin-orders';
 import { listOrderModuleManifest } from '@/server/repositories/admin-production';
+import { findShipmentForOrder } from '@/server/repositories/admin-shipments';
 import { getStoreSettings } from '@/server/repositories/store-settings';
 import { OrderEventTimeline } from '@/ui/primitives/OrderEventTimeline';
 import { OrderModuleManifest } from '@/ui/primitives/OrderModuleManifest';
@@ -13,6 +14,7 @@ import { OrderSummary } from '@/ui/primitives/OrderSummary';
 import { OrderStatusActions } from '@/ui/islands/admin/OrderStatusActions';
 import type { StatusCandidate } from '@/ui/islands/admin/OrderStatusActions';
 import { RecordActivityTimeline } from '@/ui/islands/admin/RecordActivityTimeline';
+import { ShipmentEditor } from '@/ui/islands/admin/ShipmentEditor';
 
 type OrderDetailPageProps = {
   readonly params: Promise<{ readonly orderNumber: string }>;
@@ -29,6 +31,7 @@ export default async function AdminOrderDetailPage({ params }: OrderDetailPagePr
   if (order === null) {
     notFound();
   }
+  const shipment = await findShipmentForOrder(order.id);
 
   const candidates: StatusCandidate[] = ORDER_STATUSES.filter((status) => status !== order.status)
     .map((status) => {
@@ -99,6 +102,8 @@ export default async function AdminOrderDetailPage({ params }: OrderDetailPagePr
           <OrderEventTimeline events={order.events} />
 
           <OrderStatusActions orderNumber={order.orderNumber} candidates={candidates} canMarkPaid={canMarkPaid} />
+
+          <ShipmentEditor orderNumber={order.orderNumber} orderId={order.id} shipment={shipment} />
 
           <RecordActivityTimeline entity="Order" entityId={order.id} />
         </Grid>

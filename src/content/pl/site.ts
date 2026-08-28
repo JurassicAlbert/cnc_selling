@@ -182,6 +182,17 @@ export const SITE = {
   orderBankTransferAccountPendingPl:
     'Numer konta do przelewu prześlemy osobno — e-mailem lub podczas kontaktu. Nie zawiera go to potwierdzenie.',
   orderContactArrangedNoticePl: 'Skontaktujemy się, aby ustalić szczegóły zamówienia.',
+  orderShipmentHeadingPl: 'Wysyłka',
+  orderShipmentStatusLabelPl: 'Status',
+  orderShipmentCarrierLabelPl: 'Przewoźnik',
+  orderShipmentTrackingNumberLabelPl: 'Numer przesyłki',
+  orderShipmentShippedAtLabelPl: 'Data nadania',
+  orderShipmentEstimatedDeliveryLabelPl: 'Przewidywana data dostawy',
+  orderShipmentDeliveredAtLabelPl: 'Data dostarczenia',
+  orderShipmentIssueLabelPl: 'Zgłoszony problem',
+  orderShipmentManualNoticePl:
+    'Status przesyłki jest aktualizowany ręcznie przez nasz zespół, a nie pobierany automatycznie od przewoźnika — może nie odzwierciedlać zmian z ostatnich godzin.',
+  orderShipmentNotYetPreparedPl: 'Paczka nie została jeszcze przygotowana do wysyłki.',
   orderEmailFollowUpNoticePl: 'Potwierdzenie zamówienia zostanie przesłane e-mailem.',
   orderNotFoundPl: 'Nie znaleziono takiego zamówienia.',
   orderLookupHeadingPl: 'Sprawdź status zamówienia',
