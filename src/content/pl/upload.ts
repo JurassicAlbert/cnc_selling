@@ -11,5 +11,5 @@
 export const UPLOAD = {
   ipDeclarationVersion: 'v1',
   ipDeclarationTextPl:
-    'Oświadczam, że przesłany plik jest mojego autorstwa lub posiadam prawa i zgody niezbędne do jego wykorzystania w celu wykonania zamówionego produktu. Ponoszę odpowiedzialność za treść przesłanego pliku.',
+    'Oświadczam, że przesłany plik jest mojego autorstwa lub posiadam prawa i zgody niezbędne do jego wykorzystania w celu wykonania zamówionego produktu. Ponoszę odpowiedzialność za treść przesłanego pliku.',
 } as const;

@@ -15,9 +15,9 @@
  */
 
 export const SITE = {
-  homeSeoTitlePl: 'RYT — meble i akcesoria z grawerem',
+  homeSeoTitlePl: 'RYT — meble i akcesoria z grawerem',
   homeSeoDescPl:
-    'Meble, biżuteria i wykończenia wnętrz z drewna i gresu, z personalizowanym grawerem.',
+    'Meble, biżuteria i wykończenia wnętrz z drewna i gresu, z personalizowanym grawerem.',
 
   catalogueHomeLinkPl: 'Strona główna',
   catalogueStartingPricePrefixPl: 'od',
@@ -26,10 +26,10 @@ export const SITE = {
   catalogueDimensionsLabelPl: 'Wymiary',
   catalogueMaterialsLabelPl: 'Dostępne materiały',
   catalogueCareInstructionsLabelPl: 'Pielęgnacja',
-  catalogueInstallationInfoLabelPl: 'Informacje o montażu',
+  catalogueInstallationInfoLabelPl: 'Informacje o montażu',
   catalogueInstallationVariantsLabelPl: 'Warianty montażu',
   catalogueMaterialNotesLabelPl: 'Ważne informacje',
-  catalogueEmptyCategoryPl: 'W tej kategorii nie ma jeszcze żadnych produktów.',
+  catalogueEmptyCategoryPl: 'W tej kategorii nie ma jeszcze żadnych produktów.',
   catalogueCategoryNotFoundPl: 'Nie znaleziono takiej kategorii.',
   catalogueProductNotFoundPl: 'Nie znaleziono takiego produktu.',
   catalogueViewProductPl: 'Zobacz produkt',
@@ -61,7 +61,7 @@ export const SITE = {
   configuratorPreviewHeadingPl: 'Podgląd',
   configuratorPreviewEmptyPl: 'Wybierz materiał, aby zobaczyć podgląd.',
   configuratorPreviewCaptionPl:
-    'Wizualizacja poglądowa złożona z rzeczywistych zdjęć materiału i wzoru zastępczego — ostateczny wygląd produktu może się różnić.',
+    'Wizualizacja poglądowa złożona z rzeczywistych zdjęć materiału i wzoru zastępczego — ostateczny wygląd produktu może się różnić.',
   configuratorPriceLabelPl: 'Cena',
   configuratorPriceCalculatingPl: 'Obliczanie ceny…',
   configuratorPriceUnavailablePl: 'Podaj wymiary, aby zobaczyć cenę.',
@@ -72,12 +72,12 @@ export const SITE = {
   configuratorAddToCartPl: 'Dodaj do koszyka',
   configuratorSaveChangesPl: 'Zapisz zmiany',
   configuratorAddToCartErrorPl:
-    'Nie udało się dodać do koszyka. Sprawdź wybory powyżej i spróbuj ponownie.',
+    'Nie udało się dodać do koszyka. Sprawdź wybory powyżej i spróbuj ponownie.',
   configuratorProductionDaysLabelPl: 'Czas realizacji',
   configuratorClearedFinishPl:
     'Wybrane wykończenie zostało wyczyszczone, ponieważ nie jest dostępne dla nowo wybranego materiału.',
   configuratorClearedThicknessPl:
-    'Wybrana grubość została wyczyszczona, ponieważ nie mieści się w wybranym sposobie montażu.',
+    'Wybrana grubość została wyczyszczona, ponieważ nie mieści się w wybranym sposobie montażu.',
   configuratorUploadChooseFilePl: 'Wybierz plik (JPG, PNG, SVG lub PDF)',
   configuratorUploadSubmitPl: 'Prześlij projekt',
   configuratorUploadSubmittingPl: 'Przesyłanie…',
@@ -96,9 +96,9 @@ export const SITE = {
   // Homepage hero — real claims about how this business actually operates,
   // not generic retail trust-badge copy. No "free shipping"/"money-back
   // guarantee" claims: nothing has confirmed either exists yet.
-  heroHeadlinePl: 'Meble i dodatki z grawerem, wykonane na wymiar',
+  heroHeadlinePl: 'Meble i dodatki z grawerem, wykonane na wymiar',
   heroSubcopyPl:
-    'Projektujemy i wykonujemy unikalne przedmioty z drewna i gresu — od stołków loftowych po biżuterię — z precyzyjnym grawerem CNC i laserowym.',
+    'Projektujemy i wykonujemy unikalne przedmioty z drewna i gresu — od stołków loftowych po biżuterię — z precyzyjnym grawerem CNC i laserowym.',
   heroCtaPl: 'Zobacz kategorie',
 
   trustMadeToOrderTitlePl: 'Wykonanie na zamówienie',
@@ -138,7 +138,7 @@ export const SITE = {
   cartSubtotalLabelPl: 'Suma',
   cartCheckoutCtaPl: 'Przejdź do zamówienia',
   cartIncompleteNoticePl:
-    'Ta konfiguracja nie może już zostać wykonana w tej formie — edytuj ją przed złożeniem zamówienia.',
+    'Ta konfiguracja nie może już zostać wykonana w tej formie — edytuj ją przed złożeniem zamówienia.',
 
   checkoutHeadingPl: 'Zamówienie',
   checkoutBuyerSectionHeadingPl: 'Dane zamawiającego',
@@ -150,16 +150,16 @@ export const SITE = {
   checkoutCompanyNameLabelPl: 'Nazwa firmy',
   checkoutNipLabelPl: 'NIP',
   checkoutAddressSectionHeadingPl: 'Adres dostawy',
-  checkoutStreetLabelPl: 'Ulica i numer',
+  checkoutStreetLabelPl: 'Ulica i numer',
   checkoutPostalCodeLabelPl: 'Kod pocztowy',
   checkoutCityLabelPl: 'Miejscowość',
   checkoutDeliverySectionHeadingPl: 'Sposób dostawy',
-  checkoutNoDeliveryMethodsPl: 'Obecnie żadna metoda dostawy nie jest dostępna. Skontaktuj się z nami, aby dokończyć zamówienie.',
+  checkoutNoDeliveryMethodsPl: 'Obecnie żadna metoda dostawy nie jest dostępna. Skontaktuj się z nami, aby dokończyć zamówienie.',
   checkoutDeliveryEstimateLabelPl: 'Przewidywany czas dostawy:',
   checkoutDeliveryEstimateUnitPl: 'dni roboczych',
-  checkoutDeliveryMethodInvalidPl: 'Wybrana metoda dostawy jest już niedostępna — wybierz inną i spróbuj ponownie.',
-  checkoutPaymentMethodInvalidPl: 'Wybrana metoda płatności jest już niedostępna — wybierz inną i spróbuj ponownie.',
-  checkoutNoPaymentMethodsPl: 'Obecnie żadna metoda płatności nie jest dostępna. Skontaktuj się z nami, aby dokończyć zamówienie.',
+  checkoutDeliveryMethodInvalidPl: 'Wybrana metoda dostawy jest już niedostępna — wybierz inną i spróbuj ponownie.',
+  checkoutPaymentMethodInvalidPl: 'Wybrana metoda płatności jest już niedostępna — wybierz inną i spróbuj ponownie.',
+  checkoutNoPaymentMethodsPl: 'Obecnie żadna metoda płatności nie jest dostępna. Skontaktuj się z nami, aby dokończyć zamówienie.',
   checkoutPaymentSectionHeadingPl: 'Płatność',
   checkoutPaymentBankTransferPl: 'Przelew bankowy',
   checkoutPaymentContactArrangedPl: 'Ustalę szczegóły indywidualnie',
@@ -167,10 +167,10 @@ export const SITE = {
   checkoutShippingLabelPl: 'Dostawa',
   checkoutTermsLabelPl: 'Akceptuję regulamin sklepu.',
   checkoutWithdrawalExemptionTextPl:
-    'Przyjmuję do wiadomości, że produkty wykonywane na indywidualne zamówienie, według moich specyfikacji, nie podlegają zwrotowi w ramach 14-dniowego prawa odstąpienia od umowy (art. 38 pkt 3 ustawy z dnia 30 maja 2014 r. o prawach konsumenta).',
+    'Przyjmuję do wiadomości, że produkty wykonywane na indywidualne zamówienie, według moich specyfikacji, nie podlegają zwrotowi w ramach 14-dniowego prawa odstąpienia od umowy (art. 38 pkt 3 ustawy z dnia 30 maja 2014 r. o prawach konsumenta).',
   checkoutSubmitPl: 'Złóż zamówienie',
   checkoutEmptyCartRedirectPl: 'Twój koszyk jest pusty — wróć do koszyka, aby dodać produkty.',
-  checkoutGenericErrorPl: 'Nie udało się złożyć zamówienia. Sprawdź dane powyżej i spróbuj ponownie.',
+  checkoutGenericErrorPl: 'Nie udało się złożyć zamówienia. Sprawdź dane powyżej i spróbuj ponownie.',
 
   orderConfirmationHeadingPl: 'Zamówienie przyjęte',
   orderItemsHeadingPl: 'Zamówione produkty',
@@ -191,13 +191,13 @@ export const SITE = {
   orderShipmentDeliveredAtLabelPl: 'Data dostarczenia',
   orderShipmentIssueLabelPl: 'Zgłoszony problem',
   orderShipmentManualNoticePl:
-    'Status przesyłki jest aktualizowany ręcznie przez nasz zespół, a nie pobierany automatycznie od przewoźnika — może nie odzwierciedlać zmian z ostatnich godzin.',
+    'Status przesyłki jest aktualizowany ręcznie przez nasz zespół, a nie pobierany automatycznie od przewoźnika — może nie odzwierciedlać zmian z ostatnich godzin.',
   orderShipmentNotYetPreparedPl: 'Paczka nie została jeszcze przygotowana do wysyłki.',
   orderEmailFollowUpNoticePl: 'Potwierdzenie zamówienia zostanie przesłane e-mailem.',
   orderNotFoundPl: 'Nie znaleziono takiego zamówienia.',
   orderLookupHeadingPl: 'Sprawdź status zamówienia',
   orderLookupOrderNumberLabelPl: 'Numer zamówienia',
-  orderLookupTokenLabelPl: 'Kod dostępu (z potwierdzenia zamówienia)',
+  orderLookupTokenLabelPl: 'Kod dostępu (z potwierdzenia zamówienia)',
   orderLookupSubmitPl: 'Sprawdź',
 
   footerCategoriesHeadingPl: 'Kategorie',
@@ -223,7 +223,7 @@ export const SITE = {
   authRegisterHeadingPl: 'Rejestracja',
   authEmailLabelPl: 'Adres e-mail',
   authPasswordLabelPl: 'Hasło',
-  authNameLabelPl: 'Imię i nazwisko',
+  authNameLabelPl: 'Imię i nazwisko',
   authLoginSubmitPl: 'Zaloguj się',
   authRegisterSubmitPl: 'Załóż konto',
   authNoAccountPl: 'Nie masz jeszcze konta?',
@@ -262,7 +262,7 @@ export const SITE = {
   accountConfigurationAddToCartPl: 'Dodaj do koszyka',
 
   consentBannerTextPl:
-    'Używamy niezbędnych plików cookie do działania koszyka i logowania oraz — za Twoją zgodą — plików analitycznych, które pomagają nam ulepszać sklep.',
+    'Używamy niezbędnych plików cookie do działania koszyka i logowania oraz — za Twoją zgodą — plików analitycznych, które pomagają nam ulepszać sklep.',
   consentBannerAcceptPl: 'Akceptuję',
   consentBannerDeclinePl: 'Tylko niezbędne',
 
@@ -275,39 +275,39 @@ export const SITE = {
 
   blogHeadingPl: 'Blog',
   blogSeoTitlePl: 'Blog — RYT',
-  blogSeoDescPl: 'Artykuły o rzemiośle, materiałach i personalizacji grawerem.',
+  blogSeoDescPl: 'Artykuły o rzemiośle, materiałach i personalizacji grawerem.',
   blogEmptyStatePl: 'Wpisy pojawią się tutaj wkrótce.',
   blogPublishedLabelPl: 'Opublikowano',
   blogReadMorePl: 'Czytaj dalej',
   blogPostNotFoundPl: 'Nie znaleziono takiego wpisu.',
-  homeBlogHeadingPl: 'Z naszego bloga',
+  homeBlogHeadingPl: 'Z naszego bloga',
   blogViewAllPl: 'Zobacz wszystkie posty',
 
   patternsHeadingPl: 'Wzory',
   patternsSeoTitlePl: 'Wzory — RYT',
-  patternsSeoDescPl: 'Przeglądaj nasze gotowe wzory do grawerowania CNC, a także zewnętrzne, darmowe źródła wzorów.',
+  patternsSeoDescPl: 'Przeglądaj nasze gotowe wzory do grawerowania CNC, a także zewnętrzne, darmowe źródła wzorów.',
   patternsIntroPl:
-    'Poniżej znajdziesz wzory z naszej oferty, które można wybrać przy konfiguracji wybranych produktów. Możesz też przesłać własny projekt — zapisane wzory znajdziesz na koncie w sekcji „Moje wzory”.',
+    'Poniżej znajdziesz wzory z naszej oferty, które można wybrać przy konfiguracji wybranych produktów. Możesz też przesłać własny projekt — zapisane wzory znajdziesz na koncie w sekcji „Moje wzory”.',
   patternsEmptyPl: 'Wzory pojawią się tutaj wkrótce.',
   patternsExternalHeadingPl: 'Zewnętrzne źródła wzorów',
   patternsExternalIntroPl:
-    'To linki do niezależnych, zewnętrznych serwisów z darmowymi wzorami do grawerowania i cięcia CNC. Nie są to nasze materiały — każdy link prowadzi do strony innego dostawcy, gdzie obowiązują jego własne zasady korzystania i licencje.',
+    'To linki do niezależnych, zewnętrznych serwisów z darmowymi wzorami do grawerowania i cięcia CNC. Nie są to nasze materiały — każdy link prowadzi do strony innego dostawcy, gdzie obowiązują jego własne zasady korzystania i licencje.',
   patternsExternalBadgePl: 'zasób zewnętrzny',
   patternsExternalEmptyPl: 'Obecnie nie mamy poleconych zewnętrznych źródeł wzorów.',
 
   collectionsHeadingPl: 'Kolekcje',
   collectionsSeoTitlePl: 'Kolekcje — RYT',
-  collectionsSeoDescPl: 'Gotowe, samodzielnie zaprojektowane kolekcje produktów z grawerem — dostępne od ręki, bez konieczności konfiguracji.',
+  collectionsSeoDescPl: 'Gotowe, samodzielnie zaprojektowane kolekcje produktów z grawerem — dostępne od ręki, bez konieczności konfiguracji.',
   collectionsIntroPl:
-    'To gotowe, samodzielnie zaprojektowane przez nas zestawienia produktów — nie są tworzone na indywidualne zamówienie klienta. Możesz je po prostu przeglądać i zamawiać, tak jak każdy inny produkt w sklepie.',
+    'To gotowe, samodzielnie zaprojektowane przez nas zestawienia produktów — nie są tworzone na indywidualne zamówienie klienta. Możesz je po prostu przeglądać i zamawiać, tak jak każdy inny produkt w sklepie.',
   collectionsEmptyPl: 'Kolekcje pojawią się tutaj wkrótce.',
   collectionsBadgePl: 'gotowa kolekcja',
   collectionNotFoundPl: 'Nie znaleziono takiej kolekcji.',
-  collectionEmptyProductsPl: 'W tej kolekcji nie ma jeszcze żadnych produktów.',
+  collectionEmptyProductsPl: 'W tej kolekcji nie ma jeszcze żadnych produktów.',
 
   faqHeadingPl: 'Najczęściej zadawane pytania',
   faqSeoTitlePl: 'Najczęściej zadawane pytania — RYT',
-  faqSeoDescPl: 'Odpowiedzi na najczęstsze pytania o zamówienia, personalizację i realizację.',
+  faqSeoDescPl: 'Odpowiedzi na najczęstsze pytania o zamówienia, personalizację i realizację.',
   faqEmptyStatePl: 'Pytania pojawią się tutaj wkrótce.',
   homeFaqHeadingPl: 'Najczęściej zadawane pytania',
   faqViewAllPl: 'Zobacz wszystkie pytania',
@@ -322,18 +322,18 @@ export const SITE = {
   reviewFormSubmitPl: 'Wyślij opinię',
   reviewFormThankYouPl: 'Dziękujemy za opinię! Zostanie opublikowana po weryfikacji.',
   reviewAlreadySubmittedPl: 'Opinia dla tego zamówienia została już przesłana.',
-  reviewLinkPl: 'Zostaw opinię o tym zamówieniu',
+  reviewLinkPl: 'Zostaw opinię o tym zamówieniu',
 
   contactHeadingPl: 'Kontakt',
   contactSeoTitlePl: 'Kontakt — RYT',
   contactSeoDescPl: 'Masz pytanie dotyczące zamówienia, dostawy lub oferty? Napisz do nas.',
   contactIntroPl: 'Masz pytanie? Napisz do nas — odpowiadamy najszybciej, jak to możliwe, na podany adres e-mail.',
   contactFormEmailLabelPl: 'E-mail',
-  contactFormNameLabelPl: 'Imię i nazwisko (opcjonalnie)',
+  contactFormNameLabelPl: 'Imię i nazwisko (opcjonalnie)',
   contactFormSubjectLabelPl: 'Temat',
   contactFormMessageLabelPl: 'Wiadomość',
   contactFormSubmitPl: 'Wyślij wiadomość',
   contactFormThankYouPl: 'Dziękujemy za wiadomość. Odpowiemy najszybciej, jak to możliwe, na podany adres e-mail.',
-  contactOrderContextHeadingPl: 'Masz pytanie o to zamówienie?',
-  contactOrderContextIntroPl: 'Napisz do nas w sprawie tego konkretnego zamówienia — Twoja wiadomość zostanie od razu z nim powiązana.',
+  contactOrderContextHeadingPl: 'Masz pytanie o to zamówienie?',
+  contactOrderContextIntroPl: 'Napisz do nas w sprawie tego konkretnego zamówienia — Twoja wiadomość zostanie od razu z nim powiązana.',
 } as const;
