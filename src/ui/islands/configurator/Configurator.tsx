@@ -65,6 +65,7 @@ import {
 import type { UploadErrorCode } from '@/content/pl/messages';
 import { SITE } from '@/content/pl/site';
 import { UPLOAD } from '@/content/pl/upload';
+import { maxUploadSizeBytes } from '@/domain/upload/inspect';
 import type { UploadWarning } from '@/domain/upload/inspect';
 import { DisabledExplanation } from '@/ui/primitives/DisabledExplanation';
 import { Text } from '@/ui/primitives/Text';
@@ -76,6 +77,7 @@ import { getConfiguratorSnapshot } from '@/server/actions/configurator';
 import type { ConfiguratorSnapshot } from '@/server/actions/configurator';
 import { addToCart, updateCartItemConfiguration } from '@/server/actions/cart';
 import { uploadCustomDesign } from '@/server/actions/upload';
+import type { UploadCustomDesignResult } from '@/server/actions/upload';
 import { ConfiguratorPreview } from './ConfiguratorPreview';
 import { readSelectionsFromSearch, writeSelectionsToSearch } from './selections-url';
 
@@ -741,25 +743,49 @@ function CustomUploadStep({
   const [ipConsent, setIpConsent] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<UploadErrorCode | null>(null);
+  const [errorParams, setErrorParams] = useState<Record<string, number> | undefined>(undefined);
   const [warnings, setWarnings] = useState<readonly UploadWarning[]>([]);
 
   const handleSubmit = async () => {
     if (file === null) {
       setError('NO_FILE');
+      setErrorParams(undefined);
       return;
     }
     setPending(true);
     setError(null);
+    setErrorParams(undefined);
     const formData = new FormData();
     formData.set('file', file);
     if (ipConsent) {
       formData.set('ipConsent', 'on');
     }
 
-    const result = await uploadCustomDesign(formData);
+    // A file large enough to exceed next.config's own `serverActions.
+    // bodySizeLimit` (26mb — deliberately just above the app's real 25MB
+    // cap, see next.config's own comment) never reaches `uploadCustomDesign`
+    // at all: Next.js rejects the request at the framework boundary and the
+    // call throws instead of resolving `{ok: false}`. Found live while
+    // verifying this exact upload flow — without this catch, `pending`
+    // never clears and the customer is stuck on "Przesyłanie..." forever,
+    // the failure visible only in the browser console. `file.size`/`file.
+    // type` are already known client-side, so the same real-numbers
+    // `FILE_TOO_LARGE` message can be shown immediately, no server
+    // round-trip needed to know what went wrong.
+    let result: UploadCustomDesignResult;
+    try {
+      result = await uploadCustomDesign(formData);
+    } catch {
+      setPending(false);
+      setError('FILE_TOO_LARGE');
+      const maxBytes = maxUploadSizeBytes(file.type);
+      setErrorParams(maxBytes === null ? undefined : { actualBytes: file.size, maxBytes });
+      return;
+    }
     setPending(false);
     if (!result.ok) {
       setError(result.code);
+      setErrorParams(result.params);
       return;
     }
     setWarnings(result.warnings);
@@ -799,7 +825,7 @@ function CustomUploadStep({
         label={SITE.configuratorUploadIpConsentLabelPl}
       />
 
-      {error !== null && <Alert severity="error">{uploadErrorMessage(error)}</Alert>}
+      {error !== null && <Alert severity="error">{uploadErrorMessage(error, errorParams)}</Alert>}
 
       <Button
         variant="contained"

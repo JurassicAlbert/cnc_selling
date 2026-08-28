@@ -132,7 +132,11 @@ export type UploadErrorCode =
   | 'CORRUPTED_FILE'
   | 'PDF_CONTAINS_ACTIVE_CONTENT';
 
-export function uploadErrorMessage(code: UploadErrorCode): string {
+function megabytes(bytes: number): string {
+  return `${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 1 }).format(bytes / (1024 * 1024))} MB`;
+}
+
+export function uploadErrorMessage(code: UploadErrorCode, params?: Record<string, number>): string {
   switch (code) {
     case 'NO_FILE':
       return 'Wybierz plik do przesłania.';
@@ -150,7 +154,9 @@ export function uploadErrorMessage(code: UploadErrorCode): string {
     case 'UNSUPPORTED_TYPE':
       return 'Nieobsługiwany format pliku. Akceptujemy JPG, PNG, SVG i PDF.';
     case 'FILE_TOO_LARGE':
-      return 'Plik jest za duży.';
+      return params?.actualBytes !== undefined && params.maxBytes !== undefined
+        ? `Plik ma ${megabytes(params.actualBytes)} — maksymalny dopuszczalny rozmiar to ${megabytes(params.maxBytes)}. Zmniejsz plik i spróbuj ponownie.`
+        : 'Plik jest za duży.';
     case 'CORRUPTED_FILE':
       return 'Nie udało się odczytać pliku. Sprawdź, czy nie jest uszkodzony, i spróbuj ponownie.';
     case 'PDF_CONTAINS_ACTIVE_CONTENT':

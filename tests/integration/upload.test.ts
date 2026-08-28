@@ -173,10 +173,14 @@ describe('size boundaries (§13.1.1: SVG capped at 5MB)', () => {
     expect(result.ok).toBe(true);
   });
 
-  it('rejects an SVG one byte over the 5MB cap', async () => {
+  it('rejects an SVG one byte over the 5MB cap, naming the real actual/max sizes', async () => {
     const bytes = paddedSvg(5 * 1024 * 1024 + 1);
     const result = await inspectUploadedFile({ bytes, target: null });
-    expect(result).toEqual({ ok: false, code: 'FILE_TOO_LARGE' });
+    expect(result).toEqual({
+      ok: false,
+      code: 'FILE_TOO_LARGE',
+      params: { actualBytes: 5 * 1024 * 1024 + 1, maxBytes: 5 * 1024 * 1024 },
+    });
   });
 });
 

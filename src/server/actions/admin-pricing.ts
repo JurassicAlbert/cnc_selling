@@ -49,19 +49,24 @@ export type PricingDraftInput = {
 export type PricingDraftResult = { readonly ok: true; readonly version: number } | { readonly ok: false; readonly detail: string };
 
 function validateDraftInput(input: PricingDraftInput): string | null {
-  const rates = [input.machineRateCncGrosze, input.machineRateLaserGrosze, input.moduleSurchargeGrosze];
-  if (rates.some((r) => !Number.isInteger(r) || r < 0)) {
-    return 'Stawki muszą być liczbami całkowitymi, nie mniejszymi niż 0.';
+  const rates: readonly [string, number][] = [
+    ['Stawka CNC', input.machineRateCncGrosze],
+    ['Stawka lasera', input.machineRateLaserGrosze],
+    ['Dopłata modułowa', input.moduleSurchargeGrosze],
+  ];
+  const badRate = rates.find(([, r]) => !Number.isInteger(r) || r < 0);
+  if (badRate !== undefined) {
+    return `${badRate[0]} musi być liczbą całkowitą, nie mniejszą niż 0 — podano ${badRate[1]}.`;
   }
   if (!Number.isInteger(input.vatRateBp) || input.vatRateBp < 0 || input.vatRateBp > 10_000) {
-    return 'Stawka VAT musi być liczbą całkowitą od 0 do 10000 (punkty bazowe, 2300 = 23%).';
+    return `Stawka VAT musi być liczbą całkowitą od 0 do 10000 (punkty bazowe, 2300 = 23%) — podano ${input.vatRateBp}.`;
   }
   if (input.packagingTiers.length === 0) {
     return 'Musi istnieć co najmniej jeden próg pakowania.';
   }
   for (const [index, tier] of input.packagingTiers.entries()) {
     if (!Number.isInteger(tier.priceGrosze) || tier.priceGrosze < 0) {
-      return `Próg pakowania #${index + 1}: cena musi być liczbą całkowitą, nie mniejszą niż 0.`;
+      return `Próg pakowania #${index + 1}: cena musi być liczbą całkowitą, nie mniejszą niż 0 — podano ${tier.priceGrosze}.`;
     }
   }
   // packagingGroszeFor (src/server/mapping/to-domain.ts) evaluates tiers in

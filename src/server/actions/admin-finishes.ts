@@ -51,7 +51,7 @@ function validateFinishFields(fields: FinishFields): string | null {
     return 'Nazwa jest wymagana.';
   }
   if (fields.extraDaysMin > fields.extraDaysMax) {
-    return 'Minimalny dodatkowy czas nie może być dłuższy od maksymalnego.';
+    return `Minimalny dodatkowy czas (${fields.extraDaysMin} dni) nie może być dłuższy od maksymalnego (${fields.extraDaysMax} dni).`;
   }
   return null;
 }

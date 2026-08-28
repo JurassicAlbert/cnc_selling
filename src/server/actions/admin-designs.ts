@@ -322,7 +322,7 @@ function validateDesignFields(fields: DesignFields): string | null {
     return 'Nazwa jest wymagana.';
   }
   if (fields.detailLevel < 1 || fields.detailLevel > 5) {
-    return 'Poziom szczegółowości musi być liczbą od 1 do 5.';
+    return `Poziom szczegółowości musi być liczbą od 1 do 5 — podano ${fields.detailLevel}.`;
   }
   return null;
 }

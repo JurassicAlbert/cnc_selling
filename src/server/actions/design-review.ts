@@ -38,7 +38,7 @@ export type ReuploadCustomDesignErrorCode =
 
 export type ReuploadCustomDesignResult =
   | { readonly ok: true; readonly warnings: UploadWarning[] }
-  | { readonly ok: false; readonly code: ReuploadCustomDesignErrorCode };
+  | { readonly ok: false; readonly code: ReuploadCustomDesignErrorCode; readonly params?: Record<string, number> };
 
 export async function reuploadCustomDesign(
   customerDesignId: string,
@@ -76,7 +76,7 @@ export async function reuploadCustomDesign(
   const bytes = Buffer.from(await file.arrayBuffer());
   const inspected = await inspectUploadedFile({ bytes, target: null });
   if (!inspected.ok) {
-    return { ok: false, code: inspected.code };
+    return { ok: false, code: inspected.code, params: inspected.params };
   }
 
   const storageKey = randomUUID();

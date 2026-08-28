@@ -33,7 +33,7 @@ function validateReviewFields(fields: { readonly authorNamePl: string; readonly 
     return 'Imię jest wymagane.';
   }
   if (!Number.isInteger(fields.rating) || fields.rating < 1 || fields.rating > 5) {
-    return 'Ocena musi być liczbą od 1 do 5.';
+    return `Ocena musi być liczbą całkowitą od 1 do 5 — podano ${Number.isFinite(fields.rating) ? fields.rating : 'nieprawidłową wartość'}.`;
   }
   if (fields.bodyPl.length === 0) {
     return 'Treść opinii jest wymagana.';

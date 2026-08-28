@@ -61,14 +61,17 @@ function validateProductInput(input: ProductCoreInput): string | null {
   if (input.namePl.trim().length === 0) {
     return 'Nazwa jest wymagana.';
   }
-  if (input.minWidthMm > input.maxWidthMm || input.minHeightMm > input.maxHeightMm) {
-    return 'Minimalny wymiar nie może być większy od maksymalnego.';
+  if (input.minWidthMm > input.maxWidthMm) {
+    return `Minimalna szerokość (${input.minWidthMm} mm) nie może być większa od maksymalnej (${input.maxWidthMm} mm).`;
+  }
+  if (input.minHeightMm > input.maxHeightMm) {
+    return `Minimalna wysokość (${input.minHeightMm} mm) nie może być większa od maksymalnej (${input.maxHeightMm} mm).`;
   }
   if (input.minPriceGrosze > input.basePriceGrosze) {
-    return 'Cena minimalna nie może być wyższa od ceny bazowej.';
+    return `Cena minimalna (${(input.minPriceGrosze / 100).toFixed(2)} zł) nie może być wyższa od ceny bazowej (${(input.basePriceGrosze / 100).toFixed(2)} zł).`;
   }
   if (input.productionDaysMin > input.productionDaysMax) {
-    return 'Minimalny czas realizacji nie może być dłuższy od maksymalnego.';
+    return `Minimalny czas realizacji (${input.productionDaysMin} dni) nie może być dłuższy od maksymalnego (${input.productionDaysMax} dni).`;
   }
   return null;
 }

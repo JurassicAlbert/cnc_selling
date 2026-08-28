@@ -72,7 +72,12 @@ export type InspectFileResult =
       readonly previewBytes: Buffer | null;
       readonly warnings: UploadWarning[];
     }
-  | { readonly ok: false; readonly code: InspectFileErrorCode };
+  | {
+      readonly ok: false;
+      readonly code: InspectFileErrorCode;
+      /** Real numbers behind the failure, e.g. `FILE_TOO_LARGE`'s `{actualBytes, maxBytes}` — `messages.ts` names the actual fix from these instead of a generic "file too large." Absent when the code carries nothing worth naming. */
+      readonly params?: Record<string, number>;
+    };
 
 export type InspectFileInput = {
   readonly bytes: Buffer;
@@ -94,7 +99,11 @@ export async function inspectUploadedFile(input: InspectFileInput): Promise<Insp
 
   const maxBytes = maxUploadSizeBytes(mimeType);
   if (maxBytes === null || bytes.length > maxBytes) {
-    return { ok: false, code: 'FILE_TOO_LARGE' };
+    return {
+      ok: false,
+      code: 'FILE_TOO_LARGE',
+      params: maxBytes === null ? undefined : { actualBytes: bytes.length, maxBytes },
+    };
   }
 
   if (mimeType === SVG_MIME_TYPE) {

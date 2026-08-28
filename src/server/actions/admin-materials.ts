@@ -78,7 +78,7 @@ function validateMaterialFields(fields: MaterialFields): string | null {
     return 'Nazwa jest wymagana.';
   }
   if (fields.pricePerM2Grosze <= 0) {
-    return 'Cena za m² musi być dodatnia.';
+    return `Cena za m² musi być dodatnia — podano ${(fields.pricePerM2Grosze / 100).toFixed(2)} zł.`;
   }
   return null;
 }

@@ -43,7 +43,7 @@ export type UploadCustomDesignErrorCode = 'NO_FILE' | 'CONSENT_REQUIRED' | 'RATE
 
 export type UploadCustomDesignResult =
   | { readonly ok: true; readonly customerDesignId: string; readonly warnings: UploadWarning[] }
-  | { readonly ok: false; readonly code: UploadCustomDesignErrorCode };
+  | { readonly ok: false; readonly code: UploadCustomDesignErrorCode; readonly params?: Record<string, number> };
 
 /**
  * Best-effort client IP for `CustomerDesign.ipConfirmedIp` — read from
@@ -81,7 +81,7 @@ export async function uploadCustomDesign(formData: FormData): Promise<UploadCust
   const bytes = Buffer.from(await file.arrayBuffer());
   const inspected = await inspectUploadedFile({ bytes, target: null });
   if (!inspected.ok) {
-    return { ok: false, code: inspected.code };
+    return { ok: false, code: inspected.code, params: inspected.params };
   }
 
   const storageKey = randomUUID();

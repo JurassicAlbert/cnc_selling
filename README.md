@@ -710,6 +710,23 @@ the standard way automation drives file inputs without a native OS
 dialog) — both rows appeared in the real admin list, confirmed and
 then cleaned up. See `docs/HANDOVER.md` §9z35.
 
+**Validation messages name the fix, not the rule — built 2026-08-28,
+autonomously.** The domain layer's own customer-facing messages
+already did this correctly; the one real gap was the upload flow's
+"Plik jest za duży." showing no actual size. Fixed to read "Plik ma
+25,5 MB — maksymalny dopuszczalny rozmiar to 25 MB." — and along the
+way, live-verifying it, found a real, more serious bug: a file just
+over `next.config`'s own body-size buffer never reached the app's
+check at all, so the upload button hung on "Przesyłanie..." forever
+with the real error visible only in the console. Fixed with a
+`try/catch` around the Server Action call, showing the same
+real-numbers message from the file size already known client-side.
+8 admin-side messages (Products' dimension/price/day-count conflicts,
+Materials' price, Finishes' day range, Designs' detail level, the
+pricing draft form's rates/VAT/tiers, review ratings) were rewritten
+the same way — each now names the actual submitted values instead of
+just the abstract rule. See `docs/HANDOVER.md` §9z36.
+
 ---
 
 ## Getting set up
@@ -845,8 +862,15 @@ checkbox selection, a "Zaznaczono N wierszy" toolbar, Aktywuj/Dezaktywuj
 reusing each entity's existing single-row action (§9z34; also fixed a
 drive-by pluralization inconsistency — a genuine, tested `pluralPl`/
 `countPl` helper existed since P1 but a P7c message had reimplemented
-it by hand). See `docs/CHECKLIST.md` for the itemised state of every
-phase. Next,
+it by hand). **CSV import now covers Collections and Products too**,
+Products needing a real `categorySlug`-to-id resolution per row
+(§9z35). **Validation messages now name the fix, not the rule** — the
+upload flow's file-size error shows the real size and limit instead of
+"Plik jest za duży.", and a real, more serious bug was found live while
+verifying it: a file just over `next.config`'s own body-size buffer
+hung the upload button forever with the error visible only in the
+console, fixed with a `try/catch` that was simply missing (§9z36). See
+`docs/CHECKLIST.md` for the itemised state of every phase. Next,
 continuing autonomously per the owner's standing direction to close
 remaining gaps toward "no missing pages, functionality, design and UI":
 
