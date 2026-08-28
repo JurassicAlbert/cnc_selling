@@ -823,6 +823,29 @@ few minutes, on routes this session never touched — confirmed via
 server logs it wasn't a real regression, fixed with a clean restart.
 See `docs/HANDOVER.md` §9z42.
 
+**Phase 2 of the same continuation, shipped — 2026-08-28.** The
+`CUSTOM_UPLOAD` configurator step — the thing the owner's prompt
+called a "pattern generator" — is now backed by a real, standalone,
+reusable page instead of being reachable only mid-checkout on one
+product. New `/moje-konto/wzory` lists every design a customer (or
+guest session) has ever uploaded with its real review status and a
+thumbnail, plus a real MUI upload form; the `CUSTOM` product's own
+configurator gained a "reuse a saved design" picker that correctly
+shows a reused design's *actual* status rather than a hardcoded
+"pending review" (a real bug caught and fixed before it shipped,
+during self-review of the new code, not after). The admin `Design`
+form gained a `featured` curated-highlight checkbox, always reset to
+`false` on `applyDuplicateDesign`'s copies. New integration tests (9
+cases across two files), full suite 630/630, and end-to-end live
+verification (a seeded-then-removed real DB row, traced through the
+saved-designs page, the configurator's reuse picker, and the admin
+checkbox) via server-rendered `fetch`/`curl` output rather than a
+live DOM read — this route streams via `loading.tsx`, and the
+harness's DOM-read tools get stuck mid-swap on any streamed route,
+confirmed as a harness limitation (not a regression) by reproducing
+it identically on an untouched sibling route. See `docs/HANDOVER.md`
+§9z43.
+
 ---
 
 ## Getting set up

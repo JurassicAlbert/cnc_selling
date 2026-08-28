@@ -32,6 +32,7 @@ import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import MenuItem from '@mui/material/MenuItem';
 import Step from '@mui/material/Step';
 import StepButton from '@mui/material/StepButton';
 import Stepper from '@mui/material/Stepper';
@@ -54,6 +55,7 @@ import type { PersonalizationIssue } from '@/domain/personalization/validate';
 import { formatMmAsCentimetres, parseCentimetresToMm } from '@/domain/text/numeric-input';
 import {
   COPY,
+  customerDesignStatusMessage,
   dimensionMessage,
   feasibilityMessage,
   numericInputMessage,
@@ -77,6 +79,7 @@ import { getConfiguratorSnapshot } from '@/server/actions/configurator';
 import type { ConfiguratorSnapshot } from '@/server/actions/configurator';
 import { addToCart, updateCartItemConfiguration } from '@/server/actions/cart';
 import { uploadCustomDesign } from '@/server/actions/upload';
+import type { OwnedCustomerDesignListItem } from '@/server/repositories/customer-designs';
 import type { UploadCustomDesignResult } from '@/server/actions/upload';
 import { ConfiguratorPreview } from './ConfiguratorPreview';
 import { readSelectionsFromSearch, writeSelectionsToSearch } from './selections-url';
@@ -128,6 +131,8 @@ type ConfiguratorProps = {
   };
   /** The "Preview as customer" admin feature's `?podglad=1` flag, passed down so every `getConfiguratorSnapshot` call (not just the page's own initial SSR fetch) can keep bypassing the `isActive` gate. Re-verified server-side on every call — see `getConfiguratorSnapshot`'s own doc comment. */
   readonly isPreview?: boolean;
+  /** P9 phase 2: the customer's own previously-uploaded designs, offered as a "reuse" alternative to uploading fresh on `CUSTOM_UPLOAD`. Server-fetched once on the product page — always passed, even for products with no such step, since it's cheap and simpler than a per-product-type check at the call site. */
+  readonly savedDesigns?: readonly OwnedCustomerDesignListItem[];
 };
 
 export function Configurator({
@@ -137,6 +142,7 @@ export function Configurator({
   requiresExactSize,
   dimensionEnvelope,
   isPreview = false,
+  savedDesigns = [],
 }: ConfiguratorProps) {
   const router = useRouter();
   const [selections, setSelections] = useState<Selections>(EMPTY_SELECTIONS);
@@ -495,6 +501,7 @@ export function Configurator({
         {currentStep === 'CUSTOM_UPLOAD' && (
           <CustomUploadStep
             customerDesignId={selections.customUploadId}
+            savedDesigns={savedDesigns}
             onUploaded={(customerDesignId) =>
               setSelections((prev) => ({ ...prev, customUploadId: customerDesignId }))
             }
@@ -734,9 +741,11 @@ function PersonalizationStep({
  */
 function CustomUploadStep({
   customerDesignId,
+  savedDesigns,
   onUploaded,
 }: {
   readonly customerDesignId: string | null;
+  readonly savedDesigns: readonly OwnedCustomerDesignListItem[];
   readonly onUploaded: (customerDesignId: string) => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
@@ -745,6 +754,7 @@ function CustomUploadStep({
   const [error, setError] = useState<UploadErrorCode | null>(null);
   const [errorParams, setErrorParams] = useState<Record<string, number> | undefined>(undefined);
   const [warnings, setWarnings] = useState<readonly UploadWarning[]>([]);
+  const [selectedSavedDesignId, setSelectedSavedDesignId] = useState('');
 
   const handleSubmit = async () => {
     if (file === null) {
@@ -793,11 +803,18 @@ function CustomUploadStep({
   };
 
   if (customerDesignId !== null) {
+    // Reusing a design from `savedDesigns` is a real, previously-existing
+    // row — it may already be APPROVED, not "just uploaded and pending."
+    // Showing the hardcoded pending/needs-review copy for an already
+    // -approved reused design would be actively wrong, not just imprecise.
+    const reused = savedDesigns.find((design) => design.id === customerDesignId);
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 480 }}>
-        <Alert severity="success">{SITE.configuratorUploadSuccessPl}</Alert>
-        <Text muted>{COPY.designStatusPending}</Text>
-        <Text muted>{COPY.customDesignNeedsReview}</Text>
+        <Alert severity="success">
+          {reused !== undefined ? SITE.configuratorUploadReuseSuccessPl : SITE.configuratorUploadSuccessPl}
+        </Alert>
+        <Text muted>{reused !== undefined ? customerDesignStatusMessage(reused.status) : COPY.designStatusPending}</Text>
+        {(reused === undefined || reused.status === 'PENDING_REVIEW') && <Text muted>{COPY.customDesignNeedsReview}</Text>}
         {warnings.map((warning) => (
           <Alert severity="warning" key={warning.code}>
             {uploadWarningMessage(warning)}
@@ -809,6 +826,34 @@ function CustomUploadStep({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 480 }}>
+      {savedDesigns.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Text muted>{SITE.configuratorUploadReuseHeadingPl}</Text>
+          <TextField
+            select
+            size="small"
+            label={SITE.configuratorUploadReuseSelectLabelPl}
+            value={selectedSavedDesignId}
+            onChange={(e) => setSelectedSavedDesignId(e.target.value)}
+          >
+            {savedDesigns.map((design) => (
+              <MenuItem key={design.id} value={design.id}>
+                {design.titlePl ?? design.originalName} — {customerDesignStatusMessage(design.status)}
+              </MenuItem>
+            ))}
+          </TextField>
+          <Button
+            variant="outlined"
+            disabled={selectedSavedDesignId === ''}
+            onClick={() => onUploaded(selectedSavedDesignId)}
+            sx={{ alignSelf: 'flex-start' }}
+          >
+            {SITE.configuratorUploadReuseButtonPl}
+          </Button>
+          <Text muted>{SITE.configuratorUploadReuseOrNewPl}</Text>
+        </div>
+      )}
+
       <div>
         <Text muted>{SITE.configuratorUploadChooseFilePl}</Text>
         <input

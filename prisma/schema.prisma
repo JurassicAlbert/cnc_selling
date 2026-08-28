@@ -374,6 +374,8 @@ model Design {
   previewUrl   String
   isActive     Boolean           @default(true)
   sortOrder    Int               @default(0)
+  /// P9 phase 2: admin-curated highlight, shown first/prominently on the real pattern-browsing page. Purely presentational — no pricing or availability meaning.
+  featured     Boolean           @default(false)
 
   // Production metadata.
   /// The width at which the minimums below are declared. Producing the design
@@ -851,6 +853,11 @@ model CustomerDesign {
   user             User?              @relation(fields: [userId], references: [id])
   sessionToken     String?
   status           DesignReviewStatus @default(PENDING_REVIEW)
+  /// P9 phase 2: the customer's own label for this upload ("Logo firmy",
+  /// "Wzór na prezent") — lets them tell their own saved designs apart on
+  /// the standalone library page. Optional: older rows and quick re-uploads
+  /// have none, shown by original filename instead.
+  titlePl          String?
   /// Decided internally during review. Not shown raw to the customer.
   productionMethod ProductionMethod?
   /// UploadWarning[] from the upload inspector (resolution, aspect, DPI).

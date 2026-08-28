@@ -94,6 +94,7 @@ export type AdminDesignDetail = {
   readonly previewUrl: string;
   readonly isActive: boolean;
   readonly sortOrder: number;
+  readonly featured: boolean;
   readonly referenceWidthMm: number;
   readonly minLineWidthUm: number;
   readonly minDetailSpacingUm: number;
@@ -133,6 +134,7 @@ export async function findDesignForAdmin(id: string): Promise<AdminDesignDetail 
     previewUrl: design.previewUrl,
     isActive: design.isActive,
     sortOrder: design.sortOrder,
+    featured: design.featured,
     referenceWidthMm: design.referenceWidthMm,
     minLineWidthUm: design.minLineWidthUm,
     minDetailSpacingUm: design.minDetailSpacingUm,

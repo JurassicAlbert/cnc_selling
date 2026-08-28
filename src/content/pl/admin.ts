@@ -337,6 +337,7 @@ export const ADMIN = {
   designFieldSourceRefPl: 'Źródło / odnośnik',
   designFieldRightsNotesPl: 'Uwagi dot. praw',
   designFieldSortOrderPl: 'Kolejność wyświetlania',
+  designFieldFeaturedPl: 'Wzór wyróżniony',
   designMaterialsHeadingPl: 'Zgodne materiały',
   designMaterialsEmptyPl: 'Żaden materiał nie jest jeszcze przypisany — brak wpisów oznacza, że dostępny jest każdy materiał dopuszczony przez produkt.',
   designMaterialFieldPl: 'Materiał',

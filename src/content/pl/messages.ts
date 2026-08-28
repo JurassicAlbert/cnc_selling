@@ -17,7 +17,7 @@ import type { PersonalizationIssue } from '@/domain/personalization/validate';
 import type { ParseErrorCode } from '@/domain/text/numeric-input';
 import type { UploadWarning } from '@/domain/upload/inspect';
 import type { UnavailabilityReason } from '@/server/configurator/resolve-options';
-import type { OrderStatus } from '@/generated/prisma/enums';
+import type { DesignReviewStatus, OrderStatus } from '@/generated/prisma/enums';
 import { formatMmAsCentimetres } from '@/domain/text/numeric-input';
 import { countPl } from '@/domain/text/plural';
 import { NOUNS } from '@/domain/text/nouns';
@@ -274,6 +274,20 @@ export function orderStatusMessage(status: OrderStatus): string {
       return 'Zrealizowane';
     case 'CANCELLED':
       return 'Anulowane';
+  }
+}
+
+/** Same 4 statuses as `COPY.designStatus*`, as a real function rather than a code-to-string lookup scattered at each call site — P9 phase 2's "moje wzory" library and the configurator's reuse picker both need this. */
+export function customerDesignStatusMessage(status: DesignReviewStatus): string {
+  switch (status) {
+    case 'PENDING_REVIEW':
+      return COPY.designStatusPending;
+    case 'APPROVED':
+      return COPY.designStatusApproved;
+    case 'NEEDS_CHANGES':
+      return COPY.designStatusNeedsChanges;
+    case 'REJECTED':
+      return COPY.designStatusRejected;
   }
 }
 

@@ -265,6 +265,7 @@ type DesignFields = {
   readonly sourceRef: string | null;
   readonly rightsNotes: string | null;
   readonly sortOrder: number;
+  readonly featured: boolean;
 };
 
 function optionalText(formData: FormData, key: string): string | null {
@@ -308,6 +309,7 @@ function readDesignFields(formData: FormData): DesignFields {
     sourceRef: optionalText(formData, 'sourceRef'),
     rightsNotes: optionalText(formData, 'rightsNotes'),
     sortOrder: Number(formData.get('sortOrder') ?? 0),
+    featured: formData.get('featured') === 'on',
   };
 }
 
@@ -545,6 +547,10 @@ export async function applyDuplicateDesign(staff: CurrentSession, id: string): P
     sourceRef: original.sourceRef,
     rightsNotes: original.rightsNotes,
     sortOrder: original.sortOrder,
+    // A duplicate starts unfeatured, same "starts inactive" discipline as
+    // `isActive` below — a copy shouldn't inherit a curated highlight
+    // without a deliberate re-review.
+    featured: false,
   };
 
   const created = await prisma.design.create({

@@ -25,6 +25,9 @@ export default async function AccountLayout({ children }: { readonly children: R
           <Link href="/moje-konto/projekty" style={{ font: 'var(--mui-font-body2)' }}>
             {SITE.accountNavConfigurationsPl}
           </Link>
+          <Link href="/moje-konto/wzory" style={{ font: 'var(--mui-font-body2)' }}>
+            {SITE.accountNavDesignsPl}
+          </Link>
           <form action={logout} style={{ marginInlineStart: 'auto' }}>
             <button
               type="submit"

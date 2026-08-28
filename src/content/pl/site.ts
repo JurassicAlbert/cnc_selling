@@ -84,6 +84,12 @@ export const SITE = {
   configuratorUploadSuccessPl: 'Projekt został przesłany.',
   configuratorUploadIpConsentLabelPl: 'Akceptuję powyższe oświadczenie',
   configuratorUploadReplacePl: 'Prześlij inny plik',
+  // P9 phase 2 — reusing an already-uploaded design from "Moje wzory" instead of uploading fresh.
+  configuratorUploadReuseHeadingPl: 'Masz już zapisany wzór? Możesz go użyć zamiast przesyłać nowy plik.',
+  configuratorUploadReuseSelectLabelPl: 'Zapisane wzory',
+  configuratorUploadReuseButtonPl: 'Użyj tego wzoru',
+  configuratorUploadReuseOrNewPl: 'lub prześlij nowy plik poniżej',
+  configuratorUploadReuseSuccessPl: 'Wybrano zapisany wzór.',
   configuratorCustomPriceEstimatePl:
     'Podana cena to wstępny szacunek (materiał, wykończenie, cena bazowa). Ostateczna wycena, uwzględniająca złożoność Twojego projektu, zostanie potwierdzona podczas weryfikacji projektu.',
 
@@ -211,12 +217,25 @@ export const SITE = {
 
   accountNavOrdersPl: 'Zamówienia',
   accountNavConfigurationsPl: 'Zapisane projekty',
+  accountNavDesignsPl: 'Moje wzory',
   accountOrdersHeadingPl: 'Moje zamówienia',
   accountOrdersEmptyPl: 'Nie masz jeszcze żadnych zamówień.',
   accountOrdersEmptyActionPl: 'Przejdź do sklepu',
   accountConfigurationsHeadingPl: 'Moje zapisane projekty',
   accountConfigurationsEmptyPl: 'Nie masz jeszcze żadnych zapisanych konfiguracji.',
   accountConfigurationsEmptyActionPl: 'Skonfiguruj produkt',
+
+  // P9 phase 2 — the standalone "moje wzory" upload/reuse library, moved
+  // out of being tied to any one product's configurator flow.
+  accountDesignsHeadingPl: 'Moje wzory',
+  accountDesignsIntroPl:
+    'Tutaj znajdziesz wszystkie pliki, które kiedykolwiek przesłałeś/przesłałaś jako własny projekt. Możesz przesłać nowy wzór lub użyć zapisanego podczas konfigurowania dowolnego produktu, który to umożliwia.',
+  accountDesignsEmptyPl: 'Nie masz jeszcze żadnych przesłanych wzorów.',
+  accountDesignsUploadHeadingPl: 'Prześlij nowy wzór',
+  accountDesignsTitleFieldLabelPl: 'Nazwa wzoru (opcjonalnie)',
+  accountDesignsTitleFieldPlaceholderPl: 'np. Logo firmy',
+  accountDesignsUploadedAtLabelPl: 'Przesłano',
+  accountDesignsUntitledPl: 'Bez nazwy',
   accountConfigurationEditPl: 'Edytuj',
   accountConfigurationAddToCartPl: 'Dodaj do koszyka',
 

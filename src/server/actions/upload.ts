@@ -95,6 +95,11 @@ export async function uploadCustomDesign(formData: FormData): Promise<UploadCust
 
   const originalName = sanitizeFilenameForDisplay(file.name);
   const ipConfirmedIp = await requestIpAddress();
+  // Optional — an upload triggered inline from a product's configurator
+  // (no title field on that form) still works exactly as before; only the
+  // standalone "moje wzory" library page's form actually sends one.
+  const titlePlRaw = formData.get('titlePl');
+  const titlePl = typeof titlePlRaw === 'string' && titlePlRaw.trim().length > 0 ? titlePlRaw.trim() : null;
 
   const design = await prisma.$transaction(async (tx) => {
     const uploadedFile = await tx.uploadedFile.create({
@@ -119,6 +124,7 @@ export async function uploadCustomDesign(formData: FormData): Promise<UploadCust
         userId,
         sessionToken,
         status: 'PENDING_REVIEW',
+        titlePl,
         autoWarnings: toJsonInput(inspected.warnings),
         ipConfirmedAt: new Date(),
         ipDeclarationVersion: UPLOAD.ipDeclarationVersion,

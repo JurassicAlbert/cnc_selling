@@ -8,6 +8,7 @@ import { formatPln } from '@/domain/money/money';
 import { formatMmAsCentimetres } from '@/domain/text/numeric-input';
 import { getActiveProductBySlug, getProductBySlugForPreview, listAllActiveProductSlugs } from '@/server/repositories/products';
 import { getConfiguratorProductData } from '@/server/repositories/configurator';
+import { listOwnedCustomerDesigns } from '@/server/repositories/customer-designs';
 import { recordAnalyticsEvent } from '@/server/analytics/record-event';
 import { getSession } from '@/server/auth/session';
 import { readGuestSessionToken } from '@/server/session/read-guest-session';
@@ -72,6 +73,12 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
   }
   const configuratorData = await getConfiguratorProductData(slug, !isStaffPreview);
   const primaryImage = product.images[0] ?? null;
+  // Cheap even when unused — only the CUSTOM product type's `CUSTOM_UPLOAD`
+  // step actually renders this list (P9 phase 2's "pick a saved design
+  // instead of uploading fresh" reuse path); fetched here regardless since
+  // that's still simpler and cheaper than threading a product-type check
+  // through this Server Component just to skip one indexed query.
+  const savedDesigns = await listOwnedCustomerDesigns({ userId: session?.userId ?? null, sessionToken });
 
   // A staff preview hit is not real customer traffic — never counted.
   if (!isStaffPreview) {
@@ -216,6 +223,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
                     maxHeightMm: product.maxHeightMm,
                   }}
                   isPreview={isStaffPreview}
+                  savedDesigns={savedDesigns}
                 />
               </ThemeRegistry>
             </div>

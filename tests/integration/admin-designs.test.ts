@@ -12,6 +12,7 @@ import {
   applySetDesignActive,
   applySetDesignSortOrder,
   applyUpdateCollection,
+  applyUpdateDesign,
 } from '@/server/actions/admin-designs';
 import { applyAddDesignMaterial } from '@/server/actions/admin-design-materials';
 import { listDesignOptionsForAdmin } from '@/server/repositories/admin-products';
@@ -209,6 +210,33 @@ describe('applyCreateDesign', () => {
     const result = await applyCreateDesign(staff, designFormData({ code }));
     expect(result.ok).toBe(false);
   });
+
+  it('defaults `featured` to false, and honours an explicit true — P9 phase 2 curated-highlight flag', async () => {
+    const staff = staffActor();
+
+    const plain = await applyCreateDesign(staff, designFormData());
+    if (!plain.ok) throw new Error('setup failed');
+    expect((await prisma.design.findUniqueOrThrow({ where: { id: plain.id } })).featured).toBe(false);
+
+    const highlighted = await applyCreateDesign(staff, designFormData({ featured: 'on' }));
+    if (!highlighted.ok) throw new Error('setup failed');
+    expect((await prisma.design.findUniqueOrThrow({ where: { id: highlighted.id } })).featured).toBe(true);
+  });
+});
+
+describe('applyUpdateDesign', () => {
+  it('toggles `featured` on and back off', async () => {
+    const staff = staffActor();
+    const created = await applyCreateDesign(staff, designFormData());
+    if (!created.ok) throw new Error('setup failed');
+    const original = await prisma.design.findUniqueOrThrow({ where: { id: created.id } });
+
+    await applyUpdateDesign(staff, created.id, designFormData({ slug: original.slug, code: original.code, featured: 'on' }));
+    expect((await prisma.design.findUniqueOrThrow({ where: { id: created.id } })).featured).toBe(true);
+
+    await applyUpdateDesign(staff, created.id, designFormData({ slug: original.slug, code: original.code }));
+    expect((await prisma.design.findUniqueOrThrow({ where: { id: created.id } })).featured).toBe(false);
+  });
 });
 
 describe('applySetDesignActive', () => {
@@ -298,6 +326,19 @@ describe('applyDuplicateDesign', () => {
   it('returns a failure result for a non-existent design', async () => {
     const result = await applyDuplicateDesign(staffActor(), 'does-not-exist');
     expect(result.ok).toBe(false);
+  });
+
+  it('never carries `featured` over to the copy — a curated highlight needs deliberate re-review, not free inheritance', async () => {
+    const staff = staffActor();
+    const created = await applyCreateDesign(staff, designFormData({ featured: 'on' }));
+    if (!created.ok) throw new Error('setup failed');
+    expect((await prisma.design.findUniqueOrThrow({ where: { id: created.id } })).featured).toBe(true);
+
+    const result = await applyDuplicateDesign(staff, created.id);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+
+    expect((await prisma.design.findUniqueOrThrow({ where: { id: result.id } })).featured).toBe(false);
   });
 });
 

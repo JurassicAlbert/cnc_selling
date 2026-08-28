@@ -3,7 +3,7 @@
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { Alert, Button, Grid, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Button, Checkbox, FormControlLabel, Grid, MenuItem, Stack, TextField, Typography } from '@mui/material';
 
 import { ADMIN, adminDesignRightsStatusLabel, adminProductionMethodLabel } from '@/content/pl/admin';
 import type { AdminCollectionOption, AdminDesignDetail } from '@/server/repositories/admin-designs';
@@ -31,7 +31,7 @@ export function DesignForm({
   readonly collections: readonly AdminCollectionOption[];
 }) {
   const router = useRouter();
-  const { capture, fieldValue, resetKey } = usePreservedFormValues();
+  const { capture, fieldValue, fieldChecked, resetKey } = usePreservedFormValues();
 
   const action = async (_prev: DesignMutationResult, formData: FormData) => {
     capture(formData);
@@ -284,6 +284,10 @@ export function DesignForm({
           defaultValue={fieldValue('sortOrder', String(design?.sortOrder ?? 0))}
           size="small"
           sx={{ maxWidth: 200 }}
+        />
+        <FormControlLabel
+          control={<Checkbox key={resetKey} name="featured" defaultChecked={fieldChecked('featured', design?.featured ?? false)} />}
+          label={ADMIN.designFieldFeaturedPl}
         />
 
         <SubmitButton />
