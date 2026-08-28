@@ -863,6 +863,24 @@ described honestly as an independent third-party site with its own
 licensing. 13 new test cases, full suite 643/643, all checks clean.
 See `docs/HANDOVER.md` §9z44.
 
+**Phase 4, shipped — 2026-08-28.** Product collections: a new
+`ProductCollection` model, deliberately kept separate from the
+pre-existing `DesignCollection` (which groups patterns, not
+products). Inspection this phase found `/panel/kolekcje` was already
+the live admin URL for `DesignCollection`, with its own
+`CollectionForm.tsx`/`CollectionsDataGrid.tsx` — building the new
+feature there would have silently collided with it, so the new
+feature got its own namespace throughout (`/panel/kolekcje-produktow`,
+`ProductCollectionForm.tsx`, etc.), leaving the existing feature
+completely untouched. Admin CRUD and the product-assignment nested
+editor both mirror existing patterns (FAQ CRUD, `DesignAssignEditor`)
+rather than inventing new ones. New public `/kolekcje` +
+`/kolekcje/[slug]` reuse `ProductCard`/`Breadcrumbs` exactly as the
+category page does, framed in copy as ready-made and not
+customer-request-driven. Seeded one real collection with two real
+products. 8 new test cases, full suite 651/651, all checks clean.
+See `docs/HANDOVER.md` §9z45.
+
 ---
 
 ## Getting set up

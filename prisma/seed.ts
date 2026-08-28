@@ -116,6 +116,7 @@ async function main(): Promise<void> {
   await seedBlogPosts();
   await seedFaqs();
   await seedExternalPatternResources();
+  await seedProductCollections();
 }
 
 // ---------------------------------------------------------------------------
@@ -902,6 +903,44 @@ async function seedExternalPatternResources(): Promise<void> {
     });
     console.log(`ExternalPatternResource: created "${created.namePl}"`);
   }
+}
+
+/**
+ * P9 phase 4: one real `ProductCollection` — a curated, ready-made
+ * grouping of already-seeded products, explicitly NOT customer-request-
+ * driven (§14/§15). Runs after `seedProducts`, so it looks the real rows
+ * up by slug rather than being threaded through as a return value.
+ * Create-only, matched by slug, same non-destructive precedent as every
+ * other seed function in this file.
+ */
+async function seedProductCollections(): Promise<void> {
+  const existing = await prisma.productCollection.findUnique({ where: { slug: 'polecane-na-prezent' } });
+  if (existing !== null) {
+    console.log('ProductCollection: "Polecane na prezent" already exists, leaving it alone');
+    return;
+  }
+
+  const memberSlugs = ['bransoletka-z-grawerem', 'obraz-drewniany-z-grawerem'];
+  const members = await prisma.product.findMany({ where: { slug: { in: memberSlugs } }, select: { id: true, slug: true } });
+  if (members.length === 0) {
+    console.log('ProductCollection: no matching seeded products found, skipping');
+    return;
+  }
+
+  const collection = await prisma.productCollection.create({
+    data: {
+      slug: 'polecane-na-prezent',
+      namePl: 'Polecane na prezent',
+      descPl:
+        'Nasz gotowy, samodzielnie dobrany wybór produktów, które najczęściej sprawdzają się jako prezent — bez konieczności przechodzenia przez pełną konfigurację. Każdy z nich można też skonfigurować od podstaw z poziomu jego własnej strony produktu.',
+      isActive: true,
+      sortOrder: 1,
+      items: {
+        create: members.map((member, index) => ({ productId: member.id, sortOrder: index })),
+      },
+    },
+  });
+  console.log(`ProductCollection: created "${collection.namePl}" with ${members.length} product(s)`);
 }
 
 async function seedProducts(

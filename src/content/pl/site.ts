@@ -190,6 +190,7 @@ export const SITE = {
   footerTaglinePl: 'Precyzja CNC. Ciepło rzemiosła.',
   footerBlogLinkPl: 'Blog',
   footerPatternsLinkPl: 'Wzory',
+  footerCollectionsLinkPl: 'Kolekcje',
 
   legalTermsHeadingPl: 'Regulamin',
   legalPrivacyHeadingPl: 'Polityka prywatności',
@@ -273,6 +274,16 @@ export const SITE = {
     'To linki do niezależnych, zewnętrznych serwisów z darmowymi wzorami do grawerowania i cięcia CNC. Nie są to nasze materiały — każdy link prowadzi do strony innego dostawcy, gdzie obowiązują jego własne zasady korzystania i licencje.',
   patternsExternalBadgePl: 'zasób zewnętrzny',
   patternsExternalEmptyPl: 'Obecnie nie mamy poleconych zewnętrznych źródeł wzorów.',
+
+  collectionsHeadingPl: 'Kolekcje',
+  collectionsSeoTitlePl: 'Kolekcje — RYT',
+  collectionsSeoDescPl: 'Gotowe, samodzielnie zaprojektowane kolekcje produktów z grawerem — dostępne od ręki, bez konieczności konfiguracji.',
+  collectionsIntroPl:
+    'To gotowe, samodzielnie zaprojektowane przez nas zestawienia produktów — nie są tworzone na indywidualne zamówienie klienta. Możesz je po prostu przeglądać i zamawiać, tak jak każdy inny produkt w sklepie.',
+  collectionsEmptyPl: 'Kolekcje pojawią się tutaj wkrótce.',
+  collectionsBadgePl: 'gotowa kolekcja',
+  collectionNotFoundPl: 'Nie znaleziono takiej kolekcji.',
+  collectionEmptyProductsPl: 'W tej kolekcji nie ma jeszcze żadnych produktów.',
 
   faqHeadingPl: 'Najczęściej zadawane pytania',
   faqSeoTitlePl: 'Najczęściej zadawane pytania — RYT',

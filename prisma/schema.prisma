@@ -170,6 +170,9 @@ model Product {
   personalization PersonalizationSpec?
   installVariants InstallationVariant[]
   configurations  Configuration[]
+  /// P9 phase 4: membership in a `ProductCollection` ("ready-made" curated
+  /// grouping) — unrelated to `DesignCollection`, which groups *patterns*.
+  collectionItems ProductCollectionItem[]
 
   @@index([categoryId, isActive])
   @@index([typeCode, isActive])
@@ -426,6 +429,36 @@ model ProductDesign {
 
   @@id([productId, designId])
   @@index([designId])
+}
+
+/// P9 phase 4: curated "ready-made" groupings of independently-created
+/// products — deliberately a NEW, separate model from `DesignCollection`
+/// above, which groups *patterns* (e.g. "linoryt series"), not sellable
+/// products. A product can belong to more than one collection, or none.
+model ProductCollection {
+  id        String                  @id @default(cuid())
+  slug      String                  @unique
+  namePl    String
+  descPl    String                  @db.Text
+  imageUrl  String?
+  sortOrder Int                     @default(0)
+  isActive  Boolean                 @default(true)
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  items     ProductCollectionItem[]
+
+  @@index([isActive, sortOrder])
+}
+
+model ProductCollectionItem {
+  collectionId String
+  productId    String
+  sortOrder    Int               @default(0)
+  collection   ProductCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  product      Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, productId])
+  @@index([productId])
 }
 
 model DesignMaterial {
