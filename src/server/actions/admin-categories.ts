@@ -168,6 +168,24 @@ export async function setCategoryActive(id: string, isActive: boolean): Promise<
   revalidatePath(`/panel/kategorie/${id}`);
 }
 
+/**
+ * Bulk activate/deactivate from the grid's selection toolbar (P7c). Reuses
+ * `applySetCategoryActive` per row — same validation, same audit trail, one
+ * entry per row rather than a single "bulk" entry — so a bulk action is
+ * indistinguishable in the audit log from doing the same rows one at a time.
+ */
+export async function applyBulkSetCategoryActive(staff: CurrentSession, ids: readonly string[], isActive: boolean): Promise<void> {
+  for (const id of ids) {
+    await applySetCategoryActive(staff, id, isActive);
+  }
+}
+
+export async function bulkSetCategoryActive(ids: readonly string[], isActive: boolean): Promise<void> {
+  const staff = await requireStaffSession();
+  await applyBulkSetCategoryActive(staff, ids, isActive);
+  revalidatePath('/panel/kategorie');
+}
+
 export async function applySetCategorySortOrder(
   staff: CurrentSession,
   id: string,

@@ -7,7 +7,7 @@ import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN } from '@/content/pl/admin';
 import { comparePl } from '@/domain/text/collation';
-import { setCategoryActive, setCategorySortOrder } from '@/server/actions/admin-categories';
+import { bulkSetCategoryActive, setCategoryActive, setCategorySortOrder } from '@/server/actions/admin-categories';
 import type { AdminCategoryListItem } from '@/server/repositories/admin-categories';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
 
@@ -76,6 +76,10 @@ export function CategoriesDataGrid({ rows }: { readonly rows: readonly AdminCate
         return newRow;
       }}
       onProcessRowUpdateError={(error) => console.error('[CategoriesDataGrid] row update failed:', error)}
+      bulkActions={[
+        { label: ADMIN.activatePl, run: (ids) => bulkSetCategoryActive(ids, true) },
+        { label: ADMIN.deactivatePl, run: (ids) => bulkSetCategoryActive(ids, false) },
+      ]}
     />
   );
 }

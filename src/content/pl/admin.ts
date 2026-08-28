@@ -16,6 +16,7 @@ import type {
   ReviewStatus,
   UploadKind,
 } from '@/generated/prisma/enums';
+import { countPl } from '@/domain/text/plural';
 
 export const ADMIN = {
   navDashboardPl: 'Panel główny',
@@ -85,6 +86,7 @@ export const ADMIN = {
   activeLabelPl: 'Aktywna',
   inactiveLabelPl: 'Nieaktywna',
   duplicatePl: 'Duplikuj',
+  bulkClearSelectionPl: 'Wyczyść zaznaczenie',
   previewAsCustomerPl: 'Zobacz jako klient',
   productPreviewBannerPl: 'Podgląd administratora — ta odsłona strony nie jest liczona jako wizyta klienta.',
 
@@ -732,13 +734,10 @@ export function adminStaffRoleLabel(role: string): string {
  * just split singular/plural on 1), `wierszy` otherwise (0, 5+, 11–14, ...).
  */
 export function csvImportSuccessMessage(created: number): string {
-  const lastDigit = created % 10;
-  const lastTwoDigits = created % 100;
-  const form =
-    created === 1
-      ? 'wiersz'
-      : lastDigit >= 2 && lastDigit <= 4 && !(lastTwoDigits >= 12 && lastTwoDigits <= 14)
-        ? 'wiersze'
-        : 'wierszy';
-  return `Zaimportowano ${created} ${form}.`;
+  return `Zaimportowano ${countPl(created, { one: 'wiersz', few: 'wiersze', many: 'wierszy' })}.`;
+}
+
+/** "Zaznaczono 1 wiersz / 3 wiersze / 12 wierszy" — the bulk-actions selection toolbar's count. */
+export function bulkSelectionCountMessage(count: number): string {
+  return `Zaznaczono ${countPl(count, { one: 'wiersz', few: 'wiersze', many: 'wierszy' })}`;
 }

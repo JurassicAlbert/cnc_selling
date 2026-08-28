@@ -156,6 +156,19 @@ export async function setProductActive(id: string, isActive: boolean): Promise<v
   revalidatePath(`/panel/produkty/${id}`);
 }
 
+/** Bulk activate/deactivate from the grid's selection toolbar (P7c) — see `admin-categories.ts`'s `bulkSetCategoryActive` for the pattern. */
+export async function applyBulkSetProductActive(staff: CurrentSession, ids: readonly string[], isActive: boolean): Promise<void> {
+  for (const id of ids) {
+    await applySetProductActive(staff, id, isActive);
+  }
+}
+
+export async function bulkSetProductActive(ids: readonly string[], isActive: boolean): Promise<void> {
+  const staff = await requireStaffSession();
+  await applyBulkSetProductActive(staff, ids, isActive);
+  revalidatePath('/panel/produkty');
+}
+
 export async function applySetProductSortOrder(staff: CurrentSession, id: string, sortOrder: number): Promise<void> {
   if (!Number.isInteger(sortOrder) || sortOrder < 0) {
     return;

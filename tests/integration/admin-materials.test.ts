@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  applyBulkSetMaterialAvailable,
   applyCreateMaterial,
   applyDuplicateMaterial,
   applySetMaterialAvailable,
@@ -121,6 +122,25 @@ describe('applySetMaterialAvailable', () => {
 
     expect((await listMaterialOptionsForAdmin()).some((m) => m.id === created.id)).toBe(false);
     expect(await prisma.material.findUnique({ where: { id: created.id } })).not.toBeNull();
+  });
+});
+
+describe('applyBulkSetMaterialAvailable', () => {
+  it('marks every id in the batch unavailable and audits each one', async () => {
+    const staff = staffActor();
+    const first = await applyCreateMaterial(staff, materialFormData());
+    const second = await applyCreateMaterial(staff, materialFormData());
+    if (!first.ok || !second.ok) throw new Error('setup failed');
+
+    await applyBulkSetMaterialAvailable(staff, [first.id, second.id], false);
+
+    const rows = await prisma.material.findMany({ where: { id: { in: [first.id, second.id] } } });
+    expect(rows.every((m) => m.isAvailable === false)).toBe(true);
+    expect(
+      await prisma.auditLog.count({
+        where: { entity: 'Material', entityId: { in: [first.id, second.id] }, action: 'update', actorEmail: staff.email },
+      }),
+    ).toBe(2);
   });
 });
 

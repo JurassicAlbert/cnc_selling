@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  applyBulkSetCollectionActive,
+  applyBulkSetDesignActive,
   applyCreateCollection,
   applyCreateDesign,
   applyDuplicateDesign,
@@ -92,6 +94,25 @@ describe('applyCreateCollection / applyUpdateCollection / applySetCollectionActi
   });
 });
 
+describe('applyBulkSetCollectionActive', () => {
+  it('deactivates every id in the batch and audits each one', async () => {
+    const staff = staffActor();
+    const first = await applyCreateCollection(staff, { slug: uid(), namePl: 'Testowa kolekcja', descPl: 'Opis', sortOrder: 0 });
+    const second = await applyCreateCollection(staff, { slug: uid(), namePl: 'Testowa kolekcja', descPl: 'Opis', sortOrder: 0 });
+    if (!first.ok || !second.ok) throw new Error('setup failed');
+
+    await applyBulkSetCollectionActive(staff, [first.id, second.id], false);
+
+    const rows = await prisma.designCollection.findMany({ where: { id: { in: [first.id, second.id] } } });
+    expect(rows.every((c) => c.isActive === false)).toBe(true);
+    expect(
+      await prisma.auditLog.count({
+        where: { entity: 'DesignCollection', entityId: { in: [first.id, second.id] }, action: 'update', actorEmail: staff.email },
+      }),
+    ).toBe(2);
+  });
+});
+
 describe('applySetCollectionSortOrder', () => {
   it('updates sortOrder and audits the change', async () => {
     const staff = staffActor();
@@ -177,6 +198,25 @@ describe('applySetDesignActive', () => {
 
     expect((await listDesignOptionsForAdmin()).some((d) => d.id === created.id)).toBe(false);
     expect(await prisma.design.findUnique({ where: { id: created.id } })).not.toBeNull();
+  });
+});
+
+describe('applyBulkSetDesignActive', () => {
+  it('deactivates every id in the batch and audits each one', async () => {
+    const staff = staffActor();
+    const first = await applyCreateDesign(staff, designFormData());
+    const second = await applyCreateDesign(staff, designFormData());
+    if (!first.ok || !second.ok) throw new Error('setup failed');
+
+    await applyBulkSetDesignActive(staff, [first.id, second.id], false);
+
+    const rows = await prisma.design.findMany({ where: { id: { in: [first.id, second.id] } } });
+    expect(rows.every((d) => d.isActive === false)).toBe(true);
+    expect(
+      await prisma.auditLog.count({
+        where: { entity: 'Design', entityId: { in: [first.id, second.id] }, action: 'update', actorEmail: staff.email },
+      }),
+    ).toBe(2);
   });
 });
 

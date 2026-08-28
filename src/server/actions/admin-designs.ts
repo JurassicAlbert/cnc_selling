@@ -132,6 +132,19 @@ export async function setCollectionActive(id: string, isActive: boolean): Promis
   revalidatePath(`/panel/kolekcje/${id}`);
 }
 
+/** Bulk activate/deactivate from the grid's selection toolbar (P7c) — see `admin-categories.ts`'s `bulkSetCategoryActive` for the pattern. */
+export async function applyBulkSetCollectionActive(staff: CurrentSession, ids: readonly string[], isActive: boolean): Promise<void> {
+  for (const id of ids) {
+    await applySetCollectionActive(staff, id, isActive);
+  }
+}
+
+export async function bulkSetCollectionActive(ids: readonly string[], isActive: boolean): Promise<void> {
+  const staff = await requireStaffSession();
+  await applyBulkSetCollectionActive(staff, ids, isActive);
+  revalidatePath('/panel/kolekcje');
+}
+
 export async function applySetCollectionSortOrder(staff: CurrentSession, id: string, sortOrder: number): Promise<void> {
   if (!Number.isInteger(sortOrder) || sortOrder < 0) {
     return;
@@ -380,6 +393,19 @@ export async function setDesignActive(id: string, isActive: boolean): Promise<vo
   await applySetDesignActive(staff, id, isActive);
   revalidatePath('/panel/wzory');
   revalidatePath(`/panel/wzory/${id}`);
+}
+
+/** Bulk activate/deactivate from the grid's selection toolbar (P7c) — see `admin-categories.ts`'s `bulkSetCategoryActive` for the pattern. */
+export async function applyBulkSetDesignActive(staff: CurrentSession, ids: readonly string[], isActive: boolean): Promise<void> {
+  for (const id of ids) {
+    await applySetDesignActive(staff, id, isActive);
+  }
+}
+
+export async function bulkSetDesignActive(ids: readonly string[], isActive: boolean): Promise<void> {
+  const staff = await requireStaffSession();
+  await applyBulkSetDesignActive(staff, ids, isActive);
+  revalidatePath('/panel/wzory');
 }
 
 export async function applySetDesignSortOrder(staff: CurrentSession, id: string, sortOrder: number): Promise<void> {

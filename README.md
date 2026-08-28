@@ -672,6 +672,27 @@ and confirming the tooltip genuinely renders. Left the add-to-cart
 button's four-way disabled reason for a dedicated follow-up rather
 than guess at which cause applies. See `docs/HANDOVER.md` §9z33.
 
+**Bulk actions with selection toolbar — built 2026-08-28,
+autonomously.** The 6 catalogue grids (Kategorie/Produkty/Materiały/
+Wykończenia/Wzory/Kolekcje) gain checkbox selection and a real
+selection bar — "Zaznaczono N wierszy", Aktywuj/Dezaktywuj buttons —
+whenever at least one row is checked. Each entity's new
+`applyBulkSetXActive` reuses its existing single-row `applySetXActive`
+per id rather than duplicating the validation/audit logic — a bulk
+action leaves the exact same audit trail as doing the same rows one
+at a time. Found and fixed a real, drive-by pluralization bug along
+the way: a genuine, tested Polish-plural helper (`pluralPl`/`countPl`,
+`Intl.PluralRules`-based) has existed since the P1 domain layer, but
+the previous day's CSV-import success message had hand-rolled its own
+copy of the same logic instead of using it — fixed to call the
+canonical helper, and the new bulk-selection count uses it too.
+Live-verified end to end as the real ADMIN account: selecting 2
+categories and deactivating them removed both from the real storefront
+nav immediately; reactivating restored them; spot-checked Materiały
+too (confirms the `isAvailable`-vs-`isActive` naming difference across
+entities wasn't mixed up), toggling via the bulk bar and restoring via
+the pre-existing single-row switch. See `docs/HANDOVER.md` §9z34.
+
 ---
 
 ## Getting set up
@@ -802,7 +823,12 @@ Playwright spec, replacing a stale comment that claimed coverage which
 never actually existed (§9z32), and **disabled controls now genuinely
 explain why on hover** — a real, previously-broken `title`-on-a-
 disabled-MUI-control bug found and fixed, not just a documentation gap
-(§9z33). See `docs/CHECKLIST.md` for the itemised state of every
+(§9z33), and **the 6 catalogue grids now have real bulk actions** —
+checkbox selection, a "Zaznaczono N wierszy" toolbar, Aktywuj/Dezaktywuj
+reusing each entity's existing single-row action (§9z34; also fixed a
+drive-by pluralization inconsistency — a genuine, tested `pluralPl`/
+`countPl` helper existed since P1 but a P7c message had reimplemented
+it by hand). See `docs/CHECKLIST.md` for the itemised state of every
 phase. Next,
 continuing autonomously per the owner's standing direction to close
 remaining gaps toward "no missing pages, functionality, design and UI":
@@ -811,8 +837,8 @@ remaining gaps toward "no missing pages, functionality, design and UI":
   each needing its own design: Produkcja's rows link to a different
   entity's page; Szablony e-mail is a fixed two-row list; Dziennik
   zdarzeń's diff column holds variable-height JSON `DataGrid` doesn't
-  suit. Then bulk actions, saved filters, keyboard nav (J/K between
-  records), and the rest of the list, one slice at a time.
+  suit. Then saved filters, keyboard nav (J/K between records), and
+  the rest of the list, one slice at a time.
 - **Blog admin's own remaining piece** — not yet a 5th entity type in
   the Ctrl+K global search, a scoped follow-up.
 - **"Preview as customer" for Designs** — needs a real deep-link into

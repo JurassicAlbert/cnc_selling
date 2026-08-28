@@ -3163,6 +3163,36 @@ The add-to-cart button on the Summary step (`disabled={!canProceed || addToCartP
 
 `npm run typecheck && npm run lint && npm test && npm run build` all clean (604/604 — no new test-worthy logic; `DisabledExplanation` is presentational, `stepBlockedReason`'s correctness is a live-browser behavior, not a unit-testable pure function on its own since it's local to the client component). Restarted the dev server before live-verifying, per §9z2's standing rule. Live-verified all four fixes for real, hovering and confirming the tooltip genuinely renders in the DOM (not just visually screenshotted, though those were taken too): the configurator's step 2 tooltip read "Najpierw uzupełnij krok: Wzór" before a design was picked; the "Dalej" button read "Uzupełnij ten krok, aby przejść dalej." with a design in hand but no material; `PricingDraftForm`'s remove-tier button, after removing tiers down to the last one, read `Musi zostać co najmniej jeden próg — ostatni pełni rolę „bez limitu".` (discarded via reload, no draft ever saved); the real seeded `2026/08/0066` order's design-review-blocked status button — previously silent — now shows the exact same explanation its own visible caption already gave, confirming the fix, not a regression.
 
+## 9z34. Bulk actions with selection toolbar — 2026-08-28
+
+Continuing autonomously to the next `docs/CHECKLIST.md` UX-polish line after §9z33: "Bulk actions with selection toolbar." Scoped to the same 6 catalogue entities slice 9's inline editing already touched (Kategorie/Produkty/Materiały/Wykończenia/Wzory/Kolekcje) — they share `EntityDataGrid` and an identical availability+id shape, so one mechanism covers all six.
+
+### Design: reuse the single-row action, don't reinvent it
+
+Every entity already had a real, audited `applySetXActive`/`applySetXAvailable(staff, id, value)` pure function (built in P7b, wired into the grid's per-row `Switch` in slice 9). The bulk version doesn't duplicate that logic — `applyBulkSetXActive(staff, ids, value)` just loops it, one call per id:
+
+```ts
+export async function applyBulkSetCategoryActive(staff: CurrentSession, ids: readonly string[], isActive: boolean): Promise<void> {
+  for (const id of ids) {
+    await applySetCategoryActive(staff, id, isActive);
+  }
+}
+```
+
+Same validation, same one-audit-log-entry-per-row trail (not a single "bulk" entry) — a bulk action is indistinguishable in the audit log from doing the same rows one at a time by hand, which is the honest behavior, not a shortcut. The outer wrapper (`bulkSetCategoryActive`) follows the exact same `applyXxx(staff,...)`/`xxx(...)` split as every other mutation in the codebase — derives `staff` via `requireStaffSession()`, calls the pure half, then one `revalidatePath` after the loop rather than per row.
+
+### `EntityDataGrid` gains checkbox selection + a real selection bar
+
+New optional `bulkActions` prop: `readonly {label, run(ids)}[]`. When present, `checkboxSelection` turns on and a small `Paper` bar renders above the `DataGrid` whenever `selection.ids.size > 0` — "Zaznaczono N wierszy" (see below) plus one button per action, plus a "Wyczyść zaznaczenie" clear button. `GridRowSelectionModel` in the installed `@mui/x-data-grid@9.12.0` is `{type: 'include'|'exclude', ids: Set<GridRowId>}`, not a plain array — confirmed from the package's own `.d.ts` before writing the state shape, not assumed from memory of older MUI X versions. Running an action clears the selection and calls `router.refresh()`, same "Server Action + router boundary" shape every other mutation in this codebase already uses; a failure is logged to console and the selection is left as-is so the admin can retry (no snackbar — that's the separate, not-yet-built "Cofnij" checklist item).
+
+### Drive-by fix: a real pluralization inconsistency, not just an audit note
+
+While writing the "Zaznaczono N wierszy" message, found that a genuine, tested Polish-plural helper already exists — `pluralPl`/`countPl` in `src/domain/text/plural.ts`, `Intl.PluralRules`-based, present since the P1 domain layer, already used by the storefront's password-strength messages. `docs/CHECKLIST.md`'s own line 474 claimed "no dedicated pluralization helper found" — **wrong**, corrected in this pass. What *was* true: `csvImportSuccessMessage` (built §9z31, the day before) had hand-rolled the identical 1/few/many logic instead of reusing the existing helper — a real, avoidable inconsistency, not just a style nit, since a second hand-rolled copy is exactly how these two implementations drift apart later. Fixed to call `countPl` directly; the new bulk-selection message uses it from the start.
+
+### Verified
+
+`npm run typecheck && npm run lint && npm test && npm run build` all clean (610/610 — 6 new integration tests, one `applyBulkSetXActive` case per entity, each creating two real rows, running the bulk action, and asserting both rows' DB state plus exactly 2 new `action: 'update'` audit-log rows — the `action` filter was necessary since `applyCreateX`'s own `create` audit rows share the same `entityId`s and were being double-counted without it, caught by the first test run, not assumed correct). Restarted the dev server before live-verifying, per §9z2's standing rule. Live-verified end to end on `/panel/kategorie`, logged in as the real `panel@example.com` ADMIN account (OTP read from the dev server log, mailer unconfigured in this environment): selected 2 real categories, the bar read "Zaznaczono 2 wiersze" (correct plural form), clicked Dezaktywuj — both vanished from the real storefront nav immediately, selection cleared, no console errors; clicked Aktywuj on the same two — both reappeared, confirming a clean round trip, not a one-way demo. Spot-checked `/panel/materialy` too (confirms the `isAvailable`-vs-`isActive` field-name difference across entities wasn't mixed up): toggled one material off via the bulk bar, confirmed the `Status` column showed it off, restored it via the pre-existing single-row `Switch` (proving the two mechanisms — bulk and per-row — coexist correctly on the same grid).
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

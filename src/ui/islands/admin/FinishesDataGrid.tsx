@@ -7,7 +7,7 @@ import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN, adminFinishKindLabel } from '@/content/pl/admin';
 import { comparePl } from '@/domain/text/collation';
-import { setFinishAvailable, setFinishSortOrder } from '@/server/actions/admin-finishes';
+import { bulkSetFinishAvailable, setFinishAvailable, setFinishSortOrder } from '@/server/actions/admin-finishes';
 import type { AdminFinishListItem } from '@/server/repositories/admin-finishes';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
 
@@ -74,6 +74,10 @@ export function FinishesDataGrid({ rows }: { readonly rows: readonly AdminFinish
         return newRow;
       }}
       onProcessRowUpdateError={(error) => console.error('[FinishesDataGrid] row update failed:', error)}
+      bulkActions={[
+        { label: ADMIN.activatePl, run: (ids) => bulkSetFinishAvailable(ids, true) },
+        { label: ADMIN.deactivatePl, run: (ids) => bulkSetFinishAvailable(ids, false) },
+      ]}
     />
   );
 }

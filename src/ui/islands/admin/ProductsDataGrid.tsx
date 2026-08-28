@@ -7,7 +7,7 @@ import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN } from '@/content/pl/admin';
 import { comparePl } from '@/domain/text/collation';
-import { setProductActive, setProductSortOrder } from '@/server/actions/admin-products';
+import { bulkSetProductActive, setProductActive, setProductSortOrder } from '@/server/actions/admin-products';
 import type { AdminProductListItem } from '@/server/repositories/admin-products';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
 
@@ -75,6 +75,10 @@ export function ProductsDataGrid({ rows }: { readonly rows: readonly AdminProduc
         return newRow;
       }}
       onProcessRowUpdateError={(error) => console.error('[ProductsDataGrid] row update failed:', error)}
+      bulkActions={[
+        { label: ADMIN.activatePl, run: (ids) => bulkSetProductActive(ids, true) },
+        { label: ADMIN.deactivatePl, run: (ids) => bulkSetProductActive(ids, false) },
+      ]}
     />
   );
 }

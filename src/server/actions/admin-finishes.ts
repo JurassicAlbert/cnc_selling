@@ -184,3 +184,16 @@ export async function setFinishAvailable(id: string, isAvailable: boolean): Prom
   revalidatePath('/panel/wykonczenia');
   revalidatePath(`/panel/wykonczenia/${id}`);
 }
+
+/** Bulk activate/deactivate from the grid's selection toolbar (P7c) — see `admin-categories.ts`'s `bulkSetCategoryActive` for the pattern. */
+export async function applyBulkSetFinishAvailable(staff: CurrentSession, ids: readonly string[], isAvailable: boolean): Promise<void> {
+  for (const id of ids) {
+    await applySetFinishAvailable(staff, id, isAvailable);
+  }
+}
+
+export async function bulkSetFinishAvailable(ids: readonly string[], isAvailable: boolean): Promise<void> {
+  const staff = await requireStaffSession();
+  await applyBulkSetFinishAvailable(staff, ids, isAvailable);
+  revalidatePath('/panel/wykonczenia');
+}

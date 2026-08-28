@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyCreateFinish, applySetFinishAvailable, applySetFinishSortOrder, applyUpdateFinish } from '@/server/actions/admin-finishes';
+import {
+  applyBulkSetFinishAvailable,
+  applyCreateFinish,
+  applySetFinishAvailable,
+  applySetFinishSortOrder,
+  applyUpdateFinish,
+} from '@/server/actions/admin-finishes';
 import { listFinishOptionsForAdmin } from '@/server/repositories/admin-finishes';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';
@@ -101,6 +107,25 @@ describe('applySetFinishAvailable', () => {
 
     expect((await listFinishOptionsForAdmin()).some((f) => f.id === created.id)).toBe(false);
     expect(await prisma.finish.findUnique({ where: { id: created.id } })).not.toBeNull();
+  });
+});
+
+describe('applyBulkSetFinishAvailable', () => {
+  it('marks every id in the batch unavailable and audits each one', async () => {
+    const staff = staffActor();
+    const first = await applyCreateFinish(staff, finishFormData());
+    const second = await applyCreateFinish(staff, finishFormData());
+    if (!first.ok || !second.ok) throw new Error('setup failed');
+
+    await applyBulkSetFinishAvailable(staff, [first.id, second.id], false);
+
+    const rows = await prisma.finish.findMany({ where: { id: { in: [first.id, second.id] } } });
+    expect(rows.every((f) => f.isAvailable === false)).toBe(true);
+    expect(
+      await prisma.auditLog.count({
+        where: { entity: 'Finish', entityId: { in: [first.id, second.id] }, action: 'update', actorEmail: staff.email },
+      }),
+    ).toBe(2);
   });
 });
 

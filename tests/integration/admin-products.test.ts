@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  applyBulkSetProductActive,
   applyCreateProduct,
   applyDuplicateProduct,
   applySetProductActive,
@@ -148,6 +149,26 @@ describe('applySetProductActive', () => {
 
     expect((await listActiveProductsByCategorySlug(category.slug)).some((p) => p.slug === input.slug)).toBe(false);
     expect(await prisma.product.findUnique({ where: { id: created.id } })).not.toBeNull();
+  });
+});
+
+describe('applyBulkSetProductActive', () => {
+  it('deactivates every id in the batch and audits each one', async () => {
+    const staff = staffActor();
+    const category = await seedCategory();
+    const first = await applyCreateProduct(staff, productInput(category.id));
+    const second = await applyCreateProduct(staff, productInput(category.id));
+    if (!first.ok || !second.ok) throw new Error('setup failed');
+
+    await applyBulkSetProductActive(staff, [first.id, second.id], false);
+
+    const rows = await prisma.product.findMany({ where: { id: { in: [first.id, second.id] } } });
+    expect(rows.every((p) => p.isActive === false)).toBe(true);
+    expect(
+      await prisma.auditLog.count({
+        where: { entity: 'Product', entityId: { in: [first.id, second.id] }, action: 'update', actorEmail: staff.email },
+      }),
+    ).toBe(2);
   });
 });
 

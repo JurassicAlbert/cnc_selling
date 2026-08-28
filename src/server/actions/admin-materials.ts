@@ -191,6 +191,19 @@ export async function setMaterialAvailable(id: string, isAvailable: boolean): Pr
   revalidatePath(`/panel/materialy/${id}`);
 }
 
+/** Bulk activate/deactivate from the grid's selection toolbar (P7c) — see `admin-categories.ts`'s `bulkSetCategoryActive` for the pattern. */
+export async function applyBulkSetMaterialAvailable(staff: CurrentSession, ids: readonly string[], isAvailable: boolean): Promise<void> {
+  for (const id of ids) {
+    await applySetMaterialAvailable(staff, id, isAvailable);
+  }
+}
+
+export async function bulkSetMaterialAvailable(ids: readonly string[], isAvailable: boolean): Promise<void> {
+  const staff = await requireStaffSession();
+  await applyBulkSetMaterialAvailable(staff, ids, isAvailable);
+  revalidatePath('/panel/materialy');
+}
+
 export async function applySetMaterialSortOrder(staff: CurrentSession, id: string, sortOrder: number): Promise<void> {
   if (!Number.isInteger(sortOrder) || sortOrder < 0) {
     return;

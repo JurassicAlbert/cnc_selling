@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  applyBulkSetCategoryActive,
   applyCreateCategory,
   applyImportCategoriesFromCsv,
   applySetCategoryActive,
@@ -95,6 +96,25 @@ describe('applySetCategoryActive', () => {
 
     expect((await listActiveCategories()).some((c) => c.slug === slug)).toBe(false);
     expect(await prisma.category.findUnique({ where: { id: created.id } })).not.toBeNull();
+  });
+});
+
+describe('applyBulkSetCategoryActive', () => {
+  it('deactivates every id in the batch and audits each one', async () => {
+    const staff = staffActor();
+    const first = await applyCreateCategory(staff, categoryInput());
+    const second = await applyCreateCategory(staff, categoryInput());
+    if (!first.ok || !second.ok) throw new Error('setup failed');
+
+    await applyBulkSetCategoryActive(staff, [first.id, second.id], false);
+
+    const rows = await prisma.category.findMany({ where: { id: { in: [first.id, second.id] } } });
+    expect(rows.every((c) => c.isActive === false)).toBe(true);
+    expect(
+      await prisma.auditLog.count({
+        where: { entity: 'Category', entityId: { in: [first.id, second.id] }, action: 'update', actorEmail: staff.email },
+      }),
+    ).toBe(2);
   });
 });
 

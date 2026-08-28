@@ -7,7 +7,7 @@ import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN, adminMaterialFamilyLabel } from '@/content/pl/admin';
 import { comparePl } from '@/domain/text/collation';
-import { setMaterialAvailable, setMaterialSortOrder } from '@/server/actions/admin-materials';
+import { bulkSetMaterialAvailable, setMaterialAvailable, setMaterialSortOrder } from '@/server/actions/admin-materials';
 import type { AdminMaterialListItem } from '@/server/repositories/admin-materials';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
 
@@ -74,6 +74,10 @@ export function MaterialsDataGrid({ rows }: { readonly rows: readonly AdminMater
         return newRow;
       }}
       onProcessRowUpdateError={(error) => console.error('[MaterialsDataGrid] row update failed:', error)}
+      bulkActions={[
+        { label: ADMIN.activatePl, run: (ids) => bulkSetMaterialAvailable(ids, true) },
+        { label: ADMIN.deactivatePl, run: (ids) => bulkSetMaterialAvailable(ids, false) },
+      ]}
     />
   );
 }

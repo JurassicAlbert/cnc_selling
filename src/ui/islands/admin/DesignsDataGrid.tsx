@@ -7,7 +7,7 @@ import type { GridColDef } from '@mui/x-data-grid';
 
 import { ADMIN, adminDesignRightsStatusLabel } from '@/content/pl/admin';
 import { comparePl } from '@/domain/text/collation';
-import { setDesignActive, setDesignSortOrder } from '@/server/actions/admin-designs';
+import { bulkSetDesignActive, setDesignActive, setDesignSortOrder } from '@/server/actions/admin-designs';
 import type { AdminDesignListItem } from '@/server/repositories/admin-designs';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
 
@@ -82,6 +82,10 @@ export function DesignsDataGrid({ rows }: { readonly rows: readonly AdminDesignL
         return newRow;
       }}
       onProcessRowUpdateError={(error) => console.error('[DesignsDataGrid] row update failed:', error)}
+      bulkActions={[
+        { label: ADMIN.activatePl, run: (ids) => bulkSetDesignActive(ids, true) },
+        { label: ADMIN.deactivatePl, run: (ids) => bulkSetDesignActive(ids, false) },
+      ]}
     />
   );
 }
