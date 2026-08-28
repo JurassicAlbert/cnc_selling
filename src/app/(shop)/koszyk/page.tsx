@@ -117,7 +117,7 @@ function CartRow({ item }: { readonly item: CartItemView }) {
           </Text>
         )}
         {item.personalizationText !== null && item.personalizationText.trim().length > 0 && (
-          <Text muted>„{item.personalizationText}"</Text>
+          <Text muted>„{item.personalizationText}”</Text>
         )}
         {!item.isComplete && <Text muted>{SITE.cartIncompleteNoticePl}</Text>}
 

@@ -67,7 +67,7 @@ export default async function AdminProductionBriefPage({ params }: ProductionBri
           )}
           {item.snapshot.personalizationText !== null && (
             <Typography>
-              {ADMIN.productionBriefPersonalizationLabelPl}: „{item.snapshot.personalizationText}"
+              {ADMIN.productionBriefPersonalizationLabelPl}: „{item.snapshot.personalizationText}”
             </Typography>
           )}
 

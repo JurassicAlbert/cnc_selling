@@ -119,7 +119,7 @@ const QUANTITY = 1;
 type ConfiguratorProps = {
   readonly productSlug: string;
   readonly options: ConfiguratorOptionData;
-  /** „Produkt obejmuje blat. Nogi nie są w zestawie." and similar — shown in the summary too (§12). */
+  /** „Produkt obejmuje blat. Nogi nie są w zestawie.” and similar — shown in the summary too (§12). */
   readonly materialNotesPl: string | null;
   /** Floor/panel products: no preset sizes, and a mandatory acknowledgement in the summary (§11). */
   readonly requiresExactSize: boolean;

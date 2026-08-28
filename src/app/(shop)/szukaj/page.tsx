@@ -34,7 +34,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         ) : (
           <>
             <Text muted>
-              {SITE.searchResultsForPl} „{query}"
+              {SITE.searchResultsForPl} „{query}”
             </Text>
             {results.length === 0 ? (
               <div style={{ marginBlockStart: 16 }}>

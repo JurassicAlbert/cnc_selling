@@ -98,7 +98,7 @@ export default async function AdminPackingListPage({ params }: PackingListPagePr
                   row.materialNamePl,
                   row.finishNamePl,
                   row.widthMm !== null && row.heightMm !== null ? `${row.widthMm} × ${row.heightMm} mm` : null,
-                  row.personalizationText !== null ? `„${row.personalizationText}"` : null,
+                  row.personalizationText !== null ? `„${row.personalizationText}”` : null,
                 ]
                   .filter((part): part is string => part !== null)
                   .join(' · ')}
