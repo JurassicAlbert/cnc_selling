@@ -489,7 +489,7 @@ Pricing admin built 2026-08-27, autonomously (standing owner authorization to ke
 - [ ] Backend validation on every action; frontend values never trusted
 - [x] Authorization matrix fully tested — new `tests/e2e/admin-authz.spec.ts` (built 2026-08-27, see `docs/HANDOVER.md` §9z32): real Playwright coverage of `requireStaffSession()`/`requireAdminSession()`'s actual behavior — unauthenticated → redirect to `/logowanie`, `CUSTOMER` → real 404 on `/panel`, `STAFF` → 404 on the `ADMIN`-only screen but real access elsewhere, `ADMIN` → real access everywhere. A stale comment elsewhere in the suite had claimed this coverage already existed in a `tests/e2e/admin.spec.ts` that, checked directly against git history, never once existed — this is the real thing that comment should have pointed at
 - [ ] Structured logging in place
-- [ ] Backup strategy documented
+- [x] Backup strategy documented — new `docs/BACKUP.md` (2026-08-28): honest about the current state (no production hosting target chosen yet, so no backups exist — correct for this phase, not a gap; confirmed by grep that no cloud provider/S3 bucket/managed Postgres is configured anywhere in this repo) plus a concrete, actionable plan for before launch covering both irreplaceable-data services from `docs/ARCHITECTURE.md` §14 (Postgres via managed-provider PITR or a self-hosted `pg_dump`+WAL recipe; file storage via bucket versioning/replication once the still-unbuilt S3 adapter exists) — with RPO/RTO targets, a retention schedule, and a quarterly restore-test discipline, not just a "make backups" one-liner
 - [ ] No fake payment, email, production files, or status updates anywhere in the codebase
 
 ## Edge cases (brief §36)

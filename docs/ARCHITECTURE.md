@@ -1003,6 +1003,8 @@ Per your project rules, three things are explicitly forbidden in this codebase a
 2. No fake production files. A preview SVG is not a production file and must never be labelled or exported as one.
 3. No fake email delivery. If the mailer is unconfigured, the order still succeeds, and the UI says the confirmation will follow — it does not claim an email was sent.
 
+**Backup strategy** for the two services that hold irreplaceable data (Postgres, and the file storage above once its S3 adapter exists) is documented separately — see `docs/BACKUP.md`.
+
 ---
 
 ## 15. Cart, checkout, order creation

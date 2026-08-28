@@ -3278,6 +3278,20 @@ Live-testing `MaterialForm` also surfaced the same `encType="multipart/form-data
 
 `npm run typecheck && npm run lint && npm test && npm run build` all clean (614/614 — no new test-worthy logic, this is client-side form-state wiring verified live rather than unit-tested, matching this session's own precedent for presentational changes). Restarted the dev server before every live-verification pass, fresh tabs throughout. Live-verified on three forms covering every field type the hook handles: `ProductForm` (text + number, a real dimension-conflict failure — slug, name, short description, and both width fields all survived intact); `CategoryForm` (text, an invalid-slug failure — slug, name, and description all survived); `MaterialForm`, twice — once catching the MUI warning, once confirming it gone — a `select` changed to a non-default option and a `Checkbox` unchecked from its `true` default both survived a real "price must be positive" failure exactly as set, with zero console warnings on the second pass. `CategoryForm`'s test data was never actually created (validation correctly blocked it both times); `MaterialForm`'s test files were injected via a `DataTransfer`-constructed `File` (the same technique used for §9z35/§9z36's file-upload tests — this browser tool can't drive a native OS file picker), and no rows were left in the DB since both submissions correctly failed validation.
 
+## 9z38. Backup strategy documented — 2026-08-28
+
+Continuing autonomously to a smaller, documentation-only checklist item after §9z37's substantial form-state fix. New `docs/BACKUP.md`.
+
+Checked before writing anything, rather than assuming: grepped the whole repo for any cloud provider, S3 bucket, or managed-Postgres configuration. None exists — `docker-compose.yml`'s own header comment already says "Nothing here is production configuration," and there is no chosen hosting target anywhere in this project yet. That makes "no backups exist" the honest and *correct* current state, not a gap to apologize for — writing a specific `pg_dump` cron job today would just be automating a backup of throwaway local dev-container data that `docker compose down -v` is explicitly meant to destroy on purpose.
+
+The doc instead does what's actually useful at this phase: names the two services holding genuinely irreplaceable data (Postgres — orders, customers, audit log; and uploaded files, currently `local-disk.ts`, whose own header comment already flags it as "not meant for production... no redundancy"), and gives a concrete, decision-ready plan for whoever picks the production host — managed-provider PITR if one is chosen (the right default, not a hand-rolled alternative), or a specific self-hosted `pg_dump --format=custom` + off-host storage + WAL-archiving recipe if not, plus real RPO/RTO targets and a quarterly restore-test discipline (a backup never restored is unverified, not safe). Flagged honestly, not glossed over: customer-uploaded custom design files have zero redundancy in any environment this app runs in today, since the S3-compatible `FileStorage` adapter `docs/ARCHITECTURE.md` §14 already scopes as "prod's job" isn't built yet — a real, currently-true production blocker, not a defect in this MVP pass.
+
+Linked from `docs/ARCHITECTURE.md` §14 (the service-abstractions table this doc's own scope was drawn from) and `docs/CHECKLIST.md`.
+
+### Verified
+
+Documentation-only change, no source files touched — `npm run typecheck` and `npm run lint` (including the Polish-literal checker, which doesn't scan `docs/`) both clean; `test`/`build` not re-run since nothing that could affect them changed.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

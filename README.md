@@ -748,6 +748,20 @@ verified on 3 forms across every field type — text, number, `select`,
 `Checkbox` — each surviving a real validation failure exactly as
 typed, with zero console warnings. See `docs/HANDOVER.md` §9z37.
 
+**Backup strategy documented — built 2026-08-28, autonomously.** New
+`docs/BACKUP.md`. Checked first, rather than assumed: no cloud
+provider, S3 bucket, or managed Postgres is configured anywhere in
+this repo, so "no backups exist" is the honest, correct state at this
+phase — writing a specific cron job today would just be automating a
+backup of throwaway local dev-container data meant to be disposable.
+The doc instead gives a concrete, decision-ready plan for launch:
+managed-provider point-in-time-recovery if one is chosen, or a
+specific self-hosted `pg_dump`+WAL recipe if not, real RPO/RTO
+targets, and a quarterly restore-test discipline — plus an honest flag
+that customer-uploaded design files have zero redundancy today, since
+the S3-compatible storage adapter `docs/ARCHITECTURE.md` §14 already
+scopes as future work isn't built yet. See `docs/HANDOVER.md` §9z38.
+
 ---
 
 ## Getting set up
