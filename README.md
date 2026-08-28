@@ -776,6 +776,16 @@ the dev server log — requesting a real OTP after the migration still
 found it via the same `search` parameter, now sitting in a clean
 `subject` field. See `docs/HANDOVER.md` §9z39.
 
+**CSV exports confirmed already true — verification-only, 2026-08-28,
+autonomously.** P8's own phasing summary lists this separately from
+the catalogue-table export work already closed out; checked before
+building anything and found nothing missing — all 15 admin grids
+already have `GridToolbar`'s CSV export wired. Live-verified on the
+specific module this line names (`docs/ARCHITECTURE.md` places it
+under Orders): opened the export menu against 67 real seeded orders
+on `/panel/zamowienia`, confirmed "Pobierz jako plik CSV" is real and
+triggers a clean download. See `docs/HANDOVER.md` §9z40.
+
 ---
 
 ## Getting set up

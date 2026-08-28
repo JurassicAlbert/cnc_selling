@@ -3310,6 +3310,18 @@ This session has repeatedly read a login OTP code by grepping the dev server's s
 
 `npm run typecheck && npm run lint && npm test && npm run build` all clean (618/618 — 4 new unit tests in `tests/unit/logger.test.ts`: the JSON shape and field set, `warn`/`error` routing to the correct `console.*` method and only that one, `Error`-in-context expansion, and that omitting `context` entirely doesn't log stray `undefined` keys). The existing `tests/integration/mailer.test.ts` — which spies on `console.log` and asserts the logged text `.toContain(...)`s a rendered subject — needed no changes at all: a JSON-stringified line still contains the same substrings as the old free-text one did, confirmed by the full suite passing unmodified. Restarted the dev server before live-verifying, per §9z2's standing rule. Live-verified the real end-to-end OTP flow as described above; confirmed no new console errors on the login page (the one hydration warning present in that pass's console history was pre-existing stale output from an earlier navigation on a reused tab, not something this change touched).
 
+## 9z40. CSV exports — verification-only, already true — 2026-08-28
+
+Continuing autonomously after §9z39. P8's own phasing summary lists "CSV exports" as a deliverable separately from the catalogue-table import/export line already closed out (§9z31/§9z35) — `docs/ARCHITECTURE.md`'s own line 1092 places this specifically under the Orders module's own spec ("Data grid with filters... and CSV export").
+
+Checked before building anything: grepped every `*DataGrid.tsx` in `src/ui/islands/admin` for `GridToolbar`. All 15 already have it — the 13 `EntityDataGrid` consumers inherit it from that shared wrapper, and `OrdersDataGrid`/`OpinieDataGrid`/`StaffDataGrid` (which hand-roll their own `<DataGrid>` instead of using `EntityDataGrid`, per their own documented reasons) each wire `showToolbar` + `slots={{toolbar: GridToolbar}}` directly. Nothing to build.
+
+Live-verified on `/panel/zamowienia` specifically, since that's the module this checklist line actually names: 67 real seeded orders in the grid, opened the toolbar's export menu, confirmed "Pobierz jako plik CSV" is a real, present option (not a stub or a mislabeled button), clicked it, triggered the download — zero new console errors (the one hydration warning present in that tab's console history was pre-existing stale output from an earlier `/panel/materialy/nowy` navigation in the same session, already documented, unrelated to this).
+
+### Verified
+
+Verification-only, no source files touched — nothing to `typecheck`/`lint`/`test`/`build` against. Live-verified in the browser as described above.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous
