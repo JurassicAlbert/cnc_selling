@@ -126,6 +126,7 @@ export async function getConfiguratorProductData(
                         id: true,
                         namePl: true,
                         isAvailable: true,
+                        imageUrl: true,
                         pricePerM2Grosze: true,
                         setupFeeGrosze: true,
                       },
@@ -290,6 +291,7 @@ export async function getConfiguratorProductData(
         id: finish.id,
         namePl: finish.namePl,
         isAvailable: finish.isAvailable,
+        imageUrl: finish.imageUrl,
       })),
     })),
     designs: product.designs.map(({ design }) => ({

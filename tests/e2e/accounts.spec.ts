@@ -79,21 +79,20 @@ async function login(page: Page, params: { readonly email: string; readonly pass
   await expect(page).toHaveURL('/moje-konto');
 }
 
+// 2026-08-28: the configurator no longer gates one step at a time behind
+// "Dalej" (owner feedback — every section is a real, always-visible
+// swatch/field picker) — every swatch/field below is clicked/filled
+// directly, no "Dalej" clicks between them.
 async function addSampleConfigurationToCart(page: Page): Promise<void> {
   await page.goto('/produkt/obraz-drewniany-z-grawerem');
   const main = page.getByRole('main');
   await main.getByRole('button', { name: 'Wzór podstawowy — do zastąpienia' }).click();
-  await main.getByRole('button', { name: 'Dalej' }).click();
   await main.getByRole('button', { name: 'Dąb', exact: true }).click();
-  await main.getByRole('button', { name: 'Dalej' }).click();
   await fillReliably(main.getByLabel('Szerokość (cm)'), '70');
   await main.getByLabel('Szerokość (cm)').blur();
   await fillReliably(main.getByLabel('Wysokość (cm)'), '50');
   await main.getByLabel('Wysokość (cm)').blur();
-  await main.getByRole('button', { name: 'Dalej' }).click();
   await main.getByRole('button', { name: 'Olejowanie' }).click();
-  await main.getByRole('button', { name: 'Dalej' }).click();
-  await main.getByRole('button', { name: 'Dalej' }).click();
   await main.getByRole('button', { name: 'Dodaj do koszyka' }).click();
   await expect(page).toHaveURL('/koszyk');
 }

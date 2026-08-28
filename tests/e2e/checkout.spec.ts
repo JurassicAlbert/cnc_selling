@@ -18,36 +18,35 @@ import { expect, test } from '@playwright/test';
  * database every other e2e test and this session's manual verification
  * already writes to; there is no separate throwaway e2e database in this
  * project.
+ *
+ * 2026-08-28: the configurator no longer gates one step at a time behind
+ * "Dalej" (owner feedback — every section is now a real, always-visible
+ * swatch/field picker, like choosing a t-shirt colour). This test now
+ * clicks every swatch/fills every field directly, in the same order as
+ * before, but with no "Dalej" clicks between them.
  */
 test('adds a configuration to the cart and completes checkout as a guest', async ({ page }) => {
   await page.goto('/produkt/obraz-drewniany-z-grawerem');
 
   const main = page.getByRole('main');
 
-  // Step 1: Wzór (design)
+  // Wzór (design)
   await main.getByRole('button', { name: 'Wzór podstawowy — do zastąpienia' }).click();
-  await main.getByRole('button', { name: 'Dalej' }).click();
 
-  // Step 2: Materiał
+  // Materiał
   await main.getByRole('button', { name: 'Dąb', exact: true }).click();
-  await main.getByRole('button', { name: 'Dalej' }).click();
 
-  // Step 3: Wymiary — a size verified to price with no blocking feasibility issues.
+  // Wymiary — a size verified to price with no blocking feasibility issues.
   await main.getByLabel('Szerokość (cm)').fill('70');
   await main.getByLabel('Szerokość (cm)').blur();
   await main.getByLabel('Wysokość (cm)').fill('50');
   await main.getByLabel('Wysokość (cm)').blur();
-  await expect(main.getByRole('button', { name: 'Dalej' })).toBeEnabled();
-  await main.getByRole('button', { name: 'Dalej' }).click();
 
-  // Step 4: Wykończenie
+  // Wykończenie
   await main.getByRole('button', { name: 'Olejowanie' }).click();
-  await main.getByRole('button', { name: 'Dalej' }).click();
 
-  // Step 5: Personalizacja — optional, skipped.
-  await main.getByRole('button', { name: 'Dalej' }).click();
+  // Personalizacja — optional, left blank.
 
-  // Step 6: Podsumowanie
   const addToCartButton = main.getByRole('button', { name: 'Dodaj do koszyka' });
   await expect(addToCartButton).toBeEnabled();
   await addToCartButton.click();

@@ -23,41 +23,39 @@ import { expect, test } from '@playwright/test';
  * the order automatically lands in `DESIGN_REVIEW` — a gate that
  * existed since P5 but had never been exercised by a real
  * `CustomerDesign` until this pass.
+ *
+ * 2026-08-28: the configurator no longer gates one step at a time behind
+ * "Dalej" (owner feedback — every section is a real, always-visible
+ * swatch/field picker). Every field is filled/clicked directly now, no
+ * "Dalej" clicks between them.
  */
 test('uploads a custom design, completes checkout, and lands in DESIGN_REVIEW', async ({ page }) => {
   await page.goto('/produkt/wlasny-projekt-z-grawerem');
 
   const main = page.getByRole('main');
 
-  // Step 1: Twój projekt (CUSTOM_UPLOAD)
+  // Twój projekt (CUSTOM_UPLOAD)
   const fileInput = main.locator('input[type="file"]');
   await fileInput.setInputFiles(path.resolve(process.cwd(), 'public/images/photos/gres.jpg'));
   await main.getByLabel('Akceptuję powyższe oświadczenie').check();
   await main.getByRole('button', { name: 'Prześlij projekt' }).click();
   await expect(main.getByText('Projekt został przesłany.')).toBeVisible();
-  await expect(main.getByRole('button', { name: 'Dalej' })).toBeEnabled();
-  await main.getByRole('button', { name: 'Dalej' }).click();
 
-  // Step 2: Materiał
+  // Materiał
   await main.getByRole('button', { name: 'Dąb', exact: true }).click();
-  await main.getByRole('button', { name: 'Dalej' }).click();
 
-  // Step 3: Wymiary — within the product's 200-1200mm envelope.
+  // Wymiary — within the product's 200-1200mm envelope.
   await main.getByLabel('Szerokość (cm)').fill('40');
   await main.getByLabel('Szerokość (cm)').blur();
   await main.getByLabel('Wysokość (cm)').fill('40');
   await main.getByLabel('Wysokość (cm)').blur();
-  await expect(main.getByRole('button', { name: 'Dalej' })).toBeEnabled();
-  await main.getByRole('button', { name: 'Dalej' }).click();
 
-  // Step 4: Wykończenie
+  // Wykończenie
   await main.getByRole('button', { name: 'Olejowanie' }).click();
-  await main.getByRole('button', { name: 'Dalej' }).click();
 
-  // Step 5: Personalizacja — optional, skipped.
-  await main.getByRole('button', { name: 'Dalej' }).click();
+  // Personalizacja — optional, left blank.
 
-  // Step 6: Podsumowanie — the honest "this is an estimate" notice (P4).
+  // Podsumowanie — the honest "this is an estimate" notice (P4).
   await expect(
     main.getByText('Podana cena to wstępny szacunek', { exact: false }),
   ).toBeVisible();

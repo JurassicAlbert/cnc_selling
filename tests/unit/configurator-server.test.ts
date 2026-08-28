@@ -32,8 +32,8 @@ const optionData: ConfiguratorOptionData = {
       isAvailable: true,
       imageUrl: '/images/photos/material-dab.jpg',
       finishes: [
-        { id: 'olejowanie', namePl: 'Olejowanie', isAvailable: true },
-        { id: 'lakierowanie', namePl: 'Lakierowanie', isAvailable: false },
+        { id: 'olejowanie', namePl: 'Olejowanie', isAvailable: true, imageUrl: '/images/photos/material-dab.jpg' },
+        { id: 'lakierowanie', namePl: 'Lakierowanie', isAvailable: false, imageUrl: '/images/photos/material-dab.jpg' },
       ],
     },
     {
@@ -48,7 +48,7 @@ const optionData: ConfiguratorOptionData = {
       namePl: 'Materiał niedostępny',
       isAvailable: false,
       imageUrl: '/images/photos/material-dab.jpg',
-      finishes: [{ id: 'olejowanie', namePl: 'Olejowanie', isAvailable: true }],
+      finishes: [{ id: 'olejowanie', namePl: 'Olejowanie', isAvailable: true, imageUrl: '/images/photos/material-dab.jpg' }],
     },
   ],
   designs: [

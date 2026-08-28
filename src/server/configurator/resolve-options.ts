@@ -28,6 +28,8 @@ export type FinishOptionRow = {
   readonly id: string;
   readonly namePl: string;
   readonly isAvailable: boolean;
+  /** Real, sourced finish photography — same swatch-image treatment `MaterialOptionRow.imageUrl` already gets. */
+  readonly imageUrl: string;
 };
 
 export type DesignOptionRow = {

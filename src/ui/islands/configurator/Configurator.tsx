@@ -6,26 +6,47 @@
  * `docs/HANDOVER.md` §9e for why `ThemeRegistry` was pulled out of the root
  * layout specifically so this could exist without taxing every other page).
  *
- * State ownership, deliberately split three ways:
+ * **2026-08-28 redesign, direct owner feedback**: "wzory powinny być w
+ * produkcie do wyboru tak jak kolor koszulki, tak samo typ drewna i sposób
+ * zachowania" (patterns/wood type/finish should be choosable in the product
+ * like a t-shirt color) — this used to be a `Stepper`-gated wizard showing
+ * exactly one step at a time behind "Wstecz"/"Dalej". Every applicable
+ * section now renders simultaneously on one page — DESIGN/MATERIAL/FINISH
+ * as real image swatches (`ImageSwatchGroup`, using photography that was
+ * already fetched — `MaterialOptionRow.imageUrl`/`DesignOptionRow.
+ * previewUrl`/the newly-added `FinishOptionRow.imageUrl` — just never
+ * rendered as one), SIZE/PERSONALIZATION/CUSTOM_UPLOAD as their existing
+ * inputs, SUMMARY always visible at the bottom. No step index, no
+ * `Stepper`/`StepButton` at all.
+ *
+ * The domain-level narrowing this used to lean on step-locking for turns
+ * out to already handle "no forced order" correctly on its own:
+ * `resolve-options.ts`'s `ResolvedOptionAvailability` is recomputed fresh
+ * from whatever `selections` currently holds on every change — before a
+ * material is picked, `finishes` is genuinely empty (nothing to enumerate,
+ * a material's own join table is the only source of which finishes apply),
+ * which the existing `OptionStep`/section already renders as an honest
+ * "not available yet" notice with zero new code. DESIGN/MATERIAL entries
+ * were already individually gated (`isAvailable`/`reason` per entry, not
+ * per section) — that mechanism is exactly what a real swatch picker needs,
+ * unchanged.
+ *
+ * State ownership, deliberately split three ways (unchanged by the
+ * redesign above — this is presentation-only, no state/domain logic moved):
  *   - `selections`  — what the customer has picked. Local React state, and
  *     the URL query string, so refresh and back/forward both work (brief
- *     §36) without yet needing a persisted `Configuration` row — that is a
- *     further piece (cart integration, P5), not built in this pass.
+ *     §36).
  *   - `snapshot`    — steps, resolved options, price, feasibility. NEVER
  *     computed here. Every change re-requests it from the
  *     `getConfiguratorSnapshot` Server Action (§10.2: prices are
  *     server-authoritative, full stop).
- *   - `stepIndex`   — which step is showing. Gated by `isStepEnterable` so
- *     typing a URL for a step whose prerequisites are missing cannot open it.
  *
  * Not yet built, honestly: quantity (belongs to the cart, P5), the 2D
- * preview (§7.3), font-backed personalization (no `Font` row exists yet —
- * see `prisma/seed.ts`'s header on why one was not fabricated), and
- * `CUSTOM_UPLOAD` (P4's upload pipeline). Add-to-cart renders disabled with
- * an honest label rather than doing nothing silently.
+ * preview (§7.3 — `ConfiguratorPreview` covers material/design overlay,
+ * not a full render).
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
@@ -33,18 +54,14 @@ import Checkbox from '@mui/material/Checkbox';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import MenuItem from '@mui/material/MenuItem';
-import Step from '@mui/material/Step';
-import StepButton from '@mui/material/StepButton';
-import Stepper from '@mui/material/Stepper';
 import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import Typography from '@mui/material/Typography';
 
 import {
   checkConfigurationComplete,
   EMPTY_SELECTIONS,
-  isStepEnterable,
-  isStepSatisfied,
   type Selections,
   type StepCode,
 } from '@/domain/configuration/steps';
@@ -82,6 +99,8 @@ import { uploadCustomDesign } from '@/server/actions/upload';
 import type { OwnedCustomerDesignListItem } from '@/server/repositories/customer-designs';
 import type { UploadCustomDesignResult } from '@/server/actions/upload';
 import { ConfiguratorPreview } from './ConfiguratorPreview';
+import { ImageSwatchGroup } from './ImageSwatchGroup';
+import type { SwatchEntry } from './ImageSwatchGroup';
 import { readSelectionsFromSearch, writeSelectionsToSearch } from './selections-url';
 
 const STEP_LABEL: Record<StepCode, string> = {
@@ -95,23 +114,6 @@ const STEP_LABEL: Record<StepCode, string> = {
   CUSTOM_UPLOAD: SITE.configuratorStepCustomUploadPl,
   SUMMARY: SITE.configuratorStepSummaryPl,
 };
-
-/**
- * Why a not-yet-enterable step is disabled: the label of the first earlier
- * step whose own answer is still missing — `isStepEnterable` only reports
- * true/false, not which prerequisite is the blocker, so this walks the same
- * ground `isStepEnterable` does to name it. `undefined` (not disabled, or
- * genuinely nothing missing) tells `DisabledExplanation` to render plainly.
- */
-function stepBlockedReason(steps: readonly StepCode[], index: number, selections: Selections): string | undefined {
-  for (let i = 0; i < index; i++) {
-    const step = steps[i] as StepCode;
-    if (!isStepSatisfied(step, selections)) {
-      return `${SITE.configuratorStepBlockedPrefixPl} ${STEP_LABEL[step]}`;
-    }
-  }
-  return undefined;
-}
 
 /** Fixed at 1 — quantity belongs to the cart (P5), not the configurator. */
 const QUANTITY = 1;
@@ -146,7 +148,6 @@ export function Configurator({
 }: ConfiguratorProps) {
   const router = useRouter();
   const [selections, setSelections] = useState<Selections>(EMPTY_SELECTIONS);
-  const [stepIndex, setStepIndex] = useState(0);
   const [snapshot, setSnapshot] = useState<ConfiguratorSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [acknowledged, setAcknowledged] = useState<ReadonlySet<FeasibilityCode>>(new Set());
@@ -160,8 +161,6 @@ export function Configurator({
   const [addToCartPending, setAddToCartPending] = useState(false);
   const [addToCartError, setAddToCartError] = useState(false);
   const hydrated = useRef(false);
-  const initialStepResolved = useRef(false);
-  const stepsRef = useRef<readonly StepCode[]>([]);
 
   const applyUrlSelections = useCallback((search: string) => {
     const restored = readSelectionsFromSearch(search);
@@ -191,12 +190,12 @@ export function Configurator({
   // (leaving and returning to this URL, or Next reusing a cached instance
   // of this route). Without this listener the address bar changes but the
   // rendered configurator does not, which is exactly the bug brief §36
-  // flags as "browser back button during configuration".
+  // flags as "browser back button during configuration". Every section is
+  // always visible now, so there is no step index to restore alongside the
+  // selections — just the selections themselves.
   useEffect(() => {
     function onPopState() {
-      const restored = applyUrlSelections(window.location.search);
-      initialStepResolved.current = true;
-      setStepIndex(furthestEnterable(stepsRef.current, restored));
+      applyUrlSelections(window.location.search);
     }
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
@@ -212,13 +211,6 @@ export function Configurator({
       setLoading(false);
       if (result.ok) {
         setSnapshot(result.snapshot);
-        // On the very first snapshot after a URL-restored refresh, resume at
-        // the furthest step the restored selections actually reach, instead
-        // of always landing back on step 1 with the answers merely intact.
-        if (!initialStepResolved.current) {
-          initialStepResolved.current = true;
-          setStepIndex(furthestEnterable(result.snapshot.steps, selections));
-        }
       }
     });
     // This is the only owner of the selection-encoding keys, but it isn't
@@ -241,20 +233,6 @@ export function Configurator({
   }, [selections, productSlug, router, isPreview]);
 
   const steps = snapshot?.steps ?? [];
-  stepsRef.current = steps;
-
-  // A selection change can invalidate a downstream step's prerequisites — if
-  // the customer is currently sitting past the furthest step still
-  // reachable, pull them back rather than leaving them on a step whose
-  // requirements no longer hold (§7.1: never silently keep an incompatible
-  // state, but a step "going dark" under the customer is the same class of
-  // problem for navigation as it is for a cleared selection).
-  useEffect(() => {
-    if (steps.length === 0) return;
-    if (!isStepEnterable(steps, stepIndex, selections)) {
-      setStepIndex(furthestEnterable(steps, selections));
-    }
-  }, [steps, stepIndex, selections]);
 
   // Each field commits independently on its own blur. Committing both
   // together on either blur was a real bug: tabbing from width to height
@@ -341,174 +319,194 @@ export function Configurator({
     );
   }
 
-  const currentStep = steps[stepIndex] as StepCode;
-  const canGoNext =
-    stepIndex < steps.length - 1 && isStepEnterable(steps, stepIndex + 1, selections);
-  const canGoBack = stepIndex > 0;
   const selectedInstallVariant =
     selections.installationVariant === null
       ? null
       : (options.installVariants.find((v) => v.code === selections.installationVariant) ?? null);
+  const selectedMaterial =
+    selections.materialId === null ? null : (options.materials.find((m) => m.id === selections.materialId) ?? null);
+
+  const designSwatches: readonly SwatchEntry[] = (snapshot?.availability.designs ?? []).map((entry) =>
+    toSwatchEntry(entry, options.designs.find((d) => d.id === entry.id)?.previewUrl ?? ''),
+  );
+  const materialSwatches: readonly SwatchEntry[] = (snapshot?.availability.materials ?? []).map((entry) =>
+    toSwatchEntry(entry, options.materials.find((m) => m.id === entry.id)?.imageUrl ?? ''),
+  );
+  const finishSwatches: readonly SwatchEntry[] = (snapshot?.availability.finishes ?? []).map((entry) =>
+    toSwatchEntry(entry, selectedMaterial?.finishes.find((f) => f.id === entry.id)?.imageUrl ?? ''),
+  );
 
   return (
     <>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 72 }}>
-      <Stepper nonLinear activeStep={stepIndex} alternativeLabel>
-        {steps.map((step, index) => {
-          const enterable = isStepEnterable(steps, index, selections);
-          return (
-            <Step key={step} completed={isStepEnterable(steps, index + 1, selections)}>
-              <DisabledExplanation title={enterable ? undefined : stepBlockedReason(steps, index, selections)}>
-                <StepButton disabled={!enterable} onClick={() => setStepIndex(index)}>
-                  {STEP_LABEL[step]}
-                </StepButton>
-              </DisabledExplanation>
-            </Step>
-          );
-        })}
-      </Stepper>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 40, paddingBottom: 72 }}>
+        <ConfiguratorPreview
+          selections={selections}
+          options={options}
+          dimensionEnvelope={dimensionEnvelope}
+          moduleLayout={snapshot?.pricing.status === 'priced' ? snapshot.pricing.moduleLayout : null}
+        />
 
-      <ConfiguratorPreview
-        selections={selections}
-        options={options}
-        dimensionEnvelope={dimensionEnvelope}
-        moduleLayout={snapshot?.pricing.status === 'priced' ? snapshot.pricing.moduleLayout : null}
-      />
-
-      {clearedNotice !== null && (
-        <Alert severity="info" onClose={() => setClearedNotice(null)}>
-          {clearedNotice}
-        </Alert>
-      )}
-
-      <div style={{ minHeight: 160 }}>
-        {currentStep === 'DESIGN' && (
-          <OptionStep
-            title={STEP_LABEL.DESIGN}
-            entries={snapshot?.availability.designs ?? []}
-            selectedId={selections.designId}
-            onSelect={(id) => setSelections((prev) => ({ ...prev, designId: id }))}
-          />
+        {clearedNotice !== null && (
+          <Alert severity="info" onClose={() => setClearedNotice(null)}>
+            {clearedNotice}
+          </Alert>
         )}
 
-        {currentStep === 'MATERIAL' && (
-          <OptionStep
-            title={STEP_LABEL.MATERIAL}
-            entries={snapshot?.availability.materials ?? []}
-            selectedId={selections.materialId}
-            onSelect={selectMaterial}
-          />
+        {steps.includes('DESIGN') && (
+          <ConfigSection heading={STEP_LABEL.DESIGN} selectedLabel={selectedLabelOf(designSwatches, selections.designId)}>
+            {designSwatches.length === 0 ? (
+              <Alert severity="info">{SITE.configuratorNoOptionsPl}</Alert>
+            ) : (
+              <ImageSwatchGroup
+                ariaLabel={STEP_LABEL.DESIGN}
+                entries={designSwatches}
+                selectedId={selections.designId}
+                onSelect={(id) => setSelections((prev) => ({ ...prev, designId: id }))}
+              />
+            )}
+          </ConfigSection>
         )}
 
-        {currentStep === 'FINISH' && (
-          <OptionStep
-            title={STEP_LABEL.FINISH}
-            entries={snapshot?.availability.finishes ?? []}
-            selectedId={selections.finishId}
-            onSelect={(id) => setSelections((prev) => ({ ...prev, finishId: id }))}
-          />
+        {steps.includes('MATERIAL') && (
+          <ConfigSection heading={STEP_LABEL.MATERIAL} selectedLabel={selectedLabelOf(materialSwatches, selections.materialId)}>
+            {materialSwatches.length === 0 ? (
+              <Alert severity="info">{SITE.configuratorNoOptionsPl}</Alert>
+            ) : (
+              <ImageSwatchGroup
+                ariaLabel={STEP_LABEL.MATERIAL}
+                entries={materialSwatches}
+                selectedId={selections.materialId}
+                onSelect={selectMaterial}
+              />
+            )}
+          </ConfigSection>
         )}
 
-        {currentStep === 'INSTALLATION_VARIANT' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {steps.includes('FINISH') && (
+          <ConfigSection heading={STEP_LABEL.FINISH} selectedLabel={selectedLabelOf(finishSwatches, selections.finishId)}>
+            {finishSwatches.length === 0 ? (
+              <Alert severity="info">{SITE.configuratorNoOptionsPl}</Alert>
+            ) : (
+              <ImageSwatchGroup
+                ariaLabel={STEP_LABEL.FINISH}
+                entries={finishSwatches}
+                selectedId={selections.finishId}
+                onSelect={(id) => setSelections((prev) => ({ ...prev, finishId: id }))}
+              />
+            )}
+          </ConfigSection>
+        )}
+
+        {steps.includes('SIZE') && (
+          <ConfigSection heading={STEP_LABEL.SIZE} selectedLabel={null}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 320 }}>
+              <TextField
+                label={SITE.configuratorWidthLabelPl}
+                value={widthInput}
+                onChange={(e) => setWidthInput(e.target.value)}
+                onBlur={commitWidth}
+                error={widthError !== null}
+                helperText={
+                  widthError ??
+                  `${formatMmAsCentimetres(dimensionEnvelope.minWidthMm)}–${formatMmAsCentimetres(dimensionEnvelope.maxWidthMm)} cm`
+                }
+                size="small"
+              />
+              <TextField
+                label={SITE.configuratorHeightLabelPl}
+                value={heightInput}
+                onChange={(e) => setHeightInput(e.target.value)}
+                onBlur={commitHeight}
+                error={heightError !== null}
+                helperText={
+                  heightError ??
+                  `${formatMmAsCentimetres(dimensionEnvelope.minHeightMm)}–${formatMmAsCentimetres(dimensionEnvelope.maxHeightMm)} cm`
+                }
+                size="small"
+              />
+              {snapshot?.pricing.status === 'dimension_invalid' && (
+                <Alert severity="error">
+                  {snapshot.pricing.issues.map((issue) => (
+                    <div key={issue.code}>{dimensionMessage(issue)}</div>
+                  ))}
+                </Alert>
+              )}
+            </div>
+          </ConfigSection>
+        )}
+
+        {steps.includes('THICKNESS') && (
+          <ConfigSection heading={STEP_LABEL.THICKNESS} selectedLabel={null}>
             <OptionStep
-              title={STEP_LABEL.INSTALLATION_VARIANT}
-              entries={options.installVariants.map((v) => ({
-                id: v.code,
-                namePl: v.namePl,
-                isAvailable: true,
-                reason: null,
-              }))}
-              selectedId={selections.installationVariant}
-              onSelect={selectInstallationVariant}
+              title={STEP_LABEL.THICKNESS}
+              entries={snapshot?.availability.thicknesses ?? []}
+              selectedId={selections.thicknessMm === null ? null : String(selections.thicknessMm)}
+              onSelect={(id) => setSelections((prev) => ({ ...prev, thicknessMm: Number(id) }))}
             />
-            {selectedInstallVariant !== null && (
-              <div>
-                <Text muted>{selectedInstallVariant.descPl}</Text>
-                {/* biome-ignore lint/performance/noImgElement: placeholder SVGs get nothing from next/image's raster pipeline — same as Card.tsx */}
-                <img
-                  src={selectedInstallVariant.diagramUrl}
-                  alt={selectedInstallVariant.namePl}
-                  style={{ width: '100%', maxWidth: 400, height: 'auto', display: 'block' }}
-                />
-              </div>
-            )}
-          </div>
+          </ConfigSection>
         )}
 
-        {currentStep === 'THICKNESS' && (
-          <OptionStep
-            title={STEP_LABEL.THICKNESS}
-            entries={snapshot?.availability.thicknesses ?? []}
-            selectedId={selections.thicknessMm === null ? null : String(selections.thicknessMm)}
-            onSelect={(id) => setSelections((prev) => ({ ...prev, thicknessMm: Number(id) }))}
-          />
+        {steps.includes('INSTALLATION_VARIANT') && (
+          <ConfigSection heading={STEP_LABEL.INSTALLATION_VARIANT} selectedLabel={null}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <OptionStep
+                title={STEP_LABEL.INSTALLATION_VARIANT}
+                entries={options.installVariants.map((v) => ({
+                  id: v.code,
+                  namePl: v.namePl,
+                  isAvailable: true,
+                  reason: null,
+                }))}
+                selectedId={selections.installationVariant}
+                onSelect={selectInstallationVariant}
+              />
+              {selectedInstallVariant !== null && (
+                <div>
+                  <Text muted>{selectedInstallVariant.descPl}</Text>
+                  {/* biome-ignore lint/performance/noImgElement: placeholder SVGs get nothing from next/image's raster pipeline — same as Card.tsx */}
+                  <img
+                    src={selectedInstallVariant.diagramUrl}
+                    alt={selectedInstallVariant.namePl}
+                    style={{ width: '100%', maxWidth: 400, height: 'auto', display: 'block' }}
+                  />
+                </div>
+              )}
+            </div>
+          </ConfigSection>
         )}
 
-        {currentStep === 'SIZE' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 320 }}>
-            <TextField
-              label={SITE.configuratorWidthLabelPl}
-              value={widthInput}
-              onChange={(e) => setWidthInput(e.target.value)}
-              onBlur={commitWidth}
-              error={widthError !== null}
-              helperText={
-                widthError ??
-                `${formatMmAsCentimetres(dimensionEnvelope.minWidthMm)}–${formatMmAsCentimetres(dimensionEnvelope.maxWidthMm)} cm`
+        {steps.includes('PERSONALIZATION') && (
+          <ConfigSection heading={STEP_LABEL.PERSONALIZATION} selectedLabel={null}>
+            <PersonalizationStep
+              personalization={snapshot?.personalization ?? null}
+              fonts={snapshot?.availability.fonts ?? []}
+              text={selections.personalizationText ?? ''}
+              fontId={selections.fontId}
+              issues={snapshot?.pricing.status === 'priced' ? snapshot.pricing.personalizationIssues : []}
+              fontRequired={
+                snapshot?.pricing.status === 'priced' ? snapshot.pricing.personalizationFontRequired : false
               }
-              size="small"
-            />
-            <TextField
-              label={SITE.configuratorHeightLabelPl}
-              value={heightInput}
-              onChange={(e) => setHeightInput(e.target.value)}
-              onBlur={commitHeight}
-              error={heightError !== null}
-              helperText={
-                heightError ??
-                `${formatMmAsCentimetres(dimensionEnvelope.minHeightMm)}–${formatMmAsCentimetres(dimensionEnvelope.maxHeightMm)} cm`
+              onTextChange={(text) =>
+                setSelections((prev) => ({ ...prev, personalizationText: text === '' ? null : text }))
               }
-              size="small"
+              onFontChange={(fontId) => setSelections((prev) => ({ ...prev, fontId }))}
             />
-            {snapshot?.pricing.status === 'dimension_invalid' && (
-              <Alert severity="error">
-                {snapshot.pricing.issues.map((issue) => (
-                  <div key={issue.code}>{dimensionMessage(issue)}</div>
-                ))}
-              </Alert>
-            )}
-          </div>
+          </ConfigSection>
         )}
 
-        {currentStep === 'PERSONALIZATION' && (
-          <PersonalizationStep
-            personalization={snapshot?.personalization ?? null}
-            fonts={snapshot?.availability.fonts ?? []}
-            text={selections.personalizationText ?? ''}
-            fontId={selections.fontId}
-            issues={snapshot?.pricing.status === 'priced' ? snapshot.pricing.personalizationIssues : []}
-            fontRequired={
-              snapshot?.pricing.status === 'priced' ? snapshot.pricing.personalizationFontRequired : false
-            }
-            onTextChange={(text) =>
-              setSelections((prev) => ({ ...prev, personalizationText: text === '' ? null : text }))
-            }
-            onFontChange={(fontId) => setSelections((prev) => ({ ...prev, fontId }))}
-          />
+        {steps.includes('CUSTOM_UPLOAD') && (
+          <ConfigSection heading={STEP_LABEL.CUSTOM_UPLOAD} selectedLabel={null}>
+            <CustomUploadStep
+              customerDesignId={selections.customUploadId}
+              savedDesigns={savedDesigns}
+              onUploaded={(customerDesignId) =>
+                setSelections((prev) => ({ ...prev, customUploadId: customerDesignId }))
+              }
+            />
+          </ConfigSection>
         )}
 
-        {currentStep === 'CUSTOM_UPLOAD' && (
-          <CustomUploadStep
-            customerDesignId={selections.customUploadId}
-            savedDesigns={savedDesigns}
-            onUploaded={(customerDesignId) =>
-              setSelections((prev) => ({ ...prev, customUploadId: customerDesignId }))
-            }
-          />
-        )}
-
-        {currentStep === 'SUMMARY' && (
+        <ConfigSection heading={STEP_LABEL.SUMMARY} selectedLabel={null}>
           <SummaryStep
             snapshot={snapshot}
             selections={selections}
@@ -532,37 +530,68 @@ export function Configurator({
             addToCartPending={addToCartPending}
             addToCartError={addToCartError}
           />
-        )}
+        </ConfigSection>
       </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <Button disabled={!canGoBack} onClick={() => setStepIndex((i) => i - 1)}>
-          {SITE.configuratorBackPl}
-        </Button>
-        {currentStep !== 'SUMMARY' && (
-          <DisabledExplanation title={canGoNext ? undefined : SITE.configuratorNextBlockedPl}>
-            <Button variant="contained" disabled={!canGoNext} onClick={() => setStepIndex((i) => i + 1)}>
-              {SITE.configuratorNextPl}
-            </Button>
-          </DisabledExplanation>
-        )}
-      </div>
-    </div>
-    <StickyPriceBar snapshot={snapshot} loading={loading} />
+      <StickyPriceBar snapshot={snapshot} loading={loading} />
     </>
   );
 }
 
+function toSwatchEntry(entry: OptionAvailability, imageUrl: string): SwatchEntry {
+  return {
+    id: entry.id,
+    namePl: entry.namePl,
+    imageUrl,
+    isAvailable: entry.isAvailable,
+    reasonPl: entry.reason === null ? null : unavailabilityReasonMessage(entry.reason),
+  };
+}
+
+function selectedLabelOf(entries: readonly SwatchEntry[], selectedId: string | null): string | null {
+  if (selectedId === null) return null;
+  return entries.find((entry) => entry.id === selectedId)?.namePl ?? null;
+}
+
 /**
- * Pinned to the viewport bottom on every step, not just the summary — so the
- * running price is always visible while configuring, the same pattern
- * Bazaar/NextMerce use for their PDP add-to-cart bar (this session's
- * redesign reference, `docs/HANDOVER.md` §9g). `position: fixed` rather than
- * `sticky`: the configurator's own content height varies a lot between
- * steps, and `sticky` only pins once the element would otherwise scroll past
+ * One always-visible section of the page — heading, plus the real,
+ * currently-selected value shown right next to it once there is one
+ * (`selectedLabel`), the same "Color: Blue" pattern a real e-commerce
+ * variant picker uses. Replaces the old single-step-at-a-time `Stepper`.
+ */
+function ConfigSection({
+  heading,
+  selectedLabel,
+  children,
+}: {
+  readonly heading: string;
+  readonly selectedLabel: string | null;
+  readonly children: ReactNode;
+}) {
+  return (
+    <div>
+      <Typography variant="h6" component="h3" sx={{ mb: 1.5 }}>
+        {heading}
+        {selectedLabel !== null && (
+          <Typography component="span" color="text.secondary" sx={{ ml: 1, font: 'var(--mui-font-body1)' }}>
+            — {selectedLabel}
+          </Typography>
+        )}
+      </Typography>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Pinned to the viewport bottom throughout — the running price is always
+ * visible while configuring, the same pattern Bazaar/NextMerce use for
+ * their PDP add-to-cart bar (this session's redesign reference,
+ * `docs/HANDOVER.md` §9g). `position: fixed` rather than `sticky`: the
+ * page's content height varies a lot depending on the product's own step
+ * list, and `sticky` only pins once the element would otherwise scroll past
  * its normal flow position — `fixed` is unconditional on both mobile and
  * desktop. The outer `<div>`'s `paddingBottom: 72` above keeps this from
- * covering the Wstecz/Dalej buttons.
+ * covering the page's last section.
  */
 function StickyPriceBar({
   snapshot,
@@ -624,7 +653,9 @@ function StickyPriceBar({
  * Renders EVERY option, never just the selectable ones — ARCHITECTURE.md
  * §7.2: an unavailable option is shown disabled with a Polish reason, not
  * hidden, so the customer learns the rule instead of wondering where an
- * option went.
+ * option went. Text-only (`ToggleButtonGroup`) — used for THICKNESS,
+ * INSTALLATION_VARIANT, and font choice, none of which have a real image;
+ * DESIGN/MATERIAL/FINISH use `ImageSwatchGroup` instead.
  */
 function OptionStep({
   title,
@@ -733,11 +764,10 @@ function PersonalizationStep({
  * P4's real upload flow (`ARCHITECTURE.md` §13). Only the first-upload
  * path is wired here — `uploadCustomDesign`. `reuploadCustomDesign`
  * (customer re-upload after staff requests `NEEDS_CHANGES`) is real,
- * tested, and callable (`server/actions/design-review.ts`), but that
- * event happens on an existing ORDER already past checkout, not inside
- * this pre-purchase configurator — it belongs on an order-tracking page,
- * which doesn't exist yet (P6 account features, not started). Prepared
- * but not wired here, same pattern as the Yato-yane joinery module.
+ * tested, and callable (`server/actions/design-review.ts`), and now has
+ * its own real UI on `/moje-konto/wzory/[id]` (2026-08-28) — that event
+ * happens on an existing order past checkout, not inside this pre-purchase
+ * configurator.
  */
 function CustomUploadStep({
   customerDesignId,
@@ -1023,22 +1053,9 @@ function SummaryStep({
 
       {addToCartError && <Alert severity="error">{SITE.configuratorAddToCartErrorPl}</Alert>}
 
-      <Button variant="contained" disabled={!canProceed || addToCartPending} onClick={onAddToCart}>
+      <Button variant="contained" disabled={!canProceed || addToCartPending} onClick={onAddToCart} sx={{ alignSelf: 'flex-start' }}>
         {isEditMode ? SITE.configuratorSaveChangesPl : SITE.configuratorAddToCartPl}
       </Button>
     </div>
   );
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function furthestEnterable(steps: readonly StepCode[], selections: Selections): number {
-  let furthest = 0;
-  for (let index = 1; index < steps.length; index++) {
-    if (!isStepEnterable(steps, index, selections)) break;
-    furthest = index;
-  }
-  return furthest;
 }

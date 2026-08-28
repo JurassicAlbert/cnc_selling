@@ -14,6 +14,11 @@ import { expect, test } from '@playwright/test';
  * (`koszyk/page.tsx`'s own header comment) — no client-side race to guard
  * against here, unlike the reupload form; a plain `.click()` and Playwright's
  * default navigation waiting is enough.
+ *
+ * 2026-08-28: the configurator no longer gates one step at a time behind
+ * "Dalej" (owner feedback — every section is a real, always-visible
+ * swatch/field picker, like choosing a t-shirt colour) — every
+ * swatch/field below is clicked/filled directly, in any order.
  */
 
 async function addToCart(page: import('@playwright/test').Page, widthCm: string, heightCm: string): Promise<void> {
@@ -21,23 +26,16 @@ async function addToCart(page: import('@playwright/test').Page, widthCm: string,
   const main = page.getByRole('main');
 
   await main.getByRole('button', { name: 'Wzór podstawowy — do zastąpienia' }).click();
-  await main.getByRole('button', { name: 'Dalej' }).click();
-
   await main.getByRole('button', { name: 'Dąb', exact: true }).click();
-  await main.getByRole('button', { name: 'Dalej' }).click();
 
   await main.getByLabel('Szerokość (cm)').fill(widthCm);
   await main.getByLabel('Szerokość (cm)').blur();
   await main.getByLabel('Wysokość (cm)').fill(heightCm);
   await main.getByLabel('Wysokość (cm)').blur();
-  await expect(main.getByRole('button', { name: 'Dalej' })).toBeEnabled();
-  await main.getByRole('button', { name: 'Dalej' }).click();
 
   await main.getByRole('button', { name: 'Olejowanie' }).click();
-  await main.getByRole('button', { name: 'Dalej' }).click();
 
-  // Personalizacja — optional, skipped.
-  await main.getByRole('button', { name: 'Dalej' }).click();
+  // Personalizacja — optional, left blank.
 
   const addToCartButton = main.getByRole('button', { name: 'Dodaj do koszyka' });
   await expect(addToCartButton).toBeEnabled();

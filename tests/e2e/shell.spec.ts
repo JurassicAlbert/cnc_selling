@@ -26,10 +26,14 @@ test('renders the real homepage in Polish with the theme applied', async ({ page
   expect(backgroundColor).toBe('rgb(250, 248, 245)'); // #FAF8F5
 
   // The category grid, seeded from the real catalogue — proves the page is
-  // actually server-rendering DB content, not a static shell.
+  // actually server-rendering DB content, not a static shell. "Gres" used
+  // to be the second category checked here — deactivated (2026-08-28,
+  // owner request, see prisma/seed.ts's CATEGORY_SEEDS comment), so it no
+  // longer appears in this nav at all; "Amulety i bransoletki" is still
+  // real and active.
   const main = page.getByRole('main');
   await expect(main.getByRole('link', { name: 'Loft', exact: true })).toBeVisible();
-  await expect(main.getByRole('link', { name: 'Gres', exact: true })).toBeVisible();
+  await expect(main.getByRole('link', { name: 'Amulety i bransoletki', exact: true })).toBeVisible();
 });
 
 test('navigates from the homepage into a category and a product', async ({ page }) => {
