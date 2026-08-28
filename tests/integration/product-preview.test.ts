@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { getActiveProductBySlug, getProductBySlugForPreview } from '@/server/repositories/products';
+import { getActiveProductBySlug, getProductBySlugForPreview, listAllActiveProducts } from '@/server/repositories/products';
 import { prisma } from '@/server/db/client';
 
 const PREFIX = 'test-product-preview-';
@@ -9,9 +9,16 @@ function uid(): string {
   return `${PREFIX}${crypto.randomUUID()}`;
 }
 
-async function seedProduct(overrides: { isActive?: boolean } = {}) {
+async function seedProduct(overrides: { isActive?: boolean; categoryActive?: boolean } = {}) {
   const category = await prisma.category.create({
-    data: { slug: uid(), namePl: 'Test Category', descPl: 'Test', seoTitlePl: 'Test', seoDescPl: 'Test' },
+    data: {
+      slug: uid(),
+      namePl: 'Test Category',
+      descPl: 'Test',
+      seoTitlePl: 'Test',
+      seoDescPl: 'Test',
+      isActive: overrides.categoryActive ?? true,
+    },
   });
   const product = await prisma.product.create({
     data: {
@@ -69,5 +76,37 @@ describe('getActiveProductBySlug / getProductBySlugForPreview', () => {
   it('returns null for a genuinely nonexistent slug either way', async () => {
     expect(await getActiveProductBySlug(uid())).toBeNull();
     expect(await getProductBySlugForPreview(uid())).toBeNull();
+  });
+});
+
+/**
+ * 2026-08-28, owner feedback: deactivating Gres/Panele podłogowe's
+ * *category* left their products still reachable everywhere except the
+ * category page and nav — `listAllActiveProducts`/`getActiveProductBySlug`
+ * only ever checked `product.isActive`, never `category.isActive`. Fixed
+ * by joining `category: { isActive: true }` into every public product
+ * query in `products.ts`; these tests are the real DB round-trip for that.
+ */
+describe('deactivated category cascades to its products', () => {
+  it('getActiveProductBySlug returns null for an active product in an inactive category', async () => {
+    const { product } = await seedProduct({ isActive: true, categoryActive: false });
+    expect(await getActiveProductBySlug(product.slug)).toBeNull();
+  });
+
+  it('getProductBySlugForPreview still returns it — the staff bypass ignores category state too', async () => {
+    const { product } = await seedProduct({ isActive: true, categoryActive: false });
+    expect((await getProductBySlugForPreview(product.slug))?.namePl).toBe('Testowy produkt podglądu');
+  });
+
+  it('listAllActiveProducts excludes an active product whose category is inactive', async () => {
+    const { product } = await seedProduct({ isActive: true, categoryActive: false });
+    const all = await listAllActiveProducts();
+    expect(all.some((p) => p.slug === product.slug)).toBe(false);
+  });
+
+  it('listAllActiveProducts includes an active product in an active category', async () => {
+    const { product } = await seedProduct({ isActive: true, categoryActive: true });
+    const all = await listAllActiveProducts();
+    expect(all.some((p) => p.slug === product.slug)).toBe(true);
   });
 });

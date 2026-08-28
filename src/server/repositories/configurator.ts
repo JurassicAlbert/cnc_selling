@@ -75,7 +75,11 @@ export async function getConfiguratorProductData(
 ): Promise<ConfiguratorProductData | null> {
   const [product, machine, pricing] = await Promise.all([
     prisma.product.findFirst({
-      where: activeOnly ? { slug, isActive: true } : { slug },
+      // Same `category.isActive` cascade as `products.ts`'s
+      // `findProductBySlug` — a deactivated category (Gres/Panele
+      // podłogowe, 2026-08-28) must block pricing/checkout for its
+      // products too, not just hide them from listings.
+      where: activeOnly ? { slug, isActive: true, category: { isActive: true } } : { slug },
       select: {
         id: true,
         namePl: true,

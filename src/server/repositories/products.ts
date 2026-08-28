@@ -96,10 +96,17 @@ export async function listCategoryFilterMaterials(
   return rows.map((row) => row.material);
 }
 
-/** Every active product, for the homepage's single honest "Nasze produkty" grid — no fake curation. */
+/**
+ * Every active product, for the homepage's single honest "Nasze produkty"
+ * grid — no fake curation. Also joins `category.isActive`: a deactivated
+ * category (e.g. Gres/Panele podłogowe, 2026-08-28) must hide its products
+ * everywhere, not just from its own category page and nav — this repository
+ * is the shared source for the homepage grid, sitewide search
+ * (`searchActiveProducts` below reuses this), and the sitemap.
+ */
 export async function listAllActiveProducts(): Promise<ProductCardData[]> {
   const products = await prisma.product.findMany({
-    where: { isActive: true },
+    where: { isActive: true, category: { isActive: true } },
     orderBy: { sortOrder: 'asc' },
     select: {
       slug: true,
@@ -179,6 +186,15 @@ export type ProductDetail = {
   readonly category: { readonly slug: string; readonly namePl: string };
   readonly images: readonly { readonly url: string; readonly altPl: string }[];
   readonly materials: readonly { readonly namePl: string }[];
+  /**
+   * Rights-clear, active designs this product's configurator actually
+   * offers — 2026-08-28, owner feedback: patterns were only ever visible by
+   * opening the configurator and stepping through it; now shown directly in
+   * the product's own properties, so a customer can see what's available
+   * before starting the configurator. Same `rightsStatus` filter
+   * `designs.ts`'s public browsing repository already uses.
+   */
+  readonly designs: readonly { readonly slug: string; readonly namePl: string; readonly thumbnailUrl: string }[];
   readonly installationVariants: readonly {
     readonly namePl: string;
     readonly descPl: string;
@@ -188,7 +204,11 @@ export type ProductDetail = {
 
 async function findProductBySlug(slug: string, activeOnly: boolean): Promise<ProductDetail | null> {
   const product = await prisma.product.findFirst({
-    where: activeOnly ? { slug, isActive: true } : { slug },
+    // A deactivated category hides its products from direct-URL access too,
+    // not just from listings — matching how a deactivated product already
+    // 404s. `activeOnly: false` (staff preview only, see
+    // `getProductBySlugForPreview`) deliberately skips both checks.
+    where: activeOnly ? { slug, isActive: true, category: { isActive: true } } : { slug },
     select: {
       slug: true,
       namePl: true,
@@ -220,6 +240,10 @@ async function findProductBySlug(slug: string, activeOnly: boolean): Promise<Pro
         orderBy: { sortOrder: 'asc' },
         select: { namePl: true, descPl: true, receivesPl: true },
       },
+      designs: {
+        where: { design: { isActive: true, rightsStatus: { in: ['APPROVED_COMMERCIAL', 'PUBLIC_DOMAIN'] } } },
+        select: { design: { select: { slug: true, namePl: true, thumbnailUrl: true } } },
+      },
     },
   });
 
@@ -227,11 +251,12 @@ async function findProductBySlug(slug: string, activeOnly: boolean): Promise<Pro
     return null;
   }
 
-  const { installVariants, ...rest } = product;
+  const { installVariants, designs, ...rest } = product;
   return {
     ...rest,
     materials: product.materials.map((m) => ({ namePl: m.material.namePl })),
     installationVariants: installVariants,
+    designs: designs.map((d) => d.design),
   };
 }
 
@@ -253,10 +278,10 @@ export async function getProductBySlugForPreview(slug: string): Promise<ProductD
   return findProductBySlug(slug, false);
 }
 
-/** Every active product slug, for the sitemap. */
+/** Every active product slug, for the sitemap. Same `category.isActive` cascade as `listAllActiveProducts`. */
 export async function listAllActiveProductSlugs(): Promise<string[]> {
   const products = await prisma.product.findMany({
-    where: { isActive: true },
+    where: { isActive: true, category: { isActive: true } },
     select: { slug: true },
   });
   return products.map((p) => p.slug);

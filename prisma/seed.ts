@@ -652,6 +652,8 @@ type BlogPostSeed = {
   readonly publishedAt: Date;
   /** Reuses an already-sourced category/material photo (`STOCK_PHOTO`) — no new image sourcing for placeholder posts. */
   readonly imageUrl: string;
+  /** Defaults to `true`. Same `isActive` mechanism as `CATEGORY_SEEDS` — only ever applied in `seedBlogPosts`'s `create` block, so re-running this seed never fights a later real admin toggle back to this default. */
+  readonly isActive?: boolean;
 };
 
 /**
@@ -700,6 +702,13 @@ const BLOG_POST_SEEDS: readonly BlogPostSeed[] = [
     seoDescPl: 'Dlaczego dąb i gres trafiły do oferty i czym różnią się jako materiały pod grawer.',
     publishedAt: new Date('2026-08-18T09:00:00Z'),
     imageUrl: STOCK_PHOTO('gres'),
+    // Disabled 2026-08-28, same owner request/date as CATEGORY_SEEDS'
+    // gres/panele-podlogowe: this post presents gres as a current, offered
+    // material ("sprawdza się... jako fartuch kuchenny nad blatem
+    // roboczym") — misleading while that category is off. The post itself
+    // is kept, not deleted or rewritten — same "history stays intact, only
+    // visibility changes" reasoning as the category/product rows.
+    isActive: false,
   },
   {
     slug: 'czym-jest-personalizacja-grawerem',
@@ -727,6 +736,7 @@ async function seedBlogPosts(): Promise<void> {
         seoDescPl: seed.seoDescPl,
         publishedAt: seed.publishedAt,
         imageUrl: seed.imageUrl,
+        isActive: seed.isActive ?? true,
       },
       // Re-asserted on every run: the 4 posts were originally seeded
       // 2026-08-25 with no image, so an existing dev database needs this
@@ -1067,6 +1077,7 @@ async function seedProducts(
   const gres = categories.gres;
   const panele = categories['panele-podlogowe'];
   const obrazy = categories['obrazy-drewniane'];
+  const gryPlanszowe = categories['gry-planszowe'];
   const inne = categories.inne;
   if (
     loft === undefined ||
@@ -1074,6 +1085,7 @@ async function seedProducts(
     gres === undefined ||
     panele === undefined ||
     obrazy === undefined ||
+    gryPlanszowe === undefined ||
     inne === undefined
   ) {
     throw new Error('seedCategories must run before seedProducts');
@@ -1248,6 +1260,50 @@ async function seedProducts(
   });
 
   /**
+   * `gry-planszowe` was seeded active (2026-08-28) but with zero products —
+   * a real gap: an active category with nothing in it never actually shows
+   * up in `listAllActiveProducts()`/the homepage grid/search, so the
+   * category existing was not enough on its own. Same `WALL_ART` type and
+   * shape as `obraz` above (flat engraved dąb panel) — the checkered 8×8
+   * playing field itself is a fixed feature of the product, not something
+   * `Design` selection changes; the customer's chosen `Design` decorates the
+   * border/frame instead, and `Personalization` adds an optional engraved
+   * dedication on the back. No `seedProductImage` call — same honest
+   * "stays empty until a real, subject-matched photo exists" precedent the
+   * category itself and "Inne" already use; `ProductCard`/the product page
+   * both render correctly with zero images (see `ProductCard.tsx`).
+   */
+  const szachownica = await upsertProduct({
+    slug: 'szachownica-z-grawerem',
+    typeCode: 'WALL_ART',
+    categoryId: gryPlanszowe.id,
+    namePl: 'Szachownica z grawerem',
+    shortDescPl: 'Dębowa szachownica z grawerowanym wzorem obwódki.',
+    longDescPl:
+      'Drewniana szachownica z grawerowanym wzorem zdobiącym obwódkę planszy. Pole gry ma stały, szachowy układ 8×8 — personalizacji podlega zdobienie wokół planszy oraz opcjonalny grawerowany napis na spodzie, np. dedykacja.',
+    careInstructionsPl: 'Czyścić suchą ściereczką. Unikać długiego kontaktu z wodą.',
+    materialNotesPl: null,
+    seoTitlePl: 'Szachownica z grawerem — dąb',
+    seoDescPl: 'Dębowa szachownica z grawerowanym wzorem obwódki, z możliwością personalizacji.',
+    basePriceGrosze: 12_000,
+    minPriceGrosze: 15_000,
+    productionDaysMin: 5,
+    productionDaysMax: 10,
+    minWidthMm: 300,
+    maxWidthMm: 600,
+    minHeightMm: 300,
+    maxHeightMm: 600,
+  });
+  await seedProductMaterial(szachownica.id, materials.dab.id);
+  await seedProductDesign(szachownica.id, design.id);
+  await seedPersonalizationSpec(szachownica.id, {
+    maxCharacters: 30,
+    maxLines: 1,
+    minTextHeightUm: 6_000,
+    allowedFontIds: [font.id],
+  });
+
+  /**
    * "inne" was deliberately left empty when first seeded (2026-08-24) —
    * at that time there was nothing real to put there. Its own Polish
    * description ("Projekty nietypowe, wykraczające poza pozostałe
@@ -1292,7 +1348,7 @@ async function seedProducts(
   });
 
   console.log(
-    'Products: 6 seeded (loft, amulety, gres, panele, obrazy, wlasny-projekt) — "inne" now holds the P4 custom-upload product',
+    'Products: 7 seeded (loft, amulety, gres, panele, obrazy, szachownica, wlasny-projekt) — "inne" now holds the P4 custom-upload product',
   );
 }
 

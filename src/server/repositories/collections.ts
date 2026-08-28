@@ -44,10 +44,13 @@ export async function getActiveCollectionBySlug(slug: string): Promise<Collectio
   return { ...collection, seoTitlePl: `${collection.namePl} — RYT`, seoDescPl: collection.descPl };
 }
 
-/** Only active products, in the collection's own curated order — same card shape `ProductCard` already renders for a category. */
+/** Only active products, in the collection's own curated order — same card shape `ProductCard` already renders for a category. Same `category.isActive` cascade as `products.ts`. */
 export async function listActiveProductsByCollectionSlug(collectionSlug: string): Promise<ProductCardData[]> {
   const items = await prisma.productCollectionItem.findMany({
-    where: { collection: { slug: collectionSlug, isActive: true }, product: { isActive: true } },
+    where: {
+      collection: { slug: collectionSlug, isActive: true },
+      product: { isActive: true, category: { isActive: true } },
+    },
     orderBy: { sortOrder: 'asc' },
     select: {
       product: {
