@@ -45,10 +45,10 @@ test('uploads a custom design, completes checkout, and lands in DESIGN_REVIEW', 
   await main.getByRole('button', { name: 'Dąb', exact: true }).click();
 
   // Wymiary — within the product's 200-1200mm envelope.
-  await main.getByLabel('Szerokość (cm)').fill('40');
-  await main.getByLabel('Szerokość (cm)').blur();
-  await main.getByLabel('Wysokość (cm)').fill('40');
-  await main.getByLabel('Wysokość (cm)').blur();
+  await main.getByRole('textbox', { name: 'Szerokość (cm)' }).fill('40');
+  await main.getByRole('textbox', { name: 'Szerokość (cm)' }).blur();
+  await main.getByRole('textbox', { name: 'Wysokość (cm)' }).fill('40');
+  await main.getByRole('textbox', { name: 'Wysokość (cm)' }).blur();
 
   // Wykończenie
   await main.getByRole('button', { name: 'Olejowanie' }).click();

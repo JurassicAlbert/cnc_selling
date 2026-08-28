@@ -28,10 +28,10 @@ async function addToCart(page: import('@playwright/test').Page, widthCm: string,
   await main.getByRole('button', { name: 'Wzór podstawowy — do zastąpienia' }).click();
   await main.getByRole('button', { name: 'Dąb', exact: true }).click();
 
-  await main.getByLabel('Szerokość (cm)').fill(widthCm);
-  await main.getByLabel('Szerokość (cm)').blur();
-  await main.getByLabel('Wysokość (cm)').fill(heightCm);
-  await main.getByLabel('Wysokość (cm)').blur();
+  await main.getByRole('textbox', { name: 'Szerokość (cm)' }).fill(widthCm);
+  await main.getByRole('textbox', { name: 'Szerokość (cm)' }).blur();
+  await main.getByRole('textbox', { name: 'Wysokość (cm)' }).fill(heightCm);
+  await main.getByRole('textbox', { name: 'Wysokość (cm)' }).blur();
 
   await main.getByRole('button', { name: 'Olejowanie' }).click();
 

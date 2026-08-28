@@ -83,6 +83,14 @@ export const SITE = {
   configuratorUploadSubmitPl: 'Prześlij projekt',
   configuratorUploadSubmittingPl: 'Przesyłanie…',
   configuratorUploadSuccessPl: 'Projekt został przesłany.',
+  // Short form for the CUSTOM_UPLOAD accordion band's collapsed-header
+  // summary — the full sentence above already appears once inside the
+  // band's own success `Alert`; repeating it verbatim in the header too
+  // made `getByText('Projekt został przesłany.')` match twice in the e2e
+  // suite (a real ambiguity, not just a test artifact) once the header
+  // started echoing the selection back, same "Colour: Blue" pattern every
+  // other band uses.
+  configuratorUploadDoneLabelPl: 'Plik przesłany',
   configuratorUploadIpConsentLabelPl: 'Akceptuję powyższe oświadczenie',
   configuratorUploadReplacePl: 'Prześlij inny plik',
   // P9 phase 2 — reusing an already-uploaded design from "Moje wzory" instead of uploading fresh.
@@ -246,6 +254,7 @@ export const SITE = {
   accountOrdersHeadingPl: 'Moje zamówienia',
   accountOrdersEmptyPl: 'Nie masz jeszcze żadnych zamówień.',
   accountOrdersEmptyActionPl: 'Przejdź do sklepu',
+  accountOrdersItemCountPl: (count: number) => `${count} poz.`,
   accountConfigurationsHeadingPl: 'Moje zapisane projekty',
   accountConfigurationsEmptyPl: 'Nie masz jeszcze żadnych zapisanych konfiguracji.',
   accountConfigurationsEmptyActionPl: 'Skonfiguruj produkt',

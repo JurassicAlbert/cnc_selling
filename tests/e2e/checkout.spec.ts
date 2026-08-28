@@ -37,10 +37,10 @@ test('adds a configuration to the cart and completes checkout as a guest', async
   await main.getByRole('button', { name: 'Dąb', exact: true }).click();
 
   // Wymiary — a size verified to price with no blocking feasibility issues.
-  await main.getByLabel('Szerokość (cm)').fill('70');
-  await main.getByLabel('Szerokość (cm)').blur();
-  await main.getByLabel('Wysokość (cm)').fill('50');
-  await main.getByLabel('Wysokość (cm)').blur();
+  await main.getByRole('textbox', { name: 'Szerokość (cm)' }).fill('70');
+  await main.getByRole('textbox', { name: 'Szerokość (cm)' }).blur();
+  await main.getByRole('textbox', { name: 'Wysokość (cm)' }).fill('50');
+  await main.getByRole('textbox', { name: 'Wysokość (cm)' }).blur();
 
   // Wykończenie
   await main.getByRole('button', { name: 'Olejowanie' }).click();

@@ -9,10 +9,9 @@ import { getStoreSettings } from '@/server/repositories/store-settings';
 import { submitAccountReview } from '@/server/actions/reviews';
 import { submitOrderSupportRequest } from '@/server/actions/support-requests';
 import { Heading } from '@/ui/primitives/Heading';
-import { OrderShipmentInfo } from '@/ui/primitives/OrderShipmentInfo';
-import { OrderSummary } from '@/ui/primitives/OrderSummary';
 import { Text } from '@/ui/primitives/Text';
 import { ThemeRegistry } from '@/ui/theme/ThemeRegistry';
+import { AccountOrderDetail } from '@/ui/islands/AccountOrderDetail';
 import { ReviewForm } from '@/ui/islands/ReviewForm';
 import { SupportRequestForm } from '@/ui/islands/SupportRequestForm';
 
@@ -41,26 +40,31 @@ export default async function AccountOrderDetailPage({ params }: AccountOrderDet
     <div>
       <Heading level={1}>{SITE.orderNumberLabelPl}: {order.orderNumber}</Heading>
       <Text muted>{order.email}</Text>
-      <OrderSummary order={order} bankDetails={storeSettings} />
-      <OrderShipmentInfo shipment={order.shipment} />
 
-      <ThemeRegistry>
-        {order.status === 'COMPLETED' &&
-          (reviewStatus !== null ? (
-            <Text muted>{SITE.reviewAlreadySubmittedPl}</Text>
-          ) : (
-            <ReviewForm action={submitAccountReview.bind(null, order.orderNumber)} />
-          ))}
+      <div style={{ marginBlockStart: 24 }}>
+        <ThemeRegistry>
+          <AccountOrderDetail order={order} bankDetails={storeSettings} />
 
-        <div style={{ marginBlockStart: 32 }}>
-          <SupportRequestForm
-            action={submitOrderSupportRequest.bind(null, order.orderNumber, null)}
-            heading={SITE.contactOrderContextHeadingPl}
-            intro={SITE.contactOrderContextIntroPl}
-            defaultEmail={order.email}
-          />
-        </div>
-      </ThemeRegistry>
+          {order.status === 'COMPLETED' && (
+            <div style={{ marginBlockStart: 24 }}>
+              {reviewStatus !== null ? (
+                <Text muted>{SITE.reviewAlreadySubmittedPl}</Text>
+              ) : (
+                <ReviewForm action={submitAccountReview.bind(null, order.orderNumber)} />
+              )}
+            </div>
+          )}
+
+          <div style={{ marginBlockStart: 32 }}>
+            <SupportRequestForm
+              action={submitOrderSupportRequest.bind(null, order.orderNumber, null)}
+              heading={SITE.contactOrderContextHeadingPl}
+              intro={SITE.contactOrderContextIntroPl}
+              defaultEmail={order.email}
+            />
+          </div>
+        </ThemeRegistry>
+      </div>
     </div>
   );
 }

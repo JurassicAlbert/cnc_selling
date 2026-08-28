@@ -48,12 +48,17 @@
 
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import Accordion from '@mui/material/Accordion';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import AccordionSummary from '@mui/material/AccordionSummary';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import MenuItem from '@mui/material/MenuItem';
+import Slider from '@mui/material/Slider';
 import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
@@ -62,9 +67,11 @@ import Typography from '@mui/material/Typography';
 import {
   checkConfigurationComplete,
   EMPTY_SELECTIONS,
+  isStepSatisfied,
   type Selections,
   type StepCode,
 } from '@/domain/configuration/steps';
+import type { DimensionIssue } from '@/domain/dimensions/dimensions';
 import type { FeasibilityCode } from '@/domain/feasibility/rules';
 import { formatPln } from '@/domain/money/money';
 import { countPersonalizationCharacters } from '@/domain/personalization/validate';
@@ -160,6 +167,13 @@ export function Configurator({
   const [editConfigurationId, setEditConfigurationId] = useState<string | null>(null);
   const [addToCartPending, setAddToCartPending] = useState(false);
   const [addToCartError, setAddToCartError] = useState(false);
+  // 2026-08-28, owner feedback: "wybiera się poprzez kliknięcie na band z
+  // nazwą" (you select by clicking a band with the name) — each section is
+  // a real MUI `Accordion`, one open at a time. `null` means every section
+  // is collapsed (nothing needs the customer's attention right now, or
+  // everything is already filled in).
+  const [expandedStep, setExpandedStep] = useState<StepCode | null>(null);
+  const expandedStepInitialized = useRef(false);
   const hydrated = useRef(false);
 
   const applyUrlSelections = useCallback((search: string) => {
@@ -234,21 +248,59 @@ export function Configurator({
 
   const steps = snapshot?.steps ?? [];
 
+  // Open the first section once the real step list is known — nothing to
+  // open before that (would flash the wrong band on a slow connection).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: deliberately only re-runs once real steps arrive, not on every selections change
+  useEffect(() => {
+    if (steps.length === 0 || expandedStepInitialized.current) return;
+    expandedStepInitialized.current = true;
+    const firstUnsatisfied = steps.find((step) => step !== 'SUMMARY' && !isStepSatisfied(step, selections));
+    setExpandedStep(firstUnsatisfied ?? null);
+  }, [steps]);
+
+  // After a swatch/click-based selection (DESIGN/MATERIAL/FINISH/THICKNESS/
+  // INSTALLATION_VARIANT/SIZE-once-both-dimensions-are-set), automatically
+  // open the next still-empty band — "wybiera się poprzez kliknięcie na
+  // band z nazwą": one click (or one completed field pair) both selects the
+  // option and hands the customer straight to what's next, without forcing
+  // a fixed order (every band can still be opened by hand at any time; this
+  // is a convenience, not a gate — `isStepEnterable` no longer restricts
+  // anything, same as the previous pass already established).
+  // PERSONALIZATION (optional free text) deliberately never auto-advances —
+  // it's the last real step before SUMMARY and there is nothing useful to
+  // jump to next.
+  const advanceExpandedStep = useCallback(
+    (afterStep: StepCode, updatedSelections: Selections) => {
+      const index = steps.indexOf(afterStep);
+      const next = steps.slice(index + 1).find((step) => step !== 'SUMMARY' && !isStepSatisfied(step, updatedSelections));
+      setExpandedStep(next ?? null);
+    },
+    [steps],
+  );
+
   // Each field commits independently on its own blur. Committing both
   // together on either blur was a real bug: tabbing from width to height
   // blurred width while height was still empty, which force-set a spurious
   // "Podaj wymiar" error on a field the customer had not even reached yet.
+  // Auto-advance only fires once BOTH dimensions are committed and valid
+  // (`isStepSatisfied('SIZE', ...)`) — whichever field happens to complete
+  // the pair, not tied to a fixed width-then-height order (the customer may
+  // fill either first).
   const commitWidth = useCallback(() => {
     const width = parseCentimetresToMm(widthInput);
     setWidthError(width.ok ? null : numericInputMessage(width.code));
-    setSelections((prev) => ({ ...prev, widthMm: width.ok ? width.mm : null }));
-  }, [widthInput]);
+    const next = { ...selections, widthMm: width.ok ? width.mm : null };
+    setSelections(next);
+    if (isStepSatisfied('SIZE', next)) advanceExpandedStep('SIZE', next);
+  }, [widthInput, selections, advanceExpandedStep]);
 
   const commitHeight = useCallback(() => {
     const height = parseCentimetresToMm(heightInput);
     setHeightError(height.ok ? null : numericInputMessage(height.code));
-    setSelections((prev) => ({ ...prev, heightMm: height.ok ? height.mm : null }));
-  }, [heightInput]);
+    const next = { ...selections, heightMm: height.ok ? height.mm : null };
+    setSelections(next);
+    if (isStepSatisfied('SIZE', next)) advanceExpandedStep('SIZE', next);
+  }, [heightInput, selections, advanceExpandedStep]);
 
   // Clearing a dependent selection is only correct when it is ACTUALLY no
   // longer compatible — never a blanket clear on every change — and the
@@ -259,37 +311,49 @@ export function Configurator({
   const selectMaterial = useCallback(
     (materialId: string) => {
       if (selections.finishId === null) {
-        setSelections((prev) => ({ ...prev, materialId }));
+        const next = { ...selections, materialId };
+        setSelections(next);
+        advanceExpandedStep('MATERIAL', next);
         return;
       }
       const stillOffered = options.materials
         .find((material) => material.id === materialId)
         ?.finishes.some((finish) => finish.id === selections.finishId && finish.isAvailable);
       if (stillOffered) {
-        setSelections((prev) => ({ ...prev, materialId }));
+        const next = { ...selections, materialId };
+        setSelections(next);
+        advanceExpandedStep('MATERIAL', next);
         return;
       }
       setClearedNotice(SITE.configuratorClearedFinishPl);
-      setSelections((prev) => ({ ...prev, materialId, finishId: null }));
+      const next = { ...selections, materialId, finishId: null };
+      setSelections(next);
+      advanceExpandedStep('MATERIAL', next);
     },
-    [options, selections.finishId],
+    [options, selections, advanceExpandedStep],
   );
 
   const selectInstallationVariant = useCallback(
     (code: string) => {
       if (selections.thicknessMm === null) {
-        setSelections((prev) => ({ ...prev, installationVariant: code }));
+        const next = { ...selections, installationVariant: code };
+        setSelections(next);
+        advanceExpandedStep('INSTALLATION_VARIANT', next);
         return;
       }
       const cap = options.installVariants.find((variant) => variant.code === code)?.maxThicknessMm;
       if (cap === null || cap === undefined || selections.thicknessMm <= cap) {
-        setSelections((prev) => ({ ...prev, installationVariant: code }));
+        const next = { ...selections, installationVariant: code };
+        setSelections(next);
+        advanceExpandedStep('INSTALLATION_VARIANT', next);
         return;
       }
       setClearedNotice(SITE.configuratorClearedThicknessPl);
-      setSelections((prev) => ({ ...prev, installationVariant: code, thicknessMm: null }));
+      const next = { ...selections, installationVariant: code, thicknessMm: null };
+      setSelections(next);
+      advanceExpandedStep('INSTALLATION_VARIANT', next);
     },
-    [options, selections.thicknessMm],
+    [options, selections, advanceExpandedStep],
   );
 
   // Re-validates and re-prices server-side either way — §10.2 applies to
@@ -336,9 +400,18 @@ export function Configurator({
     toSwatchEntry(entry, selectedMaterial?.finishes.find((f) => f.id === entry.id)?.imageUrl ?? ''),
   );
 
+  const selectedThicknessLabel =
+    selections.thicknessMm === null
+      ? null
+      : (snapshot?.availability.thicknesses.find((t) => t.id === String(selections.thicknessMm))?.namePl ?? null);
+  const sizeLabel =
+    selections.widthMm !== null && selections.heightMm !== null
+      ? `${formatMmAsCentimetres(selections.widthMm)}×${formatMmAsCentimetres(selections.heightMm)} cm`
+      : null;
+
   return (
     <>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 40, paddingBottom: 72 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 72 }}>
         <ConfiguratorPreview
           selections={selections}
           options={options}
@@ -353,7 +426,13 @@ export function Configurator({
         )}
 
         {steps.includes('DESIGN') && (
-          <ConfigSection heading={STEP_LABEL.DESIGN} selectedLabel={selectedLabelOf(designSwatches, selections.designId)}>
+          <ConfigSection
+            step="DESIGN"
+            heading={STEP_LABEL.DESIGN}
+            selectedLabel={selectedLabelOf(designSwatches, selections.designId)}
+            expanded={expandedStep === 'DESIGN'}
+            onToggle={() => setExpandedStep((prev) => (prev === 'DESIGN' ? null : 'DESIGN'))}
+          >
             {designSwatches.length === 0 ? (
               <Alert severity="info">{SITE.configuratorNoOptionsPl}</Alert>
             ) : (
@@ -361,14 +440,24 @@ export function Configurator({
                 ariaLabel={STEP_LABEL.DESIGN}
                 entries={designSwatches}
                 selectedId={selections.designId}
-                onSelect={(id) => setSelections((prev) => ({ ...prev, designId: id }))}
+                onSelect={(id) => {
+                  const next = { ...selections, designId: id };
+                  setSelections(next);
+                  advanceExpandedStep('DESIGN', next);
+                }}
               />
             )}
           </ConfigSection>
         )}
 
         {steps.includes('MATERIAL') && (
-          <ConfigSection heading={STEP_LABEL.MATERIAL} selectedLabel={selectedLabelOf(materialSwatches, selections.materialId)}>
+          <ConfigSection
+            step="MATERIAL"
+            heading={STEP_LABEL.MATERIAL}
+            selectedLabel={selectedLabelOf(materialSwatches, selections.materialId)}
+            expanded={expandedStep === 'MATERIAL'}
+            onToggle={() => setExpandedStep((prev) => (prev === 'MATERIAL' ? null : 'MATERIAL'))}
+          >
             {materialSwatches.length === 0 ? (
               <Alert severity="info">{SITE.configuratorNoOptionsPl}</Alert>
             ) : (
@@ -383,7 +472,13 @@ export function Configurator({
         )}
 
         {steps.includes('FINISH') && (
-          <ConfigSection heading={STEP_LABEL.FINISH} selectedLabel={selectedLabelOf(finishSwatches, selections.finishId)}>
+          <ConfigSection
+            step="FINISH"
+            heading={STEP_LABEL.FINISH}
+            selectedLabel={selectedLabelOf(finishSwatches, selections.finishId)}
+            expanded={expandedStep === 'FINISH'}
+            onToggle={() => setExpandedStep((prev) => (prev === 'FINISH' ? null : 'FINISH'))}
+          >
             {finishSwatches.length === 0 ? (
               <Alert severity="info">{SITE.configuratorNoOptionsPl}</Alert>
             ) : (
@@ -391,63 +486,68 @@ export function Configurator({
                 ariaLabel={STEP_LABEL.FINISH}
                 entries={finishSwatches}
                 selectedId={selections.finishId}
-                onSelect={(id) => setSelections((prev) => ({ ...prev, finishId: id }))}
+                onSelect={(id) => {
+                  const next = { ...selections, finishId: id };
+                  setSelections(next);
+                  advanceExpandedStep('FINISH', next);
+                }}
               />
             )}
           </ConfigSection>
         )}
 
         {steps.includes('SIZE') && (
-          <ConfigSection heading={STEP_LABEL.SIZE} selectedLabel={null}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 320 }}>
-              <TextField
-                label={SITE.configuratorWidthLabelPl}
-                value={widthInput}
-                onChange={(e) => setWidthInput(e.target.value)}
-                onBlur={commitWidth}
-                error={widthError !== null}
-                helperText={
-                  widthError ??
-                  `${formatMmAsCentimetres(dimensionEnvelope.minWidthMm)}–${formatMmAsCentimetres(dimensionEnvelope.maxWidthMm)} cm`
-                }
-                size="small"
-              />
-              <TextField
-                label={SITE.configuratorHeightLabelPl}
-                value={heightInput}
-                onChange={(e) => setHeightInput(e.target.value)}
-                onBlur={commitHeight}
-                error={heightError !== null}
-                helperText={
-                  heightError ??
-                  `${formatMmAsCentimetres(dimensionEnvelope.minHeightMm)}–${formatMmAsCentimetres(dimensionEnvelope.maxHeightMm)} cm`
-                }
-                size="small"
-              />
-              {snapshot?.pricing.status === 'dimension_invalid' && (
-                <Alert severity="error">
-                  {snapshot.pricing.issues.map((issue) => (
-                    <div key={issue.code}>{dimensionMessage(issue)}</div>
-                  ))}
-                </Alert>
-              )}
-            </div>
+          <ConfigSection
+            step="SIZE"
+            heading={STEP_LABEL.SIZE}
+            selectedLabel={sizeLabel}
+            expanded={expandedStep === 'SIZE'}
+            onToggle={() => setExpandedStep((prev) => (prev === 'SIZE' ? null : 'SIZE'))}
+          >
+            <SizeStep
+              widthInput={widthInput}
+              heightInput={heightInput}
+              widthError={widthError}
+              heightError={heightError}
+              dimensionEnvelope={dimensionEnvelope}
+              onWidthChange={setWidthInput}
+              onHeightChange={setHeightInput}
+              onCommitWidth={commitWidth}
+              onCommitHeight={commitHeight}
+              dimensionIssues={snapshot?.pricing.status === 'dimension_invalid' ? snapshot.pricing.issues : []}
+            />
           </ConfigSection>
         )}
 
         {steps.includes('THICKNESS') && (
-          <ConfigSection heading={STEP_LABEL.THICKNESS} selectedLabel={null}>
+          <ConfigSection
+            step="THICKNESS"
+            heading={STEP_LABEL.THICKNESS}
+            selectedLabel={selectedThicknessLabel}
+            expanded={expandedStep === 'THICKNESS'}
+            onToggle={() => setExpandedStep((prev) => (prev === 'THICKNESS' ? null : 'THICKNESS'))}
+          >
             <OptionStep
               title={STEP_LABEL.THICKNESS}
               entries={snapshot?.availability.thicknesses ?? []}
               selectedId={selections.thicknessMm === null ? null : String(selections.thicknessMm)}
-              onSelect={(id) => setSelections((prev) => ({ ...prev, thicknessMm: Number(id) }))}
+              onSelect={(id) => {
+                const next = { ...selections, thicknessMm: Number(id) };
+                setSelections(next);
+                advanceExpandedStep('THICKNESS', next);
+              }}
             />
           </ConfigSection>
         )}
 
         {steps.includes('INSTALLATION_VARIANT') && (
-          <ConfigSection heading={STEP_LABEL.INSTALLATION_VARIANT} selectedLabel={null}>
+          <ConfigSection
+            step="INSTALLATION_VARIANT"
+            heading={STEP_LABEL.INSTALLATION_VARIANT}
+            selectedLabel={selectedInstallVariant?.namePl ?? null}
+            expanded={expandedStep === 'INSTALLATION_VARIANT'}
+            onToggle={() => setExpandedStep((prev) => (prev === 'INSTALLATION_VARIANT' ? null : 'INSTALLATION_VARIANT'))}
+          >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <OptionStep
                 title={STEP_LABEL.INSTALLATION_VARIANT}
@@ -476,7 +576,13 @@ export function Configurator({
         )}
 
         {steps.includes('PERSONALIZATION') && (
-          <ConfigSection heading={STEP_LABEL.PERSONALIZATION} selectedLabel={null}>
+          <ConfigSection
+            step="PERSONALIZATION"
+            heading={STEP_LABEL.PERSONALIZATION}
+            selectedLabel={selections.personalizationText !== null && selections.personalizationText !== '' ? selections.personalizationText : null}
+            expanded={expandedStep === 'PERSONALIZATION'}
+            onToggle={() => setExpandedStep((prev) => (prev === 'PERSONALIZATION' ? null : 'PERSONALIZATION'))}
+          >
             <PersonalizationStep
               personalization={snapshot?.personalization ?? null}
               fonts={snapshot?.availability.fonts ?? []}
@@ -495,18 +601,29 @@ export function Configurator({
         )}
 
         {steps.includes('CUSTOM_UPLOAD') && (
-          <ConfigSection heading={STEP_LABEL.CUSTOM_UPLOAD} selectedLabel={null}>
+          <ConfigSection
+            step="CUSTOM_UPLOAD"
+            heading={STEP_LABEL.CUSTOM_UPLOAD}
+            selectedLabel={selections.customUploadId !== null ? SITE.configuratorUploadDoneLabelPl : null}
+            expanded={expandedStep === 'CUSTOM_UPLOAD'}
+            onToggle={() => setExpandedStep((prev) => (prev === 'CUSTOM_UPLOAD' ? null : 'CUSTOM_UPLOAD'))}
+          >
             <CustomUploadStep
               customerDesignId={selections.customUploadId}
               savedDesigns={savedDesigns}
-              onUploaded={(customerDesignId) =>
-                setSelections((prev) => ({ ...prev, customUploadId: customerDesignId }))
-              }
+              onUploaded={(customerDesignId) => {
+                const next = { ...selections, customUploadId: customerDesignId };
+                setSelections(next);
+                advanceExpandedStep('CUSTOM_UPLOAD', next);
+              }}
             />
           </ConfigSection>
         )}
 
-        <ConfigSection heading={STEP_LABEL.SUMMARY} selectedLabel={null}>
+        <div>
+          <Typography variant="h6" component="h3" sx={{ mb: 1.5 }}>
+            {STEP_LABEL.SUMMARY}
+          </Typography>
           <SummaryStep
             snapshot={snapshot}
             selections={selections}
@@ -530,7 +647,7 @@ export function Configurator({
             addToCartPending={addToCartPending}
             addToCartError={addToCartError}
           />
-        </ConfigSection>
+        </div>
       </div>
       <StickyPriceBar snapshot={snapshot} loading={loading} />
     </>
@@ -553,31 +670,174 @@ function selectedLabelOf(entries: readonly SwatchEntry[], selectedId: string | n
 }
 
 /**
- * One always-visible section of the page — heading, plus the real,
- * currently-selected value shown right next to it once there is one
- * (`selectedLabel`), the same "Color: Blue" pattern a real e-commerce
- * variant picker uses. Replaces the old single-step-at-a-time `Stepper`.
+ * One collapsible "band" of the configurator — a real MUI `Accordion`,
+ * closed by default except the first unsatisfied step (owner feedback,
+ * 2026-08-28: "wybiera się poprzez kliknięcie na band z nazwą" — you pick
+ * by clicking a named band, like a t-shirt colour/size selector). The
+ * band's own header always shows the current selection next to its name,
+ * so a collapsed band still communicates its state at a glance.
  */
 function ConfigSection({
+  step,
   heading,
   selectedLabel,
+  expanded,
+  onToggle,
   children,
 }: {
+  readonly step: StepCode;
   readonly heading: string;
   readonly selectedLabel: string | null;
+  readonly expanded: boolean;
+  readonly onToggle: () => void;
   readonly children: ReactNode;
 }) {
   return (
-    <div>
-      <Typography variant="h6" component="h3" sx={{ mb: 1.5 }}>
-        {heading}
-        {selectedLabel !== null && (
-          <Typography component="span" color="text.secondary" sx={{ ml: 1, font: 'var(--mui-font-body1)' }}>
-            — {selectedLabel}
-          </Typography>
-        )}
-      </Typography>
-      {children}
+    <Accordion
+      expanded={expanded}
+      onChange={onToggle}
+      disableGutters
+      elevation={0}
+      sx={{
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 1,
+        '&:before': { display: 'none' },
+        '&.Mui-expanded': { borderColor: 'secondary.main' },
+      }}
+    >
+      <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls={`${step}-content`} id={`${step}-header`}>
+        <Typography variant="h6" component="h3">
+          {heading}
+          {selectedLabel !== null && (
+            <Typography component="span" color="text.secondary" sx={{ ml: 1, font: 'var(--mui-font-body1)' }}>
+              — {selectedLabel}
+            </Typography>
+          )}
+        </Typography>
+      </AccordionSummary>
+      <AccordionDetails>{children}</AccordionDetails>
+    </Accordion>
+  );
+}
+
+/**
+ * The SIZE band's control: a `Slider` for fast, visual, thumb-drag sizing
+ * plus a precise `TextField` next to it for exact centimetre entry — real
+ * e-commerce configurators (the same reference set as `StickyPriceBar`,
+ * `docs/HANDOVER.md` §9g) pair the two rather than forcing a bare number
+ * field. The slider commits on release (`onChangeCommitted`), matching the
+ * existing `TextField`'s commit-on-blur pattern, so it costs exactly one
+ * server round-trip per real change, not one per pixel dragged.
+ */
+function SizeStep({
+  widthInput,
+  heightInput,
+  widthError,
+  heightError,
+  dimensionEnvelope,
+  onWidthChange,
+  onHeightChange,
+  onCommitWidth,
+  onCommitHeight,
+  dimensionIssues,
+}: {
+  readonly widthInput: string;
+  readonly heightInput: string;
+  readonly widthError: string | null;
+  readonly heightError: string | null;
+  readonly dimensionEnvelope: {
+    readonly minWidthMm: number;
+    readonly maxWidthMm: number;
+    readonly minHeightMm: number;
+    readonly maxHeightMm: number;
+  };
+  readonly onWidthChange: (value: string) => void;
+  readonly onHeightChange: (value: string) => void;
+  readonly onCommitWidth: () => void;
+  readonly onCommitHeight: () => void;
+  readonly dimensionIssues: readonly DimensionIssue[];
+}) {
+  const minWidthCm = Number(formatMmAsCentimetres(dimensionEnvelope.minWidthMm));
+  const maxWidthCm = Number(formatMmAsCentimetres(dimensionEnvelope.maxWidthMm));
+  const minHeightCm = Number(formatMmAsCentimetres(dimensionEnvelope.minHeightMm));
+  const maxHeightCm = Number(formatMmAsCentimetres(dimensionEnvelope.maxHeightMm));
+  const widthSliderValue = Number(widthInput.replace(',', '.'));
+  const heightSliderValue = Number(heightInput.replace(',', '.'));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 28, maxWidth: 420 }}>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <Typography id="configurator-width-slider-label">{SITE.configuratorWidthLabelPl}</Typography>
+          <TextField
+            aria-labelledby="configurator-width-slider-label"
+            label={SITE.configuratorWidthLabelPl}
+            value={widthInput}
+            onChange={(e) => onWidthChange(e.target.value)}
+            onBlur={onCommitWidth}
+            error={widthError !== null}
+            size="small"
+            sx={{ width: 96 }}
+            slotProps={{ htmlInput: { style: { textAlign: 'right' } } }}
+          />
+        </div>
+        <Slider
+          aria-labelledby="configurator-width-slider-label"
+          value={Number.isFinite(widthSliderValue) ? widthSliderValue : minWidthCm}
+          min={minWidthCm}
+          max={maxWidthCm}
+          step={1}
+          valueLabelDisplay="auto"
+          valueLabelFormat={(v) => `${v} cm`}
+          onChange={(_, value) => onWidthChange(String(Array.isArray(value) ? value[0] : value))}
+          onChangeCommitted={onCommitWidth}
+          sx={{ mt: 1 }}
+        />
+        <Typography variant="caption" color={widthError !== null ? 'error' : 'text.secondary'}>
+          {widthError ?? `${minWidthCm}–${maxWidthCm} cm`}
+        </Typography>
+      </div>
+
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <Typography id="configurator-height-slider-label">{SITE.configuratorHeightLabelPl}</Typography>
+          <TextField
+            aria-labelledby="configurator-height-slider-label"
+            label={SITE.configuratorHeightLabelPl}
+            value={heightInput}
+            onChange={(e) => onHeightChange(e.target.value)}
+            onBlur={onCommitHeight}
+            error={heightError !== null}
+            size="small"
+            sx={{ width: 96 }}
+            slotProps={{ htmlInput: { style: { textAlign: 'right' } } }}
+          />
+        </div>
+        <Slider
+          aria-labelledby="configurator-height-slider-label"
+          value={Number.isFinite(heightSliderValue) ? heightSliderValue : minHeightCm}
+          min={minHeightCm}
+          max={maxHeightCm}
+          step={1}
+          valueLabelDisplay="auto"
+          valueLabelFormat={(v) => `${v} cm`}
+          onChange={(_, value) => onHeightChange(String(Array.isArray(value) ? value[0] : value))}
+          onChangeCommitted={onCommitHeight}
+          sx={{ mt: 1 }}
+        />
+        <Typography variant="caption" color={heightError !== null ? 'error' : 'text.secondary'}>
+          {heightError ?? `${minHeightCm}–${maxHeightCm} cm`}
+        </Typography>
+      </div>
+
+      {dimensionIssues.length > 0 && (
+        <Alert severity="error">
+          {dimensionIssues.map((issue) => (
+            <div key={issue.code}>{dimensionMessage(issue)}</div>
+          ))}
+        </Alert>
+      )}
     </div>
   );
 }

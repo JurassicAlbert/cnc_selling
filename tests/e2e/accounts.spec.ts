@@ -88,10 +88,10 @@ async function addSampleConfigurationToCart(page: Page): Promise<void> {
   const main = page.getByRole('main');
   await main.getByRole('button', { name: 'Wzór podstawowy — do zastąpienia' }).click();
   await main.getByRole('button', { name: 'Dąb', exact: true }).click();
-  await fillReliably(main.getByLabel('Szerokość (cm)'), '70');
-  await main.getByLabel('Szerokość (cm)').blur();
-  await fillReliably(main.getByLabel('Wysokość (cm)'), '50');
-  await main.getByLabel('Wysokość (cm)').blur();
+  await fillReliably(main.getByRole('textbox', { name: 'Szerokość (cm)' }), '70');
+  await main.getByRole('textbox', { name: 'Szerokość (cm)' }).blur();
+  await fillReliably(main.getByRole('textbox', { name: 'Wysokość (cm)' }), '50');
+  await main.getByRole('textbox', { name: 'Wysokość (cm)' }).blur();
   await main.getByRole('button', { name: 'Olejowanie' }).click();
   await main.getByRole('button', { name: 'Dodaj do koszyka' }).click();
   await expect(page).toHaveURL('/koszyk');
