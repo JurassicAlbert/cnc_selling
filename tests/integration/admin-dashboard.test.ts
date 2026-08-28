@@ -56,6 +56,7 @@ async function seedOrder(overrides: {
       subtotalNetGrosze: overrides.subtotalNetGrosze ?? 1000,
       vatGrosze: 230,
       shippingGrosze: 0,
+      deliveryMethodNamePl: 'Test',
       totalGrossGrosze: overrides.totalGrossGrosze ?? 1230,
       termsVersion: '1',
       termsAcceptedAt: new Date(),

@@ -213,6 +213,7 @@ export type CheckoutFieldIssueCode =
   | 'POSTAL_CODE_INVALID'
   | 'CITY_REQUIRED'
   | 'PAYMENT_METHOD_REQUIRED'
+  | 'DELIVERY_METHOD_REQUIRED'
   | 'TERMS_NOT_ACCEPTED'
   | 'WITHDRAWAL_NOT_ACKNOWLEDGED';
 
@@ -245,6 +246,8 @@ export function checkoutIssueMessage(code: CheckoutFieldIssueCode): string {
       return 'Podaj miejscowość.';
     case 'PAYMENT_METHOD_REQUIRED':
       return 'Wybierz sposób płatności.';
+    case 'DELIVERY_METHOD_REQUIRED':
+      return 'Wybierz sposób dostawy.';
     case 'TERMS_NOT_ACCEPTED':
       return 'Musisz zaakceptować regulamin, aby złożyć zamówienie.';
     case 'WITHDRAWAL_NOT_ACKNOWLEDGED':

@@ -747,6 +747,31 @@ enum PaymentStatus {
   REFUNDED
 }
 
+/// P9 phase 5: real, admin-managed delivery/shipping methods — replaces the
+/// single hardcoded `StoreSettings.shippingFlatRateGrosze` at checkout.
+/// That field stays as-is for now (still used as the fallback when no
+/// method row exists yet, e.g. right after this migration on a fresh DB)
+/// but a real checkout always prefers a real `DeliveryMethod` row.
+model DeliveryMethod {
+  id                          String   @id @default(cuid())
+  namePl                      String
+  descPl                      String   @db.Text
+  priceGrosze                 Int
+  /// Order subtotal (net) at or above which this method becomes free. `null` = never free.
+  freeShippingThresholdGrosze Int?
+  estimatedDaysMin            Int
+  estimatedDaysMax            Int
+  carrier                     String?
+  trackingAvailable           Boolean  @default(false)
+  isActive                    Boolean  @default(true)
+  sortOrder                   Int      @default(0)
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+  orders                      Order[]
+
+  @@index([isActive, sortOrder])
+}
+
 model Order {
   id            String        @id @default(cuid())
   orderNumber   String        @unique // "2026/08/0042" — from a sequence, never count()+1
@@ -776,6 +801,15 @@ model Order {
   shippingGrosze    Int
   totalGrossGrosze  Int
   currency          String @default("PLN")
+
+  /// P9 phase 5: which real `DeliveryMethod` row was chosen, nullable
+  /// because the row can be deactivated later — the name/price actually
+  /// charged are snapshotted below (`deliveryMethodNamePl`,
+  /// `shippingGrosze` above), never re-read live, same discipline as
+  /// `OrderItem.snapshot`.
+  deliveryMethodId     String?
+  deliveryMethod       DeliveryMethod? @relation(fields: [deliveryMethodId], references: [id])
+  deliveryMethodNamePl String
 
   // Acknowledgements, stored verbatim: a consent record is only evidence if
   // it captures WHAT was agreed to. Custom-made goods are exempt from the

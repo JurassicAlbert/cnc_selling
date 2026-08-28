@@ -22,7 +22,7 @@ import { createOrder } from '@/server/orders/create-order';
 
 export type CheckoutFormState = {
   readonly fieldErrors: Partial<Record<string, CheckoutFieldIssueCode>>;
-  readonly formError: 'CART_EMPTY' | 'PRICE_CHANGED' | null;
+  readonly formError: 'CART_EMPTY' | 'PRICE_CHANGED' | 'DELIVERY_METHOD_INVALID' | null;
   /**
    * Echoed back so a validation error on one field doesn't erase everything
    * else the customer already typed — `useActionState` re-renders the same
@@ -54,6 +54,7 @@ export async function submitCheckout(
   const postalCode = field(formData, 'postalCode');
   const city = field(formData, 'city');
   const paymentMethod = field(formData, 'paymentMethod');
+  const deliveryMethodId = field(formData, 'deliveryMethodId');
   const termsAccepted = formData.get('termsAccepted') === 'on';
   const withdrawalAcknowledged = formData.get('withdrawalAcknowledged') === 'on';
 
@@ -70,6 +71,7 @@ export async function submitCheckout(
   if (paymentMethod !== 'BANK_TRANSFER' && paymentMethod !== 'CONTACT_ARRANGED') {
     fieldErrors.paymentMethod = 'PAYMENT_METHOD_REQUIRED';
   }
+  if (deliveryMethodId.length === 0) fieldErrors.deliveryMethodId = 'DELIVERY_METHOD_REQUIRED';
   if (!termsAccepted) fieldErrors.terms = 'TERMS_NOT_ACCEPTED';
   if (!withdrawalAcknowledged) fieldErrors.withdrawal = 'WITHDRAWAL_NOT_ACKNOWLEDGED';
 
@@ -84,6 +86,7 @@ export async function submitCheckout(
     postalCode,
     city,
     paymentMethod,
+    deliveryMethodId,
   };
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -104,6 +107,7 @@ export async function submitCheckout(
     postalCode,
     city,
     paymentMethod: paymentMethod as PaymentMethod,
+    deliveryMethodId,
   });
 
   if (!result.ok) {

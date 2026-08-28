@@ -144,6 +144,7 @@ describe('applyPublishPricingVersion', () => {
         subtotalNetGrosze: 100_00,
         vatGrosze: 23_00,
         shippingGrosze: 0,
+        deliveryMethodNamePl: 'Test',
         totalGrossGrosze: 123_00,
         termsVersion: '1',
         termsAcceptedAt: new Date(),

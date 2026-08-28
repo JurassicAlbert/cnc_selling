@@ -55,7 +55,8 @@ export function StoreSettingsForm({ settings }: { readonly settings: StoreSettin
           type="number"
           defaultValue={fieldValue('shippingFlatRatePln', String(settings.shippingFlatRateGrosze / 100))}
           size="small"
-          sx={{ maxWidth: 200 }}
+          sx={{ maxWidth: 320 }}
+          helperText={ADMIN.settingsFieldShippingRateHelperPl}
         />
 
         <SubmitButton />

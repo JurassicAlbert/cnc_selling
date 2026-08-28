@@ -117,6 +117,7 @@ async function main(): Promise<void> {
   await seedFaqs();
   await seedExternalPatternResources();
   await seedProductCollections();
+  await seedDeliveryMethods();
 }
 
 // ---------------------------------------------------------------------------
@@ -941,6 +942,64 @@ async function seedProductCollections(): Promise<void> {
     },
   });
   console.log(`ProductCollection: created "${collection.namePl}" with ${members.length} product(s)`);
+}
+
+type DeliveryMethodSeed = {
+  readonly namePl: string;
+  readonly descPl: string;
+  readonly priceGrosze: number;
+  readonly freeShippingThresholdGrosze: number | null;
+  readonly estimatedDaysMin: number;
+  readonly estimatedDaysMax: number;
+  readonly carrier: string | null;
+  readonly trackingAvailable: boolean;
+  readonly sortOrder: number;
+};
+
+/**
+ * P9 phase 5: real delivery methods, replacing the single hardcoded
+ * `StoreSettings.shippingFlatRateGrosze` at checkout. Two honest rows: a
+ * real courier price with a real free-shipping threshold, and a genuinely
+ * manual "odbiór osobisty" (personal pickup) option — no live carrier
+ * tracking claimed for either (§9/§15: `trackingAvailable: false` for
+ * both, since no carrier API is integrated). Create-only, matched by
+ * `namePl` (no natural key), same non-destructive precedent as `seedFaqs`.
+ */
+const DELIVERY_METHOD_SEEDS: readonly DeliveryMethodSeed[] = [
+  {
+    namePl: 'Kurier',
+    descPl: 'Dostawa kurierska pod wskazany adres. Paczkę nadajemy po zakończeniu produkcji.',
+    priceGrosze: 1_500,
+    freeShippingThresholdGrosze: 30_000,
+    estimatedDaysMin: 1,
+    estimatedDaysMax: 3,
+    carrier: null,
+    trackingAvailable: false,
+    sortOrder: 1,
+  },
+  {
+    namePl: 'Odbiór osobisty',
+    descPl: 'Bezpłatny odbiór osobisty po wcześniejszym umówieniu terminu — szczegóły ustalamy indywidualnie po złożeniu zamówienia.',
+    priceGrosze: 0,
+    freeShippingThresholdGrosze: null,
+    estimatedDaysMin: 1,
+    estimatedDaysMax: 5,
+    carrier: null,
+    trackingAvailable: false,
+    sortOrder: 2,
+  },
+];
+
+async function seedDeliveryMethods(): Promise<void> {
+  for (const seed of DELIVERY_METHOD_SEEDS) {
+    const existing = await prisma.deliveryMethod.findFirst({ where: { namePl: seed.namePl } });
+    if (existing !== null) {
+      console.log(`DeliveryMethod: "${seed.namePl}" already exists, leaving it alone`);
+      continue;
+    }
+    const created = await prisma.deliveryMethod.create({ data: { ...seed, isActive: true } });
+    console.log(`DeliveryMethod: created "${created.namePl}"`);
+  }
 }
 
 async function seedProducts(

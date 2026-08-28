@@ -89,6 +89,7 @@ describe('applyDesignReviewDecision', () => {
         subtotalNetGrosze: 100,
         vatGrosze: 23,
         shippingGrosze: 0,
+        deliveryMethodNamePl: 'Test',
         totalGrossGrosze: 123,
         termsVersion: '1',
         termsAcceptedAt: new Date(),

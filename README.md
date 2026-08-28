@@ -881,6 +881,29 @@ customer-request-driven. Seeded one real collection with two real
 products. 8 new test cases, full suite 651/651, all checks clean.
 See `docs/HANDOVER.md` §9z45.
 
+**Phase 5, shipped — 2026-08-28.** Delivery method CRUD + real
+checkout wiring — the first phase to touch the money-critical
+`create-order.ts` path. New `DeliveryMethod` model + admin CRUD;
+`CheckoutForm.tsx` converted wholesale from raw HTML to real MUI
+(not just the new field, so it isn't half-polished), with a live
+subtotal/shipping/total estimate — display-only, `createOrder` stays
+the sole source of truth server-side, re-validating the chosen
+method is real and active before anything else. A real client/server
+import-boundary bug was caught by `npm run build` (not by typecheck
+or lint): a value import of a pure pricing function from a
+`server/repositories/*` file pulled the Postgres driver into the
+browser bundle. Fixed by moving that function into a new
+`src/domain/checkout/delivery.ts` with zero `prisma` dependency — a
+generalizable lesson flagged for the remaining phases, all of which
+touch checkout too. Making the new `Order` field required broke 11
+pre-existing test call sites across 10 other files — caught by
+running the full suite, not by typecheck/lint, and fixed at the call
+sites rather than by weakening the new field. Verified via the real,
+unchanged Playwright e2e checkout spec on both browsers, then
+confirmed the resulting real order's delivery snapshot and
+free-shipping threshold were both correct. Full suite 667/667.
+See `docs/HANDOVER.md` §9z46.
+
 ---
 
 ## Getting set up

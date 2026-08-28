@@ -57,6 +57,7 @@ async function seedOrder(status: OrderStatus, itemSnapshots: readonly OrderItemS
       subtotalNetGrosze: 100,
       vatGrosze: 23,
       shippingGrosze: 0,
+      deliveryMethodNamePl: 'Test',
       totalGrossGrosze: 123,
       termsVersion: '1',
       termsAcceptedAt: new Date(),

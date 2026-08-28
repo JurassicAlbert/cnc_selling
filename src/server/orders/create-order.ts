@@ -28,7 +28,7 @@ import { priceAndValidateSelections } from '@/server/configurator/validate-and-p
 import type { ValidatedPricing } from '@/server/configurator/validate-and-price';
 import { recordAnalyticsEvent } from '@/server/analytics/record-event';
 import { mailer } from '@/server/mail/mailer';
-import { getStoreSettings } from '@/server/repositories/store-settings';
+import { computeShippingGrosze } from '@/domain/checkout/delivery';
 import { SITE } from '@/content/pl/site';
 import type { OrderItemSnapshot } from './snapshot';
 
@@ -48,12 +48,14 @@ export type CreateOrderInput = {
   readonly postalCode: string;
   readonly city: string;
   readonly paymentMethod: PaymentMethod;
+  readonly deliveryMethodId: string;
 };
 
 export type CreateOrderResult =
   | { readonly ok: true; readonly orderNumber: string; readonly accessToken: string }
   | { readonly ok: false; readonly code: 'CART_EMPTY' }
-  | { readonly ok: false; readonly code: 'PRICE_CHANGED' };
+  | { readonly ok: false; readonly code: 'PRICE_CHANGED' }
+  | { readonly ok: false; readonly code: 'DELIVERY_METHOD_INVALID' };
 
 type RevalidatedItem = {
   readonly item: CartItemView;
@@ -68,12 +70,22 @@ function toJsonInput<T>(value: T): Prisma.InputJsonValue {
 }
 
 export async function createOrder(input: CreateOrderInput): Promise<CreateOrderResult> {
-  const [cart, storeSettings] = await Promise.all([
+  const [cart, deliveryMethod] = await Promise.all([
     findCartForRequest({ userId: input.userId, sessionToken: input.sessionToken }),
-    getStoreSettings(),
+    prisma.deliveryMethod.findFirst({
+      where: { id: input.deliveryMethodId, isActive: true },
+      select: { namePl: true, priceGrosze: true, freeShippingThresholdGrosze: true },
+    }),
   ]);
   if (cart.items.length === 0) {
     return { ok: false, code: 'CART_EMPTY' };
+  }
+  // Re-checked here, not trusted from whatever the form last rendered: the
+  // method could have been deactivated between page load and submission,
+  // same "never trust client-side prices" discipline as the per-item
+  // re-pricing loop below.
+  if (deliveryMethod === null) {
+    return { ok: false, code: 'DELIVERY_METHOD_INVALID' };
   }
 
   const revalidated: RevalidatedItem[] = [];
@@ -98,7 +110,11 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
 
   const subtotalNetGrosze = sumGrosze(revalidated.map((r) => r.lineNetGrosze));
   const vatGrosze = sumGrosze(revalidated.map((r) => r.lineVatGrosze));
-  const shippingGrosze = storeSettings.shippingFlatRateGrosze;
+  // Free-shipping thresholds are set and understood in gross terms (what a
+  // customer actually sees as "spend over X zł"), so the comparison uses
+  // the pre-shipping gross total, not the net figure — matches what the
+  // checkout page's own live estimate shows the customer before submission.
+  const shippingGrosze = computeShippingGrosze(deliveryMethod, subtotalNetGrosze + vatGrosze);
   const totalGrossGrosze = subtotalNetGrosze + vatGrosze + shippingGrosze;
 
   const accessToken = randomBytes(32).toString('base64url');
@@ -141,6 +157,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
         vatGrosze,
         shippingGrosze,
         totalGrossGrosze,
+        deliveryMethodId: input.deliveryMethodId,
+        deliveryMethodNamePl: deliveryMethod.namePl,
         termsVersion: TERMS_VERSION,
         termsAcceptedAt: now,
         withdrawalExemptionTextPl: SITE.checkoutWithdrawalExemptionTextPl,

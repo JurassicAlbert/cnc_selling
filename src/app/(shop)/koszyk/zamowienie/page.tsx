@@ -7,11 +7,12 @@ import { getSession } from '@/server/auth/session';
 import { readGuestSessionToken } from '@/server/session/read-guest-session';
 import { findCartForRequest } from '@/server/repositories/cart';
 import { recordAnalyticsEvent } from '@/server/analytics/record-event';
-import { getStoreSettings } from '@/server/repositories/store-settings';
+import { listActiveDeliveryMethods } from '@/server/repositories/delivery-methods';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
 import { Section } from '@/ui/primitives/Section';
 import { Text } from '@/ui/primitives/Text';
+import { ThemeRegistry } from '@/ui/theme/ThemeRegistry';
 import { CheckoutForm } from '@/ui/islands/checkout/CheckoutForm';
 
 export const metadata: Metadata = {
@@ -21,13 +22,19 @@ export const metadata: Metadata = {
 /**
  * A Server Component shell around one client island — the form itself
  * needs `useActionState` for inline validation feedback, but the cart read
- * and the order-summary render need no interactivity at all.
+ * needs no interactivity at all. P9 phase 5: delivery cost is no longer a
+ * single flat rate — it depends on the method the customer picks inside
+ * `CheckoutForm`, so the running total (subtotal + shipping) now lives
+ * there too, not split across a static summary here and a live one below.
+ * `ThemeRegistry` mounted here (not at the root — see that file's own
+ * comment on measured mobile-LCP cost) around just this real interactive
+ * island, same precedent the product page's Configurator already set.
  */
 export default async function CheckoutPage() {
   const [sessionToken, session] = await Promise.all([readGuestSessionToken(), getSession()]);
-  const [cart, storeSettings] = await Promise.all([
+  const [cart, deliveryMethods] = await Promise.all([
     findCartForRequest({ userId: session?.userId ?? null, sessionToken }),
-    getStoreSettings(),
+    listActiveDeliveryMethods(),
   ]);
 
   if (cart.items.length === 0) {
@@ -35,8 +42,6 @@ export default async function CheckoutPage() {
   }
 
   void recordAnalyticsEvent({ name: 'checkout_started', sessionToken, userId: session?.userId ?? null });
-
-  const totalGrossGrosze = cart.subtotalGrossGrosze + storeSettings.shippingFlatRateGrosze;
 
   return (
     <Section>
@@ -54,26 +59,12 @@ export default async function CheckoutPage() {
               </Text>
             </div>
           ))}
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Text muted>{SITE.checkoutShippingLabelPl}</Text>
-            <Text muted>{formatPln(storeSettings.shippingFlatRateGrosze)}</Text>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              font: 'var(--mui-font-h5)',
-              paddingBlockStart: 8,
-              borderTop: '1px solid var(--mui-palette-divider)',
-            }}
-          >
-            <span>{SITE.orderTotalLabelPl}</span>
-            <span>{formatPln(totalGrossGrosze)}</span>
-          </div>
         </div>
 
         <div style={{ marginBlockStart: 32 }}>
-          <CheckoutForm />
+          <ThemeRegistry>
+            <CheckoutForm deliveryMethods={deliveryMethods} subtotalGrossGrosze={cart.subtotalGrossGrosze} />
+          </ThemeRegistry>
         </div>
       </Container>
     </Section>
