@@ -21,6 +21,7 @@
  */
 
 import { prisma } from '@/server/db/client';
+import { logger } from '@/server/logging/logger';
 
 export type MailTemplate = 'order-confirmation' | 'verification-otp' | 'order-status-update';
 
@@ -158,7 +159,7 @@ async function resolveSubjectAndText<T extends MailTemplate>(template: T, data: 
       return { subject: interpolate(override.subjectPl, placeholders), text: interpolate(override.bodyPl, placeholders) };
     }
   } catch (error) {
-    console.error(`[mailer] EmailTemplate lookup failed for "${template}", using the hardcoded default:`, error);
+    logger.warn('mailer.template_lookup_failed', { template, error });
   }
   return renderSubjectAndText(template, data);
 }
@@ -173,7 +174,7 @@ async function resolveSubjectAndText<T extends MailTemplate>(template: T, data: 
 class UnconfiguredMailer implements Mailer {
   async send<T extends MailTemplate>(template: T, to: string, data: MailDataFor<T>): Promise<MailSendResult> {
     const { subject } = await resolveSubjectAndText(template, data);
-    console.log(`[mailer] unconfigured — would have sent "${template}" (${subject}) to ${to}`);
+    logger.info('mailer.unconfigured_send', { template, subject, to });
     return { sent: false };
   }
 }
@@ -203,12 +204,12 @@ class ResendMailer implements Mailer {
         body: JSON.stringify({ from: this.from, to, subject, text }),
       });
       if (!response.ok) {
-        console.error(`[mailer] Resend send failed (${response.status}) for "${template}" to ${to}`);
+        logger.error('mailer.resend_send_failed', { template, to, status: response.status });
         return { sent: false };
       }
       return { sent: true };
     } catch (error) {
-      console.error(`[mailer] Resend send threw for "${template}" to ${to}:`, error);
+      logger.error('mailer.resend_send_threw', { template, to, error });
       return { sent: false };
     }
   }

@@ -3292,6 +3292,24 @@ Linked from `docs/ARCHITECTURE.md` §14 (the service-abstractions table this doc
 
 Documentation-only change, no source files touched — `npm run typecheck` and `npm run lint` (including the Polish-literal checker, which doesn't scan `docs/`) both clean; `test`/`build` not re-run since nothing that could affect them changed.
 
+## 9z39. Structured logging in place — 2026-08-28
+
+Continuing autonomously after §9z38's backup-strategy doc. Grepped the whole `src/server` tree for real `console.*` call sites before writing anything — 7 total, all already carrying a consistent `[module] free-text message` prefix convention (`auth.ts` ×2, `mailer.ts` ×4, `analytics/record-event.ts` ×1), no silent empty `catch {}` blocks anywhere to worry about missing. A small, contained surface — the right size for "wire a real logger through" rather than "invent a logging framework."
+
+### The design
+
+`src/server/logging/logger.ts` — `logger.info/warn/error(event, context?)`. `event` is a stable dot-namespaced identifier (`"mailer.resend_send_failed"`), never a free-text sentence — that's the field a real log query filters on; everything variable (a template name, a recipient, an error) goes in `context`. One `JSON.stringify`'d object per line, always, including dev — pretty-printing only outside dev was considered and rejected: the shape callers write against should be the shape actually exercised locally, not a shape that only gets tested once something breaks in production. No new dependency (pino/winston) for 7 call sites — the same "earn the dependency" bar `mailer.ts` itself already set by hand-rolling its Resend HTTP call instead of pulling in an SDK.
+
+One real correctness detail, not obvious until tested: `JSON.stringify(new Error('x'))` produces `{}` — `message`/`stack` are non-enumerable own properties on `Error`, so a raw `{error}` in the context would silently log an empty object instead of a stack trace, defeating the entire point of switching to this. `serializeValue` expands any `Error` instance to `{name, message, stack}` before stringifying.
+
+### The one workflow that could have broken, checked deliberately
+
+This session has repeatedly read a login OTP code by grepping the dev server's stdout for `[mailer] unconfigured — would have sent "verification-otp" (Twój kod logowania: NNNNNN) to panel@example.com` via `preview_logs`' `search` parameter. Migrating that line to structured JSON risked breaking that workflow if the searchable substrings (the email, the OTP) stopped appearing in the raw log text. They don't — `search` does a plain substring match against the log line regardless of its shape, and the migrated `logger.info('mailer.unconfigured_send', {template, subject, to})` still contains `"to":"panel@example.com"` and the OTP inside the `subject` field's value. Verified live, not just reasoned about: requested a real OTP, `preview_logs` with `search: "panel@example.com"` returned exactly one structured line with the code readable straight out of the `subject` field, completed the login with it, landed on the real `/panel` dashboard.
+
+### Verified
+
+`npm run typecheck && npm run lint && npm test && npm run build` all clean (618/618 — 4 new unit tests in `tests/unit/logger.test.ts`: the JSON shape and field set, `warn`/`error` routing to the correct `console.*` method and only that one, `Error`-in-context expansion, and that omitting `context` entirely doesn't log stray `undefined` keys). The existing `tests/integration/mailer.test.ts` — which spies on `console.log` and asserts the logged text `.toContain(...)`s a rendered subject — needed no changes at all: a JSON-stringified line still contains the same substrings as the old free-text one did, confirmed by the full suite passing unmodified. Restarted the dev server before live-verifying, per §9z2's standing rule. Live-verified the real end-to-end OTP flow as described above; confirmed no new console errors on the login page (the one hydration warning present in that pass's console history was pre-existing stale output from an earlier navigation on a reused tab, not something this change touched).
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

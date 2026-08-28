@@ -19,6 +19,7 @@
 
 import { prisma } from '@/server/db/client';
 import type { Prisma } from '@/generated/prisma/client';
+import { logger } from '@/server/logging/logger';
 import { readConsentChoice } from '@/server/session/consent';
 
 /** Same intentional double-cast as `cart.ts`/`upload.ts`'s own `toJsonInput` — a single, named, auditable spot. */
@@ -53,6 +54,6 @@ export async function recordAnalyticsEvent(input: AnalyticsEventInput): Promise<
       },
     });
   } catch (error) {
-    console.error('[analytics] failed to record event:', input.name, error);
+    logger.error('analytics.record_event_failed', { eventName: input.name, error });
   }
 }

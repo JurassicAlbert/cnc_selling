@@ -23,6 +23,7 @@ import type { AuthFieldIssueCode, AuthFormErrorCode } from '@/content/pl/message
 import { auth } from '@/server/auth/auth';
 import { mergeGuestCartIntoUser } from '@/server/cart/merge-guest-cart';
 import { prisma } from '@/server/db/client';
+import { logger } from '@/server/logging/logger';
 import { readGuestSessionToken } from '@/server/session/read-guest-session';
 
 function field(formData: FormData, name: string): string {
@@ -54,7 +55,7 @@ function mapAuthError(
   if (error.body?.code !== undefined && expectedCodes.includes(error.body.code)) {
     return mappedTo;
   }
-  console.error('[auth] unexpected error from Better Auth:', error.body ?? error);
+  logger.error('auth.unexpected_better_auth_error', { mappedTo, detail: error.body ?? error });
   return 'UNKNOWN';
 }
 
@@ -184,7 +185,7 @@ export async function submitOtpRequest(
     return { fieldErrors: {}, formError: null, values: { email }, sent: true };
   } catch (error) {
     if (error instanceof APIError) {
-      console.error('[auth] unexpected error from Better Auth:', error.body ?? error);
+      logger.error('auth.unexpected_better_auth_error', { mappedTo: 'UNKNOWN', flow: 'send_verification_otp', detail: error.body ?? error });
       return { fieldErrors: {}, formError: 'UNKNOWN', values: { email }, sent: false };
     }
     throw error;

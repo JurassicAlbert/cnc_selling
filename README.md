@@ -762,6 +762,20 @@ that customer-uploaded design files have zero redundancy today, since
 the S3-compatible storage adapter `docs/ARCHITECTURE.md` §14 already
 scopes as future work isn't built yet. See `docs/HANDOVER.md` §9z38.
 
+**Structured logging in place — built 2026-08-28, autonomously.** New
+`src/server/logging/logger.ts` — `logger.info/warn/error(event,
+context)` emits one real JSON line per call instead of the free-text
+`console.error('[module] message:', ...)` strings the 7 real call
+sites (`auth.ts`, `mailer.ts`, `analytics/record-event.ts`) used
+before. No new dependency for 7 call sites; a nested `Error` is
+expanded to `{name, message, stack}` since plain `JSON.stringify` on
+an `Error` silently produces `{}`. Checked and verified live that this
+didn't break the one workflow that depends on the mailer's log output
+— this session's own repeated habit of reading a login OTP by grepping
+the dev server log — requesting a real OTP after the migration still
+found it via the same `search` parameter, now sitting in a clean
+`subject` field. See `docs/HANDOVER.md` §9z39.
+
 ---
 
 ## Getting set up
