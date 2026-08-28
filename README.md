@@ -964,6 +964,25 @@ contextual forms render correctly, and a real seeded request appears
 correctly in both the admin list and detail page. See
 `docs/HANDOVER.md` §9z49.
 
+**Phase 9, shipped — 2026-08-28 — the 19-section continuation
+prompt is complete.** Sitewide MUI form audit, the closing pass.
+Converted the three forms the plan predicted (`LoginForm`,
+`RegisterForm`, `OtpLoginForm`) to real MUI. Swept the rest of the
+storefront first — found four more raw forms, and every one already
+carried an explicit "zero-client-JS, deliberate" comment in its own
+source (the cart page's per-row forms, the logout button, the guest
+order-lookup form); left all four alone rather than reversing a real
+prior architectural decision. Found one genuine gap the sweep did
+catch: `ReviewForm.tsx` was still raw and, as of Phase 8, sits right
+next to a real-MUI contact form on the same order pages — converted
+it too and widened the shared `ThemeRegistry` to cover both. Pure
+presentation, no new server logic; full suite stayed at 698/698.
+Verified via the real, unchanged Playwright `accounts.spec.ts`
+(exercises the converted forms end-to-end via `getByLabel`) plus a
+clean `curl` confirming real MUI markup on both pages. See
+`docs/HANDOVER.md` §9z50 for the full phase and the close-out of all
+9 phases of the owner's continuation prompt.
+
 ---
 
 ## Getting set up

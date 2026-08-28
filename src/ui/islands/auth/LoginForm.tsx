@@ -5,13 +5,18 @@
  * `CheckoutForm.tsx` (see that file's header for why: `defaultValue`-based
  * uncontrolled inputs only apply on first mount, so a validation error
  * needs the form to remount to show the server's echoed-back values).
+ *
+ * P9 phase 9 (sitewide MUI form audit, closing pass): converted from raw
+ * `<input>`/`<button>` to real MUI — `ThemeRegistry` now mounted on
+ * `/logowanie`, same "mount around just the real interactive island"
+ * precedent every earlier phase this session already established.
  */
 
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import Link from 'next/link';
+import { Alert, Button, Stack, TextField, Typography } from '@mui/material';
 
-import type { AuthFieldIssueCode } from '@/content/pl/messages';
 import { authFormErrorMessage, authIssueMessage } from '@/content/pl/messages';
 import { SITE } from '@/content/pl/site';
 import { submitLogin } from '@/server/actions/auth';
@@ -33,25 +38,36 @@ export function LoginForm() {
   }, [state]);
 
   return (
-    <form key={renderKey} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 400 }}>
-      {state.formError !== null && (
-        <p style={{ color: 'var(--mui-palette-primary-main)' }}>{authFormErrorMessage(state.formError)}</p>
-      )}
+    <form key={renderKey} action={formAction}>
+      <Stack spacing={2} sx={{ maxWidth: 400 }}>
+        {state.formError !== null && <Alert severity="error">{authFormErrorMessage(state.formError)}</Alert>}
 
-      <Field
-        label={SITE.authEmailLabelPl}
-        name="email"
-        type="email"
-        defaultValue={state.values.email}
-        error={state.fieldErrors.email}
-      />
-      <Field label={SITE.authPasswordLabelPl} name="password" type="password" error={state.fieldErrors.password} />
+        <TextField
+          label={SITE.authEmailLabelPl}
+          name="email"
+          type="email"
+          defaultValue={state.values.email}
+          error={state.fieldErrors.email !== undefined}
+          helperText={state.fieldErrors.email !== undefined ? authIssueMessage(state.fieldErrors.email) : undefined}
+          size="small"
+          fullWidth
+        />
+        <TextField
+          label={SITE.authPasswordLabelPl}
+          name="password"
+          type="password"
+          error={state.fieldErrors.password !== undefined}
+          helperText={state.fieldErrors.password !== undefined ? authIssueMessage(state.fieldErrors.password) : undefined}
+          size="small"
+          fullWidth
+        />
 
-      <SubmitButton />
+        <SubmitButton />
 
-      <p style={{ font: 'var(--mui-font-body2)' }}>
-        {SITE.authNoAccountPl} <Link href="/rejestracja">{SITE.authSwitchToRegisterPl}</Link>
-      </p>
+        <Typography variant="body2">
+          {SITE.authNoAccountPl} <Link href="/rejestracja">{SITE.authSwitchToRegisterPl}</Link>
+        </Typography>
+      </Stack>
     </form>
   );
 }
@@ -59,47 +75,8 @@ export function LoginForm() {
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      style={{
-        font: 'var(--mui-font-button)',
-        padding: '12px 24px',
-        background: 'var(--mui-palette-primary-main)',
-        color: 'var(--mui-palette-background-paper)',
-        border: 'none',
-        borderRadius: 2,
-      }}
-    >
+    <Button type="submit" variant="contained" disabled={pending} sx={{ alignSelf: 'flex-start' }}>
       {SITE.authLoginSubmitPl}
-    </button>
-  );
-}
-
-function ErrorText({ code }: { readonly code: AuthFieldIssueCode }) {
-  return <p style={{ color: 'var(--mui-palette-primary-main)', margin: '4px 0 0' }}>{authIssueMessage(code)}</p>;
-}
-
-function Field({
-  label,
-  name,
-  type = 'text',
-  defaultValue,
-  error,
-}: {
-  readonly label: string;
-  readonly name: string;
-  readonly type?: string;
-  readonly defaultValue?: string;
-  readonly error?: AuthFieldIssueCode;
-}) {
-  return (
-    <div>
-      <label style={{ display: 'block' }}>
-        {label}
-        <input type={type} name={name} defaultValue={defaultValue} style={{ display: 'block', width: '100%' }} />
-      </label>
-      {error !== undefined && <ErrorText code={error} />}
-    </div>
+    </Button>
   );
 }

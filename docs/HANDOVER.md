@@ -3482,6 +3482,23 @@ Continuing the plan from §9z42–§9z48.
 
 New `tests/integration/support-requests.test.ts` (8 cases) and `tests/integration/admin-support-requests.test.ts` (5 cases). Full suite 698/698, `typecheck`/`lint`/`build` all clean. Dev server restarted clean. Live-verified: `/kontakt` and the contextual form on the real guest confirmation page both render correctly with the right copy; seeded one real `SupportRequest` linked to a real order and confirmed it appears correctly in both the admin list (via the real RSC payload — subject/email/order number all present) and detail page (message, order link, and the real editable status/notes form) — then removed it.
 
+## 9z50. Phase 9 shipped: sitewide MUI form audit (closing pass) — the 19-section prompt is complete
+
+Continuing and closing out the plan from §9z42–§9z49.
+
+- Converted the three forms the plan itself predicted back in §9z42 — `LoginForm.tsx`, `RegisterForm.tsx`, `OtpLoginForm.tsx` — from raw `<input>`/`<button>` to real MUI, `ThemeRegistry` mounted on `/logowanie`/`/rejestracja`, same "mount around just the real interactive island" precedent every earlier phase already used.
+- Before converting anything else, swept the rest of the storefront for raw forms and read each one's own existing comments before touching it. Found four more raw forms (`koszyk/page.tsx`'s per-row buttons, the account layout's logout button, the saved-configurations page's per-row button, `zamowienie/sprawdz/page.tsx`'s guest lookup form) — every one of them already carries an explicit "zero-client-JS, deliberate" comment in the source, the same documented pattern this session has cited from `CheckoutForm.tsx`'s own header since Phase 5. Left all four alone. Converting them would have reversed a real, previously-made architectural decision, not fixed an oversight — the plan's own §11 said "improve all forms," not "add client JS to every form regardless of whether it needs any."
+- Found one genuine, additional gap the sweep surfaced that the plan didn't explicitly name: `ReviewForm.tsx` was still raw, and as of Phase 8 both order pages that render it now also render a real-MUI `SupportRequestForm` right next to it — shipping that page with one form styled and one raw would have been exactly the "half-polished" outcome this session has avoided at every other step. Converted it too, and widened both order pages' `ThemeRegistry` wrapper (previously scoped tightly around just the new contact form) to cover both forms under one mount instead of two.
+- No new server logic anywhere in this phase — pure presentation. Same "UI-only change, no new tests required" precedent Phase 1 set for the FAQ accordion conversion.
+
+### Verified
+
+Full suite unchanged at 698/698, `typecheck`/`lint`/`build` all clean — a pure UI conversion should never move that number, and it didn't. Live verification leaned on the real, pre-existing Playwright `accounts.spec.ts` rather than manual click-through (the Browser pane's interactive tools still require the pane to be displayed, unavailable this pass) — both of its cases (guest-cart-survives-registration, order-appears-in-history-after-login) exercise the real converted forms end-to-end via `getByLabel`, which can only succeed if the real MUI `TextField`s render with their real accessible labels; both passed. Confirmed independently with a clean `curl` (no session cookie, so the real form renders instead of the logged-in redirect) that both `/logowanie` and `/rejestracja` serve real `MuiTextField-root`/`MuiButton-root` markup with every expected field `name` present, and that the order confirmation page's widened `ThemeRegistry` renders both forms together with no console errors beyond the environment's own already-documented benign HMR WebSocket noise.
+
+### Where this leaves the owner's 19-section continuation prompt
+
+All 9 phases of the approved plan are shipped: FAQ + category changes (1), the pattern/design library (2), external pattern resources + a real `/wzory` page (3), product collections (4), delivery-method CRUD + checkout wiring (5), payment-method CRUD with an honestly unconnected Przelewy24 (6), manual shipment tracking (7), support/contact requests (8), and this closing MUI sweep (9). Every phase shipped with its own migration, admin CRUD, customer-facing wiring where applicable, real tests, a live-verification pass, and its own commit — see §9z42 through this section for the full trail. Nothing in this pass claims a payment, tracking, or communication integration that doesn't actually exist; every "not yet connected" state is a real, honestly-labelled database row, not a hidden gap.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

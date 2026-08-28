@@ -44,23 +44,23 @@ export default async function AccountOrderDetailPage({ params }: AccountOrderDet
       <OrderSummary order={order} bankDetails={storeSettings} />
       <OrderShipmentInfo shipment={order.shipment} />
 
-      {order.status === 'COMPLETED' &&
-        (reviewStatus !== null ? (
-          <Text muted>{SITE.reviewAlreadySubmittedPl}</Text>
-        ) : (
-          <ReviewForm action={submitAccountReview.bind(null, order.orderNumber)} />
-        ))}
+      <ThemeRegistry>
+        {order.status === 'COMPLETED' &&
+          (reviewStatus !== null ? (
+            <Text muted>{SITE.reviewAlreadySubmittedPl}</Text>
+          ) : (
+            <ReviewForm action={submitAccountReview.bind(null, order.orderNumber)} />
+          ))}
 
-      <div style={{ marginBlockStart: 32 }}>
-        <ThemeRegistry>
+        <div style={{ marginBlockStart: 32 }}>
           <SupportRequestForm
             action={submitOrderSupportRequest.bind(null, order.orderNumber, null)}
             heading={SITE.contactOrderContextHeadingPl}
             intro={SITE.contactOrderContextIntroPl}
             defaultEmail={order.email}
           />
-        </ThemeRegistry>
-      </div>
+        </div>
+      </ThemeRegistry>
     </div>
   );
 }

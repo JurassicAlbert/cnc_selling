@@ -6,10 +6,17 @@
  * Action (`submitGuestReview`/`submitAccountReview`, both
  * `src/server/actions/reviews.ts`) and passes it in, so this component
  * itself never knows or cares which context it's in.
+ *
+ * P9 phase 9 (sitewide MUI form audit): converted from raw
+ * `<input>`/`<select>`/`<button>` to real MUI — both order pages that
+ * render this now also render `SupportRequestForm` (P9 phase 8) right
+ * below it inside the same `ThemeRegistry`, and leaving this one raw
+ * would have made the page visibly half-polished.
  */
 
 import { useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
+import { Alert, Button, MenuItem, Stack, TextField, Typography } from '@mui/material';
 
 import { SITE } from '@/content/pl/site';
 import type { SubmitReviewResult } from '@/server/actions/reviews';
@@ -30,37 +37,30 @@ export function ReviewForm({ action }: { readonly action: (formData: FormData) =
   }, INITIAL_STATE);
 
   if (submitted) {
-    return <p style={{ marginBlockStart: 16 }}>{SITE.reviewFormThankYouPl}</p>;
+    return <Alert severity="success">{SITE.reviewFormThankYouPl}</Alert>;
   }
 
   return (
-    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 480, marginBlockStart: 16 }}>
-      <div style={{ font: 'var(--mui-font-h6)' }}>{SITE.reviewFormHeadingPl}</div>
+    <form action={formAction}>
+      <Stack spacing={2} sx={{ maxWidth: 480, mt: 2 }}>
+        <Typography variant="h6">{SITE.reviewFormHeadingPl}</Typography>
 
-      {!state.ok && <p style={{ color: 'var(--mui-palette-primary-main)' }}>{state.detail}</p>}
+        {!state.ok && <Alert severity="error">{state.detail}</Alert>}
 
-      <label style={{ display: 'block' }}>
-        {SITE.reviewFormAuthorNameLabelPl}
-        <input type="text" name="authorNamePl" required style={{ display: 'block', width: '100%' }} />
-      </label>
+        <TextField label={SITE.reviewFormAuthorNameLabelPl} name="authorNamePl" required size="small" fullWidth />
 
-      <label style={{ display: 'block' }}>
-        {SITE.reviewFormRatingLabelPl}
-        <select name="rating" defaultValue="5" style={{ display: 'block', width: '100%' }}>
+        <TextField select label={SITE.reviewFormRatingLabelPl} name="rating" defaultValue="5" size="small" sx={{ maxWidth: 160 }}>
           {[5, 4, 3, 2, 1].map((value) => (
-            <option key={value} value={value}>
+            <MenuItem key={value} value={value}>
               {value}
-            </option>
+            </MenuItem>
           ))}
-        </select>
-      </label>
+        </TextField>
 
-      <label style={{ display: 'block' }}>
-        {SITE.reviewFormBodyLabelPl}
-        <textarea name="bodyPl" required rows={4} style={{ display: 'block', width: '100%' }} />
-      </label>
+        <TextField label={SITE.reviewFormBodyLabelPl} name="bodyPl" required multiline minRows={4} size="small" fullWidth />
 
-      <SubmitButton />
+        <SubmitButton />
+      </Stack>
     </form>
   );
 }
@@ -68,21 +68,8 @@ export function ReviewForm({ action }: { readonly action: (formData: FormData) =
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      style={{
-        font: 'var(--mui-font-button)',
-        padding: '10px 20px',
-        background: 'var(--mui-palette-primary-main)',
-        color: 'var(--mui-palette-background-paper)',
-        border: 'none',
-        borderRadius: 2,
-        cursor: 'pointer',
-        alignSelf: 'flex-start',
-      }}
-    >
+    <Button type="submit" variant="contained" disabled={pending} sx={{ alignSelf: 'flex-start' }}>
       {SITE.reviewFormSubmitPl}
-    </button>
+    </Button>
   );
 }

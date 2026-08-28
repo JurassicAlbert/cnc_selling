@@ -77,23 +77,23 @@ export default async function OrderConfirmationPage({ params, searchParams }: Or
           <Text muted>{COPY.orderReceived}</Text>
         </div>
 
-        {order.status === 'COMPLETED' &&
-          (reviewStatus !== null ? (
-            <Text muted>{SITE.reviewAlreadySubmittedPl}</Text>
-          ) : (
-            <ReviewForm action={submitGuestReview.bind(null, order.orderNumber, token)} />
-          ))}
+        <ThemeRegistry>
+          {order.status === 'COMPLETED' &&
+            (reviewStatus !== null ? (
+              <Text muted>{SITE.reviewAlreadySubmittedPl}</Text>
+            ) : (
+              <ReviewForm action={submitGuestReview.bind(null, order.orderNumber, token)} />
+            ))}
 
-        <div style={{ marginBlockStart: 32 }}>
-          <ThemeRegistry>
+          <div style={{ marginBlockStart: 32 }}>
             <SupportRequestForm
               action={submitOrderSupportRequest.bind(null, order.orderNumber, token)}
               heading={SITE.contactOrderContextHeadingPl}
               intro={SITE.contactOrderContextIntroPl}
               defaultEmail={order.email}
             />
-          </ThemeRegistry>
-        </div>
+          </div>
+        </ThemeRegistry>
       </Container>
     </Section>
   );
