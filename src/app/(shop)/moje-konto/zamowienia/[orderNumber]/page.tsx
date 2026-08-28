@@ -7,11 +7,14 @@ import { findOrderForUser } from '@/server/repositories/orders';
 import { findReviewStatusForOrder } from '@/server/repositories/reviews';
 import { getStoreSettings } from '@/server/repositories/store-settings';
 import { submitAccountReview } from '@/server/actions/reviews';
+import { submitOrderSupportRequest } from '@/server/actions/support-requests';
 import { Heading } from '@/ui/primitives/Heading';
 import { OrderShipmentInfo } from '@/ui/primitives/OrderShipmentInfo';
 import { OrderSummary } from '@/ui/primitives/OrderSummary';
 import { Text } from '@/ui/primitives/Text';
+import { ThemeRegistry } from '@/ui/theme/ThemeRegistry';
 import { ReviewForm } from '@/ui/islands/ReviewForm';
+import { SupportRequestForm } from '@/ui/islands/SupportRequestForm';
 
 type AccountOrderDetailPageProps = {
   readonly params: Promise<{ readonly orderNumber: string }>;
@@ -47,6 +50,17 @@ export default async function AccountOrderDetailPage({ params }: AccountOrderDet
         ) : (
           <ReviewForm action={submitAccountReview.bind(null, order.orderNumber)} />
         ))}
+
+      <div style={{ marginBlockStart: 32 }}>
+        <ThemeRegistry>
+          <SupportRequestForm
+            action={submitOrderSupportRequest.bind(null, order.orderNumber, null)}
+            heading={SITE.contactOrderContextHeadingPl}
+            intro={SITE.contactOrderContextIntroPl}
+            defaultEmail={order.email}
+          />
+        </ThemeRegistry>
+      </div>
     </div>
   );
 }

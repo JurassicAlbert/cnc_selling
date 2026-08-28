@@ -945,6 +945,25 @@ before one does. 8 new test cases, full suite 686/686. Live-verified
 on a real order end to end, including confirming the two staff-only
 fields never reach the customer view. See `docs/HANDOVER.md` §9z48.
 
+**Phase 8, shipped — 2026-08-28.** Support/contact requests — real,
+internal, no fake external communication integration. New
+`SupportRequest` model; a real MUI contact form built from scratch
+(not converted from a raw one — no reason to add a form Phase 9's
+later sweep would just have to redo) used both standalone at
+`/kontakt` and contextually on both existing order pages, reusing
+the same `action`-prop-injection shape `ReviewForm.tsx` already
+established. Context on a contextual submission is re-verified
+server-side (real token/session ownership) but a failed check
+doesn't reject the whole message — it still reaches staff, just
+unlinked. Caught a real gotcha proactively while writing the action
+file, before any test existed: both new actions call `getSession()`,
+which throws outside real request scope, so both got the
+`applyXxx(sessionUserId, ...)` / `xxx(...)` split up front. 13 new
+test cases, full suite 698/698. Live-verified the standalone and
+contextual forms render correctly, and a real seeded request appears
+correctly in both the admin list and detail page. See
+`docs/HANDOVER.md` §9z49.
+
 ---
 
 ## Getting set up

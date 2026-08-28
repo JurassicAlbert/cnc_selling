@@ -16,6 +16,7 @@ import type {
   ProductTypeCode,
   ReviewStatus,
   ShipmentStatus,
+  SupportRequestStatus,
   UploadKind,
 } from '@/generated/prisma/enums';
 import { countPl } from '@/domain/text/plural';
@@ -39,6 +40,7 @@ export const ADMIN = {
   navProductCollectionsPl: 'Kolekcje produktów',
   navDeliveryMethodsPl: 'Metody dostawy',
   navPaymentMethodsPl: 'Metody płatności',
+  navSupportRequestsPl: 'Zgłoszenia kontaktowe',
   navProductionPl: 'Produkcja',
   navFaqPl: 'FAQ',
   navStaticPagesPl: 'Strony',
@@ -475,6 +477,22 @@ export const ADMIN = {
   shipmentFieldInternalNotesPl: 'Notatki wewnętrzne',
   shipmentManualNoticePl: 'Status jest ustawiany ręcznie — brak integracji z API przewoźnika w tym projekcie.',
 
+  supportRequestsHeadingPl: 'Zgłoszenia kontaktowe',
+  supportRequestsEmptyPl: 'Brak zgłoszeń kontaktowych.',
+  supportRequestColumnSubjectPl: 'Temat',
+  supportRequestColumnEmailPl: 'E-mail',
+  supportRequestColumnOrderPl: 'Zamówienie',
+  supportRequestColumnStatusPl: 'Status',
+  supportRequestColumnCreatedAtPl: 'Data zgłoszenia',
+  supportRequestFieldEmailPl: 'E-mail',
+  supportRequestFieldNamePl: 'Imię i nazwisko',
+  supportRequestFieldMessagePl: 'Wiadomość',
+  supportRequestFieldStatusPl: 'Status',
+  supportRequestFieldAdminNotesPl: 'Notatki wewnętrzne',
+  supportRequestSavePl: 'Zapisz',
+  supportRequestOrderContextPl: 'Dotyczy zamówienia',
+  supportRequestNoOrderContextPl: 'Zgłoszenie ogólne (bez powiązanego zamówienia)',
+
   staticPagesHeadingPl: 'Strony',
   staticPagesNewPl: 'Nowa strona',
   staticPagesEmptyPl: 'Brak stron. Dodaj pierwszą, aby pojawiła się pod adresem /strony/...',
@@ -752,6 +770,17 @@ const SHIPMENT_STATUS_LABELS_PL: Record<ShipmentStatus, string> = {
 
 export function adminShipmentStatusLabel(status: ShipmentStatus): string {
   return SHIPMENT_STATUS_LABELS_PL[status];
+}
+
+const SUPPORT_REQUEST_STATUS_LABELS_PL: Record<SupportRequestStatus, string> = {
+  NEW: 'Nowe',
+  IN_PROGRESS: 'W trakcie',
+  RESOLVED: 'Rozwiązane',
+  CLOSED: 'Zamknięte',
+};
+
+export function adminSupportRequestStatusLabel(status: SupportRequestStatus): string {
+  return SUPPORT_REQUEST_STATUS_LABELS_PL[status];
 }
 
 const FINISH_KIND_LABELS_PL: Record<FinishKind, string> = {

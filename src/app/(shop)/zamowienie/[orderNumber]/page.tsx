@@ -7,13 +7,16 @@ import { findOrderForConfirmation } from '@/server/repositories/orders';
 import { findReviewStatusForOrder } from '@/server/repositories/reviews';
 import { getStoreSettings } from '@/server/repositories/store-settings';
 import { submitGuestReview } from '@/server/actions/reviews';
+import { submitOrderSupportRequest } from '@/server/actions/support-requests';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
 import { OrderShipmentInfo } from '@/ui/primitives/OrderShipmentInfo';
 import { OrderSummary } from '@/ui/primitives/OrderSummary';
 import { Section } from '@/ui/primitives/Section';
 import { Text } from '@/ui/primitives/Text';
+import { ThemeRegistry } from '@/ui/theme/ThemeRegistry';
 import { ReviewForm } from '@/ui/islands/ReviewForm';
+import { SupportRequestForm } from '@/ui/islands/SupportRequestForm';
 
 type OrderConfirmationPageProps = {
   readonly params: Promise<{ readonly orderNumber: string }>;
@@ -80,6 +83,17 @@ export default async function OrderConfirmationPage({ params, searchParams }: Or
           ) : (
             <ReviewForm action={submitGuestReview.bind(null, order.orderNumber, token)} />
           ))}
+
+        <div style={{ marginBlockStart: 32 }}>
+          <ThemeRegistry>
+            <SupportRequestForm
+              action={submitOrderSupportRequest.bind(null, order.orderNumber, token)}
+              heading={SITE.contactOrderContextHeadingPl}
+              intro={SITE.contactOrderContextIntroPl}
+              defaultEmail={order.email}
+            />
+          </ThemeRegistry>
+        </div>
       </Container>
     </Section>
   );

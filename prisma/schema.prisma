@@ -865,15 +865,17 @@ model Order {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  items    OrderItem[]
-  events   OrderEvent[]
+  items           OrderItem[]
+  events          OrderEvent[]
   /// At most one — `Review.orderId` is `@unique`. A real customer testimonial
   /// requires a genuine `COMPLETED` order behind it (§16A.1 module 9: "no
   /// facility to author a testimonial in a customer's name").
-  reviews  Review[]
+  reviews         Review[]
   /// P9 phase 7: one order → one package (real reality here, not a
   /// modelling shortcut) — manually managed, never a live carrier API.
-  shipment Shipment?
+  shipment        Shipment?
+  /// P9 phase 8: support requests a customer filed about this order.
+  supportRequests SupportRequest[]
 
   @@index([userId])
   @@index([status])
@@ -956,6 +958,52 @@ model Shipment {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  /// P9 phase 8: support requests specifically about this shipment (e.g. "where is my package").
+  supportRequests SupportRequest[]
+}
+
+enum SupportRequestStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+/// P9 phase 8: a real, internal DB-driven support/contact workflow — no
+/// fake external communication integration (no real email/chat/ticketing
+/// system wired up here, §9/§15). A staff member reads and answers these
+/// through the panel; `email` is how they'd actually reply, outside this
+/// system, same honest limitation already documented for the mailer.
+model SupportRequest {
+  id String @id @default(cuid())
+
+  /// Set when filed by a logged-in customer; null for a guest submission.
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id])
+  /// Optional context — a request can stand alone, or be about one real order/shipment.
+  orderId    String?
+  order      Order?    @relation(fields: [orderId], references: [id])
+  shipmentId String?
+  shipment   Shipment? @relation(fields: [shipmentId], references: [id])
+
+  /// Always captured, even for a logged-in user — same "capture, don't
+  /// re-read from the profile" discipline as `Order`'s own buyer fields.
+  email     String
+  namePl    String?
+  subjectPl String
+  messagePl String  @db.Text
+
+  status       SupportRequestStatus @default(NEW)
+  /// Staff-only — never shown to the customer.
+  adminNotesPl String?              @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([userId])
+  @@index([orderId])
 }
 
 model OrderEvent {
@@ -1113,13 +1161,15 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts       Account[]
-  sessions       Session[]
-  configurations Configuration[]
-  carts          Cart[]
-  orders         Order[]
-  files          UploadedFile[]
-  customDesigns  CustomerDesign[]
+  accounts        Account[]
+  sessions        Session[]
+  configurations  Configuration[]
+  carts           Cart[]
+  orders          Order[]
+  files           UploadedFile[]
+  customDesigns   CustomerDesign[]
+  /// P9 phase 8: support/contact requests this user has filed while logged in.
+  supportRequests SupportRequest[]
 }
 
 /// One row per sign-in method a user has — the credentials ("local")

@@ -3469,6 +3469,19 @@ Continuing the plan from §9z42–§9z47.
 
 New `tests/integration/admin-shipments.test.ts` (8 cases, including two that directly assert the staff-only fields are absent from the customer-facing repository return value — a real negative assertion, not just "the happy path works"). Full suite 686/686, `typecheck`/`lint`/`build` all clean. Dev server restarted clean. Live-verified on a real order from this session's own earlier e2e runs: admin page renders the editor with the manual notice; guest confirmation page shows the honest "not yet prepared" empty state; after inserting a real `Shipment` row directly, the same page correctly shows every field including the customer note and the manual-update disclaimer, and the admin form correctly pre-fills from the real row — then the verification row was removed.
 
+## 9z49. Phase 8 shipped: support/contact requests — real, internal, no fake integrations
+
+Continuing the plan from §9z42–§9z48.
+
+- New `SupportRequest` model, no fake external communication integration anywhere (§9/§15) — this is a real row a staff member reads and answers through the panel, nothing more, matching the exact same honesty rule already applied to the mailer, payment, and shipment phases.
+- The reusable customer-facing form (`SupportRequestForm.tsx`) was built in real MUI **from the start** — a deliberate choice: this is a brand-new form, and building it raw only to have Phase 9's sitewide sweep convert it later would be pure waste. It's used two ways with zero duplication: standalone at `/kontakt`, and contextual on both existing order pages, reusing the exact `action`-prop-injection shape `ReviewForm.tsx` already established for those same two pages (the page binds the right Server Action, the form component never knows which context it's in).
+- Context verification on a contextual submission mirrors `reviews.ts`'s existing guest/logged-in split exactly — real `accessToken` constant-time compare for the guest page, real session ownership for the logged-in page. One deliberate design choice worth flagging: an unverifiable context (wrong token, tampered order number) does **not** reject the whole submission — the request is still created, just without the order link. Getting the customer's message to staff matters more than the optional metadata being perfectly attached; the alternative (rejecting on a context mismatch) would silently drop a real customer's message over what's usually a harmless copy/paste error, not an attack.
+- **A gotcha caught proactively, before it could cause a failing test, not after**: both new public actions (`submitSupportRequest`, `submitOrderSupportRequest`) call `getSession()` internally, which throws outside real Next.js request scope — the exact class of issue this session's own memory already flagged from earlier work. Applied the same `applyXxx(sessionUserId, ...)` / `xxx(...)` split used everywhere else in this codebase for that reason *while writing the action file*, before the test file was even started — confirmed correct once the tests were written and passed cleanly on the first run.
+
+### Verified
+
+New `tests/integration/support-requests.test.ts` (8 cases) and `tests/integration/admin-support-requests.test.ts` (5 cases). Full suite 698/698, `typecheck`/`lint`/`build` all clean. Dev server restarted clean. Live-verified: `/kontakt` and the contextual form on the real guest confirmation page both render correctly with the right copy; seeded one real `SupportRequest` linked to a real order and confirmed it appears correctly in both the admin list (via the real RSC payload — subject/email/order number all present) and detail page (message, order link, and the real editable status/notes form) — then removed it.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

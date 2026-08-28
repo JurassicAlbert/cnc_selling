@@ -124,6 +124,9 @@ export function Footer({ categories }: FooterProps) {
               <Link href="/kolekcje" className="footer-link" style={{ font: 'var(--mui-font-body2)' }}>
                 {SITE.footerCollectionsLinkPl}
               </Link>
+              <Link href="/kontakt" className="footer-link" style={{ font: 'var(--mui-font-body2)' }}>
+                {SITE.footerContactLinkPl}
+              </Link>
               <Link href="/regulamin" className="footer-link" style={{ font: 'var(--mui-font-body2)' }}>
                 {SITE.footerTermsLinkPl}
               </Link>

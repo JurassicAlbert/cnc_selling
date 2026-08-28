@@ -210,6 +210,7 @@ export const SITE = {
   footerBlogLinkPl: 'Blog',
   footerPatternsLinkPl: 'Wzory',
   footerCollectionsLinkPl: 'Kolekcje',
+  footerContactLinkPl: 'Kontakt',
 
   legalTermsHeadingPl: 'Regulamin',
   legalPrivacyHeadingPl: 'Polityka prywatności',
@@ -322,4 +323,17 @@ export const SITE = {
   reviewFormThankYouPl: 'Dziękujemy za opinię! Zostanie opublikowana po weryfikacji.',
   reviewAlreadySubmittedPl: 'Opinia dla tego zamówienia została już przesłana.',
   reviewLinkPl: 'Zostaw opinię o tym zamówieniu',
+
+  contactHeadingPl: 'Kontakt',
+  contactSeoTitlePl: 'Kontakt — RYT',
+  contactSeoDescPl: 'Masz pytanie dotyczące zamówienia, dostawy lub oferty? Napisz do nas.',
+  contactIntroPl: 'Masz pytanie? Napisz do nas — odpowiadamy najszybciej, jak to możliwe, na podany adres e-mail.',
+  contactFormEmailLabelPl: 'E-mail',
+  contactFormNameLabelPl: 'Imię i nazwisko (opcjonalnie)',
+  contactFormSubjectLabelPl: 'Temat',
+  contactFormMessageLabelPl: 'Wiadomość',
+  contactFormSubmitPl: 'Wyślij wiadomość',
+  contactFormThankYouPl: 'Dziękujemy za wiadomość. Odpowiemy najszybciej, jak to możliwe, na podany adres e-mail.',
+  contactOrderContextHeadingPl: 'Masz pytanie o to zamówienie?',
+  contactOrderContextIntroPl: 'Napisz do nas w sprawie tego konkretnego zamówienia — Twoja wiadomość zostanie od razu z nim powiązana.',
 } as const;

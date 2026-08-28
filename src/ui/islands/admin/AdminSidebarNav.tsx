@@ -26,6 +26,7 @@ import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
 import AutoAwesomeMosaicOutlinedIcon from '@mui/icons-material/AutoAwesomeMosaicOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
+import ContactSupportOutlinedIcon from '@mui/icons-material/ContactSupportOutlined';
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined';
 import NewspaperOutlinedIcon from '@mui/icons-material/NewspaperOutlined';
@@ -58,6 +59,7 @@ const NAV_GROUPS: readonly NavGroup[] = [
       { href: '/panel/klienci', label: ADMIN.navCustomersPl, icon: <PeopleOutlinedIcon fontSize="small" /> },
       { href: '/panel/weryfikacja', label: ADMIN.navDesignReviewPl, icon: <FactCheckOutlinedIcon fontSize="small" /> },
       { href: '/panel/produkcja', label: ADMIN.navProductionPl, icon: <PrecisionManufacturingOutlinedIcon fontSize="small" /> },
+      { href: '/panel/kontakt', label: ADMIN.navSupportRequestsPl, icon: <ContactSupportOutlinedIcon fontSize="small" /> },
     ],
   },
   {
