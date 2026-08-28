@@ -17,6 +17,7 @@
 
 import { revalidatePath } from 'next/cache';
 
+import { isPlausibleEmail } from '@/domain/text/email';
 import { prisma } from '@/server/db/client';
 import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
@@ -39,6 +40,9 @@ export async function applyInviteStaffUser(admin: CurrentSession, input: InviteS
   }
   if (email.length === 0) {
     return { ok: false, detail: 'E-mail jest wymagany.' };
+  }
+  if (!isPlausibleEmail(email)) {
+    return { ok: false, detail: 'Podaj prawidłowy adres e-mail.' };
   }
 
   const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });

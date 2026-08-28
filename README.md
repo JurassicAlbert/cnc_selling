@@ -786,6 +786,21 @@ under Orders): opened the export menu against 67 real seeded orders
 on `/panel/zamowienia`, confirmed "Pobierz jako plik CSV" is real and
 triggers a clean download. See `docs/HANDOVER.md` §9z40.
 
+**Backend validation on every action, audited — built 2026-08-28,
+autonomously.** Read all 21 Server Action files with a real database
+mutation, not just grepped them. Almost everything already validated
+properly; the one real gap: `applyInviteStaffUser` accepted any
+non-empty string as an email, so a typo'd staff invite silently
+created a permanently unreachable account (staff sign-in is OTP-only
+— no real inbox, no way in, ever). Fixed by extracting the
+`isPlausibleEmail` check that already existed as identical private
+copies in both `auth.ts` and `checkout.ts` into a shared
+`src/domain/text/email.ts`, closing the gap in one place instead of
+adding a third duplicate. Live-verified with an email a browser's own
+native `type="email"` validation accepts but the server correctly
+rejects — no account created, confirmed against the database. See
+`docs/HANDOVER.md` §9z41.
+
 ---
 
 ## Getting set up

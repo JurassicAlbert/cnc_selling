@@ -20,6 +20,7 @@ import { redirect } from 'next/navigation';
 import { APIError } from 'better-auth';
 
 import type { AuthFieldIssueCode, AuthFormErrorCode } from '@/content/pl/messages';
+import { isPlausibleEmail } from '@/domain/text/email';
 import { auth } from '@/server/auth/auth';
 import { mergeGuestCartIntoUser } from '@/server/cart/merge-guest-cart';
 import { prisma } from '@/server/db/client';
@@ -29,10 +30,6 @@ import { readGuestSessionToken } from '@/server/session/read-guest-session';
 function field(formData: FormData, name: string): string {
   const value = formData.get(name);
   return typeof value === 'string' ? value.trim() : '';
-}
-
-function isPlausibleEmail(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 /**

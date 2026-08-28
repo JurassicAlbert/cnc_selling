@@ -3322,6 +3322,26 @@ Live-verified on `/panel/zamowienia` specifically, since that's the module this 
 
 Verification-only, no source files touched — nothing to `typecheck`/`lint`/`test`/`build` against. Live-verified in the browser as described above.
 
+## 9z41. Backend validation on every action — a real audit, one real gap fixed — 2026-08-28
+
+Continuing autonomously after §9z40. Grepped all 29 `src/server/actions/*.ts` files for a real Prisma mutation call (`create`/`update`/`upsert`/`delete`/`updateMany`/`createMany`) — 21 files. Rather than trusting that a "validate" grep-count near each one meant real coverage, read the files with the thinnest count in full: `admin-store-settings.ts`, `admin-customers.ts`, `admin-reviews.ts`, `admin-email-templates.ts`, `admin-staff.ts`, `admin-design-materials.ts`, `admin-orders.ts`, `admin-product-images.ts`.
+
+### What held up, and why it's not a false confidence
+
+Every one of those genuinely validates: numeric bounds checked (`admin-store-settings.ts`'s shipping rate), required-field and duplicate checks (`admin-customers.ts`'s anonymization note, `admin-staff.ts`'s invite name), existence checks before mutating (`admin-email-templates.ts`, `admin-reviews.ts`), and real domain-level rules for the highest-stakes one (`admin-orders.ts`'s `checkOrderStatusTransition`, plus a hardcoded mandatory-note rule specifically for the one "backwards" transition the state graph allows). The narrower toggles (`admin-design-materials.ts`'s add/remove, `admin-material-finishes.ts`) skip an existence pre-check on the ids they're given — but `DesignMaterial`/`MaterialFinish` are real Postgres FK-constrained tables, so a garbage id throws a DB-level error rather than silently corrupting anything; the actor reaching that code is already an authenticated `STAFF`/`ADMIN` session. That's an accepted, already-existing risk posture in this codebase (the root `error.tsx` boundary is exactly what's there to catch it), not a new finding — deliberately not "fixed" into existence-check boilerplate that wouldn't change what a real attacker or a real bug could do.
+
+### The one real, fixable gap
+
+`applyInviteStaffUser` (`admin-staff.ts`) checked `email` for non-empty but never for a plausible shape. A typo'd invite — `admin` instead of `admin@example.com`, or `staff@localhost` (which the browser's own native `type="email"` input validation happily lets through — it doesn't require a TLD dot) — would silently create a real, permanently unreachable `STAFF`/`ADMIN` account: this project's whole staff sign-in flow is OTP-only (§9z-era design, `auth.ts`'s `sendVerificationOTP`), so an account with no real inbox behind it can never sign in, and nothing in the UI would ever explain why the invited person couldn't log in.
+
+The fix reused rather than duplicated: `isPlausibleEmail` already existed as a verbatim-identical private function in both `auth.ts` (customer login/register) and `checkout.ts` (guest checkout email) — a pre-existing small DRY gap, found as a side effect of looking for something to reuse. Extracted to a new `src/domain/text/email.ts`, all three call sites now share it — `admin-staff.ts` gained the check it never had, `auth.ts`/`checkout.ts` lost their private duplicates, behavior unchanged for both.
+
+### Verified
+
+`npm run typecheck && npm run lint && npm test && npm run build` all clean (622/622 — 4 new: `tests/unit/email.test.ts` covering real-looking addresses, no-@/no-domain/no-TLD-dot rejections, and whitespace/empty; one new integration case in `tests/integration/admin-staff.test.ts` asserting `applyInviteStaffUser` rejects an implausible email and creates no row). Hit a real but unrelated snag mid-typecheck: `.next/dev/types/routes.d.ts` was corrupted (a literal truncated `erface RouteContext...` — a concurrent-write race from the dev server mid-regeneration while `tsc` read it) — confirmed it wasn't caused by this change (the corruption predates it, reproducing on a second immediate rerun), fixed by stopping the dev server and `rm -rf .next` before rebuilding fresh, not by touching any source.
+
+Restarted the dev server before live-verifying, per §9z2's standing rule. Live-verified end to end: on the real `/panel/ustawienia/personel` invite form, entered `admin@localhost` (chosen specifically because native browser `type="email"` validation accepts it, so the rejection genuinely has to come from the server) — got "Podaj prawidłowy adres e-mail." back, form fields stayed filled (§9z37's fix composing correctly with this one), and a direct DB query afterward confirmed no `User` row was created. Also hit, and correctly diagnosed rather than "fixed," a real red herring: a fresh browser tab briefly showed a stale `the name isPlausibleEmail is defined multiple times` Turbopack error in its console history — traced to the narrow window between two separate edit calls (added the import to `auth.ts`, then removed its old local copy in a later call) where the *then-still-running* old dev server process HMR-compiled a real transient duplicate declaration; confirmed gone on a genuinely fresh tab against the post-edit, post-restart server, and confirmed the source file itself only ever had one definition by direct `grep`.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

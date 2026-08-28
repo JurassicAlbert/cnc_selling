@@ -36,6 +36,14 @@ describe('applyInviteStaffUser', () => {
     expect(await prisma.auditLog.count({ where: { entity: 'User', entityId: created.id, action: 'create' } })).toBe(1);
   });
 
+  it('rejects an implausible email — a garbage invite must never create a permanently unreachable staff account', async () => {
+    const admin = adminActor(uid());
+
+    const result = await applyInviteStaffUser(admin, { name: 'Zły e-mail', email: 'nie-jest-adresem-email', role: 'STAFF' });
+    expect(result.ok).toBe(false);
+    expect(await prisma.user.count({ where: { name: 'Zły e-mail' } })).toBe(0);
+  });
+
   it('rejects a duplicate email', async () => {
     const admin = adminActor(uid());
     const email = `${uid()}@example.test`;

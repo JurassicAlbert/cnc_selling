@@ -13,6 +13,7 @@
 import { redirect } from 'next/navigation';
 
 import { validateNip, validatePhone, validatePostalCode } from '@/domain/checkout/validate';
+import { isPlausibleEmail } from '@/domain/text/email';
 import type { CheckoutFieldIssueCode } from '@/content/pl/messages';
 import type { PaymentMethod } from '@/generated/prisma/enums';
 import { getSession } from '@/server/auth/session';
@@ -33,10 +34,6 @@ export type CheckoutFormState = {
    */
   readonly values: Partial<Record<string, string>>;
 };
-
-function isPlausibleEmail(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
 
 function field(formData: FormData, name: string): string {
   const value = formData.get(name);
