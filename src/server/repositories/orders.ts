@@ -57,6 +57,8 @@ export type OrderSummaryView = {
   readonly totalGrossGrosze: number;
   readonly createdAt: Date;
   readonly itemCount: number;
+  /** `null` until staff creates a `Shipment` row — most orders start their life this way. P9 continuation: surfaced on `/moje-konto` so "state after order but before shipping" is visible without opening each order individually. */
+  readonly shipmentStatus: ShipmentStatus | null;
 };
 
 /** Order history (P6 Part C) — `Order.userId` is already indexed. */
@@ -70,6 +72,7 @@ export async function listOrdersForUser(userId: string): Promise<readonly OrderS
       totalGrossGrosze: true,
       createdAt: true,
       items: { select: { quantity: true } },
+      shipment: { select: { status: true } },
     },
   });
   return orders.map((order) => ({
@@ -78,6 +81,7 @@ export async function listOrdersForUser(userId: string): Promise<readonly OrderS
     totalGrossGrosze: order.totalGrossGrosze,
     createdAt: order.createdAt,
     itemCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
+    shipmentStatus: order.shipment?.status ?? null,
   }));
 }
 

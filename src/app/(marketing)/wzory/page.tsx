@@ -1,9 +1,13 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import Link from 'next/link';
 
+import { getSession } from '@/server/auth/session';
 import { listActiveDesignsForBrowsing } from '@/server/repositories/designs';
+import { listFavoritedDesignIds } from '@/server/repositories/design-favorites';
 import { listActiveExternalPatternResources } from '@/server/repositories/external-pattern-resources';
 import { Container } from '@/ui/primitives/Container';
+import { FavoriteDesignButton } from '@/ui/islands/FavoriteDesignButton';
 import { Heading } from '@/ui/primitives/Heading';
 import { Section } from '@/ui/primitives/Section';
 import { Text } from '@/ui/primitives/Text';
@@ -17,17 +21,28 @@ export const metadata: Metadata = {
 
 /**
  * Real public pattern-browsing page — P9 phase 3. `Design.featured` (added
- * in phase 2) gets its first real consumer here. Purely a gallery: designs
- * aren't linked anywhere from here (there's no standalone `/wzory/[slug]`
- * detail route — a design is only ever selected inside a specific
- * product's configurator), so this deliberately doesn't pretend to be a
- * checkout entry point. Below the in-house designs, a clearly-labelled
- * external-resources section — never presented as this project's own
- * content, honest by construction (§15's "no fake functionality" rule
- * applies to attribution too, not just to payment/tracking).
+ * in phase 2) gets its first real consumer here. There's still no
+ * standalone `/wzory/[slug]` detail route — a design is only ever selected
+ * inside a specific product's configurator — but each card now links out to
+ * every real, currently-orderable product that offers it (2026-08-28, owner
+ * feedback: this used to be a dead-end gallery with no way from "I like
+ * this pattern" to "here's where I can order it"), so this is no longer a
+ * pure dead end even without its own detail page. Below the in-house
+ * designs, a clearly-labelled external-resources section — never presented
+ * as this project's own content, honest by construction (§15's "no fake
+ * functionality" rule applies to attribution too, not just to
+ * payment/tracking).
  */
 export default async function PatternsPage() {
-  const [designs, externalResources] = await Promise.all([listActiveDesignsForBrowsing(), listActiveExternalPatternResources()]);
+  const [designs, externalResources, session] = await Promise.all([
+    listActiveDesignsForBrowsing(),
+    listActiveExternalPatternResources(),
+    getSession(),
+  ]);
+  const favoritedIds = await listFavoritedDesignIds(
+    session?.userId ?? null,
+    designs.map((d) => d.id),
+  );
 
   return (
     <Section>
@@ -65,12 +80,34 @@ export default async function PatternsPage() {
                 >
                   <Image src={design.thumbnailUrl} alt="" fill sizes="(max-width: 768px) 50vw, 220px" style={{ objectFit: 'cover' }} />
                 </div>
-                <div style={{ font: 'var(--mui-font-h6)', color: 'var(--mui-palette-text-primary)' }}>{design.namePl}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <div style={{ font: 'var(--mui-font-h6)', color: 'var(--mui-palette-text-primary)' }}>{design.namePl}</div>
+                  <FavoriteDesignButton designId={design.id} initiallyFavorited={favoritedIds.has(design.id)} loggedIn={session !== null} />
+                </div>
                 {design.descPl !== null && (
                   <div style={{ marginBlockStart: 4 }}>
                     <Text muted>{design.descPl}</Text>
                   </div>
                 )}
+                <div style={{ marginBlockStart: 8 }}>
+                  {design.products.length === 0 ? (
+                    <Text muted>{SITE.patternsNotAssignedPl}</Text>
+                  ) : (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'baseline' }}>
+                      <span style={{ font: 'var(--mui-font-caption)', color: 'var(--mui-palette-text-secondary)' }}>
+                        {SITE.patternsAvailableOnLabelPl}
+                      </span>
+                      {design.products.map((product, index) => (
+                        <span key={product.slug} style={{ font: 'var(--mui-font-caption)' }}>
+                          <Link href={`/produkt/${product.slug}`} style={{ color: 'var(--mui-palette-secondary-main)' }}>
+                            {product.namePl}
+                          </Link>
+                          {index < design.products.length - 1 ? ',' : ''}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>

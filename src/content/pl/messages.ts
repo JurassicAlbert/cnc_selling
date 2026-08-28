@@ -17,7 +17,7 @@ import type { PersonalizationIssue } from '@/domain/personalization/validate';
 import type { ParseErrorCode } from '@/domain/text/numeric-input';
 import type { UploadWarning } from '@/domain/upload/inspect';
 import type { UnavailabilityReason } from '@/server/configurator/resolve-options';
-import type { DesignReviewStatus, OrderStatus, ShipmentStatus } from '@/generated/prisma/enums';
+import type { DesignReviewStatus, OrderStatus, ShipmentStatus, SupportRequestStatus } from '@/generated/prisma/enums';
 import { formatMmAsCentimetres } from '@/domain/text/numeric-input';
 import { countPl } from '@/domain/text/plural';
 import { NOUNS } from '@/domain/text/nouns';
@@ -295,6 +295,20 @@ export function shipmentStatusMessage(status: ShipmentStatus): string {
       return 'Problem z przesyłką';
     case 'RETURNED':
       return 'Zwrócone do nadawcy';
+  }
+}
+
+/** P9 continuation, 2026-08-28 — customer-facing support-request status labels, for `/moje-konto`. Same 4 statuses `adminSupportRequestStatusLabel` (`admin.ts`) uses staff-side, translated separately since this file is the customer-visible one. */
+export function supportRequestStatusMessage(status: SupportRequestStatus): string {
+  switch (status) {
+    case 'NEW':
+      return 'Nowe';
+    case 'IN_PROGRESS':
+      return 'W trakcie';
+    case 'RESOLVED':
+      return 'Rozwiązane';
+    case 'CLOSED':
+      return 'Zamknięte';
   }
 }
 

@@ -9,6 +9,11 @@ import { prisma } from '@/server/db/client';
  * pending permission is never shown as if it were sellable/usable.
  */
 
+export type PublicDesignProductLink = {
+  readonly slug: string;
+  readonly namePl: string;
+};
+
 export type PublicDesignListItem = {
   readonly id: string;
   readonly slug: string;
@@ -17,13 +22,35 @@ export type PublicDesignListItem = {
   readonly thumbnailUrl: string;
   readonly tags: readonly string[];
   readonly featured: boolean;
+  /**
+   * Which real, currently-active products this pattern can actually be
+   * picked on — 2026-08-28 owner feedback: `/wzory` used to be a dead-end
+   * gallery ("designs aren't linked anywhere from here"), so a customer had
+   * no way to get from a pattern they liked to a product they could order
+   * it on. Only active products in active categories (matches
+   * `listAllActiveProducts`'s own cascade) — a pattern assigned only to a
+   * since-deactivated product (e.g. Gres) shows no links, not a dead one.
+   */
+  readonly products: readonly PublicDesignProductLink[];
 };
 
 export async function listActiveDesignsForBrowsing(): Promise<readonly PublicDesignListItem[]> {
   const designs = await prisma.design.findMany({
     where: { isActive: true, rightsStatus: { in: ['APPROVED_COMMERCIAL', 'PUBLIC_DOMAIN'] } },
     orderBy: [{ featured: 'desc' }, { sortOrder: 'asc' }],
-    select: { id: true, slug: true, namePl: true, descPl: true, thumbnailUrl: true, tags: true, featured: true },
+    select: {
+      id: true,
+      slug: true,
+      namePl: true,
+      descPl: true,
+      thumbnailUrl: true,
+      tags: true,
+      featured: true,
+      products: {
+        where: { product: { isActive: true, category: { isActive: true } } },
+        select: { product: { select: { slug: true, namePl: true } } },
+      },
+    },
   });
-  return designs;
+  return designs.map((d) => ({ ...d, products: d.products.map((p) => p.product) }));
 }

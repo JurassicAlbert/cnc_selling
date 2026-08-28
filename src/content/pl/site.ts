@@ -29,6 +29,7 @@ export const SITE = {
   catalogueInstallationInfoLabelPl: 'Informacje o montażu',
   catalogueInstallationVariantsLabelPl: 'Warianty montażu',
   catalogueMaterialNotesLabelPl: 'Ważne informacje',
+  catalogueAvailableDesignsLabelPl: 'Dostępne wzory',
   catalogueEmptyCategoryPl: 'W tej kategorii nie ma jeszcze żadnych produktów.',
   catalogueCategoryNotFoundPl: 'Nie znaleziono takiej kategorii.',
   catalogueProductNotFoundPl: 'Nie znaleziono takiego produktu.',
@@ -246,6 +247,14 @@ export const SITE = {
   accountConfigurationsHeadingPl: 'Moje zapisane projekty',
   accountConfigurationsEmptyPl: 'Nie masz jeszcze żadnych zapisanych konfiguracji.',
   accountConfigurationsEmptyActionPl: 'Skonfiguruj produkt',
+  accountViewAllPl: 'Zobacz wszystkie',
+  accountOverviewGreetingPl: 'Witaj',
+  accountOverviewOrdersEmptyPl: 'Nie masz jeszcze żadnych zamówień.',
+  accountOverviewDesignsSummaryPl: (uploaded: number, favorites: number) =>
+    `Przesłane pliki: ${uploaded} · Ulubione wzory: ${favorites}`,
+  accountOverviewHelpSummaryOpenPl: (count: number) => `Otwarte zgłoszenia: ${count}`,
+  accountOverviewHelpSummaryNonePl: 'Brak zgłoszeń.',
+  accountOverviewShipmentLabelPl: 'Wysyłka',
 
   // P9 phase 2 — the standalone "moje wzory" upload/reuse library, moved
   // out of being tied to any one product's configurator flow.
@@ -258,8 +267,26 @@ export const SITE = {
   accountDesignsTitleFieldPlaceholderPl: 'np. Logo firmy',
   accountDesignsUploadedAtLabelPl: 'Przesłano',
   accountDesignsUntitledPl: 'Bez nazwy',
+  accountFavoriteDesignsHeadingPl: 'Ulubione wzory',
+  accountFavoriteDesignsEmptyPl: 'Nie masz jeszcze żadnych ulubionych wzorów. Dodaj je z listy wzorów.',
+  accountFavoriteDesignsBrowseLinkPl: 'Przeglądaj wzory',
   accountConfigurationEditPl: 'Edytuj',
   accountConfigurationAddToCartPl: 'Dodaj do koszyka',
+
+  // P9 continuation, 2026-08-28 — the customer-visible half of the design
+  // review "dyskusja" (`DesignReviewComment.authorType` has always been
+  // "staff" | "customer", but no page ever showed it to the customer).
+  designDetailBackToListPl: 'Wróć do listy wzorów',
+  designDetailStatusLabelPl: 'Status',
+  designDetailDiscussionHeadingPl: 'Dyskusja o tym projekcie',
+  designDetailDiscussionEmptyPl: 'Brak komentarzy. Jeśli masz pytanie o ten projekt, napisz poniżej.',
+  designDetailCommentStaffLabelPl: 'Zespół',
+  designDetailCommentCustomerLabelPl: 'Ty',
+  designDetailReplyLabelPl: 'Nowa wiadomość',
+  designDetailReplySubmitPl: 'Wyślij',
+  designDetailReplyEmptyErrorPl: 'Wpisz treść wiadomości.',
+  designDetailReplyErrorPl: 'Nie udało się wysłać wiadomości. Spróbuj ponownie.',
+  designDetailNotFoundPl: 'Nie znaleziono takiego wzoru.',
 
   consentBannerTextPl:
     'Używamy niezbędnych plików cookie do działania koszyka i logowania oraz — za Twoją zgodą — plików analitycznych, które pomagają nam ulepszać sklep.',
@@ -289,6 +316,11 @@ export const SITE = {
   patternsIntroPl:
     'Poniżej znajdziesz wzory z naszej oferty, które można wybrać przy konfiguracji wybranych produktów. Możesz też przesłać własny projekt — zapisane wzory znajdziesz na koncie w sekcji „Moje wzory”.',
   patternsEmptyPl: 'Wzory pojawią się tutaj wkrótce.',
+  patternsAvailableOnLabelPl: 'Dostępny w:',
+  patternsNotAssignedPl: 'Obecnie niedostępny w żadnym zamawianym produkcie.',
+  patternsFavoritePl: 'Dodaj do ulubionych',
+  patternsUnfavoritePl: 'Usuń z ulubionych',
+  patternsFavoriteLoginRequiredPl: 'Zaloguj się, aby dodać do ulubionych',
   patternsExternalHeadingPl: 'Zewnętrzne źródła wzorów',
   patternsExternalIntroPl:
     'To linki do niezależnych, zewnętrznych serwisów z darmowymi wzorami do grawerowania i cięcia CNC. Nie są to nasze materiały — każdy link prowadzi do strony innego dostawcy, gdzie obowiązują jego własne zasady korzystania i licencje.',
@@ -336,4 +368,15 @@ export const SITE = {
   contactFormThankYouPl: 'Dziękujemy za wiadomość. Odpowiemy najszybciej, jak to możliwe, na podany adres e-mail.',
   contactOrderContextHeadingPl: 'Masz pytanie o to zamówienie?',
   contactOrderContextIntroPl: 'Napisz do nas w sprawie tego konkretnego zamówienia — Twoja wiadomość zostanie od razu z nim powiązana.',
+
+  // P9 continuation, 2026-08-28 — "informacje kontaktowe i pomoc do firmy"
+  // (owner feedback): a real account-section home for the customer's own
+  // past support requests, not just a blind submission form.
+  accountNavHelpPl: 'Pomoc',
+  accountHelpHeadingPl: 'Pomoc i kontakt',
+  accountHelpIntroPl: 'Tutaj znajdziesz swoje dotychczasowe zgłoszenia oraz możesz napisać do nas w nowej sprawie.',
+  accountHelpRequestsHeadingPl: 'Twoje zgłoszenia',
+  accountHelpRequestsEmptyPl: 'Nie masz jeszcze żadnych zgłoszeń.',
+  accountHelpNewRequestHeadingPl: 'Nowe zgłoszenie',
+  accountHelpOrderContextPl: 'Dotyczy zamówienia',
 } as const;

@@ -184,6 +184,42 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
               <Text>{product.longDescPl}</Text>
             </div>
 
+            {/* 2026-08-28, owner feedback: patterns were only ever visible
+                by opening the configurator and stepping through it — shown
+                here, directly in the product's own properties, so a
+                customer can see what's available before starting it.
+                Links to `/wzory` (the real pattern-browsing page) rather
+                than an external site — there's no standalone per-design
+                page yet. */}
+            {product.designs.length > 0 && (
+              <div style={{ marginBlockStart: 24 }}>
+                <Text muted>{SITE.catalogueAvailableDesignsLabelPl}</Text>
+                <div style={{ marginBlockStart: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {product.designs.map((designItem) => (
+                    <Link
+                      key={designItem.slug}
+                      href="/wzory"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        border: '1px solid var(--mui-palette-divider)',
+                        borderRadius: 999,
+                        padding: '4px 12px 4px 4px',
+                        textDecoration: 'none',
+                        color: 'var(--mui-palette-text-primary)',
+                      }}
+                    >
+                      <span style={{ position: 'relative', width: 24, height: 24, borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
+                        <Image src={designItem.thumbnailUrl} alt="" fill sizes="24px" style={{ objectFit: 'cover' }} />
+                      </span>
+                      <span style={{ font: 'var(--mui-font-caption)' }}>{designItem.namePl}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {configuratorData !== null && (
               <div style={{ marginBlockStart: 32 }}>
                 <Link

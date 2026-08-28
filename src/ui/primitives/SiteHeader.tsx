@@ -71,6 +71,16 @@ export function SiteHeader({ categories, session }: SiteHeaderProps) {
             </Link>
           ))}
 
+          {/* 2026-08-28, owner feedback: pattern browsing/upload was only
+              reachable from inside a product's configurator or the footer —
+              real navbar entry point, matching every category link above. */}
+          <Link href="/wzory" className="nav-link" style={{ font: 'var(--mui-font-body2)' }}>
+            {SITE.footerPatternsLinkPl}
+          </Link>
+          <Link href="/kolekcje" className="nav-link" style={{ font: 'var(--mui-font-body2)' }}>
+            {SITE.footerCollectionsLinkPl}
+          </Link>
+
           <Link
             href="/koszyk"
             className="cart-link"

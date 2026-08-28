@@ -415,6 +415,7 @@ model Design {
   /// Optional narrowing. No rows means "every material the product allows".
   materials      DesignMaterial[]
   configurations Configuration[]
+  favoritedBy    DesignFavorite[]
 
   @@index([isActive, rightsStatus])
   @@index([collectionId])
@@ -1170,6 +1171,25 @@ model User {
   customDesigns   CustomerDesign[]
   /// P9 phase 8: support/contact requests this user has filed while logged in.
   supportRequests SupportRequest[]
+  /// P9 continuation, 2026-08-28: catalogue designs this user has favourited.
+  favoriteDesigns DesignFavorite[]
+}
+
+/// P9 continuation, 2026-08-28 — "wzory, które dodał do ulubionych" (owner
+/// feedback): favouriting a real catalogue `Design`, distinct from
+/// `CustomerDesign` (a customer's own uploaded file). Login-only by design —
+/// unlike `CustomerDesign`/`Cart`, there is no guest `sessionToken` half:
+/// a favourite is a durable preference tied to an account, not something a
+/// guest checkout flow ever needs to carry across a session boundary.
+model DesignFavorite {
+  userId    String
+  designId  String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  design    Design   @relation(fields: [designId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, designId])
+  @@index([designId])
 }
 
 /// One row per sign-in method a user has — the credentials ("local")

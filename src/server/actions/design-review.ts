@@ -12,6 +12,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { revalidatePath } from 'next/cache';
 
 import { checkDesignReviewTransition } from '@/domain/design-review/transitions';
 import type { DesignReviewTransitionIssueCode } from '@/domain/design-review/transitions';
@@ -19,7 +20,9 @@ import { sanitizeFilenameForDisplay } from '@/domain/upload/inspect';
 import type { UploadWarning } from '@/domain/upload/inspect';
 import { prisma } from '@/server/db/client';
 import type { Prisma } from '@/generated/prisma/client';
-import { requireOwnedDesignId } from '@/server/repositories/design-review';
+import { findOwnedDesignId, requireOwnedDesignId } from '@/server/repositories/design-review';
+import type { Owner } from '@/server/session/ownership';
+import { currentOwner } from '@/server/session/ownership';
 import { storage } from '@/server/storage/local-disk';
 import type { InspectFileErrorCode } from '@/server/upload/inspect-file';
 import { inspectUploadedFile } from '@/server/upload/inspect-file';
@@ -122,4 +125,47 @@ export async function reuploadCustomDesign(
   });
 
   return { ok: true, warnings: inspected.warnings };
+}
+
+/**
+ * The other half of the "dyskusje" the owner's 2026-08-28 feedback asked
+ * for — `DesignReviewComment.authorType` has always been `"staff" |
+ * "customer"` (schema comment, since P7's admin design-review work), and
+ * `admin.ts`'s own `designReviewCommentLabelPl` already promised staff
+ * comments are "widoczny dla klienta" (visible to the customer), but no
+ * customer-facing page ever rendered `requireOwnedDesignStatus`'s comment
+ * thread, and there was no way for a customer to reply. This closes both
+ * gaps: the read side already existed (`design-review.ts`'s
+ * `findOwnedDesignStatus`), this adds the write side.
+ */
+export type PostCustomerDesignCommentResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly code: 'NOT_OWNED' | 'EMPTY_COMMENT' };
+
+export async function applyPostCustomerDesignComment(
+  owner: Owner,
+  customerDesignId: string,
+  bodyPl: string,
+): Promise<PostCustomerDesignCommentResult> {
+  const trimmed = bodyPl.trim();
+  if (trimmed.length === 0) {
+    return { ok: false, code: 'EMPTY_COMMENT' };
+  }
+  const owned = await findOwnedDesignId(customerDesignId, owner);
+  if (!owned) {
+    return { ok: false, code: 'NOT_OWNED' };
+  }
+  await prisma.designReviewComment.create({
+    data: { designId: customerDesignId, authorType: 'customer', authorId: owner.userId, bodyPl: trimmed },
+  });
+  return { ok: true };
+}
+
+export async function postCustomerDesignComment(customerDesignId: string, formData: FormData): Promise<PostCustomerDesignCommentResult> {
+  const owner = await currentOwner();
+  const result = await applyPostCustomerDesignComment(owner, customerDesignId, String(formData.get('bodyPl') ?? ''));
+  if (result.ok) {
+    revalidatePath(`/moje-konto/wzory/${customerDesignId}`);
+  }
+  return result;
 }

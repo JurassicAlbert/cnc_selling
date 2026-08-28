@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { applySubmitOrderSupportRequest, applySubmitSupportRequest } from '@/server/actions/support-requests';
+import { listSupportRequestsForUser } from '@/server/repositories/support-requests';
 import { prisma } from '@/server/db/client';
 
 /**
@@ -59,6 +60,7 @@ async function seedOrder() {
 afterEach(async () => {
   await prisma.supportRequest.deleteMany({ where: { subjectPl: { startsWith: PREFIX } } });
   await prisma.order.deleteMany({ where: { orderNumber: { startsWith: PREFIX } } });
+  await prisma.user.deleteMany({ where: { email: { startsWith: PREFIX } } });
 });
 
 describe('submitSupportRequest (standalone)', () => {
@@ -120,5 +122,47 @@ describe('submitOrderSupportRequest (contextual)', () => {
     const order = await seedOrder();
     const result = await applySubmitOrderSupportRequest(null, order.orderNumber, order.accessToken, validFormData({ messagePl: '  ' }));
     expect(result.ok).toBe(false);
+  });
+});
+
+/**
+ * P9 continuation, 2026-08-28 — "informacje kontaktowe i pomoc do firmy"
+ * (owner feedback): a customer could file a request but never see it again
+ * — `applySubmitSupportRequest` already existed, `listSupportRequestsForUser`
+ * is the missing read side, for `/moje-konto/pomoc`.
+ */
+describe('listSupportRequestsForUser', () => {
+  it('returns the real owner’s own requests, newest first, with order context when present', async () => {
+    const user = await prisma.user.create({ data: { email: `${uid()}@example.test`, name: 'Test Customer', role: 'CUSTOMER' } });
+    const order = await seedOrder();
+
+    await applySubmitSupportRequest(user.id, validFormData({ subjectPl: `${PREFIX}pierwsze` }));
+    const withOrder = await applySubmitOrderSupportRequest(user.id, order.orderNumber, order.accessToken, validFormData({ subjectPl: `${PREFIX}drugie` }));
+    expect(withOrder.ok).toBe(true);
+
+    const result = await listSupportRequestsForUser(user.id);
+
+    expect(result).toHaveLength(2);
+    expect(result[0]?.subjectPl).toBe(`${PREFIX}drugie`);
+    expect(result[0]?.orderNumber).toBe(order.orderNumber);
+    expect(result[1]?.subjectPl).toBe(`${PREFIX}pierwsze`);
+    expect(result[1]?.orderNumber).toBeNull();
+  });
+
+  it('never returns another user’s requests', async () => {
+    const owner = await prisma.user.create({ data: { email: `${uid()}@example.test`, name: 'Owner', role: 'CUSTOMER' } });
+    const other = await prisma.user.create({ data: { email: `${uid()}@example.test`, name: 'Other', role: 'CUSTOMER' } });
+    await applySubmitSupportRequest(owner.id, validFormData());
+
+    expect(await listSupportRequestsForUser(owner.id)).toHaveLength(1);
+    expect(await listSupportRequestsForUser(other.id)).toHaveLength(0);
+  });
+
+  it('returns an empty list for a guest submission (no userId)', async () => {
+    await applySubmitSupportRequest(null, validFormData());
+    // Nothing to assert an id against — this just confirms a real user with
+    // no requests gets an empty list, not an error.
+    const user = await prisma.user.create({ data: { email: `${uid()}@example.test`, name: 'Test Customer', role: 'CUSTOMER' } });
+    expect(await listSupportRequestsForUser(user.id)).toHaveLength(0);
   });
 });

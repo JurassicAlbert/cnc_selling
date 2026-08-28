@@ -1,9 +1,14 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
+
+import Image from 'next/image';
 
 import { customerDesignStatusMessage } from '@/content/pl/messages';
 import { SITE } from '@/content/pl/site';
 import { listMyCustomerDesigns } from '@/server/repositories/customer-designs';
+import { listMyFavoriteDesigns } from '@/server/repositories/design-favorites';
 import { CustomerDesignUploadForm } from '@/ui/islands/CustomerDesignUploadForm';
+import { FavoriteDesignButton } from '@/ui/islands/FavoriteDesignButton';
 import { Heading } from '@/ui/primitives/Heading';
 import { Text } from '@/ui/primitives/Text';
 import { ThemeRegistry } from '@/ui/theme/ThemeRegistry';
@@ -23,7 +28,7 @@ const dateFormatter = new Intl.DateTimeFormat('pl-PL', { dateStyle: 'long' });
  * same "wrap only the interactive part" precedent as `/faq`.
  */
 export default async function AccountDesignsPage() {
-  const designs = await listMyCustomerDesigns();
+  const [designs, favoriteDesigns] = await Promise.all([listMyCustomerDesigns(), listMyFavoriteDesigns()]);
 
   return (
     <div>
@@ -39,8 +44,9 @@ export default async function AccountDesignsPage() {
       ) : (
         <div style={{ marginBlockStart: 32, display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 640 }}>
           {designs.map((design) => (
-            <div
+            <Link
               key={design.id}
+              href={`/moje-konto/wzory/${design.id}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -48,6 +54,8 @@ export default async function AccountDesignsPage() {
                 padding: 16,
                 border: '1px solid var(--mui-palette-divider)',
                 borderRadius: 'var(--radius-card)',
+                textDecoration: 'none',
+                color: 'inherit',
               }}
             >
               {design.hasPreview ? (
@@ -76,10 +84,55 @@ export default async function AccountDesignsPage() {
                 </Text>
               </div>
               <Text muted>{customerDesignStatusMessage(design.status)}</Text>
-            </div>
+            </Link>
           ))}
         </div>
       )}
+
+      {/* P9 continuation, 2026-08-28, owner feedback: catalogue designs
+          favourited from /wzory, distinct from the customer's own
+          uploads above. */}
+      <div style={{ marginBlockStart: 48 }}>
+        <Heading level={2}>{SITE.accountFavoriteDesignsHeadingPl}</Heading>
+        {favoriteDesigns.length === 0 ? (
+          <div style={{ marginBlockStart: 12 }}>
+            <Text muted>{SITE.accountFavoriteDesignsEmptyPl}</Text>
+            <Link href="/wzory" style={{ display: 'inline-block', marginBlockStart: 8 }}>
+              {SITE.accountFavoriteDesignsBrowseLinkPl}
+            </Link>
+          </div>
+        ) : (
+          <div
+            style={{
+              marginBlockStart: 16,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+              gap: 16,
+              maxWidth: 640,
+            }}
+          >
+            {favoriteDesigns.map((design) => (
+              <div key={design.id}>
+                <div
+                  style={{
+                    position: 'relative',
+                    aspectRatio: '1 / 1',
+                    borderRadius: 'var(--radius-card)',
+                    overflow: 'hidden',
+                    marginBlockEnd: 4,
+                  }}
+                >
+                  <Image src={design.thumbnailUrl} alt="" fill sizes="160px" style={{ objectFit: 'cover' }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                  <Text>{design.namePl}</Text>
+                  <FavoriteDesignButton designId={design.id} initiallyFavorited loggedIn />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div style={{ marginBlockStart: 48, maxWidth: 480 }}>
         <ThemeRegistry>

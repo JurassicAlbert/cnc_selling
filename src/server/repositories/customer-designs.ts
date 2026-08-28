@@ -59,3 +59,38 @@ export async function listOwnedCustomerDesigns(owner: Owner): Promise<readonly O
 export async function listMyCustomerDesigns(): Promise<readonly OwnedCustomerDesignListItem[]> {
   return listOwnedCustomerDesigns(await currentOwner());
 }
+
+/** Single-item variant of `listOwnedCustomerDesigns`, for `/moje-konto/wzory/[id]`'s detail page. `null` on any failure (no owner, wrong owner, no such design) — same 404-not-403 discipline as `design-review.ts`'s `findOwnedDesignStatus`. */
+export async function findOwnedCustomerDesign(id: string, owner: Owner): Promise<OwnedCustomerDesignListItem | null> {
+  if (hasNoOwner(owner)) {
+    return null;
+  }
+  const design = await prisma.customerDesign.findFirst({
+    where: { id, OR: ownerOrClauses(owner) },
+    select: {
+      id: true,
+      fileId: true,
+      titlePl: true,
+      status: true,
+      createdAt: true,
+      file: { select: { originalName: true, mimeType: true, previewKey: true } },
+    },
+  });
+  if (design === null) {
+    return null;
+  }
+  return {
+    id: design.id,
+    fileId: design.fileId,
+    titlePl: design.titlePl,
+    originalName: design.file.originalName,
+    status: design.status,
+    mimeType: design.file.mimeType,
+    hasPreview: design.file.previewKey !== null,
+    createdAt: design.createdAt,
+  };
+}
+
+export async function findMyCustomerDesign(id: string): Promise<OwnedCustomerDesignListItem | null> {
+  return findOwnedCustomerDesign(id, await currentOwner());
+}
