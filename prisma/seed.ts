@@ -114,6 +114,7 @@ async function main(): Promise<void> {
   const categories = await seedCategories();
   await seedProducts(categories, materials, design, font);
   await seedBlogPosts();
+  await seedFaqs();
 }
 
 // ---------------------------------------------------------------------------
@@ -513,6 +514,9 @@ type CategorySeed = {
   readonly seoTitlePl: string;
   readonly seoDescPl: string;
   readonly sortOrder: number;
+  readonly isActive: boolean;
+  /** `STOCK_PHOTO(slug)` by default; `null` for a category with no real, subject-matched photo sourced yet — same "stays empty until a real one exists" honesty already established for "Inne". */
+  readonly imageUrl?: string | null;
 };
 
 /**
@@ -521,6 +525,15 @@ type CategorySeed = {
  * is seeded with no product: it is an open catch-all by definition, and
  * inventing a concrete item for it would be less honest than leaving it
  * empty until a real one exists.
+ *
+ * **2026-08-28, owner request**: Gres and Panele podłogowe temporarily
+ * disabled (`isActive: false`) — real existing categories/products are kept,
+ * not deleted, exactly the mechanism `Category.isActive` exists for. A new
+ * `gry-planszowe` category added, active from creation. `isActive` is only
+ * ever applied in `seedCategories`' `create` block (see that function's own
+ * comment) — a fresh database gets the current intended state, but
+ * re-running this seed against an already-seeded database never fights a
+ * later real admin toggle (e.g. re-enabling Gres) back to this default.
  */
 const CATEGORY_SEEDS: readonly CategorySeed[] = [
   {
@@ -531,6 +544,7 @@ const CATEGORY_SEEDS: readonly CategorySeed[] = [
     seoTitlePl: 'Meble loft z grawerem — stołki, półki, stoliki',
     seoDescPl: 'Drewniane blaty z grawerem na metalowej podstawie w stylu loft. Wykonanie na zamówienie.',
     sortOrder: 1,
+    isActive: true,
   },
   {
     slug: 'amulety-i-bransoletki',
@@ -539,6 +553,7 @@ const CATEGORY_SEEDS: readonly CategorySeed[] = [
     seoTitlePl: 'Amulety i bransoletki z grawerem',
     seoDescPl: 'Drewniane amulety i bransoletki z personalizowanym grawerem.',
     sortOrder: 2,
+    isActive: true,
   },
   {
     slug: 'gres',
@@ -547,6 +562,9 @@ const CATEGORY_SEEDS: readonly CategorySeed[] = [
     seoTitlePl: 'Fartuchy kuchenne z gresu z grawerem',
     seoDescPl: 'Gresowe fartuchy kuchenne z grawerowanym wzorem, dopasowane na wymiar.',
     sortOrder: 3,
+    // Temporarily disabled 2026-08-28 at the owner's request. Products and
+    // history stay intact — only storefront visibility changes.
+    isActive: false,
   },
   {
     slug: 'panele-podlogowe',
@@ -555,6 +573,9 @@ const CATEGORY_SEEDS: readonly CategorySeed[] = [
     seoTitlePl: 'Drewniane panele podłogowe z grawerem',
     seoDescPl: 'Panele podłogowe z drewna z grawerowanym wzorem, wykonanie na wymiar.',
     sortOrder: 4,
+    // Temporarily disabled 2026-08-28 at the owner's request. Products and
+    // history stay intact — only storefront visibility changes.
+    isActive: false,
   },
   {
     slug: 'obrazy-drewniane',
@@ -563,6 +584,21 @@ const CATEGORY_SEEDS: readonly CategorySeed[] = [
     seoTitlePl: 'Obrazy drewniane z grawerem',
     seoDescPl: 'Drewniane obrazy z grawerowanym wzorem, z możliwością personalizacji.',
     sortOrder: 5,
+    isActive: true,
+  },
+  {
+    slug: 'gry-planszowe',
+    namePl: 'Gry planszowe',
+    descPl:
+      'Drewniane gry planszowe z grawerem — klasyczne rozgrywki wykonane na zamówienie, z możliwością personalizacji.',
+    seoTitlePl: 'Drewniane gry planszowe z grawerem',
+    seoDescPl: 'Gry planszowe z drewna z grawerowanym wzorem, wykonanie na zamówienie.',
+    sortOrder: 6,
+    isActive: true,
+    // No real, subject-matched photo sourced yet — same honest "stays
+    // empty" precedent "Inne" originally used, rather than a misleading
+    // reused photo from an unrelated category.
+    imageUrl: null,
   },
   {
     slug: 'inne',
@@ -570,7 +606,8 @@ const CATEGORY_SEEDS: readonly CategorySeed[] = [
     descPl: 'Projekty nietypowe, wykraczające poza pozostałe kategorie — wycena indywidualna.',
     seoTitlePl: 'Inne realizacje z grawerem',
     seoDescPl: 'Nietypowe zlecenia z grawerem, wykonywane na indywidualne zamówienie.',
-    sortOrder: 6,
+    sortOrder: 7,
+    isActive: true,
   },
 ];
 
@@ -585,8 +622,9 @@ async function seedCategories(): Promise<Record<string, { readonly id: string }>
         descPl: seed.descPl,
         seoTitlePl: seed.seoTitlePl,
         seoDescPl: seed.seoDescPl,
-        imageUrl: STOCK_PHOTO(seed.slug),
+        imageUrl: seed.imageUrl === undefined ? STOCK_PHOTO(seed.slug) : seed.imageUrl,
         sortOrder: seed.sortOrder,
+        isActive: seed.isActive,
       },
       update: {},
     });
@@ -692,6 +730,126 @@ async function seedBlogPosts(): Promise<void> {
       update: { imageUrl: seed.imageUrl },
     });
     console.log(`BlogPost: ${post.titlePl} (/blog/${seed.slug})`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 5. FAQ — real customer questions, not placeholders
+// ---------------------------------------------------------------------------
+
+type FaqSeed = {
+  readonly questionPl: string;
+  readonly answerPl: string;
+  readonly sortOrder: number;
+};
+
+/**
+ * `docs/CHECKLIST.md`'s FAQ line — real questions a customer of THIS
+ * business would actually have, covering products, customization,
+ * patterns/designs, ordering, production, shipping, payments, returns,
+ * personalization, and materials. Every answer states only what is
+ * actually true of the current implementation (bank transfer / contact
+ * -arranged payment only, no live courier tracking, custom designs go
+ * through internal review) — no invented policy, matching `TODO_PRICING`'s
+ * own "real content, safe to demo" discipline elsewhere in this file.
+ *
+ * Create-only per question, like `seedStoreSettings`/`seedEmailTemplates`:
+ * once a row exists it's real admin-owned content (`/panel/faq`), and
+ * re-running this script must never stomp an admin's edit back to the
+ * seed text. Matched by `questionPl` since `Faq` has no natural slug/key.
+ */
+const FAQ_SEEDS: readonly FaqSeed[] = [
+  {
+    questionPl: 'Czym różni się wybór gotowego wzoru od przesłania własnego projektu?',
+    answerPl:
+      'Przy każdym produkcie, który to oferuje, możesz wybrać jeden z naszych gotowych wzorów w konfiguratorze — to najszybsza droga do zamówienia. Jeśli wolisz coś w pełni własnego, możesz zamiast tego przesłać swój plik (JPG, PNG, SVG lub PDF) — dotyczy to produktów oznaczonych jako możliwość realizacji z własnego projektu. Żadna z tych opcji nie jest obowiązkowa dla wszystkich produktów — dostępność zależy od konkretnego wyrobu i jest zawsze widoczna wprost w konfiguratorze.',
+    sortOrder: 1,
+  },
+  {
+    questionPl: 'Co się dzieje z moim przesłanym projektem po zamówieniu?',
+    answerPl:
+      'Każdy przesłany plik trafia najpierw do wewnętrznej weryfikacji — sprawdzamy go pod kątem wykonalności (m.in. rozdzielczość, format, ewentualne problemy techniczne) przed przyjęciem do produkcji. Status weryfikacji („oczekuje", „zaakceptowany", „wymaga poprawy") widzisz na koncie klienta. Realizacja rozpoczyna się dopiero po akceptacji projektu — to celowe zabezpieczenie, dzięki któremu nie tracisz materiału na plik, który technicznie nie dałby się poprawnie wykonać.',
+    sortOrder: 2,
+  },
+  {
+    questionPl: 'Jak długo trwa realizacja zamówienia?',
+    answerPl:
+      'Czas realizacji zależy od konkretnego produktu i jest zawsze podany w jego karcie — zwykle od kilku do kilkunastu dni roboczych, licząc od zaakceptowania projektu (w przypadku własnego pliku) lub złożenia zamówienia (przy gotowym wzorze). Zamówienia z personalizacją lub nietypowym wymiarem mogą wymagać nieco więcej czasu ze względu na dodatkowe sprawdzenie wykonalności.',
+    sortOrder: 3,
+  },
+  {
+    questionPl: 'Jakie materiały są dostępne i czym się różnią?',
+    answerPl:
+      'Pracujemy przede wszystkim na drewnie dębowym oraz gresie ceramicznym, z ofertą stopniowo rozszerzaną. Dąb to materiał naturalny — rysunek słojów, odcień i drobne sęki różnią się w każdym egzemplarzu, co sprawia, że gotowy produkt jest niepowtarzalny. Gres sprawdza się tam, gdzie liczy się odporność na wilgoć i uszkodzenia mechaniczne, np. jako fartuch kuchenny. Dostępność materiału zależy od wybranego produktu — pełna lista widoczna jest w konfiguratorze.',
+    sortOrder: 4,
+  },
+  {
+    questionPl: 'Czy mogę dodać własny tekst (personalizację) do produktu?',
+    answerPl:
+      'Tak, w produktach oferujących personalizację możesz dodać własny tekst — na przykład imię, datę lub krótką sentencję — w wybranym kroju pisma. System automatycznie sprawdza, czy wybrana czcionka obsługuje wszystkie wpisane znaki (w tym polskie znaki diakrytyczne, jak „ł" czy „ę") oraz czy tekst zmieści się czytelnie przy wybranym rozmiarze produktu, zanim pozwoli przejść dalej.',
+    sortOrder: 5,
+  },
+  {
+    questionPl: 'Jakie formy płatności są dostępne?',
+    answerPl:
+      'Obecnie płatność odbywa się przelewem bankowym na podane w potwierdzeniu zamówienia dane, lub poprzez indywidualne ustalenie warunków płatności z naszym zespołem — wybór formy płatności następuje na etapie składania zamówienia. Sukcesywnie rozszerzamy dostępne opcje płatności; jeśli dana metoda nie jest jeszcze aktywna, nie pojawi się jako wybieralna przy zamówieniu.',
+    sortOrder: 6,
+  },
+  {
+    questionPl: 'Ile kosztuje i ile trwa dostawa?',
+    answerPl:
+      'Koszt dostawy jest stały i wyświetlany w podsumowaniu koszyka przed złożeniem zamówienia — nie doliczamy żadnych ukrytych opłat na etapie płatności. Paczkę nadajemy po zakończeniu produkcji; orientacyjny czas dostawy zależy od wybranego przewoźnika i jest widoczny przy zamówieniu.',
+    sortOrder: 7,
+  },
+  {
+    questionPl: 'Czy mogę zwrócić zamówiony produkt?',
+    answerPl:
+      'Produkty wykonywane na indywidualne zamówienie (z personalizacją, własnym projektem lub niestandardowym wymiarem) są, zgodnie z art. 38 pkt 3 ustawy o prawach konsumenta, wyłączone z 14-dniowego prawa odstąpienia od umowy — dokładnie dlatego, że są wytwarzane specjalnie dla Ciebie i nie możemy przyjąć ich z powrotem do sprzedaży. Pełna treść tego zastrzeżenia znajduje się w naszym Regulaminie i jest potwierdzana świadomie przy składaniu zamówienia.',
+    sortOrder: 8,
+  },
+  {
+    questionPl: 'Jak dbać o drewniane produkty z grawerem?',
+    answerPl:
+      'Do czyszczenia na co dzień wystarczy sucha lub lekko wilgotna ściereczka — należy unikać silnych detergentów i moczenia produktu w wodzie. Drewno to materiał naturalny, warto więc unikać stawiania go bezpośrednio nad źródłem ciepła lub w miejscu z dużymi wahaniami wilgotności. Regularne, delikatne naoliwienie (raz na kilka miesięcy) pomaga zachować naturalny wygląd na dłużej.',
+    sortOrder: 9,
+  },
+  {
+    questionPl: 'Czy każdy rozmiar i wzór jest technicznie możliwy do wykonania?',
+    answerPl:
+      'Nie zawsze — każda kombinacja wzoru, materiału i rozmiaru jest automatycznie sprawdzana pod kątem wykonalności (minimalna szerokość linii, odstępy między detalami, minimalna wysokość tekstu). Jeśli wybrana kombinacja przekracza możliwości techniczne, konfigurator poinformuje Cię o tym wprost i podpowie, co zmienić — np. większy rozmiar lub inny materiał — zanim będzie można dodać produkt do koszyka.',
+    sortOrder: 10,
+  },
+  {
+    questionPl: 'Czy mogę zamówić bardzo duży lub nietypowy produkt?',
+    answerPl:
+      'Wiele naszych produktów można wykonać w większych rozmiarach niż standardowe, łącząc kilka precyzyjnie dopasowanych elementów w jedną spójną całość — to ułatwia też transport i montaż. Jeśli potrzebujesz czegoś zupełnie nietypowego, skorzystaj z kategorii „Inne" lub skontaktuj się z nami bezpośrednio — każde nietypowe zgłoszenie rozpatrujemy indywidualnie.',
+    sortOrder: 11,
+  },
+  {
+    questionPl: 'Czy zdjęcia produktów odpowiadają temu, co faktycznie otrzymam?',
+    answerPl:
+      'Zdjęcia w naszym sklepie pokazują rzeczywisty charakter materiału i techniki grawerowania, ale przy materiałach naturalnych, takich jak drewno, rysunek słojów, odcień i drobne sęki różnią się w każdym egzemplarzu — to nie wada, a naturalna cecha materiału, która sprawia, że każdy produkt jest unikalny. Dokładny efekt personalizacji lub własnego projektu zależy od wybranych przez Ciebie ustawień.',
+    sortOrder: 12,
+  },
+  {
+    questionPl: 'Jak mogę skontaktować się w sprawie zamówienia?',
+    answerPl:
+      'Jeśli masz pytanie dotyczące już złożonego zamówienia, statusu realizacji lub dostawy, najszybciej odpowiemy na wiadomość wysłaną z podaniem numeru zamówienia. Dane kontaktowe znajdziesz w stopce strony oraz w wiadomości potwierdzającej złożenie zamówienia.',
+    sortOrder: 13,
+  },
+];
+
+async function seedFaqs(): Promise<void> {
+  for (const seed of FAQ_SEEDS) {
+    const existing = await prisma.faq.findFirst({ where: { questionPl: seed.questionPl } });
+    if (existing !== null) {
+      console.log(`Faq: "${seed.questionPl.slice(0, 40)}..." already exists, leaving it alone`);
+      continue;
+    }
+    const created = await prisma.faq.create({
+      data: { questionPl: seed.questionPl, answerPl: seed.answerPl, sortOrder: seed.sortOrder, isActive: true },
+    });
+    console.log(`Faq: created "${created.questionPl.slice(0, 50)}..."`);
   }
 }
 

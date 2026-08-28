@@ -801,6 +801,28 @@ native `type="email"` validation accepts but the server correctly
 rejects — no account created, confirmed against the database. See
 `docs/HANDOVER.md` §9z41.
 
+**A new, large continuation prompt — planned properly, Phase 1
+shipped — 2026-08-28.** The owner sent a 19-section follow-on request
+covering FAQ content, category visibility, a pattern/design library
+restructure, external pattern resources, a new "ready-made products"
+Collections concept, delivery/payment CRUD, shipment tracking, and a
+support system. Inspected the real codebase first rather than
+assuming the request's own framing was accurate — it wasn't, in three
+places (no pattern-generator tool exists, "Collections" already means
+something different and incompatible, a real Przelewy24 integration
+needs real credentials nobody has) — resolved each directly with the
+owner via `AskUserQuestion` inside `EnterPlanMode`, then wrote and got
+approval on a 9-phase plan before touching any code. Phase 1 shipped
+this pass: 13 real Polish FAQ questions (not placeholders), `/faq`
+converted to a real MUI `Accordion`, Gres and Panele podłogowe
+deactivated via the real admin bulk-action UI (not a script), and a
+new, real `Gry planszowe` category. Also diagnosed (not
+worked-around-blindly) a real, reproducible dev-environment quirk: a
+fresh `.next` rebuild left every `/panel/*` sub-route 404ing for a
+few minutes, on routes this session never touched — confirmed via
+server logs it wasn't a real regression, fixed with a clean restart.
+See `docs/HANDOVER.md` §9z42.
+
 ---
 
 ## Getting set up

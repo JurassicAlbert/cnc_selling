@@ -5,6 +5,8 @@ import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
 import { Section } from '@/ui/primitives/Section';
 import { Text } from '@/ui/primitives/Text';
+import { FaqAccordionList } from '@/ui/islands/FaqAccordionList';
+import { ThemeRegistry } from '@/ui/theme/ThemeRegistry';
 import { toSafeJsonLd } from '@/ui/seo/json-ld';
 import { SITE } from '@/content/pl/site';
 
@@ -14,6 +16,19 @@ export const metadata: Metadata = {
   alternates: { canonical: '/faq' },
 };
 
+/**
+ * Real MUI `Accordion`, not the raw `<details>/<summary>` this page used
+ * before — the owner's own ask ("polished MUI design, preferably an
+ * accordion"). `ThemeRegistry` is mounted around just the accordion list,
+ * the same "wrap the one real interactive island, not the whole page"
+ * precedent the product page's Configurator already established
+ * (`ThemeRegistry.tsx`'s own header comment: mounting it at the root
+ * shipped the full MUI+Emotion runtime to pages with zero interactive MUI
+ * components and measurably hurt mobile LCP). The homepage's own FAQ
+ * teaser deliberately keeps the lighter `<details>` version — it's on the
+ * highest-traffic, most LCP-sensitive page on the site, and doesn't need
+ * a full accordion, just a glance-and-click preview.
+ */
 export default async function FaqPage() {
   const faqs = await listActiveFaqs();
 
@@ -47,22 +62,10 @@ export default async function FaqPage() {
             <Text muted>{SITE.faqEmptyStatePl}</Text>
           </div>
         ) : (
-          <div style={{ marginBlockStart: 32, display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 720 }}>
-            {faqs.map((faq) => (
-              <details
-                key={faq.id}
-                style={{
-                  border: '1px solid var(--mui-palette-divider)',
-                  borderRadius: 'var(--radius-card)',
-                  padding: '16px 20px',
-                }}
-              >
-                <summary style={{ font: 'var(--mui-font-h6)', cursor: 'pointer' }}>{faq.questionPl}</summary>
-                <div style={{ marginBlockStart: 12 }}>
-                  <Text muted>{faq.answerPl}</Text>
-                </div>
-              </details>
-            ))}
+          <div style={{ marginBlockStart: 32, maxWidth: 720 }}>
+            <ThemeRegistry>
+              <FaqAccordionList faqs={faqs} />
+            </ThemeRegistry>
           </div>
         )}
       </Container>

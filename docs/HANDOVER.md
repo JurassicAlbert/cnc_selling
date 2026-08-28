@@ -3342,6 +3342,39 @@ The fix reused rather than duplicated: `isPlausibleEmail` already existed as a v
 
 Restarted the dev server before live-verifying, per §9z2's standing rule. Live-verified end to end: on the real `/panel/ustawienia/personel` invite form, entered `admin@localhost` (chosen specifically because native browser `type="email"` validation accepts it, so the rejection genuinely has to come from the server) — got "Podaj prawidłowy adres e-mail." back, form fields stayed filled (§9z37's fix composing correctly with this one), and a direct DB query afterward confirmed no `User` row was created. Also hit, and correctly diagnosed rather than "fixed," a real red herring: a fresh browser tab briefly showed a stale `the name isPlausibleEmail is defined multiple times` Turbopack error in its console history — traced to the narrow window between two separate edit calls (added the import to `auth.ts`, then removed its old local copy in a later call) where the *then-still-running* old dev server process HMR-compiled a real transient duplicate declaration; confirmed gone on a genuinely fresh tab against the post-edit, post-restart server, and confirmed the source file itself only ever had one definition by direct `grep`.
 
+## 9z42. A new, large continuation prompt — planned properly, then Phase 1 shipped — 2026-08-28
+
+The owner sent a 19-section follow-on request: real FAQ content, category visibility changes, a restructured pattern/design library, external pattern resources, a new "ready-made products" Collections concept, delivery/payment CRUD, shipment tracking, and a support/contact system — plus tests, and an explicit repeat of the project's own "no fake functionality" rule for payment and shipping specifically.
+
+### Inspected before planning, not assumed
+
+Read the real schema, admin CRUD, checkout, and storefront theming directly before writing a plan. That surfaced three places where the request's own framing didn't match what's actually in this codebase:
+
+- **"Pattern generator"** — no generative tool exists anywhere. What exists is the `CUSTOM_UPLOAD` configurator step (upload your own file), live on exactly one product type (`CUSTOM`).
+- **"Collections"** — `DesignCollection` already exists and means something specific and different: grouping **designs/patterns** (e.g. "linoryt series"), admin-only, no customer page. Not compatible with "curated ready-made products for sale" without breaking its existing use.
+- **Payment** — "a real implemented payment integration such as Przelewy24" needs real merchant credentials nobody has; the project's own already-established rule (and the owner's own restated one) forbids faking a working payment.
+
+Used `EnterPlanMode`, then `AskUserQuestion` to resolve exactly these three ambiguities plus the overall scope/order — genuinely blocking decisions, not guessed at — before writing the plan file. Answers: the upload step is what moves to a standalone reusable page (an actual generative tool is explicitly deferred); a new, separate `ProductCollection` model, `DesignCollection` untouched; real DB-driven payment config with an honest "not connected" state for anything without real credentials; one phased plan, built in priority order, continuing autonomously across turns — the same rhythm as the rest of this session.
+
+### Also found while inspecting: `ThemeRegistry` is not mounted at the root, on purpose
+
+`src/app/layout.tsx`'s own comment: mounting MUI/Emotion at the root shipped the full runtime to pages with zero interactive MUI components and measurably hurt mobile LCP (a real Lighthouse finding, not speculative). Only the admin panel and the product page (for the Configurator) mount it today — login, register, and checkout are all still raw `<input>`/`<button>` styled with the shared CSS-variable theme. This governs how "polished MUI, sitewide" gets applied through every later phase: mount `ThemeRegistry` per-page around the one real interactive island, the same pattern the product page already set, not at the root.
+
+### Phase 1 shipped: FAQ content + category changes
+
+- 13 real Polish FAQ rows (`prisma/seed.ts`'s new `seedFaqs()`), covering all the categories the owner named (products, customization, patterns vs. upload, ordering, production, materials, personalization, payments, shipping, returns, care) plus two more genuinely useful ones (feasibility checks, honesty about natural-material photos). Create-only per question (matched by `questionPl`), same non-destructive precedent as `seedStoreSettings`.
+- `/faq` converted from raw `<details>` to a real MUI `Accordion` — needed extracting a new client island (`FaqAccordionList.tsx`) once `ARCHITECTURE.md` §2.1's own `noRestrictedImports` lint rule (real, caught it immediately) refused a direct `@mui/material` import inside the (marketing) Server Component page.
+- `Category.isActive` (already existed) applied to Gres/Panele podłogowe via the real admin bulk-deactivate UI this session's own earlier work built — not a script, not a raw SQL update, the actual mechanism a real admin would use. `CATEGORY_SEEDS` updated for reproducibility, `update: {}` left alone so a re-seed never fights a later real admin re-enable.
+- `Gry planszowe` added as a real active category. No stock photo — fetching an external file needs explicit permission per this session's own standing safety rules, not something to assume; left `imageUrl: null`, matching the exact precedent "Inne" originally used rather than reusing an unrelated category's photo dishonestly.
+
+### A real, reproducible dev-environment quirk hit and diagnosed, not worked around blindly
+
+After `rm -rf .next` (from the earlier backend-validation-audit turn) and a fresh `next dev` boot, every `/panel/*` **sub**-route (`kategorie`, `kolekcje`, `ustawienia/personel`) 404'd while `/panel` itself (the dashboard) returned 200 — reproduced three times, across completely unrelated, untouched routes. Confirmed via `preview_logs` this wasn't a compile error (no error lines, clean 404s) and wasn't caused by anything in this session's diff (none of the 404ing routes were touched). A second clean restart (kill + `preview_start`, no further cache changes) resolved it completely and permanently for the rest of the session — consistent with this project's own already-documented "Turbopack dev-mode routing can be unreliable right after a fresh boot" class of flakiness (§9w), just a variant tied to a `.next` rebuild rather than a navigation race. Diagnosed with real evidence (server logs, repeated reproduction, ruling out the actual diff) before concluding it was environmental, not patched around by assumption.
+
+### Verified
+
+`npm run typecheck && npm run lint && npm test && npm run build` all clean (622/622 unchanged — Phase 1 is real content plus presentation-only page changes, no new server logic to unit-test, matching this session's own precedent for that class of change). Dev server restarted (twice, see above) before live-verifying. Live-verified on a genuinely fresh tab (avoiding a much-reused tab's known stale-console-history problem, confirmed yet again this pass): `/faq` renders all 13 real questions in a real MUI `Accordion`, expand/collapse works, zero console errors; the storefront nav no longer shows Gres or Panele podłogowe but does show Gry planszowe, confirmed both on the admin panel (post-bulk-deactivate) and on a separate customer-facing tab.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous
