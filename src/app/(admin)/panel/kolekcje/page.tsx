@@ -1,10 +1,14 @@
 import Link from 'next/link';
-import { Button, Typography } from '@mui/material';
+import { Button, Divider, Typography } from '@mui/material';
 
 import { ADMIN } from '@/content/pl/admin';
+import { importCollectionsFromCsv } from '@/server/actions/admin-designs';
 import { listCollectionsForAdmin } from '@/server/repositories/admin-designs';
 import { CollectionsDataGrid } from '@/ui/islands/admin/CollectionsDataGrid';
+import { CsvImportForm } from '@/ui/islands/admin/CsvImportForm';
 import { EmptyState } from '@/ui/primitives/EmptyState';
+
+const CSV_COLUMNS = ['slug', 'namePl', 'descPl', 'sortOrder'] as const;
 
 export default async function AdminCollectionsPage() {
   const collections = await listCollectionsForAdmin();
@@ -25,6 +29,9 @@ export default async function AdminCollectionsPage() {
       ) : (
         <CollectionsDataGrid rows={collections} />
       )}
+
+      <Divider sx={{ my: 4 }} />
+      <CsvImportForm action={importCollectionsFromCsv} expectedColumns={CSV_COLUMNS} />
     </>
   );
 }

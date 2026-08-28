@@ -4,6 +4,7 @@ import {
   applyBulkSetProductActive,
   applyCreateProduct,
   applyDuplicateProduct,
+  applyImportProductsFromCsv,
   applySetProductActive,
   applySetProductSortOrder,
   applyUpdateProduct,
@@ -264,5 +265,68 @@ describe('applySetProductMaterial (nested editor, proven end to end)', () => {
 
     const after = await listActiveProductsByCategorySlug(category.slug);
     expect(after.find((p) => p.slug === input.slug)?.materials).toEqual([{ namePl: material.namePl }]);
+  });
+});
+
+describe('applyImportProductsFromCsv', () => {
+  it('resolves categorySlug to a real category id and creates a valid row', async () => {
+    const staff = staffActor();
+    const category = await seedCategory();
+    const slug = uid();
+    const csv = [
+      'slug,typeCode,categorySlug,namePl,shortDescPl,longDescPl,careInstructionsPl,installationInfoPl,materialNotesPl,seoTitlePl,seoDescPl,basePriceGrosze,minPriceGrosze,productionDaysMin,productionDaysMax,minWidthMm,maxWidthMm,minHeightMm,maxHeightMm,allowsCustomSize,requiresExactSize,sortOrder',
+      `${slug},WALL_ART,${category.slug},Testowy produkt,Krótki opis,Pełny opis,Pielęgnacja,,,SEO,SEO opis,10000,8000,3,7,100,800,100,600,true,false,2`,
+    ].join('\n');
+
+    const result = await applyImportProductsFromCsv(staff, csv);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.createdCount).toBe(1);
+    expect(result.rows[0]?.ok).toBe(true);
+
+    const created = await prisma.product.findUniqueOrThrow({ where: { slug } });
+    expect(created.categoryId).toBe(category.id);
+    expect(created.basePriceGrosze).toBe(10_000);
+    expect(created.allowsCustomSize).toBe(true);
+    expect(created.requiresExactSize).toBe(false);
+    expect(created.installationInfoPl).toBeNull();
+  });
+
+  it('reports a row with an unknown categorySlug as a failure, without aborting the batch', async () => {
+    const staff = staffActor();
+    const category = await seedCategory();
+    const slugBad = uid();
+    const slugGood = uid();
+    const csv = [
+      'slug,typeCode,categorySlug,namePl,shortDescPl,longDescPl,careInstructionsPl,installationInfoPl,materialNotesPl,seoTitlePl,seoDescPl,basePriceGrosze,minPriceGrosze,productionDaysMin,productionDaysMax,minWidthMm,maxWidthMm,minHeightMm,maxHeightMm,allowsCustomSize,requiresExactSize,sortOrder',
+      `${slugBad},WALL_ART,nieistniejaca-kategoria,Zły wiersz,Opis,Opis,Opis,,,SEO,SEO,10000,8000,3,7,100,800,100,600,false,false,0`,
+      `${slugGood},WALL_ART,${category.slug},Dobry wiersz,Opis,Opis,Opis,,,SEO,SEO,10000,8000,3,7,100,800,100,600,false,false,0`,
+    ].join('\n');
+
+    const result = await applyImportProductsFromCsv(staff, csv);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.createdCount).toBe(1);
+    expect(result.rows[0]?.ok).toBe(false);
+    expect(result.rows[1]?.ok).toBe(true);
+    expect(await prisma.product.findUnique({ where: { slug: slugBad } })).toBeNull();
+    expect(await prisma.product.findUnique({ where: { slug: slugGood } })).not.toBeNull();
+  });
+
+  it('rejects a missing or non-numeric required column as a per-row failure', async () => {
+    const staff = staffActor();
+    const category = await seedCategory();
+    const slug = uid();
+    const csv = [
+      'slug,typeCode,categorySlug,namePl,shortDescPl,longDescPl,careInstructionsPl,installationInfoPl,materialNotesPl,seoTitlePl,seoDescPl,basePriceGrosze,minPriceGrosze,productionDaysMin,productionDaysMax,minWidthMm,maxWidthMm,minHeightMm,maxHeightMm,allowsCustomSize,requiresExactSize,sortOrder',
+      `${slug},WALL_ART,${category.slug},Zły wiersz,Opis,Opis,Opis,,,SEO,SEO,not-a-number,8000,3,7,100,800,100,600,false,false,0`,
+    ].join('\n');
+
+    const result = await applyImportProductsFromCsv(staff, csv);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.createdCount).toBe(0);
+    expect(result.rows[0]?.ok).toBe(false);
+    expect(await prisma.product.findUnique({ where: { slug } })).toBeNull();
   });
 });

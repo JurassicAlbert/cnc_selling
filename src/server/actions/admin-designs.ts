@@ -17,6 +17,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import Papa from 'papaparse';
 
 import { prisma } from '@/server/db/client';
 import { requireStaffSession } from '@/server/auth/session';
@@ -168,6 +169,70 @@ export async function setCollectionSortOrder(id: string, sortOrder: number): Pro
   await applySetCollectionSortOrder(staff, id, sortOrder);
   revalidatePath('/panel/kolekcje');
   revalidatePath(`/panel/kolekcje/${id}`);
+}
+
+// --- Collections: CSV import ------------------------------------------------
+//
+// Expected header row: slug,namePl,descPl,sortOrder — same pattern as
+// `admin-categories.ts`'s `applyImportCategoriesFromCsv` (see its own header
+// comment for the full rationale: every row goes through the real
+// `applyCreateCollection`, a bad row never aborts the batch).
+
+export type CollectionCsvRowResult = {
+  readonly row: number;
+  readonly slug: string;
+  readonly ok: boolean;
+  readonly detail: string | null;
+};
+
+export type ImportCollectionsResult =
+  | { readonly ok: true; readonly createdCount: number; readonly rows: readonly CollectionCsvRowResult[] }
+  | { readonly ok: false; readonly detail: string };
+
+function csvCell(record: Record<string, string>, key: string): string {
+  return (record[key] ?? '').trim();
+}
+
+export async function applyImportCollectionsFromCsv(staff: CurrentSession, csvText: string): Promise<ImportCollectionsResult> {
+  const parsed = Papa.parse<Record<string, string>>(csvText, { header: true, skipEmptyLines: true });
+  if (parsed.data.length === 0) {
+    return { ok: false, detail: 'Plik CSV nie zawiera żadnych wierszy z danymi.' };
+  }
+
+  const rows: CollectionCsvRowResult[] = [];
+  let createdCount = 0;
+  for (const [index, record] of parsed.data.entries()) {
+    const rowNumber = index + 2;
+    const slug = csvCell(record, 'slug');
+    const sortOrderRaw = csvCell(record, 'sortOrder');
+    const input: CollectionFormInput = {
+      slug,
+      namePl: csvCell(record, 'namePl'),
+      descPl: csvCell(record, 'descPl'),
+      sortOrder: sortOrderRaw.length > 0 && Number.isInteger(Number(sortOrderRaw)) ? Number(sortOrderRaw) : 0,
+    };
+    const result = await applyCreateCollection(staff, input);
+    if (result.ok) {
+      createdCount += 1;
+    }
+    rows.push({ row: rowNumber, slug, ok: result.ok, detail: result.ok ? null : result.detail });
+  }
+
+  return { ok: true, createdCount, rows };
+}
+
+export async function importCollectionsFromCsv(formData: FormData): Promise<ImportCollectionsResult> {
+  const staff = await requireStaffSession();
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, detail: 'Wybierz plik CSV.' };
+  }
+  const csvText = await file.text();
+  const result = await applyImportCollectionsFromCsv(staff, csvText);
+  if (result.ok && result.createdCount > 0) {
+    revalidatePath('/panel/kolekcje');
+  }
+  return result;
 }
 
 // --- Designs ------------------------------------------------------------

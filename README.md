@@ -693,6 +693,23 @@ too (confirms the `isAvailable`-vs-`isActive` naming difference across
 entities wasn't mixed up), toggling via the bulk bar and restoring via
 the pre-existing single-row switch. See `docs/HANDOVER.md` §9z34.
 
+**CSV import for Collections and Products — built 2026-08-28,
+autonomously.** Collections was a near-direct copy of the Categories
+pilot (§9z31). Products needed one real new piece: a `categorySlug`
+CSV column resolved to the real category id per row (a bad slug fails
+just that row), and defensive numeric parsing — a missing or
+non-numeric required column fails the row with a specific message
+rather than silently defaulting to 0 and creating a broken "0 zł"
+product that the import report would call a success. Materials,
+Finishes, and Designs are deliberately left out: all three require a
+real uploaded image file at creation time, which a flat CSV row
+structurally can't supply — a different bulk-import mechanism, not a
+copy of this one. Live-verified both imports with a real click-through
+file upload (a `DataTransfer`-constructed `File` assigned to the input,
+the standard way automation drives file inputs without a native OS
+dialog) — both rows appeared in the real admin list, confirmed and
+then cleaned up. See `docs/HANDOVER.md` §9z35.
+
 ---
 
 ## Getting set up
@@ -844,10 +861,11 @@ remaining gaps toward "no missing pages, functionality, design and UI":
 - **"Preview as customer" for Designs** — needs a real deep-link into
   the configurator (no standalone design page exists today), its own
   separate slice from the Product half just built.
-- **CSV import for the other 5 catalogue entities** — Categories has
-  the real pattern now (§9z31); Products/Materials/Finishes/Designs/
-  Collections each need their own `applyImportXFromCsv`, a mechanical
-  follow-up.
+- **CSV import for Materials, Finishes, Designs** — Categories,
+  Collections, and Products all have it now (§9z31, §9z35); these three
+  each require a mandatory uploaded image at creation time, which a
+  flat CSV row can't supply — needs its own design (an image-URL
+  column, or a zip+CSV combo), not a copy of the existing pattern.
 - **P8's configurator funnel** — needs `AnalyticsEvent` + instrumenting
   every configurator step to write events, its own substantial slice.
 - **P2's remaining piece** — the homepage's hero/craftsmanship narrative

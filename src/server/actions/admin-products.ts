@@ -14,6 +14,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import Papa from 'papaparse';
 
 import { prisma } from '@/server/db/client';
 import { requireStaffSession } from '@/server/auth/session';
@@ -269,4 +270,153 @@ export async function duplicateProductAndGo(id: string): Promise<void> {
   if (result.ok) {
     redirect(`/panel/produkty/${result.id}`);
   }
+}
+
+// --- CSV import --------------------------------------------------------
+//
+// Expected header row: slug,typeCode,categorySlug,namePl,shortDescPl,
+// longDescPl,careInstructionsPl,installationInfoPl,materialNotesPl,
+// seoTitlePl,seoDescPl,basePriceGrosze,minPriceGrosze,productionDaysMin,
+// productionDaysMax,minWidthMm,maxWidthMm,minHeightMm,maxHeightMm,
+// allowsCustomSize,requiresExactSize,sortOrder — same pattern as
+// `admin-categories.ts`'s `applyImportCategoriesFromCsv`, with one addition:
+// `Product` has no image of its own (images are the separate nested
+// `ProductImage` editor, out of scope for a flat CSV row), but it does have
+// a required `categoryId` foreign key — the CSV carries the human-readable
+// `categorySlug` instead and this resolves it to an id per row, reporting a
+// per-row failure (not aborting the batch) when the slug doesn't exist.
+// Numeric/boolean columns are parsed defensively: an invalid or missing
+// required number fails that row with a specific message rather than
+// silently defaulting to 0, which would create a broken product (e.g. a
+// 0 zł price) that looks like a successful import.
+
+export type ProductCsvRowResult = {
+  readonly row: number;
+  readonly slug: string;
+  readonly ok: boolean;
+  readonly detail: string | null;
+};
+
+export type ImportProductsResult =
+  | { readonly ok: true; readonly createdCount: number; readonly rows: readonly ProductCsvRowResult[] }
+  | { readonly ok: false; readonly detail: string };
+
+const PRODUCT_TYPE_CODES: readonly ProductTypeCode[] = [
+  'WALL_ART',
+  'TABLE_TOP',
+  'KITCHEN_TILE',
+  'FLOOR_ELEMENT',
+  'CUSTOM',
+  'LOFT_FURNITURE',
+  'JEWELRY',
+];
+
+function csvCell(record: Record<string, string>, key: string): string {
+  return (record[key] ?? '').trim();
+}
+
+function csvRequiredInt(record: Record<string, string>, key: string): number | null {
+  const raw = csvCell(record, key);
+  if (raw.length === 0 || !Number.isInteger(Number(raw)) || Number(raw) < 0) {
+    return null;
+  }
+  return Number(raw);
+}
+
+function csvBool(record: Record<string, string>, key: string): boolean {
+  const raw = csvCell(record, key).toLowerCase();
+  return raw === 'true' || raw === '1' || raw === 'tak';
+}
+
+export async function applyImportProductsFromCsv(staff: CurrentSession, csvText: string): Promise<ImportProductsResult> {
+  const parsed = Papa.parse<Record<string, string>>(csvText, { header: true, skipEmptyLines: true });
+  if (parsed.data.length === 0) {
+    return { ok: false, detail: 'Plik CSV nie zawiera żadnych wierszy z danymi.' };
+  }
+
+  const rows: ProductCsvRowResult[] = [];
+  let createdCount = 0;
+  for (const [index, record] of parsed.data.entries()) {
+    const rowNumber = index + 2;
+    const slug = csvCell(record, 'slug');
+
+    const typeCode = csvCell(record, 'typeCode');
+    if (!(PRODUCT_TYPE_CODES as readonly string[]).includes(typeCode)) {
+      rows.push({ row: rowNumber, slug, ok: false, detail: `Nieprawidłowy typ produktu: "${typeCode}".` });
+      continue;
+    }
+
+    const categorySlug = csvCell(record, 'categorySlug');
+    const category = await prisma.category.findUnique({ where: { slug: categorySlug }, select: { id: true } });
+    if (category === null) {
+      rows.push({ row: rowNumber, slug, ok: false, detail: `Nie znaleziono kategorii o identyfikatorze URL "${categorySlug}".` });
+      continue;
+    }
+
+    const numericFields = {
+      basePriceGrosze: csvRequiredInt(record, 'basePriceGrosze'),
+      minPriceGrosze: csvRequiredInt(record, 'minPriceGrosze'),
+      productionDaysMin: csvRequiredInt(record, 'productionDaysMin'),
+      productionDaysMax: csvRequiredInt(record, 'productionDaysMax'),
+      minWidthMm: csvRequiredInt(record, 'minWidthMm'),
+      maxWidthMm: csvRequiredInt(record, 'maxWidthMm'),
+      minHeightMm: csvRequiredInt(record, 'minHeightMm'),
+      maxHeightMm: csvRequiredInt(record, 'maxHeightMm'),
+    };
+    const missingField = Object.entries(numericFields).find(([, value]) => value === null)?.[0];
+    if (missingField !== undefined) {
+      rows.push({ row: rowNumber, slug, ok: false, detail: `Brak lub nieprawidłowa wartość liczbowa w kolumnie "${missingField}".` });
+      continue;
+    }
+
+    const installationInfoPl = csvCell(record, 'installationInfoPl');
+    const materialNotesPl = csvCell(record, 'materialNotesPl');
+    const sortOrderRaw = csvCell(record, 'sortOrder');
+    const input: ProductCoreInput = {
+      slug,
+      typeCode: typeCode as ProductTypeCode,
+      categoryId: category.id,
+      namePl: csvCell(record, 'namePl'),
+      shortDescPl: csvCell(record, 'shortDescPl'),
+      longDescPl: csvCell(record, 'longDescPl'),
+      careInstructionsPl: csvCell(record, 'careInstructionsPl'),
+      installationInfoPl: installationInfoPl.length > 0 ? installationInfoPl : null,
+      materialNotesPl: materialNotesPl.length > 0 ? materialNotesPl : null,
+      seoTitlePl: csvCell(record, 'seoTitlePl'),
+      seoDescPl: csvCell(record, 'seoDescPl'),
+      basePriceGrosze: numericFields.basePriceGrosze as number,
+      minPriceGrosze: numericFields.minPriceGrosze as number,
+      productionDaysMin: numericFields.productionDaysMin as number,
+      productionDaysMax: numericFields.productionDaysMax as number,
+      minWidthMm: numericFields.minWidthMm as number,
+      maxWidthMm: numericFields.maxWidthMm as number,
+      minHeightMm: numericFields.minHeightMm as number,
+      maxHeightMm: numericFields.maxHeightMm as number,
+      allowsCustomSize: csvBool(record, 'allowsCustomSize'),
+      requiresExactSize: csvBool(record, 'requiresExactSize'),
+      sortOrder: sortOrderRaw.length > 0 && Number.isInteger(Number(sortOrderRaw)) ? Number(sortOrderRaw) : 0,
+    };
+
+    const result = await applyCreateProduct(staff, input);
+    if (result.ok) {
+      createdCount += 1;
+    }
+    rows.push({ row: rowNumber, slug, ok: result.ok, detail: result.ok ? null : result.detail });
+  }
+
+  return { ok: true, createdCount, rows };
+}
+
+export async function importProductsFromCsv(formData: FormData): Promise<ImportProductsResult> {
+  const staff = await requireStaffSession();
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, detail: 'Wybierz plik CSV.' };
+  }
+  const csvText = await file.text();
+  const result = await applyImportProductsFromCsv(staff, csvText);
+  if (result.ok && result.createdCount > 0) {
+    revalidatePath('/panel/produkty');
+  }
+  return result;
 }

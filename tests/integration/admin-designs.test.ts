@@ -6,6 +6,7 @@ import {
   applyCreateCollection,
   applyCreateDesign,
   applyDuplicateDesign,
+  applyImportCollectionsFromCsv,
   applySetCollectionActive,
   applySetCollectionSortOrder,
   applySetDesignActive,
@@ -110,6 +111,30 @@ describe('applyBulkSetCollectionActive', () => {
         where: { entity: 'DesignCollection', entityId: { in: [first.id, second.id] }, action: 'update', actorEmail: staff.email },
       }),
     ).toBe(2);
+  });
+});
+
+describe('applyImportCollectionsFromCsv', () => {
+  it('creates every valid row and reports a bad row without aborting the batch', async () => {
+    const staff = staffActor();
+    const slugGood = uid();
+    const csv = [
+      'slug,namePl,descPl,sortOrder',
+      'Not A Slug!,Zła kolekcja,Opis,0',
+      `${slugGood},Dobra kolekcja,Opis,4`,
+    ].join('\n');
+
+    const result = await applyImportCollectionsFromCsv(staff, csv);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.createdCount).toBe(1);
+    expect(result.rows[0]?.ok).toBe(false);
+    expect(result.rows[1]?.ok).toBe(true);
+
+    const created = await prisma.designCollection.findUniqueOrThrow({ where: { slug: slugGood } });
+    expect(created.namePl).toBe('Dobra kolekcja');
+    expect(created.sortOrder).toBe(4);
+    expect(await prisma.auditLog.count({ where: { entity: 'DesignCollection', action: 'create', actorEmail: staff.email } })).toBe(1);
   });
 });
 

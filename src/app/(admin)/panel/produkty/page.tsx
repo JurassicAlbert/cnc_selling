@@ -1,9 +1,11 @@
 import Link from 'next/link';
-import { Button, MenuItem, TextField, Typography } from '@mui/material';
+import { Button, Divider, MenuItem, TextField, Typography } from '@mui/material';
 
 import { ADMIN, adminProductTypeLabel } from '@/content/pl/admin';
+import { importProductsFromCsv } from '@/server/actions/admin-products';
 import { listCategoryOptionsForAdmin, listProductsForAdmin } from '@/server/repositories/admin-products';
 import { ProductsDataGrid } from '@/ui/islands/admin/ProductsDataGrid';
+import { CsvImportForm } from '@/ui/islands/admin/CsvImportForm';
 import { EmptyState } from '@/ui/primitives/EmptyState';
 import type { ProductTypeCode } from '@/generated/prisma/enums';
 
@@ -16,6 +18,31 @@ const PRODUCT_TYPES: readonly ProductTypeCode[] = [
   'LOFT_FURNITURE',
   'JEWELRY',
 ];
+
+const CSV_COLUMNS = [
+  'slug',
+  'typeCode',
+  'categorySlug',
+  'namePl',
+  'shortDescPl',
+  'longDescPl',
+  'careInstructionsPl',
+  'installationInfoPl',
+  'materialNotesPl',
+  'seoTitlePl',
+  'seoDescPl',
+  'basePriceGrosze',
+  'minPriceGrosze',
+  'productionDaysMin',
+  'productionDaysMax',
+  'minWidthMm',
+  'maxWidthMm',
+  'minHeightMm',
+  'maxHeightMm',
+  'allowsCustomSize',
+  'requiresExactSize',
+  'sortOrder',
+] as const;
 
 type ProductsPageProps = {
   readonly searchParams: Promise<{ readonly categoryId?: string; readonly typeCode?: string }>;
@@ -74,6 +101,9 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
       ) : (
         <ProductsDataGrid rows={products} />
       )}
+
+      <Divider sx={{ my: 4 }} />
+      <CsvImportForm action={importProductsFromCsv} expectedColumns={CSV_COLUMNS} />
     </>
   );
 }
