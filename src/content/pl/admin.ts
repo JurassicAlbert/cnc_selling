@@ -597,6 +597,16 @@ export const ADMIN = {
   settingsFieldShippingRatePl: 'Stawka wysyłki (zł) — nieużywana',
   settingsFieldShippingRateHelperPl: 'Zastąpione przez „Metody dostawy” (P9 faza 5) — ta wartość nie jest już używana przy składaniu zamówienia i pozostaje tylko dla zgodności wstecznej.',
   settingsSavedNoticePl: 'Zapisano.',
+
+  settingsAnalyticsSectionHeadingPl: 'Dane analityczne',
+  settingsAnalyticsRetentionNoticePl: 'Zdarzenia analityczne (AnalyticsEvent) są przechowywane przez 12 miesięcy. Nie istnieje jeszcze automatyczne, zaplanowane czyszczenie — to działanie trzeba uruchomić ręcznie.',
+  settingsAnalyticsPrunableCountPl: (count: number) =>
+    `Zdarzenia starsze niż 12 miesięcy do usunięcia: ${countPl(count, { one: 'zdarzenie', few: 'zdarzenia', many: 'zdarzeń' })}.`,
+  settingsAnalyticsPruneButtonPl: 'Wyczyść stare dane analityczne',
+  settingsAnalyticsPruneConfirmTitlePl: 'Usunąć stare dane analityczne?',
+  settingsAnalyticsPruneConfirmMessagePl: 'Ta operacja jest nieodwracalna — usunięte zdarzenia analityczne nie mogą zostać przywrócone.',
+  settingsAnalyticsPruneConfirmButtonPl: 'Usuń',
+  settingsAnalyticsPrunedNoticePl: (count: number) => `Usunięto ${countPl(count, { one: 'zdarzenie', few: 'zdarzenia', many: 'zdarzeń' })}.`,
   settingsPersonnelLinkPl: 'Personel',
   settingsEmailTemplatesLinkPl: 'Szablony e-mail',
 
