@@ -287,6 +287,7 @@ export const SITE = {
   designDetailReplyEmptyErrorPl: 'Wpisz treść wiadomości.',
   designDetailReplyErrorPl: 'Nie udało się wysłać wiadomości. Spróbuj ponownie.',
   designDetailNotFoundPl: 'Nie znaleziono takiego wzoru.',
+  designDetailNeedsChangesNoticePl: 'Ten projekt wymaga poprawy — sprawdź komentarze poniżej i prześlij poprawiony plik.',
 
   consentBannerTextPl:
     'Używamy niezbędnych plików cookie do działania koszyka i logowania oraz — za Twoją zgodą — plików analitycznych, które pomagają nam ulepszać sklep.',

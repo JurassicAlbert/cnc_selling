@@ -7,6 +7,7 @@ import { SITE } from '@/content/pl/site';
 import { findMyCustomerDesign } from '@/server/repositories/customer-designs';
 import { requireOwnedDesignStatus } from '@/server/repositories/design-review';
 import { DesignReviewDiscussion } from '@/ui/islands/DesignReviewDiscussion';
+import { ReuploadCustomDesignForm } from '@/ui/islands/ReuploadCustomDesignForm';
 import { Heading } from '@/ui/primitives/Heading';
 import { Text } from '@/ui/primitives/Text';
 import { ThemeRegistry } from '@/ui/theme/ThemeRegistry';
@@ -27,7 +28,12 @@ const dateFormatter = new Intl.DateTimeFormat('pl-PL', { dateStyle: 'long', time
  * (`requireOwnedDesignStatus`, built for P7's admin panel but never
  * rendered anywhere customer-facing); this page finally renders it,
  * plus the file/title info `listMyCustomerDesigns` already shows in the
- * list, plus a real reply form (`DesignReviewDiscussion`, new).
+ * list, plus a real reply form (`DesignReviewDiscussion`, new). Also
+ * closes `docs/CHECKLIST.md`'s own honestly-flagged gap: `NEEDS_CHANGES`
+ * had a real, tested `reuploadCustomDesign` action but no UI to reach it —
+ * `ReuploadCustomDesignForm` is shown only for that one status;
+ * `checkDesignReviewTransition` inside the action itself is still the real
+ * gate, this is just the entry point.
  * `notFound()` on any ownership failure — same 404-not-403 discipline as
  * `requireOwnedDesignStatus` itself.
  */
@@ -65,6 +71,14 @@ export default async function AccountDesignDetailPage({ params }: DesignDetailPa
           </div>
         </div>
       </div>
+
+      {design.status === 'NEEDS_CHANGES' && (
+        <div style={{ marginBlockStart: 32, maxWidth: 480 }}>
+          <ThemeRegistry>
+            <ReuploadCustomDesignForm customerDesignId={design.id} />
+          </ThemeRegistry>
+        </div>
+      )}
 
       <div style={{ marginBlockStart: 48, maxWidth: 640 }}>
         <Heading level={2}>{SITE.designDetailDiscussionHeadingPl}</Heading>
