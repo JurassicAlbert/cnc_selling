@@ -876,14 +876,15 @@ type ExternalPatternResourceSeed = {
 };
 
 /**
- * P9 phase 3: real external free-pattern resources shown on `/wzory`,
- * always clearly labelled as third-party — never presented as this
- * project's own content. One real row: 3axis.co, an actual, well-known
- * free vector/DXF pattern repository for CNC/laser work — described
- * honestly (a third-party site with its own licensing terms), not
- * pretended to be curated or vetted content of ours. Create-only, matched
- * by `url` (no natural unique key), same non-destructive precedent as
- * `seedFaqs`.
+ * P9 phase 3 + 2026-08-28 continuation: real external free-pattern
+ * resources shown on `/wzory`, always clearly labelled as third-party —
+ * never presented as this project's own content. Every row here was
+ * actually visited (`WebFetch`) and checked for real red flags before
+ * being added, not just returned by a search — one real candidate
+ * (LibraryLaser) was checked and deliberately excluded: mixed "free" vs.
+ * paid pricing, vague ownership, no visible IP-verification process for
+ * its user-submitted files. Create-only, matched by `url` (no natural
+ * unique key), same non-destructive precedent as `seedFaqs`.
  */
 const EXTERNAL_PATTERN_RESOURCE_SEEDS: readonly ExternalPatternResourceSeed[] = [
   {
@@ -893,6 +894,22 @@ const EXTERNAL_PATTERN_RESOURCE_SEEDS: readonly ExternalPatternResourceSeed[] = 
       'Niezależny, zewnętrzny serwis z bazą darmowych plików wektorowych (DXF, SVG, CDR) do cięcia i grawerowania CNC/laserowego. To nie są nasze materiały — przed użyciem sprawdź zasady licencjonowania obowiązujące na tej stronie.',
     sourceLabel: '3axis.co',
     sortOrder: 1,
+  },
+  {
+    namePl: 'CNCCookbook — darmowe pliki DXF',
+    url: 'https://www.cnccookbook.com/free-dxf-files/',
+    descPl:
+      'Zewnętrzny serwis prowadzony przez uznaną w branży firmę edukacyjną CNCCookbook — darmowe pliki DXF w kilkunastu kategoriach, bez rejestracji. To nie są nasze materiały — przed użyciem sprawdź zasady licencjonowania obowiązujące na tej stronie.',
+    sourceLabel: 'cnccookbook.com',
+    sortOrder: 2,
+  },
+  {
+    namePl: 'FreeLaserFile — darmowe wzory DXF/SVG do lasera',
+    url: 'https://freelaserfile.com/',
+    descPl:
+      'Niezależny, zewnętrzny serwis z bazą darmowych wzorów do cięcia laserowego (DXF, SVG, AI, CDR), pobieranych bez zakładania konta. To nie są nasze materiały — przed użyciem sprawdź zasady licencjonowania obowiązujące na tej stronie.',
+    sourceLabel: 'freelaserfile.com',
+    sortOrder: 3,
   },
 ];
 

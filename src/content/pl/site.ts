@@ -232,6 +232,8 @@ export const SITE = {
   authHaveAccountPl: 'Masz już konto?',
   authSwitchToLoginPl: 'Zaloguj się',
   authOrDividerPl: 'lub',
+  authTabPasswordPl: 'Hasło',
+  authTabOtpPl: 'Kod e-mail',
   authOtpRequestSubmitPl: 'Wyślij kod logowania e-mailem',
   authOtpCodeLabelPl: 'Kod logowania',
   authOtpSubmitPl: 'Zaloguj kodem',
@@ -326,6 +328,7 @@ export const SITE = {
   patternsExternalIntroPl:
     'To linki do niezależnych, zewnętrznych serwisów z darmowymi wzorami do grawerowania i cięcia CNC. Nie są to nasze materiały — każdy link prowadzi do strony innego dostawcy, gdzie obowiązują jego własne zasady korzystania i licencje.',
   patternsExternalBadgePl: 'zasób zewnętrzny',
+  patternsFeaturedBadgePl: 'Wyróżniony',
   patternsExternalEmptyPl: 'Obecnie nie mamy poleconych zewnętrznych źródeł wzorów.',
 
   collectionsHeadingPl: 'Kolekcje',

@@ -1,30 +1,97 @@
 /**
- * P9 continuation, 2026-08-28 — the real account dashboard body. No
- * `'use client'`: nothing here is interactive (every action lives on its
- * own sub-page), so this stays a plain Server Component — it only lives
- * under `src/ui/islands` rather than `src/ui/primitives` because it's
- * MUI-based and page-specific, not a shared cross-page primitive. Lives
- * outside `src/app/(marketing)|(shop)` specifically so it CAN import
- * `@mui/material` directly — that import is restricted by biome for
- * `src/app/(marketing)/**`/`src/app/(shop)/**` server components
- * (ARCHITECTURE.md §2.1), not for `src/ui/**`.
+ * P9 continuation, 2026-08-28 — the real account dashboard body, redesigned
+ * again the same day after direct owner feedback that the first pass still
+ * "looked vanilla html/css". Real icon badges (reusing the exact icons
+ * `AccountNav`'s tabs already use — icon↔section association reinforced,
+ * not four new arbitrary icons), an initials `Avatar` in the greeting, a
+ * responsive 2-column card grid instead of one long vertical stack, and a
+ * real hover lift on each card. No `'use client'`: nothing here is
+ * interactive (every action lives on its own sub-page) — lives under
+ * `src/ui/islands` only because it needs `@mui/material`, which
+ * `src/app/(shop)` server components cannot import directly
+ * (ARCHITECTURE.md §2.1 / biome's `noRestrictedImports`).
  *
  * `justifyContent`/`alignItems`/`flexWrap`/`gap` all go through `sx`, not
- * as direct `Stack` props — matching the established convention (see
- * `DashboardCharts.tsx`), not this MUI version's `Stack` type overload for
- * those as top-level props.
+ * as direct `Stack` props — this MUI version's `Stack` type overload
+ * doesn't accept those as top-level props (see `DashboardCharts.tsx`).
  */
 
+import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { Card, CardContent, Chip, Stack, Typography } from '@mui/material';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutlineOutlined';
+import PaletteIcon from '@mui/icons-material/Palette';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import TurnedInIcon from '@mui/icons-material/TurnedIn';
+import { Avatar, Box, Card, CardContent, Chip, Stack, Typography } from '@mui/material';
+import type { SvgIconComponent } from '@mui/icons-material';
 
 import { formatPln } from '@/domain/money/money';
 import { orderStatusMessage, shipmentStatusMessage } from '@/content/pl/messages';
 import { SITE } from '@/content/pl/site';
 import type { OrderSummaryView } from '@/server/repositories/orders';
-import { Heading } from '@/ui/primitives/Heading';
 
 const RECENT_ORDERS_LIMIT = 3;
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const chars = parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '');
+  return chars.join('') || '?';
+}
+
+function SectionIcon({ Icon }: { readonly Icon: SvgIconComponent }) {
+  return (
+    <Box
+      sx={{
+        width: 40,
+        height: 40,
+        borderRadius: '50%',
+        bgcolor: 'secondary.main',
+        color: 'background.paper',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+      }}
+    >
+      <Icon fontSize="small" />
+    </Box>
+  );
+}
+
+function DashboardCard({
+  icon,
+  heading,
+  href,
+  children,
+}: {
+  readonly icon: SvgIconComponent;
+  readonly heading: string;
+  readonly href: string;
+  readonly children?: ReactNode;
+}) {
+  return (
+    <Card
+      variant="outlined"
+      sx={{
+        transition: 'border-color 0.15s ease, transform 0.15s ease',
+        '&:hover': { borderColor: 'secondary.main', transform: 'translateY(-2px)' },
+      }}
+    >
+      <CardContent>
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mb: children ? 2 : 0.5 }}>
+          <SectionIcon Icon={icon} />
+          <Stack direction="row" sx={{ flex: 1, alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="h6">{heading}</Typography>
+            <Link href={href} style={{ font: 'var(--mui-font-body2)' }}>
+              {SITE.accountViewAllPl}
+            </Link>
+          </Stack>
+        </Stack>
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
 
 export function AccountDashboard({
   name,
@@ -42,21 +109,22 @@ export function AccountDashboard({
   const recentOrders = orders.slice(0, RECENT_ORDERS_LIMIT);
 
   return (
-    <div>
-      <Heading level={1}>{SITE.headerAccountLinkPl}</Heading>
-      <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-        {SITE.accountOverviewGreetingPl}, {name}
-      </Typography>
+    <Box>
+      <Stack direction="row" spacing={2} sx={{ alignItems: 'center', mb: 4 }}>
+        <Avatar sx={{ bgcolor: 'secondary.main', width: 56, height: 56, fontSize: '1.1rem' }}>{initials(name)}</Avatar>
+        <Box>
+          <Typography variant="h5" component="h1">
+            {SITE.headerAccountLinkPl}
+          </Typography>
+          <Typography color="text.secondary">
+            {SITE.accountOverviewGreetingPl}, {name}
+          </Typography>
+        </Box>
+      </Stack>
 
-      <Stack spacing={3} sx={{ mt: 4, maxWidth: 720 }}>
-        <Card variant="outlined">
-          <CardContent>
-            <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="h6">{SITE.accountNavOrdersPl}</Typography>
-              <Link href="/moje-konto/zamowienia" style={{ font: 'var(--mui-font-body2)' }}>
-                {SITE.accountViewAllPl}
-              </Link>
-            </Stack>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+        <Box sx={{ gridColumn: { xs: '1', md: '1 / -1' } }}>
+          <DashboardCard icon={ReceiptLongIcon} heading={SITE.accountNavOrdersPl} href="/moje-konto/zamowienia">
             {recentOrders.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
                 {SITE.accountOverviewOrdersEmptyPl}
@@ -87,50 +155,27 @@ export function AccountDashboard({
                 ))}
               </Stack>
             )}
-          </CardContent>
-        </Card>
+          </DashboardCard>
+        </Box>
 
-        <Card variant="outlined">
-          <CardContent>
-            <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="h6">{SITE.accountNavDesignsPl}</Typography>
-              <Link href="/moje-konto/wzory" style={{ font: 'var(--mui-font-body2)' }}>
-                {SITE.accountViewAllPl}
-              </Link>
-            </Stack>
-            <Typography variant="body2" color="text.secondary">
-              {SITE.accountOverviewDesignsSummaryPl(designCount, favoriteDesignCount)}
-            </Typography>
-          </CardContent>
-        </Card>
+        <DashboardCard icon={PaletteIcon} heading={SITE.accountNavDesignsPl} href="/moje-konto/wzory">
+          <Typography variant="body2" color="text.secondary">
+            {SITE.accountOverviewDesignsSummaryPl(designCount, favoriteDesignCount)}
+          </Typography>
+        </DashboardCard>
 
-        <Card variant="outlined">
-          <CardContent>
-            <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="h6">{SITE.accountNavConfigurationsPl}</Typography>
-              <Link href="/moje-konto/projekty" style={{ font: 'var(--mui-font-body2)' }}>
-                {SITE.accountViewAllPl}
-              </Link>
-            </Stack>
-          </CardContent>
-        </Card>
+        <DashboardCard icon={TurnedInIcon} heading={SITE.accountNavConfigurationsPl} href="/moje-konto/projekty" />
 
-        <Card variant="outlined">
-          <CardContent>
-            <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="h6">{SITE.accountNavHelpPl}</Typography>
-              <Link href="/moje-konto/pomoc" style={{ font: 'var(--mui-font-body2)' }}>
-                {SITE.accountViewAllPl}
-              </Link>
-            </Stack>
+        <Box sx={{ gridColumn: { xs: '1', md: '1 / -1' } }}>
+          <DashboardCard icon={HelpOutlineIcon} heading={SITE.accountNavHelpPl} href="/moje-konto/pomoc">
             <Typography variant="body2" color="text.secondary">
               {openSupportRequestCount > 0
                 ? SITE.accountOverviewHelpSummaryOpenPl(openSupportRequestCount)
                 : SITE.accountOverviewHelpSummaryNonePl}
             </Typography>
-          </CardContent>
-        </Card>
-      </Stack>
-    </div>
+          </DashboardCard>
+        </Box>
+      </Box>
+    </Box>
   );
 }
