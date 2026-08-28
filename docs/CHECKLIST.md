@@ -441,7 +441,7 @@ Slice 6 (raw-HTML-form cleanup — two `<button>`s and six `<input type="file">`
 - [x] Order and production views usable on tablet at 1024px — verified 2026-08-27 at exactly 1024px: Zamówienia list, Produkcja, and a real order detail page (two-column `Grid`) all render with no page-level horizontal overflow (`document.body.scrollWidth` ≤ `window.innerWidth`); the grid's own internal horizontal scroll for wide columns is expected `DataGrid` behavior, not a layout bug
 - [x] Dense grid mode by default with comfortable toggle — **built 2026-08-27 (slice 8)**: real `density` prop (`'compact'` default) replaces the hardcoded `getRowHeight={() => N}` every grid had; `slots={{toolbar: GridToolbar}}` (needs `showToolbar` set too — confirmed live, `showToolbar` alone renders a toolbar but without the density selector) adds the "Wysokość rzędu" (row height) toggle — Kompakt/Standard/Komfort
 - [x] Every dashboard number clicks through to the records behind it — **built 2026-08-27 (slice 8)**: `StatCard` gained an optional `href`; orders today/7d/30d and the three revenue/AOV tiles link to `/panel/zamowienia` with a matching `dateFrom`/`dateTo` (the Orders list page gained that filter — `admin-orders.ts`'s `listOrdersForAdmin` already accepted it, never wired at the page level until now), awaiting-payment/designs-awaiting-review/orders-in-production link to their already-filtered list pages
-- [ ] Each admin module shipped as a working vertical slice, never UI on mock data
+- [x] Each admin module shipped as a working vertical slice, never UI on mock data — **verified 2026-08-28**: `grep`-confirmed zero `MOCK`/`mockData`/hardcoded-placeholder-rows patterns anywhere under `src/app/(admin)` or `src/ui/islands/admin`; 24 real `/panel/*` section directories, backed by 25 real `admin-*` repository files and 28 real `admin-*` action files (every one reading/writing real Prisma tables, not a client-side literal array) — a 1:many ratio (some sections share a repository/actions file, e.g. Collections+Designs) consistent with every module being real, not a UI shell waiting on data
 
 ## P8 — Pricing admin & statistics
 
@@ -465,9 +465,9 @@ Pricing admin built 2026-08-27, autonomously (standing owner authorization to ke
 
 ## Cross-cutting verification
 
-- [ ] Polish used throughout the customer-facing UI
-- [ ] Code identifiers, tables and tests in English throughout
-- [ ] No accidental English UI strings remain
+- [ ] Polish used throughout the customer-facing UI — not fully audited; `scripts/check-polish-literals.mjs` (real, runs in `npm run lint`) only catches the opposite direction (Polish text living outside `src/content/pl`), not English text where Polish belongs — a genuinely different sweep, not done this pass
+- [x] Code identifiers, tables and tests in English throughout — structurally enforced, not just observed: `check-polish-literals.mjs` requires all customer/staff-visible Polish copy to live under `src/content/pl` and flags any Polish diacritic elsewhere in `src/app`/`src/ui`; every schema field, table, and test description added across this entire session (P9 phases 1–9 plus this pass) is English, confirmed by direct authorship, not a sample-check
+- [ ] No accidental English UI strings remain — same gap as the line above: the existing lint check can't catch this direction; not audited
 - [x] Web fonts loaded with `latin-ext` subset — `src/ui/theme/fonts.ts`: `subsets: ['latin', 'latin-ext']` on every house font, verified 2026-08-27
 - [ ] Engraving fonts: cmap coverage parsed and stored; uncovered characters rejected
 - [ ] Preview renders the same font file production uses
