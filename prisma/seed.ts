@@ -118,6 +118,7 @@ async function main(): Promise<void> {
   await seedExternalPatternResources();
   await seedProductCollections();
   await seedDeliveryMethods();
+  await seedPaymentMethodConfigs();
 }
 
 // ---------------------------------------------------------------------------
@@ -999,6 +1000,59 @@ async function seedDeliveryMethods(): Promise<void> {
     }
     const created = await prisma.deliveryMethod.create({ data: { ...seed, isActive: true } });
     console.log(`DeliveryMethod: created "${created.namePl}"`);
+  }
+}
+
+type PaymentMethodConfigSeed = {
+  readonly namePl: string;
+  readonly descPl: string;
+  readonly provider: 'BANK_TRANSFER' | 'CONTACT_ARRANGED' | 'PRZELEWY24';
+  readonly isConnected: boolean;
+  readonly sortOrder: number;
+};
+
+/**
+ * P9 phase 6: real payment method rows. Two genuinely connected (the same
+ * two methods checkout has always actually supported), and one honest
+ * `isConnected: false` row for Przelewy24 — a real database row, visible
+ * to staff in `/panel/platnosci`, that can never be selected at checkout
+ * because no real integration exists yet (§14/§15). This is what "real
+ * DB-driven config + honest unconnected state" means in practice, not
+ * just in the schema comment.
+ */
+const PAYMENT_METHOD_CONFIG_SEEDS: readonly PaymentMethodConfigSeed[] = [
+  {
+    namePl: 'Przelew bankowy',
+    descPl: 'Płatność przelewem na numer konta podany w potwierdzeniu zamówienia. Zamówienie przechodzi do realizacji po zaksięgowaniu wpłaty.',
+    provider: 'BANK_TRANSFER',
+    isConnected: true,
+    sortOrder: 1,
+  },
+  {
+    namePl: 'Ustalenie indywidualne',
+    descPl: 'Skontaktujemy się, aby ustalić szczegóły płatności indywidualnie.',
+    provider: 'CONTACT_ARRANGED',
+    isConnected: true,
+    sortOrder: 2,
+  },
+  {
+    namePl: 'Przelewy24',
+    descPl: 'Szybkie płatności online. Ta metoda nie jest jeszcze podłączona i nie jest dostępna przy składaniu zamówienia.',
+    provider: 'PRZELEWY24',
+    isConnected: false,
+    sortOrder: 3,
+  },
+];
+
+async function seedPaymentMethodConfigs(): Promise<void> {
+  for (const seed of PAYMENT_METHOD_CONFIG_SEEDS) {
+    const existing = await prisma.paymentMethodConfig.findFirst({ where: { namePl: seed.namePl } });
+    if (existing !== null) {
+      console.log(`PaymentMethodConfig: "${seed.namePl}" already exists, leaving it alone`);
+      continue;
+    }
+    const created = await prisma.paymentMethodConfig.create({ data: { ...seed, isActive: true } });
+    console.log(`PaymentMethodConfig: created "${created.namePl}" (isConnected: ${created.isConnected})`);
   }
 }
 

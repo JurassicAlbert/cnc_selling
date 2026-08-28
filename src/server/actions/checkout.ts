@@ -15,14 +15,13 @@ import { redirect } from 'next/navigation';
 import { validateNip, validatePhone, validatePostalCode } from '@/domain/checkout/validate';
 import { isPlausibleEmail } from '@/domain/text/email';
 import type { CheckoutFieldIssueCode } from '@/content/pl/messages';
-import type { PaymentMethod } from '@/generated/prisma/enums';
 import { getSession } from '@/server/auth/session';
 import { readGuestSessionToken } from '@/server/session/read-guest-session';
 import { createOrder } from '@/server/orders/create-order';
 
 export type CheckoutFormState = {
   readonly fieldErrors: Partial<Record<string, CheckoutFieldIssueCode>>;
-  readonly formError: 'CART_EMPTY' | 'PRICE_CHANGED' | 'DELIVERY_METHOD_INVALID' | null;
+  readonly formError: 'CART_EMPTY' | 'PRICE_CHANGED' | 'DELIVERY_METHOD_INVALID' | 'PAYMENT_METHOD_INVALID' | null;
   /**
    * Echoed back so a validation error on one field doesn't erase everything
    * else the customer already typed — `useActionState` re-renders the same
@@ -53,7 +52,7 @@ export async function submitCheckout(
   const street = field(formData, 'street');
   const postalCode = field(formData, 'postalCode');
   const city = field(formData, 'city');
-  const paymentMethod = field(formData, 'paymentMethod');
+  const paymentMethodConfigId = field(formData, 'paymentMethodConfigId');
   const deliveryMethodId = field(formData, 'deliveryMethodId');
   const termsAccepted = formData.get('termsAccepted') === 'on';
   const withdrawalAcknowledged = formData.get('withdrawalAcknowledged') === 'on';
@@ -68,9 +67,7 @@ export async function submitCheckout(
   if (street.length === 0) fieldErrors.street = 'STREET_REQUIRED';
   if (!validatePostalCode(postalCode)) fieldErrors.postalCode = 'POSTAL_CODE_INVALID';
   if (city.length === 0) fieldErrors.city = 'CITY_REQUIRED';
-  if (paymentMethod !== 'BANK_TRANSFER' && paymentMethod !== 'CONTACT_ARRANGED') {
-    fieldErrors.paymentMethod = 'PAYMENT_METHOD_REQUIRED';
-  }
+  if (paymentMethodConfigId.length === 0) fieldErrors.paymentMethodConfigId = 'PAYMENT_METHOD_REQUIRED';
   if (deliveryMethodId.length === 0) fieldErrors.deliveryMethodId = 'DELIVERY_METHOD_REQUIRED';
   if (!termsAccepted) fieldErrors.terms = 'TERMS_NOT_ACCEPTED';
   if (!withdrawalAcknowledged) fieldErrors.withdrawal = 'WITHDRAWAL_NOT_ACKNOWLEDGED';
@@ -85,7 +82,7 @@ export async function submitCheckout(
     street,
     postalCode,
     city,
-    paymentMethod,
+    paymentMethodConfigId,
     deliveryMethodId,
   };
 
@@ -106,7 +103,7 @@ export async function submitCheckout(
     street,
     postalCode,
     city,
-    paymentMethod: paymentMethod as PaymentMethod,
+    paymentMethodConfigId,
     deliveryMethodId,
   });
 

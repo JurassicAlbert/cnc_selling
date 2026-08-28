@@ -27,6 +27,12 @@
  * driven (`ActiveDeliveryMethod[]`) — the shown price is for display only;
  * `createOrder` always recomputes it server-side from the real row, never
  * trusting whatever this form last rendered (§15.3).
+ *
+ * P9 phase 6: the two hardcoded payment radios became a real DB-driven
+ * selector too, sourced from `listActivePaymentMethods()` — which is
+ * already filtered to `isConnected: true` only, so an unconnected
+ * provider (e.g. Przelewy24) never even appears as an option here, not
+ * just "shown but disabled."
  */
 
 import { useActionState, useEffect, useRef, useState } from 'react';
@@ -53,6 +59,7 @@ import { submitCheckout } from '@/server/actions/checkout';
 import type { CheckoutFormState } from '@/server/actions/checkout';
 import { computeShippingGrosze } from '@/domain/checkout/delivery';
 import type { ActiveDeliveryMethod } from '@/server/repositories/delivery-methods';
+import type { ActivePaymentMethod } from '@/server/repositories/payment-methods';
 
 // Not exported from checkout.ts itself: a 'use server' file may only
 // export async functions, never a plain data constant.
@@ -60,9 +67,11 @@ const INITIAL_CHECKOUT_STATE: CheckoutFormState = { fieldErrors: {}, formError: 
 
 export function CheckoutForm({
   deliveryMethods,
+  paymentMethods,
   subtotalGrossGrosze,
 }: {
   readonly deliveryMethods: readonly ActiveDeliveryMethod[];
+  readonly paymentMethods: readonly ActivePaymentMethod[];
   /** Pre-shipping gross total, for the live estimate shown below — `createOrder` always recomputes the real, final figure server-side (§15.3); this is display-only. */
   readonly subtotalGrossGrosze: number;
 }) {
@@ -82,6 +91,7 @@ export function CheckoutForm({
   const defaultDeliveryMethodId = v.deliveryMethodId ?? deliveryMethods[0]?.id ?? '';
   const [selectedDeliveryId, setSelectedDeliveryId] = useState(defaultDeliveryMethodId);
   const selectedDelivery = deliveryMethods.find((m) => m.id === selectedDeliveryId) ?? null;
+  const defaultPaymentMethodConfigId = v.paymentMethodConfigId ?? paymentMethods[0]?.id ?? '';
 
   return (
     <form key={renderKey} action={formAction}>
@@ -89,6 +99,7 @@ export function CheckoutForm({
         {state.formError === 'CART_EMPTY' && <Alert severity="error">{SITE.checkoutEmptyCartRedirectPl}</Alert>}
         {state.formError === 'PRICE_CHANGED' && <Alert severity="error">{COPY.priceChanged}</Alert>}
         {state.formError === 'DELIVERY_METHOD_INVALID' && <Alert severity="error">{SITE.checkoutDeliveryMethodInvalidPl}</Alert>}
+        {state.formError === 'PAYMENT_METHOD_INVALID' && <Alert severity="error">{SITE.checkoutPaymentMethodInvalidPl}</Alert>}
 
         <Stack spacing={2}>
           <Typography variant="subtitle1">{SITE.checkoutBuyerSectionHeadingPl}</Typography>
@@ -223,12 +234,29 @@ export function CheckoutForm({
 
         <Stack spacing={1}>
           <Typography variant="subtitle1">{SITE.checkoutPaymentSectionHeadingPl}</Typography>
-          <RadioGroup name="paymentMethod" defaultValue={v.paymentMethod ?? 'BANK_TRANSFER'}>
-            <FormControlLabel value="BANK_TRANSFER" control={<Radio size="small" />} label={SITE.checkoutPaymentBankTransferPl} />
-            <FormControlLabel value="CONTACT_ARRANGED" control={<Radio size="small" />} label={SITE.checkoutPaymentContactArrangedPl} />
-          </RadioGroup>
-          {state.fieldErrors.paymentMethod !== undefined && (
-            <FormHelperText error>{checkoutIssueMessage(state.fieldErrors.paymentMethod)}</FormHelperText>
+          {paymentMethods.length === 0 ? (
+            <Alert severity="warning">{SITE.checkoutNoPaymentMethodsPl}</Alert>
+          ) : (
+            <RadioGroup name="paymentMethodConfigId" defaultValue={defaultPaymentMethodConfigId}>
+              {paymentMethods.map((method) => (
+                <FormControlLabel
+                  key={method.id}
+                  value={method.id}
+                  control={<Radio size="small" />}
+                  label={
+                    <Stack sx={{ py: 0.25 }}>
+                      <Typography variant="body2">{method.namePl}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {method.descPl}
+                      </Typography>
+                    </Stack>
+                  }
+                />
+              ))}
+            </RadioGroup>
+          )}
+          {state.fieldErrors.paymentMethodConfigId !== undefined && (
+            <FormHelperText error>{checkoutIssueMessage(state.fieldErrors.paymentMethodConfigId)}</FormHelperText>
           )}
         </Stack>
 

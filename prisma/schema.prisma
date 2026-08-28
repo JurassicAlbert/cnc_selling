@@ -738,6 +738,11 @@ enum OrderStatus {
 enum PaymentMethod {
   BANK_TRANSFER
   CONTACT_ARRANGED
+  /// P9 phase 6: real DB row exists (`PaymentMethodConfig`), `isConnected: false`
+  /// — visible to admins, never selectable at checkout. See that model's comment.
+  PRZELEWY24
+  CARD
+  PAYPAL
 }
 
 enum PaymentStatus {
@@ -745,6 +750,37 @@ enum PaymentStatus {
   UNDERPAID
   PAID
   REFUNDED
+  /// P9 phase 6 additions — additive only, no existing value removed or
+  /// repurposed. None of the two real payment methods' own tested logic
+  /// (`applyMarkOrderPaid` etc.) currently produces these; they exist for
+  /// a real future provider integration's honest lifecycle, not simulated.
+  PENDING
+  FAILED
+  CANCELLED
+}
+
+/// P9 phase 6: real, admin-managed payment method configuration —
+/// `isConnected: false` means "a real row, visible to staff, but never
+/// selectable at checkout" — the honest "not yet integrated" state
+/// (docs/ARCHITECTURE.md §14's `PaymentProvider` interface has no
+/// implementation yet for anything beyond bank transfer / contact-
+/// arranged). Deliberately NOT admin-editable via the form — flipping it
+/// to `true` would let an admin silently "enable" a payment method with no
+/// real integration behind it, exactly what §15's "no fake payment" rule
+/// forbids. Only ever set `true` by real code once a real provider exists.
+model PaymentMethodConfig {
+  id          String        @id @default(cuid())
+  namePl      String
+  descPl      String        @db.Text
+  provider    PaymentMethod
+  isConnected Boolean       @default(false)
+  isActive    Boolean       @default(true)
+  sortOrder   Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  orders      Order[]
+
+  @@index([isActive, isConnected, sortOrder])
 }
 
 /// P9 phase 5: real, admin-managed delivery/shipping methods — replaces the
@@ -773,15 +809,21 @@ model DeliveryMethod {
 }
 
 model Order {
-  id            String        @id @default(cuid())
-  orderNumber   String        @unique // "2026/08/0042" — from a sequence, never count()+1
-  userId        String?
-  user          User?         @relation(fields: [userId], references: [id])
+  id                    String               @id @default(cuid())
+  orderNumber           String               @unique // "2026/08/0042" — from a sequence, never count()+1
+  userId                String?
+  user                  User?                @relation(fields: [userId], references: [id])
   /// Guest order lookup. 32 random bytes, compared in constant time.
-  accessToken   String        @unique
-  status        OrderStatus   @default(NEW)
-  paymentMethod PaymentMethod
-  paymentStatus PaymentStatus @default(AWAITING)
+  accessToken           String               @unique
+  status                OrderStatus          @default(NEW)
+  paymentMethod         PaymentMethod
+  paymentStatus         PaymentStatus        @default(AWAITING)
+  /// P9 phase 6: which real `PaymentMethodConfig` row was actually shown/
+  /// chosen — traceability only. `paymentMethod` above stays the field the
+  /// two real methods' own tested logic (`applyMarkOrderPaid` etc.) reads;
+  /// this is additive, never a replacement.
+  paymentMethodConfigId String?
+  paymentMethodConfig   PaymentMethodConfig? @relation(fields: [paymentMethodConfigId], references: [id])
 
   // Buyer data is CAPTURED, never re-read from the user profile: a customer
   // who moves house must not retroactively change where an old order went.

@@ -25,6 +25,7 @@ import CollectionsBookmarkOutlinedIcon from '@mui/icons-material/CollectionsBook
 import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
 import AutoAwesomeMosaicOutlinedIcon from '@mui/icons-material/AutoAwesomeMosaicOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
+import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined';
 import NewspaperOutlinedIcon from '@mui/icons-material/NewspaperOutlined';
@@ -86,6 +87,7 @@ const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       { href: '/panel/ustawienia', label: ADMIN.navSettingsPl, icon: <SettingsOutlinedIcon fontSize="small" /> },
       { href: '/panel/dostawa', label: ADMIN.navDeliveryMethodsPl, icon: <LocalShippingOutlinedIcon fontSize="small" /> },
+      { href: '/panel/platnosci', label: ADMIN.navPaymentMethodsPl, icon: <PaymentsOutlinedIcon fontSize="small" /> },
       { href: '/panel/ceny', label: ADMIN.navPricingPl, icon: <SellOutlinedIcon fontSize="small" /> },
       { href: '/panel/dziennik-zdarzen', label: ADMIN.navAuditLogPl, icon: <HistoryOutlinedIcon fontSize="small" /> },
     ],

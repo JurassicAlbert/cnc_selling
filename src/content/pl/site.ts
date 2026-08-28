@@ -158,6 +158,8 @@ export const SITE = {
   checkoutDeliveryEstimateLabelPl: 'Przewidywany czas dostawy:',
   checkoutDeliveryEstimateUnitPl: 'dni roboczych',
   checkoutDeliveryMethodInvalidPl: 'Wybrana metoda dostawy jest już niedostępna — wybierz inną i spróbuj ponownie.',
+  checkoutPaymentMethodInvalidPl: 'Wybrana metoda płatności jest już niedostępna — wybierz inną i spróbuj ponownie.',
+  checkoutNoPaymentMethodsPl: 'Obecnie żadna metoda płatności nie jest dostępna. Skontaktuj się z nami, aby dokończyć zamówienie.',
   checkoutPaymentSectionHeadingPl: 'Płatność',
   checkoutPaymentBankTransferPl: 'Przelew bankowy',
   checkoutPaymentContactArrangedPl: 'Ustalę szczegóły indywidualnie',

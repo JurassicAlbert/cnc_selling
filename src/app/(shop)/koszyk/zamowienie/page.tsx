@@ -8,6 +8,7 @@ import { readGuestSessionToken } from '@/server/session/read-guest-session';
 import { findCartForRequest } from '@/server/repositories/cart';
 import { recordAnalyticsEvent } from '@/server/analytics/record-event';
 import { listActiveDeliveryMethods } from '@/server/repositories/delivery-methods';
+import { listActivePaymentMethods } from '@/server/repositories/payment-methods';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
 import { Section } from '@/ui/primitives/Section';
@@ -32,9 +33,10 @@ export const metadata: Metadata = {
  */
 export default async function CheckoutPage() {
   const [sessionToken, session] = await Promise.all([readGuestSessionToken(), getSession()]);
-  const [cart, deliveryMethods] = await Promise.all([
+  const [cart, deliveryMethods, paymentMethods] = await Promise.all([
     findCartForRequest({ userId: session?.userId ?? null, sessionToken }),
     listActiveDeliveryMethods(),
+    listActivePaymentMethods(),
   ]);
 
   if (cart.items.length === 0) {
@@ -63,7 +65,7 @@ export default async function CheckoutPage() {
 
         <div style={{ marginBlockStart: 32 }}>
           <ThemeRegistry>
-            <CheckoutForm deliveryMethods={deliveryMethods} subtotalGrossGrosze={cart.subtotalGrossGrosze} />
+            <CheckoutForm deliveryMethods={deliveryMethods} paymentMethods={paymentMethods} subtotalGrossGrosze={cart.subtotalGrossGrosze} />
           </ThemeRegistry>
         </div>
       </Container>

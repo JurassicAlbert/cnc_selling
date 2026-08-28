@@ -12,6 +12,7 @@ import type {
   InstallationVariantCode,
   MaterialFamily,
   OrderStatus,
+  PaymentMethod,
   ProductTypeCode,
   ReviewStatus,
   UploadKind,
@@ -36,6 +37,7 @@ export const ADMIN = {
   navExternalPatternResourcesPl: 'Zewnętrzne wzory',
   navProductCollectionsPl: 'Kolekcje produktów',
   navDeliveryMethodsPl: 'Metody dostawy',
+  navPaymentMethodsPl: 'Metody płatności',
   navProductionPl: 'Produkcja',
   navFaqPl: 'FAQ',
   navStaticPagesPl: 'Strony',
@@ -442,6 +444,22 @@ export const ADMIN = {
   deliveryMethodFieldTrackingAvailablePl: 'Śledzenie przesyłki dostępne',
   deliveryMethodFieldSortOrderPl: 'Kolejność wyświetlania',
 
+  paymentMethodsHeadingPl: 'Metody płatności',
+  paymentMethodsNewPl: 'Nowa metoda',
+  paymentMethodsEmptyPl: 'Brak metod płatności. Dodaj pierwszą, aby pojawiła się w koszyku.',
+  paymentMethodColumnNamePl: 'Nazwa',
+  paymentMethodColumnProviderPl: 'Dostawca',
+  paymentMethodColumnConnectedPl: 'Połączona',
+  paymentMethodColumnStatusPl: 'Status',
+  paymentMethodFieldNamePl: 'Nazwa',
+  paymentMethodFieldDescPl: 'Opis',
+  paymentMethodFieldProviderPl: 'Dostawca',
+  paymentMethodFieldSortOrderPl: 'Kolejność wyświetlania',
+  paymentMethodConnectedYesPl: 'Połączona — dostępna w kasie',
+  paymentMethodConnectedNoPl: 'Niepołączona — nie jest jeszcze dostępna w kasie',
+  paymentMethodConnectedHelperPl:
+    'To pole jest ustawiane wyłącznie przez rzeczywistą integrację techniczną, nie z tego formularza — dzięki temu żadna metoda płatności nie może zostać omyłkowo „włączona” bez faktycznego podłączenia.',
+
   staticPagesHeadingPl: 'Strony',
   staticPagesNewPl: 'Nowa strona',
   staticPagesEmptyPl: 'Brak stron. Dodaj pierwszą, aby pojawiła się pod adresem /strony/...',
@@ -694,6 +712,18 @@ const GRAIN_DIRECTION_LABELS_PL: Record<GrainDirection, string> = {
 
 export function adminGrainDirectionLabel(direction: GrainDirection): string {
   return GRAIN_DIRECTION_LABELS_PL[direction];
+}
+
+const PAYMENT_METHOD_LABELS_PL: Record<PaymentMethod, string> = {
+  BANK_TRANSFER: 'Przelew bankowy',
+  CONTACT_ARRANGED: 'Ustalenie indywidualne',
+  PRZELEWY24: 'Przelewy24',
+  CARD: 'Karta płatnicza',
+  PAYPAL: 'PayPal',
+};
+
+export function adminPaymentMethodLabel(provider: PaymentMethod): string {
+  return PAYMENT_METHOD_LABELS_PL[provider];
 }
 
 const FINISH_KIND_LABELS_PL: Record<FinishKind, string> = {

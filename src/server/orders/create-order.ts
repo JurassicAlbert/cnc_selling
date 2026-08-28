@@ -21,7 +21,6 @@ import { checkOrderStatusTransition } from '@/domain/order-status/transitions';
 import type { OrderStatus } from '@/domain/order-status/transitions';
 import { prisma } from '@/server/db/client';
 import type { Prisma } from '@/generated/prisma/client';
-import type { PaymentMethod } from '@/generated/prisma/enums';
 import { findCartForRequest } from '@/server/repositories/cart';
 import type { CartItemView } from '@/server/repositories/cart';
 import { priceAndValidateSelections } from '@/server/configurator/validate-and-price';
@@ -47,7 +46,7 @@ export type CreateOrderInput = {
   readonly street: string;
   readonly postalCode: string;
   readonly city: string;
-  readonly paymentMethod: PaymentMethod;
+  readonly paymentMethodConfigId: string;
   readonly deliveryMethodId: string;
 };
 
@@ -55,7 +54,8 @@ export type CreateOrderResult =
   | { readonly ok: true; readonly orderNumber: string; readonly accessToken: string }
   | { readonly ok: false; readonly code: 'CART_EMPTY' }
   | { readonly ok: false; readonly code: 'PRICE_CHANGED' }
-  | { readonly ok: false; readonly code: 'DELIVERY_METHOD_INVALID' };
+  | { readonly ok: false; readonly code: 'DELIVERY_METHOD_INVALID' }
+  | { readonly ok: false; readonly code: 'PAYMENT_METHOD_INVALID' };
 
 type RevalidatedItem = {
   readonly item: CartItemView;
@@ -70,11 +70,15 @@ function toJsonInput<T>(value: T): Prisma.InputJsonValue {
 }
 
 export async function createOrder(input: CreateOrderInput): Promise<CreateOrderResult> {
-  const [cart, deliveryMethod] = await Promise.all([
+  const [cart, deliveryMethod, paymentMethodConfig] = await Promise.all([
     findCartForRequest({ userId: input.userId, sessionToken: input.sessionToken }),
     prisma.deliveryMethod.findFirst({
       where: { id: input.deliveryMethodId, isActive: true },
       select: { namePl: true, priceGrosze: true, freeShippingThresholdGrosze: true },
+    }),
+    prisma.paymentMethodConfig.findFirst({
+      where: { id: input.paymentMethodConfigId, isActive: true, isConnected: true },
+      select: { provider: true },
     }),
   ]);
   if (cart.items.length === 0) {
@@ -86,6 +90,13 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   // re-pricing loop below.
   if (deliveryMethod === null) {
     return { ok: false, code: 'DELIVERY_METHOD_INVALID' };
+  }
+  // `isConnected: false` (an unconnected provider like Przelewy24) is
+  // rejected the same as a non-existent id — never just "disabled and
+  // explained," since there's no real payment flow behind it to send
+  // anyone into (§15's "no fake payment" rule).
+  if (paymentMethodConfig === null) {
+    return { ok: false, code: 'PAYMENT_METHOD_INVALID' };
   }
 
   const revalidated: RevalidatedItem[] = [];
@@ -120,7 +131,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   const accessToken = randomBytes(32).toString('base64url');
   const cartItemIds = cart.items.map((i) => i.cartItemId);
   const now = new Date();
-  const initialStatus: OrderStatus = input.paymentMethod === 'BANK_TRANSFER' ? 'AWAITING_PAYMENT' : 'NEW';
+  const initialStatus: OrderStatus = paymentMethodConfig.provider === 'BANK_TRANSFER' ? 'AWAITING_PAYMENT' : 'NEW';
 
   const { orderNumber } = await prisma.$transaction(async (tx) => {
     const counterYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -142,7 +153,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
         orderNumber: number,
         accessToken,
         status: initialStatus,
-        paymentMethod: input.paymentMethod,
+        paymentMethod: paymentMethodConfig.provider,
+        paymentMethodConfigId: input.paymentMethodConfigId,
         userId: input.userId,
         email: input.email,
         phone: input.phone,
@@ -218,7 +230,13 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     .send('order-confirmation', input.email, {
       orderNumber,
       totalGrossGrosze,
-      paymentMethod: input.paymentMethod as 'BANK_TRANSFER' | 'CONTACT_ARRANGED',
+      // Safe today: only BANK_TRANSFER/CONTACT_ARRANGED are ever seeded
+      // `isConnected: true`, so `paymentMethodConfig` (checked above) can
+      // never resolve to anything else in practice. Revisit this cast the
+      // day a real third provider actually goes connected — the mailer
+      // template itself would need a real Przelewy24/card/PayPal copy
+      // block first, which is out of this phase's scope.
+      paymentMethod: paymentMethodConfig.provider as 'BANK_TRANSFER' | 'CONTACT_ARRANGED',
     })
     .catch(() => {
       // Logged inside the mailer itself; nothing else to do here.

@@ -904,6 +904,27 @@ confirmed the resulting real order's delivery snapshot and
 free-shipping threshold were both correct. Full suite 667/667.
 See `docs/HANDOVER.md` §9z46.
 
+**Phase 6, shipped — 2026-08-28.** Payment method CRUD + real
+checkout wiring, no fake payment. New `PaymentMethodConfig` model
+(`provider` reuses the existing `PaymentMethod` enum rather than a
+duplicate one) with an `isConnected` gate — real DB row, staff-
+visible, but never selectable at checkout unless actually wired up.
+The load-bearing decision: `isConnected` is not exposed anywhere in
+the admin form, no checkbox, nothing — the only other boolean like it
+in this panel (`isActive`) is a real toggle everywhere else, but this
+one deliberately isn't, so an admin can never accidentally "enable" a
+payment method with zero real integration behind it. `CheckoutForm`'s
+payment radios became DB-driven, filtered to connected methods only
+at the repository level; `createOrder` re-validates the chosen
+config before anything else, mirroring the delivery-method pattern
+from Phase 5 exactly. Seeded three real rows — two connected (the
+methods checkout has always supported), one honest unconnected
+Przelewy24 row. 11 new/extended test cases, full suite 678/678.
+Live-verified the unconnected row is provably unreachable at
+checkout — fetched the real rendered checkout HTML and confirmed
+"Przelewy24" is absent while the two connected methods are present.
+See `docs/HANDOVER.md` §9z47.
+
 ---
 
 ## Getting set up
