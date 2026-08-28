@@ -22,6 +22,7 @@ import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
 import BrushOutlinedIcon from '@mui/icons-material/BrushOutlined';
 import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
 import CollectionsBookmarkOutlinedIcon from '@mui/icons-material/CollectionsBookmarkOutlined';
+import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined';
 import NewspaperOutlinedIcon from '@mui/icons-material/NewspaperOutlined';
@@ -65,6 +66,7 @@ const NAV_GROUPS: readonly NavGroup[] = [
       { href: '/panel/wykonczenia', label: ADMIN.navFinishesPl, icon: <BrushOutlinedIcon fontSize="small" /> },
       { href: '/panel/wzory', label: ADMIN.navDesignsPl, icon: <PaletteOutlinedIcon fontSize="small" /> },
       { href: '/panel/kolekcje', label: ADMIN.navCollectionsPl, icon: <CollectionsBookmarkOutlinedIcon fontSize="small" /> },
+      { href: '/panel/zasoby-zewnetrzne', label: ADMIN.navExternalPatternResourcesPl, icon: <LinkOutlinedIcon fontSize="small" /> },
     ],
   },
   {

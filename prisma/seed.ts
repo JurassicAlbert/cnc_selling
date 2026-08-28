@@ -115,6 +115,7 @@ async function main(): Promise<void> {
   await seedProducts(categories, materials, design, font);
   await seedBlogPosts();
   await seedFaqs();
+  await seedExternalPatternResources();
 }
 
 // ---------------------------------------------------------------------------
@@ -850,6 +851,56 @@ async function seedFaqs(): Promise<void> {
       data: { questionPl: seed.questionPl, answerPl: seed.answerPl, sortOrder: seed.sortOrder, isActive: true },
     });
     console.log(`Faq: created "${created.questionPl.slice(0, 50)}..."`);
+  }
+}
+
+type ExternalPatternResourceSeed = {
+  readonly namePl: string;
+  readonly url: string;
+  readonly descPl: string;
+  readonly sourceLabel: string;
+  readonly sortOrder: number;
+};
+
+/**
+ * P9 phase 3: real external free-pattern resources shown on `/wzory`,
+ * always clearly labelled as third-party — never presented as this
+ * project's own content. One real row: 3axis.co, an actual, well-known
+ * free vector/DXF pattern repository for CNC/laser work — described
+ * honestly (a third-party site with its own licensing terms), not
+ * pretended to be curated or vetted content of ours. Create-only, matched
+ * by `url` (no natural unique key), same non-destructive precedent as
+ * `seedFaqs`.
+ */
+const EXTERNAL_PATTERN_RESOURCE_SEEDS: readonly ExternalPatternResourceSeed[] = [
+  {
+    namePl: '3axis.co — darmowe wzory DXF/SVG do CNC i lasera',
+    url: 'https://www.3axis.co/',
+    descPl:
+      'Niezależny, zewnętrzny serwis z bazą darmowych plików wektorowych (DXF, SVG, CDR) do cięcia i grawerowania CNC/laserowego. To nie są nasze materiały — przed użyciem sprawdź zasady licencjonowania obowiązujące na tej stronie.',
+    sourceLabel: '3axis.co',
+    sortOrder: 1,
+  },
+];
+
+async function seedExternalPatternResources(): Promise<void> {
+  for (const seed of EXTERNAL_PATTERN_RESOURCE_SEEDS) {
+    const existing = await prisma.externalPatternResource.findFirst({ where: { url: seed.url } });
+    if (existing !== null) {
+      console.log(`ExternalPatternResource: "${seed.namePl}" already exists, leaving it alone`);
+      continue;
+    }
+    const created = await prisma.externalPatternResource.create({
+      data: {
+        namePl: seed.namePl,
+        url: seed.url,
+        descPl: seed.descPl,
+        sourceLabel: seed.sourceLabel,
+        sortOrder: seed.sortOrder,
+        isActive: true,
+      },
+    });
+    console.log(`ExternalPatternResource: created "${created.namePl}"`);
   }
 }
 

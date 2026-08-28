@@ -189,6 +189,7 @@ export const SITE = {
   footerCopyrightPl: 'RYT',
   footerTaglinePl: 'Precyzja CNC. Ciepło rzemiosła.',
   footerBlogLinkPl: 'Blog',
+  footerPatternsLinkPl: 'Wzory',
 
   legalTermsHeadingPl: 'Regulamin',
   legalPrivacyHeadingPl: 'Polityka prywatności',
@@ -260,6 +261,18 @@ export const SITE = {
   blogPostNotFoundPl: 'Nie znaleziono takiego wpisu.',
   homeBlogHeadingPl: 'Z naszego bloga',
   blogViewAllPl: 'Zobacz wszystkie posty',
+
+  patternsHeadingPl: 'Wzory',
+  patternsSeoTitlePl: 'Wzory — RYT',
+  patternsSeoDescPl: 'Przeglądaj nasze gotowe wzory do grawerowania CNC, a także zewnętrzne, darmowe źródła wzorów.',
+  patternsIntroPl:
+    'Poniżej znajdziesz wzory z naszej oferty, które można wybrać przy konfiguracji wybranych produktów. Możesz też przesłać własny projekt — zapisane wzory znajdziesz na koncie w sekcji „Moje wzory”.',
+  patternsEmptyPl: 'Wzory pojawią się tutaj wkrótce.',
+  patternsExternalHeadingPl: 'Zewnętrzne źródła wzorów',
+  patternsExternalIntroPl:
+    'To linki do niezależnych, zewnętrznych serwisów z darmowymi wzorami do grawerowania i cięcia CNC. Nie są to nasze materiały — każdy link prowadzi do strony innego dostawcy, gdzie obowiązują jego własne zasady korzystania i licencje.',
+  patternsExternalBadgePl: 'zasób zewnętrzny',
+  patternsExternalEmptyPl: 'Obecnie nie mamy poleconych zewnętrznych źródeł wzorów.',
 
   faqHeadingPl: 'Najczęściej zadawane pytania',
   faqSeoTitlePl: 'Najczęściej zadawane pytania — RYT',

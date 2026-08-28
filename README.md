@@ -846,6 +846,23 @@ confirmed as a harness limitation (not a regression) by reproducing
 it identically on an untouched sibling route. See `docs/HANDOVER.md`
 §9z43.
 
+**Phase 3, shipped — 2026-08-28.** External pattern resources: a new
+`ExternalPatternResource` model with admin CRUD built by mirroring
+the FAQ admin CRUD files almost line-for-line — the reuse-the-
+existing-pattern instruction taken literally. Its `url` field is
+server-validated as a real `http(s)://` link before storage, since
+it's only ever rendered as a real `<a target="_blank">`. The plan
+assumed a "patterns browsing area" already existed for this to slot
+into; it didn't, so this phase also built the real thing implied by
+that gap and by Phase 2's own `Design.featured` field — a new public
+`/wzory` page (an honest gallery, not a checkout entry point, since
+no per-design detail route exists) listing active, rights-clear
+designs, featured ones first, with the external resources clearly
+labelled "zasób zewnętrzny" beneath. Seeded one real row: 3axis.co,
+described honestly as an independent third-party site with its own
+licensing. 13 new test cases, full suite 643/643, all checks clean.
+See `docs/HANDOVER.md` §9z44.
+
 ---
 
 ## Getting set up

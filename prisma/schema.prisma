@@ -438,6 +438,26 @@ model DesignMaterial {
   @@index([materialId])
 }
 
+/// P9 phase 3: links to free/external pattern sources (e.g. 3axis.co) shown
+/// on the customer-facing pattern-browsing page. Never our own content — the
+/// frontend must always label these as external, `target="_blank"`. Admin
+/// CRUD only, no delete (isActive toggle, same as every other catalogue
+/// entity) — see `Faq` for the identical shape/precedent.
+model ExternalPatternResource {
+  id          String   @id @default(cuid())
+  namePl      String
+  url         String
+  descPl      String?  @db.Text
+  /// Short label naming the source site, shown as a badge next to the link (e.g. "3axis.co").
+  sourceLabel String
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
 // ---------------------------------------------------------------------------
 // Kitchen installation variants
 // ---------------------------------------------------------------------------
