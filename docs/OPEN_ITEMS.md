@@ -107,6 +107,25 @@ for the full technical detail behind each line here).
   trusted to run the catalogue day to day), or tighten ~20 actions to
   `requireAdminSession()`. Cheap either way once decided.
 
+## 8. Four models with no admin screen at all
+
+Found by auditing every Prisma model against the panel (2026-08-30, §20).
+`DeliveryWeightTier` was the fifth and the one that actually mattered —
+it decides what customers are charged — and now has a real editor on the
+delivery-method page. These four remain, deliberately:
+
+| Model | What it holds | Why it can wait |
+|---|---|---|
+| `Font` | engraving fonts | Adding one is not just a DB row — a real font file has to be licensed, installed and validated by `opentype.js`. A form alone would be a trap. |
+| `PersonalizationSpec` | per-product engraving rules (max characters, allowed fonts) | Real, seeded, and correct. Changing it is rare and currently a seed edit. |
+| `MachineSettings` | the real machine's own limits, feeding feasibility and pricing | One row, changed roughly never, and wrong values silently distort every quote. Arguably *should* stay out of a form. |
+| `ProductFinishExclusion` | "this finish is not available on this product" | Editable indirectly today via the product's finish compatibility; a dedicated screen is a nice-to-have. |
+
+**What's needed**: nothing urgent. Worth revisiting if the owner finds
+themselves wanting to change any of these without a developer. `Font` is
+the one most likely to come up, and is also the one that needs the most
+care beyond a CRUD form.
+
 ---
 
 *Update this file (don't just let it go stale) whenever one of these

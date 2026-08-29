@@ -5,6 +5,7 @@ import { findDeliveryMethodForAdmin } from '@/server/repositories/admin-delivery
 import { setDeliveryMethodActive } from '@/server/actions/admin-delivery-methods';
 import { ActiveToggleButton } from '@/ui/primitives/ActiveToggleButton';
 import { DeliveryMethodForm } from '@/ui/islands/admin/DeliveryMethodForm';
+import { DeliveryWeightTiersEditor } from '@/ui/islands/admin/DeliveryWeightTiersEditor';
 import { RecordActivityTimeline } from '@/ui/islands/admin/RecordActivityTimeline';
 
 type DeliveryMethodDetailPageProps = {
@@ -25,6 +26,13 @@ export default async function AdminDeliveryMethodDetailPage({ params }: Delivery
         <ActiveToggleButton isActive={method.isActive} action={setDeliveryMethodActive.bind(null, method.id, !method.isActive)} />
       </Stack>
       <DeliveryMethodForm method={method} />
+      {/*
+       * Directly below the form, not in a separate screen: the "Cena" field
+       * just above is only the fallback for a method that has tiers, so the
+       * two have to be readable together or the form stays misleading
+       * (`docs/AUDIT-2026-08-30.md` §20).
+       */}
+      <DeliveryWeightTiersEditor deliveryMethodId={method.id} tiers={method.weightTiers} />
       <RecordActivityTimeline entity="DeliveryMethod" entityId={method.id} />
     </>
   );

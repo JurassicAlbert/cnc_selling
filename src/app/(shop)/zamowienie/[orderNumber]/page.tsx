@@ -54,6 +54,12 @@ export default async function OrderConfirmationPage({ params, searchParams }: Or
     notFound();
   }
 
+  // `getStoreSettings()` could technically start before the order lookup —
+  // it depends on nothing — but deliberately doesn't. `notFound()` above
+  // throws, so a promise started earlier and never awaited becomes an
+  // unhandled rejection that can take the process down. Two indexed row
+  // reads are not worth that: this is the "don't optimise blindly" case,
+  // not an oversight (2026-08-30 audit).
   const [reviewStatus, storeSettings] = await Promise.all([
     order.status === 'COMPLETED' ? findReviewStatusForOrder(order.orderNumber) : Promise.resolve(null),
     getStoreSettings(),

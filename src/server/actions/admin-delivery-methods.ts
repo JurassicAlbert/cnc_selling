@@ -36,3 +36,17 @@ export async function setDeliveryMethodActive(
 ): ReturnType<typeof operations.setDeliveryMethodActive> {
   return operations.setDeliveryMethodActive(...args);
 }
+
+export type { DeliveryWeightTierInput } from '@/server/operations/admin-delivery-methods';
+
+export async function addDeliveryWeightTier(
+  ...args: Parameters<typeof operations.addDeliveryWeightTier>
+): ReturnType<typeof operations.addDeliveryWeightTier> {
+  return operations.addDeliveryWeightTier(...args);
+}
+
+export async function removeDeliveryWeightTier(
+  ...args: Parameters<typeof operations.removeDeliveryWeightTier>
+): ReturnType<typeof operations.removeDeliveryWeightTier> {
+  return operations.removeDeliveryWeightTier(...args);
+}

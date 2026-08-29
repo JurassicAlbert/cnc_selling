@@ -3613,6 +3613,64 @@ work: the long-running dev server had a stale Prisma client after the
 migration and threw a real 500 until restarted — the same stale-cache pattern
 this project has hit before, not an application bug.
 
+## 9z55. The audit's second pass — recovery UI, waterfalls, a sitewide dead link, real form controls, carrier rate-card CRUD (2026-08-30)
+
+Everything the audit ranked below P0/P1, plus three bugs found while doing
+it that were not on the list.
+
+- **The most valuable finding came from crawling the site, not reading
+  it.** `/wzory` calls `notFound()` deliberately (the owner asked for the
+  patterns page to be hidden) — but the footer still linked to it from
+  every page on the site, and `/moje-konto/wzory`'s empty state pointed
+  there too. Worse: the 404 page added earlier that same day offered
+  "Przeglądaj wzory" as one of its three escape routes, so the site's own
+  404 handler linked to another 404. None of this is visible in a diff or
+  a type check; it took fetching every internal URL and looking at what
+  came back. Worth repeating whenever a page gets hidden or renamed.
+- **Getting the crawler to tell the truth took two corrections, both
+  interesting.** First pass flagged all 32 URLs as broken: Next.js
+  serialises the not-found boundary into every page's RSC flight payload,
+  so a naive substring match hits every page. Second pass flagged nothing —
+  including `/wzory`, which genuinely was broken — because a `notFound()`
+  reached during streaming SSR answers **HTTP 200** and finishes the 404 on
+  the client. A checker that only looks at status codes would have missed
+  the one real problem on the site.
+- **The 404 page rendered the chrome twice**, live, on `/wzory`. A root
+  `not-found.tsx` has to supply `StorefrontChrome` itself because an
+  unmatched URL never reaches a group layout — but a `notFound()` called
+  from *inside* `(shop)`/`(marketing)` renders in that group's boundary,
+  where the layout has already drawn it. Three boundaries now, one shared
+  content component, each deciding for itself.
+- **`DeliveryWeightTier` had no admin screen, and its absence was worse
+  than a missing feature.** The tiers decide what a customer is actually
+  charged; `DeliveryMethod.priceGrosze` is only the fallback for a method
+  with none. So the panel offered an editable "Cena" on the InPost and DPD
+  methods that changes nothing a customer ever pays. Full CRUD now, on the
+  existing `ThicknessesEditor` pattern, with copy that says outright when
+  that field is and isn't used.
+- **One optimisation was deliberately NOT taken, and the reason written
+  into the file.** Hoisting `getStoreSettings()` above the order lookup in
+  the confirmation page saves two indexed row reads — but `notFound()`
+  throws in between, so a promise started early and never awaited becomes
+  an unhandled rejection that can take the process down. The audit brief's
+  "do not optimise blindly" applies to the auditor too.
+- **The remaining raw controls got CSS, not MUI, and that is the right
+  answer here.** The category filter and consent banner render exactly
+  where this project measured a 3.8s LCP cost for mounting a client theme
+  provider (`theme-vars.css`'s header records the original Lighthouse
+  finding). Real `.form-*` classes — brand `accent-color` on native radios,
+  a custom select chevron, 40px touch targets — get the polish at zero JS.
+  Verified by reading computed styles, not by looking at a screenshot.
+
+### Verified
+
+`typecheck`/`lint` clean, 814/814 tests (+6 for the weight-tier CRUD),
+`next build` clean, Playwright green against a production build. Live
+browser verification of the styled filter controls (by computed style), the
+tier editor rendering InPost's real Paczkomat brackets, and both 404 paths
+rendering single chrome. Link crawl: 31 internal URLs, no broken links, no
+page rendering a 404 body.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

@@ -118,9 +118,19 @@ export function Footer({ categories }: FooterProps) {
               <Link href="/blog" className="footer-link" style={{ font: 'var(--mui-font-body2)' }}>
                 {SITE.footerBlogLinkPl}
               </Link>
-              <Link href="/wzory" className="footer-link" style={{ font: 'var(--mui-font-body2)' }}>
-                {SITE.footerPatternsLinkPl}
-              </Link>
+              {/*
+               * The "Wzory" link is deliberately absent, not forgotten.
+               * `/wzory` calls `notFound()` on purpose (owner, 2026-08-29:
+               * "ukryj na razie podstronę dla wzorów") — but this link was
+               * left pointing at it, so every page on the site carried a
+               * link into a 404. Found by crawling the storefront during
+               * the 2026-08-30 audit, not by reading the code.
+               *
+               * Restoring it is the other half of re-enabling that page:
+               * delete the `notFound()` line in
+               * `(marketing)/wzory/page.tsx` and put this link back. The
+               * copy (`SITE.footerPatternsLinkPl`) is deliberately kept.
+               */}
               <Link href="/kolekcje" className="footer-link" style={{ font: 'var(--mui-font-body2)' }}>
                 {SITE.footerCollectionsLinkPl}
               </Link>

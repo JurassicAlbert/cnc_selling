@@ -452,6 +452,27 @@ export const ADMIN = {
   deliveryMethodFieldTrackingAvailablePl: 'Śledzenie przesyłki dostępne',
   deliveryMethodFieldRequiresPickupPointPl: 'Wymaga wyboru paczkomatu/punktu odbioru',
   deliveryMethodFieldSortOrderPl: 'Kolejność wyświetlania',
+  /**
+   * 2026-08-30 (`docs/AUDIT-2026-08-30.md` §20). The panel showed an
+   * editable "Cena" and nothing else, while for a tiered carrier that field
+   * is never what a customer is charged — the brackets below are. The copy
+   * has to say so plainly, or the screen stays misleading even with the
+   * editor added.
+   */
+  deliveryTiersHeadingPl: 'Progi wagowe (cennik przewoźnika)',
+  deliveryTiersIntroPl:
+    'Jeśli metoda ma progi wagowe, to one decydują o cenie dostawy — naliczany jest najtańszy próg, w którym mieszczą się waga i wymiary zamówienia. Pole „Cena” powyżej działa wtedy wyłącznie jako wartość zapasowa i nie jest naliczane klientowi.',
+  deliveryTiersEmptyPl:
+    'Brak progów wagowych — ta metoda nalicza stałą cenę z pola „Cena” powyżej. Dodaj progi, aby wyceniać dostawę według rzeczywistego cennika przewoźnika.',
+  deliveryTierFieldLabelPl: 'Nazwa progu',
+  deliveryTierFieldMaxWeightKgPl: 'Waga do (kg)',
+  deliveryTierFieldPricePlnPl: 'Cena (zł)',
+  deliveryTierFieldMaxWidthMmPl: 'Maks. szer. (mm)',
+  deliveryTierFieldMaxHeightMmPl: 'Maks. wys. (mm)',
+  deliveryTierFieldMaxDepthMmPl: 'Maks. gł. (mm)',
+  deliveryTierDimensionsHelperPl:
+    'Wymiary wypełnij tylko przy realnym ograniczeniu fizycznym, np. skrytce paczkomatu. Puste = brak limitu wymiarów dla tego progu.',
+  deliveryTierNoDimensionLimitPl: 'bez limitu wymiarów',
 
   paymentMethodsHeadingPl: 'Metody płatności',
   paymentMethodsNewPl: 'Nowa metoda',

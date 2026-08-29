@@ -16,6 +16,7 @@ import Link from 'next/link';
 
 import { SITE } from '@/content/pl/site';
 import { toggleFavoriteDesign } from '@/server/actions/design-favorites';
+import { FavoriteBorderIcon, FavoriteIcon } from '@/ui/icons';
 
 export function FavoriteDesignButton({
   designId,
@@ -35,9 +36,19 @@ export function FavoriteDesignButton({
         href="/logowanie"
         aria-label={SITE.patternsFavoriteLoginRequiredPl}
         title={SITE.patternsFavoriteLoginRequiredPl}
-        style={{ fontSize: 18, lineHeight: 1, textDecoration: 'none', color: 'var(--mui-palette-text-secondary)' }}
+        style={{
+          display: 'inline-flex',
+          // A 40px target, not the 20px icon — the same touch-size rule the
+          // filter form's option rows follow (§11).
+          inlineSize: 40,
+          blockSize: 40,
+          alignItems: 'center',
+          justifyContent: 'center',
+          textDecoration: 'none',
+          color: 'var(--mui-palette-text-secondary)',
+        }}
       >
-        ♡
+        <FavoriteBorderIcon size={20} />
       </Link>
     );
   }
@@ -60,17 +71,23 @@ export function FavoriteDesignButton({
       disabled={pending}
       aria-label={favorited ? SITE.patternsUnfavoritePl : SITE.patternsFavoritePl}
       title={favorited ? SITE.patternsUnfavoritePl : SITE.patternsFavoritePl}
+      aria-pressed={favorited}
       style={{
-        fontSize: 18,
-        lineHeight: 1,
+        display: 'inline-flex',
+        inlineSize: 40,
+        blockSize: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
         background: 'none',
         border: 'none',
-        cursor: 'pointer',
+        borderRadius: '50%',
+        cursor: pending ? 'progress' : 'pointer',
         padding: 0,
-        color: favorited ? 'var(--mui-palette-error-main, #b3382c)' : 'var(--mui-palette-text-secondary)',
+        color: favorited ? 'var(--mui-palette-error-main)' : 'var(--mui-palette-text-secondary)',
+        transition: 'color 0.15s ease',
       }}
     >
-      {favorited ? '♥' : '♡'}
+      {favorited ? <FavoriteIcon size={20} /> : <FavoriteBorderIcon size={20} />}
     </button>
   );
 }

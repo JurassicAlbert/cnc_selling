@@ -17,6 +17,17 @@ export async function listDeliveryMethodsForAdmin(): Promise<readonly AdminDeliv
   });
 }
 
+/** One real published price bracket of a carrier's own rate card — see `DeliveryWeightTier`'s schema comment. */
+export type AdminDeliveryWeightTier = {
+  readonly id: string;
+  readonly labelPl: string;
+  readonly maxWeightGrams: number;
+  readonly priceGrosze: number;
+  readonly maxWidthMm: number | null;
+  readonly maxHeightMm: number | null;
+  readonly maxDepthMm: number | null;
+};
+
 export type AdminDeliveryMethodDetail = {
   readonly id: string;
   readonly namePl: string;
@@ -30,7 +41,24 @@ export type AdminDeliveryMethodDetail = {
   readonly requiresPickupPoint: boolean;
   readonly sortOrder: number;
   readonly isActive: boolean;
+  /**
+   * 2026-08-30 (`docs/AUDIT-2026-08-30.md` §20): these were invisible in the
+   * panel, which made the detail page actively misleading — it offered an
+   * editable "Cena" while, for any method that has tiers, that field is
+   * only the fallback and is never what a customer is charged.
+   */
+  readonly weightTiers: readonly AdminDeliveryWeightTier[];
 };
+
+const WEIGHT_TIER_SELECT = {
+  id: true,
+  labelPl: true,
+  maxWeightGrams: true,
+  priceGrosze: true,
+  maxWidthMm: true,
+  maxHeightMm: true,
+  maxDepthMm: true,
+} as const;
 
 export async function findDeliveryMethodForAdmin(id: string): Promise<AdminDeliveryMethodDetail | null> {
   return prisma.deliveryMethod.findUnique({
@@ -48,6 +76,10 @@ export async function findDeliveryMethodForAdmin(id: string): Promise<AdminDeliv
       requiresPickupPoint: true,
       sortOrder: true,
       isActive: true,
+      // Ordered by the bracket itself, not by `sortOrder`: a rate card only
+      // makes sense read lightest-first, and an admin adding a tier out of
+      // order should still see a sane list rather than have to fix it.
+      weightTiers: { orderBy: { maxWeightGrams: 'asc' }, select: WEIGHT_TIER_SELECT },
     },
   });
 }

@@ -46,36 +46,24 @@ export function CookieConsentBanner() {
       }}
     >
       <p style={{ font: 'var(--mui-font-body2)', margin: 0, flex: '1 1 320px' }}>{SITE.consentBannerTextPl}</p>
+      {/*
+       * Declining is listed first and styled as the quieter of the two.
+       * Not a stylistic choice: RODO/GDPR requires refusing to be as easy
+       * as accepting, and the shared `.form-button*` classes
+       * (`theme-vars.css`) give both real hover, disabled and focus states
+       * without shipping MUI to a banner that renders on a first-time
+       * visitor's very first page load.
+       */}
       <div style={{ display: 'flex', gap: 8 }}>
         <button
+          className="form-button form-button-outlined"
           type="button"
           disabled={isPending}
           onClick={() => choose(false)}
-          style={{
-            font: 'var(--mui-font-button)',
-            padding: '10px 20px',
-            background: 'none',
-            border: '1px solid var(--mui-palette-divider)',
-            borderRadius: 2,
-            cursor: 'pointer',
-          }}
         >
           {SITE.consentBannerDeclinePl}
         </button>
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={() => choose(true)}
-          style={{
-            font: 'var(--mui-font-button)',
-            padding: '10px 20px',
-            background: 'var(--mui-palette-primary-main)',
-            color: 'var(--mui-palette-background-paper)',
-            border: 'none',
-            borderRadius: 2,
-            cursor: 'pointer',
-          }}
-        >
+        <button className="form-button" type="button" disabled={isPending} onClick={() => choose(true)}>
           {SITE.consentBannerAcceptPl}
         </button>
       </div>

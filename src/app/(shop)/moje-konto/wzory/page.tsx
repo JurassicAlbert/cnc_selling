@@ -97,7 +97,15 @@ export default async function AccountDesignsPage() {
         {favoriteDesigns.length === 0 ? (
           <div style={{ marginBlockStart: 12 }}>
             <Text muted>{SITE.accountFavoriteDesignsEmptyPl}</Text>
-            <Link href="/wzory" style={{ display: 'inline-block', marginBlockStart: 8 }}>
+            {/*
+             * Points at /kolekcje, not /wzory: the patterns page is
+             * deliberately `notFound()`-ed for now (owner's request), and
+             * an empty state whose only call to action is a 404 is worse
+             * than an empty state with none. Collections are the real
+             * browsing surface while that page is hidden. Found by
+             * crawling the storefront during the 2026-08-30 audit.
+             */}
+            <Link href="/kolekcje" style={{ display: 'inline-block', marginBlockStart: 8 }}>
               {SITE.accountFavoriteDesignsBrowseLinkPl}
             </Link>
           </div>

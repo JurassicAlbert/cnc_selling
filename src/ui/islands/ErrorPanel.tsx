@@ -20,7 +20,6 @@
 import Link from 'next/link';
 import { Alert, AlertTitle, Button, Paper, Stack, Typography } from '@mui/material';
 
-import { COPY } from '@/content/pl/messages';
 import { SITE } from '@/content/pl/site';
 
 export function ErrorPanel({
@@ -37,7 +36,7 @@ export function ErrorPanel({
           <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
             {SITE.errorPageHeadingPl}
           </Typography>
-          <Typography color="text.secondary">{COPY.genericServerError}</Typography>
+          <Typography color="text.secondary">{SITE.errorPageBodyPl}</Typography>
         </Stack>
 
         {digest !== undefined && (

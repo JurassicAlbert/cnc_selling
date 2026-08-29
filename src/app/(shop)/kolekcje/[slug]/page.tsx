@@ -17,11 +17,19 @@ type CollectionDetailPageProps = {
 
 export default async function CollectionDetailPage({ params }: CollectionDetailPageProps) {
   const { slug } = await params;
-  const collection = await getActiveCollectionBySlug(slug);
+  // Both take the same `slug` and neither needs the other's result, so
+  // running them in series was a round trip of pure waiting
+  // (`docs/AUDIT-2026-08-30.md` P1-7's pattern, found again here). The
+  // product query for a slug that turns out not to exist is wasted work —
+  // but it is wasted work that costs nothing extra in wall time, and this
+  // page's 404 path is the rare case, not the common one.
+  const [collection, products] = await Promise.all([
+    getActiveCollectionBySlug(slug),
+    listActiveProductsByCollectionSlug(slug),
+  ]);
   if (collection === null) {
     notFound();
   }
-  const products = await listActiveProductsByCollectionSlug(slug);
 
   return (
     <Section>

@@ -357,7 +357,17 @@ export const SITE = {
   routeLoadingPl: 'Ładowanie…',
 
   errorPageHeadingPl: 'Coś poszło nie tak',
-  errorPageBodyPl: 'Wystąpił nieoczekiwany błąd. Spróbuj odświeżyć stronę.',
+  /**
+   * Deliberately does NOT restate the heading. The error panels previously
+   * paired `errorPageHeadingPl` ("Coś poszło nie tak") with
+   * `COPY.genericServerError`, which opens with the same four words — so
+   * the page read "Coś poszło nie tak / Coś poszło nie tak. Spróbuj…".
+   * Caught by looking at a rendered error page, not at the strings
+   * (2026-08-30). `COPY.genericServerError` stays as-is: it is still right
+   * where it appears alone, without a heading above it.
+   */
+  errorPageBodyPl:
+    'Wystąpił nieoczekiwany błąd po naszej stronie — nie po Twojej. Spróbuj ponownie za chwilę, a jeśli problem się powtarza, napisz do nas.',
   errorPageRetryPl: 'Spróbuj ponownie',
   errorPageCorrelationIdLabelPl: 'Numer błędu',
   errorPageCorrelationIdHelpPl: 'Podaj ten numer, jeśli napiszesz do nas o tym błędzie — pozwoli nam szybko znaleźć, co się stało.',
@@ -369,7 +379,7 @@ export const SITE = {
   notFoundHeadingPl: 'Nie znaleziono takiej strony',
   notFoundBodyPl: 'Strona, której szukasz, nie istnieje albo została przeniesiona.',
   notFoundHomeCtaPl: 'Wróć na stronę główną',
-  notFoundPatternsCtaPl: 'Przeglądaj wzory',
+  notFoundCollectionsCtaPl: 'Zobacz kolekcje',
   notFoundContactCtaPl: 'Napisz do nas',
 
   blogHeadingPl: 'Blog',

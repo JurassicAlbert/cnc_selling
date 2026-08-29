@@ -124,18 +124,28 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
   const [sessionToken, session] = await Promise.all([readGuestSessionToken(), getSession()]);
   const isStaffPreview = podglad === '1' && (session?.role === 'STAFF' || session?.role === 'ADMIN');
 
-  const product = isStaffPreview ? await getProductBySlugForPreview(slug) : await getActiveProductBySlug(slug);
+  // Three independent reads, run together rather than one after another
+  // (`docs/AUDIT-2026-08-30.md` P1-7's pattern). None depends on another's
+  // result — the configurator data is keyed by the same `slug`, and the
+  // saved-design list by the session resolved above — so the product page,
+  // the single hottest page in the shop, was paying three sequential round
+  // trips for work that fits in one.
+  //
+  // `savedDesigns` is cheap even when unused: only the CUSTOM product
+  // type's `CUSTOM_UPLOAD` step renders it (P9 phase 2's "pick a saved
+  // design instead of uploading fresh" path). Fetched regardless because
+  // that is still simpler and cheaper than threading a product-type check
+  // through this Server Component to skip one indexed query — and now it
+  // costs no wall time at all.
+  const [product, configuratorData, savedDesigns] = await Promise.all([
+    isStaffPreview ? getProductBySlugForPreview(slug) : getActiveProductBySlug(slug),
+    getConfiguratorProductData(slug, !isStaffPreview),
+    listOwnedCustomerDesigns({ userId: session?.userId ?? null, sessionToken }),
+  ]);
   if (product === null) {
     notFound();
   }
-  const configuratorData = await getConfiguratorProductData(slug, !isStaffPreview);
   const primaryImage = product.images[0] ?? null;
-  // Cheap even when unused — only the CUSTOM product type's `CUSTOM_UPLOAD`
-  // step actually renders this list (P9 phase 2's "pick a saved design
-  // instead of uploading fresh" reuse path); fetched here regardless since
-  // that's still simpler and cheaper than threading a product-type check
-  // through this Server Component just to skip one indexed query.
-  const savedDesigns = await listOwnedCustomerDesigns({ userId: session?.userId ?? null, sessionToken });
 
   // A staff preview hit is not real customer traffic — never counted.
   if (!isStaffPreview) {

@@ -391,3 +391,99 @@ html {
   outline-offset: 2px;
   border-radius: 2px;
 }
+
+/*
+ * Real form controls for the storefront's zero-JS surfaces — 2026-08-30
+ * (`docs/AUDIT-2026-08-30.md` P2-10, and the owner's own "default selects,
+ * raw buttons, browser-default controls" complaint).
+ *
+ * These exist INSTEAD of converting `CategoryFilterForm` and the consent
+ * banner to MUI, not as a poor substitute for it. Both render on the hot
+ * path — the filter on every category page, the banner on a first-time
+ * visitor's very first page — and this file's own header records the real
+ * Lighthouse finding that mounting a client theme provider there cost 3.8s
+ * LCP for components that only ever needed CSS. Styling the native controls
+ * gets the polish at zero JS; converting them would trade a measured
+ * performance property for a cosmetic one.
+ *
+ * `accent-color` is what makes a native radio/checkbox adopt the brand
+ * colour without replacing it with a div — the control stays a real
+ * `<input>`, so keyboard behaviour, form semantics and screen-reader
+ * announcements are the browser's, not a reimplementation's.
+ */
+.form-control-radio,
+.form-control-checkbox {
+  accent-color: var(--mui-palette-secondary-main);
+  inline-size: 18px;
+  block-size: 18px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.form-option-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--mui-font-body2);
+  color: var(--mui-palette-text-primary);
+  /* A 40px row, so the whole label is a comfortable touch target rather
+     than just the 18px control itself (§11: touch target sizes). */
+  min-block-size: 40px;
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-card);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.form-option-label:hover {
+  background-color: color-mix(in srgb, var(--mui-palette-secondary-main) 8%, transparent);
+}
+
+.form-select {
+  font: var(--mui-font-body2);
+  color: var(--mui-palette-text-primary);
+  background-color: var(--mui-palette-background-paper);
+  border: 1px solid var(--mui-palette-divider);
+  border-radius: var(--radius-card);
+  padding: 10px 36px 10px 12px;
+  cursor: pointer;
+  /* The native arrow differs wildly between browsers and is the single
+     biggest "this is an unstyled form" tell. Replaced with one inline SVG
+     chevron so it looks the same everywhere. */
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b655e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  transition: border-color 0.15s ease;
+}
+.form-select:hover {
+  border-color: var(--mui-palette-secondary-main);
+}
+
+.form-button {
+  font: var(--mui-font-button);
+  text-transform: none;
+  padding: 10px 20px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-card);
+  background-color: var(--mui-palette-primary-main);
+  color: var(--mui-palette-background-paper);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.form-button:hover {
+  background-color: var(--mui-palette-secondary-main);
+}
+.form-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.form-button-outlined {
+  background-color: transparent;
+  color: var(--mui-palette-text-primary);
+  border-color: var(--mui-palette-divider);
+}
+.form-button-outlined:hover {
+  background-color: color-mix(in srgb, var(--mui-palette-secondary-main) 8%, transparent);
+  border-color: var(--mui-palette-secondary-main);
+}
