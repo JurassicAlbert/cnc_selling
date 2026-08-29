@@ -670,6 +670,35 @@ const DESIGN_SEEDS: readonly DesignSeedInput[] = [
     imageSlug: 'pioro-lesne',
     detailLevel: 2,
   },
+  /**
+   * 2026-08-29, owner feedback: the first ten patterns read as "too basic"
+   * next to real reference woodcut/relief pieces — these two are a real
+   * step up in complexity on purpose: layered depth (multiple overlapping
+   * ridge/canopy shapes at different opacities, simulating the "which
+   * layer sits in front" read a relief or multi-pass engraving would give),
+   * many more path elements than the first ten, still genuinely original
+   * line art (no external source), still a flat 2D SVG a laser/CNC can cut
+   * directly — not a literal 3D relief model, which is a real, separate
+   * production technique this catalogue doesn't model as a pattern yet.
+   */
+  {
+    slug: 'panorama-gorska',
+    code: 'WZR-011',
+    namePl: 'Panorama górska',
+    descPl: 'Wielowarstwowa panorama gór z linią drzew i słońcem — bogatszy, wielopoziomowy motyw.',
+    tags: ['krajobraz', 'zaawansowany'],
+    imageSlug: 'panorama-gorska',
+    detailLevel: 4,
+  },
+  {
+    slug: 'gaj-brzozowy',
+    code: 'WZR-012',
+    namePl: 'Gaj brzozowy',
+    descPl: 'Rząd brzozowych pni o różnej głębi i grubości, z korą i opadającymi liśćmi — bogaty, warstwowy motyw leśny.',
+    tags: ['krajobraz', 'zaawansowany'],
+    imageSlug: 'gaj-brzozowy',
+    detailLevel: 4,
+  },
 ];
 
 async function seedDesigns(): Promise<readonly SeededDesign[]> {
