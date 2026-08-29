@@ -356,6 +356,7 @@ describe('applyAddDesignMaterial (nested editor)', () => {
         characteristicsPl: 'Test',
         imageUrl: '/images/photos/material-dab.jpg',
         pricePerM2Grosze: 10_000,
+        densityKgPerM3: 600,
         maxSheetWidthMm: 1000,
         maxSheetHeightMm: 1000,
         minLineWidthUm: 1000,

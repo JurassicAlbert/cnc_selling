@@ -37,6 +37,8 @@ type MaterialFields = {
   readonly shortDescPl: string;
   readonly characteristicsPl: string;
   readonly pricePerM2Grosze: number;
+  /** Real, used to compute a configuration's real shipping weight (`domain/shipping/weight.ts`) — never a fabricated per-product weight. */
+  readonly densityKgPerM3: number;
   readonly maxSheetWidthMm: number;
   readonly maxSheetHeightMm: number;
   readonly minLineWidthUm: number;
@@ -57,6 +59,7 @@ function readMaterialFields(formData: FormData): MaterialFields {
     shortDescPl: String(formData.get('shortDescPl') ?? ''),
     characteristicsPl: String(formData.get('characteristicsPl') ?? ''),
     pricePerM2Grosze: Math.round(Number(formData.get('pricePerM2Pln') ?? 0) * 100),
+    densityKgPerM3: Number(formData.get('densityKgPerM3') ?? 0),
     maxSheetWidthMm: Number(formData.get('maxSheetWidthMm') ?? 0),
     maxSheetHeightMm: Number(formData.get('maxSheetHeightMm') ?? 0),
     minLineWidthUm: Number(formData.get('minLineWidthUm') ?? 0),
@@ -79,6 +82,9 @@ function validateMaterialFields(fields: MaterialFields): string | null {
   }
   if (fields.pricePerM2Grosze <= 0) {
     return `Cena za m² musi być dodatnia — podano ${(fields.pricePerM2Grosze / 100).toFixed(2)} zł.`;
+  }
+  if (!Number.isFinite(fields.densityKgPerM3) || fields.densityKgPerM3 <= 0) {
+    return 'Gęstość (kg/m³) musi być dodatnia — potrzebna do wyliczenia realnej wagi przesyłki.';
   }
   return null;
 }
@@ -255,6 +261,7 @@ export async function applyDuplicateMaterial(staff: CurrentSession, id: string):
     shortDescPl: original.shortDescPl,
     characteristicsPl: original.characteristicsPl,
     pricePerM2Grosze: original.pricePerM2Grosze,
+    densityKgPerM3: original.densityKgPerM3,
     maxSheetWidthMm: original.maxSheetWidthMm,
     maxSheetHeightMm: original.maxSheetHeightMm,
     minLineWidthUm: original.minLineWidthUm,

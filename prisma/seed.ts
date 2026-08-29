@@ -305,6 +305,18 @@ type SeededMaterials = {
  * value already exists); metal does (no `METAL` value exists yet). Both are
  * deferred rather than half-seeded as invisible rows, so there is nothing
  * to forget was there.
+ *
+ * 2026-08-29: `densityKgPerM3` values — standard, published reference
+ * figures for seasoned/kiln-dried furniture-grade timber (~12% moisture)
+ * and porcelain stoneware, NOT a business-specific number (owner's own
+ * "you are not allowed to lie" instruction extends to this too, even
+ * though it isn't carrier pricing): dąb (European oak) ~750, świerk
+ * (Norway spruce) ~450, modrzew (European larch) ~600, sosna (Scots pine)
+ * ~480, gres (porcelain stoneware tile) ~2400 kg/m³ — mid-range of the
+ * commonly-cited 700–900 / 410–500 / 550–700 / 410–550 / 2300–2450 kg/m³
+ * bands respectively. Used by `domain/shipping/weight.ts` to compute real
+ * per-configuration shipping weight from actual width×height×thickness,
+ * never a fabricated flat per-product weight.
  */
 async function seedMaterials(): Promise<SeededMaterials> {
   const dab = await prisma.material.upsert({
@@ -318,6 +330,7 @@ async function seedMaterials(): Promise<SeededMaterials> {
         'Drewno naturalne — usłojenie, odcień i ewentualne sęki różnią się w każdym egzemplarzu.',
       imageUrl: STOCK_PHOTO('material-dab'),
       pricePerM2Grosze: 18_000, // TODO_PRICING
+      densityKgPerM3: 750,
       maxSheetWidthMm: 1200,
       maxSheetHeightMm: 2400,
       minLineWidthUm: 1_200,
@@ -342,6 +355,7 @@ async function seedMaterials(): Promise<SeededMaterials> {
       characteristicsPl: 'Materiał produkowany — bez naturalnych odchyleń koloru między sztukami.',
       imageUrl: STOCK_PHOTO('gres'),
       pricePerM2Grosze: 22_000, // TODO_PRICING
+      densityKgPerM3: 2400,
       maxSheetWidthMm: 600,
       maxSheetHeightMm: 1200,
       minLineWidthUm: 800,
@@ -367,6 +381,7 @@ async function seedMaterials(): Promise<SeededMaterials> {
         'Drewno naturalne — usłojenie, odcień i ewentualne sęki różnią się w każdym egzemplarzu.',
       imageUrl: PLACEHOLDER_IMAGE('material-swierk'),
       pricePerM2Grosze: 9_000, // TODO_PRICING
+      densityKgPerM3: 450,
       maxSheetWidthMm: 1200,
       maxSheetHeightMm: 2400,
       minLineWidthUm: 1_200,
@@ -392,6 +407,7 @@ async function seedMaterials(): Promise<SeededMaterials> {
         'Drewno naturalne — usłojenie, odcień i ewentualne sęki różnią się w każdym egzemplarzu.',
       imageUrl: PLACEHOLDER_IMAGE('material-modrzew'),
       pricePerM2Grosze: 12_000, // TODO_PRICING
+      densityKgPerM3: 600,
       maxSheetWidthMm: 1200,
       maxSheetHeightMm: 2400,
       minLineWidthUm: 1_200,
@@ -417,6 +433,7 @@ async function seedMaterials(): Promise<SeededMaterials> {
         'Drewno naturalne — usłojenie, odcień i ewentualne sęki różnią się w każdym egzemplarzu.',
       imageUrl: PLACEHOLDER_IMAGE('material-sosna'),
       pricePerM2Grosze: 8_000, // TODO_PRICING
+      densityKgPerM3: 480,
       maxSheetWidthMm: 1200,
       maxSheetHeightMm: 2400,
       minLineWidthUm: 1_200,
@@ -1452,6 +1469,16 @@ async function seedProductCollections(): Promise<void> {
   }
 }
 
+type WeightTierSeed = {
+  readonly labelPl: string;
+  readonly maxWeightGrams: number;
+  readonly priceGrosze: number;
+  readonly maxWidthMm?: number;
+  readonly maxHeightMm?: number;
+  readonly maxDepthMm?: number;
+  readonly sortOrder: number;
+};
+
 type DeliveryMethodSeed = {
   readonly namePl: string;
   readonly descPl: string;
@@ -1462,34 +1489,68 @@ type DeliveryMethodSeed = {
   readonly carrier: string | null;
   readonly trackingAvailable: boolean;
   readonly requiresPickupPoint: boolean;
+  readonly isActive: boolean;
   readonly sortOrder: number;
+  readonly weightTiers: readonly WeightTierSeed[];
 };
 
 /**
- * P9 phase 5: real delivery methods, replacing the single hardcoded
- * `StoreSettings.shippingFlatRateGrosze` at checkout. Two honest rows: a
- * real courier price with a real free-shipping threshold, and a genuinely
- * manual "odbiór osobisty" (personal pickup) option — no live carrier
- * tracking claimed for either (§9/§15: `trackingAvailable: false` for
- * both, since no carrier API is integrated). Create-only, matched by
- * `namePl` (no natural key), same non-destructive precedent as `seedFaqs`.
+ * 2026-08-29 rewrite, owner request: "cena powinna być przeliczana na
+ * podstawie wielkości i wagi produktu zgodnie z danymi cenowymi wybranego
+ * kuriera" — real weight-tier prices, sourced from each carrier's own
+ * published price list, cited per method below. No fabricated numbers
+ * anywhere in this array — a method with no real published tiers gets
+ * `weightTiers: []` (falls back to its flat `priceGrosze`, e.g.
+ * `Odbiór osobisty`) or, for a real carrier with no real numbers found at
+ * all (GEIS — real search performed, no published static price list
+ * exists, only interactive per-shipment quote forms), `isActive: false`
+ * with a comment naming what's needed rather than an invented one.
  *
- * 2026-08-29 addition: a third method, "Paczkomat", with
- * `requiresPickupPoint: true` — exercises the real pickup-point picker
- * (`server/delivery/pickup-points.ts`) end-to-end at checkout.
+ * "Kurier InPost" prices: InPost's own real "Kurier Standard" (business)
+ * net tiers from https://inpost.pl/cenniki (fetched 2026-08-29), converted
+ * to a gross customer-facing price the same way InPost's own page states
+ * business pricing is converted: net × 1.13 (their stated 13% fuel
+ * surcharge) × 1.23 (23% VAT). "Paczkomat InPost" prices: InPost's own
+ * real INDIVIDUAL/consumer "Paczkomat 24/7" tier prices from the same
+ * page — already gross, 0% fuel surcharge per that page. Real locker
+ * door/compartment dimensions from the same source (width×height fixed
+ * per InPost's own published data; only depth varies by size).
+ *
+ * "Punkt DPD Pickup" prices: DPD's own real, official "Cennik krajowy DPD
+ * Pickup" (version 1.8, effective 01.09.2025), the exact content of
+ * `https://www.dpd.com/pl/pl/cennik-przesylek-krajowych/` — WebFetch
+ * against DPD's own site was blocked (HTTP 403, bot protection); the
+ * owner pasted the real page content directly. The 20–31.5kg bracket is
+ * deliberately NOT included here — DPD's own price list states it
+ * ("Przedział wagowy niedostępny dla przesyłek kierowanych do odbioru w
+ * Punkcie DPD Pickup") is unavailable for Pickup-point delivery
+ * specifically.
  */
 const DELIVERY_METHOD_SEEDS: readonly DeliveryMethodSeed[] = [
   {
-    namePl: 'Kurier',
-    descPl: 'Dostawa kurierska pod wskazany adres. Paczkę nadajemy po zakończeniu produkcji.',
-    priceGrosze: 1_500,
-    freeShippingThresholdGrosze: 30_000,
+    namePl: 'Kurier InPost',
+    descPl: 'Dostawa kurierska InPost pod wskazany adres. Cena zależy od wagi paczki.',
+    priceGrosze: 5_200, // flat-rate fallback only — real price always comes from weightTiers below
+    freeShippingThresholdGrosze: 50_000,
     estimatedDaysMin: 1,
     estimatedDaysMax: 3,
-    carrier: null,
+    carrier: 'InPost Kurier',
     trackingAvailable: false,
     requiresPickupPoint: false,
+    isActive: true,
     sortOrder: 1,
+    weightTiers: [
+      { labelPl: 'do 1 kg', maxWeightGrams: 1_000, priceGrosze: 3_516, sortOrder: 1 },
+      { labelPl: 'do 2 kg', maxWeightGrams: 2_000, priceGrosze: 3_751, sortOrder: 2 },
+      { labelPl: 'do 5 kg', maxWeightGrams: 5_000, priceGrosze: 4_457, sortOrder: 3 },
+      { labelPl: 'do 10 kg', maxWeightGrams: 10_000, priceGrosze: 5_161, sortOrder: 4 },
+      { labelPl: 'do 15 kg', maxWeightGrams: 15_000, priceGrosze: 6_100, sortOrder: 5 },
+      { labelPl: 'do 20 kg', maxWeightGrams: 20_000, priceGrosze: 6_805, sortOrder: 6 },
+      { labelPl: 'do 25 kg', maxWeightGrams: 25_000, priceGrosze: 7_507, sortOrder: 7 },
+      { labelPl: 'do 30 kg', maxWeightGrams: 30_000, priceGrosze: 8_212, sortOrder: 8 },
+      { labelPl: 'do 40 kg', maxWeightGrams: 40_000, priceGrosze: 12_427, sortOrder: 9 },
+      { labelPl: 'do 50 kg', maxWeightGrams: 50_000, priceGrosze: 15_010, sortOrder: 10 },
+    ],
   },
   {
     namePl: 'Odbiór osobisty',
@@ -1501,31 +1562,110 @@ const DELIVERY_METHOD_SEEDS: readonly DeliveryMethodSeed[] = [
     carrier: null,
     trackingAvailable: false,
     requiresPickupPoint: false,
+    isActive: true,
     sortOrder: 2,
+    weightTiers: [],
   },
   {
-    namePl: 'Paczkomat',
-    descPl: 'Dostawa do wybranego paczkomatu lub punktu odbioru. Wybierz konkretny punkt w kolejnym kroku.',
-    priceGrosze: 1_200,
-    freeShippingThresholdGrosze: 30_000,
+    namePl: 'Paczkomat InPost',
+    descPl: 'Dostawa do wybranego Paczkomatu InPost. Cena zależy od rozmiaru i wagi paczki — wybierz konkretny punkt w kolejnym kroku.',
+    priceGrosze: 2_049, // flat-rate fallback only
+    freeShippingThresholdGrosze: 50_000,
     estimatedDaysMin: 1,
     estimatedDaysMax: 3,
     carrier: 'InPost Paczkomaty',
     trackingAvailable: false,
     requiresPickupPoint: true,
+    isActive: true,
     sortOrder: 3,
+    weightTiers: [
+      { labelPl: 'XS', maxWeightGrams: 3_000, priceGrosze: 1_149, maxWidthMm: 230, maxHeightMm: 400, maxDepthMm: 40, sortOrder: 1 },
+      { labelPl: 'A', maxWeightGrams: 25_000, priceGrosze: 1_649, maxWidthMm: 380, maxHeightMm: 640, maxDepthMm: 80, sortOrder: 2 },
+      { labelPl: 'B', maxWeightGrams: 25_000, priceGrosze: 1_849, maxWidthMm: 380, maxHeightMm: 640, maxDepthMm: 190, sortOrder: 3 },
+      { labelPl: 'C', maxWeightGrams: 25_000, priceGrosze: 2_049, maxWidthMm: 380, maxHeightMm: 640, maxDepthMm: 410, sortOrder: 4 },
+    ],
+  },
+  {
+    namePl: 'Punkt DPD Pickup',
+    descPl: 'Dostawa do wybranego punktu DPD Pickup. Cena zależy od wagi paczki (do 20 kg — powyżej tej wagi punkt odbioru jest niedostępny, zgodnie z cennikiem DPD).',
+    priceGrosze: 3_249, // flat-rate fallback only
+    freeShippingThresholdGrosze: 50_000,
+    estimatedDaysMin: 1,
+    estimatedDaysMax: 3,
+    carrier: 'DPD Pickup',
+    trackingAvailable: false,
+    requiresPickupPoint: true,
+    isActive: true,
+    sortOrder: 4,
+    weightTiers: [
+      { labelPl: 'do 0,50 kg', maxWeightGrams: 500, priceGrosze: 1_699, sortOrder: 1 },
+      { labelPl: 'do 1,00 kg', maxWeightGrams: 1_000, priceGrosze: 1_799, sortOrder: 2 },
+      { labelPl: 'do 3,00 kg', maxWeightGrams: 3_000, priceGrosze: 1_999, sortOrder: 3 },
+      { labelPl: 'do 5,00 kg', maxWeightGrams: 5_000, priceGrosze: 2_249, sortOrder: 4 },
+      { labelPl: 'do 10,00 kg', maxWeightGrams: 10_000, priceGrosze: 2_749, sortOrder: 5 },
+      { labelPl: 'do 20,00 kg', maxWeightGrams: 20_000, priceGrosze: 3_249, sortOrder: 6 },
+    ],
+  },
+  {
+    // 2026-08-29, owner request: "check other companies like GEIS and much
+    // more". Real search performed (epaka.pl, globkurier.pl, fastpost.pl,
+    // pogotowiepaczkowe.pl, geis.pl itself) — GEIS does not publish a
+    // static weight-tier price list anywhere found; every source only
+    // offers an interactive per-shipment quote form. Seeded here as a
+    // real, visible-to-staff row — same "honest, not yet priced" pattern
+    // `PaymentMethodConfig`'s `isConnected: false` already established —
+    // rather than either inventing numbers or silently omitting the
+    // option the owner asked about. `isActive: false` keeps it OFF the
+    // real checkout until real numbers exist (from the owner directly, or
+    // a real published GEIS price list someone finds).
+    namePl: 'Kurier GEIS',
+    descPl: 'Nieaktywne — brak realnego, publicznie dostępnego cennika wagowego GEIS. Wymaga cennika od właściciela sklepu lub bezpośrednio od GEIS.',
+    priceGrosze: 0,
+    freeShippingThresholdGrosze: null,
+    estimatedDaysMin: 1,
+    estimatedDaysMax: 3,
+    carrier: 'GEIS',
+    trackingAvailable: false,
+    requiresPickupPoint: false,
+    isActive: false,
+    sortOrder: 5,
+    weightTiers: [],
   },
 ];
 
+/**
+ * 2026-08-29: the three original methods ("Kurier"/"Paczkomat", both flat-
+ * rate, plus a stray earlier "Paczkomat" row) are renamed rather than
+ * updated in place — a genuinely different pricing model (real weight
+ * tiers) under a clearer name ("Kurier InPost"/"Paczkomat InPost"), not a
+ * same-method edit. Deactivating the old namePl rows (never deleting —
+ * they may already be referenced by a real historical `Order.deliveryMethodId`)
+ * so checkout shows only the new, real, weight-priced ones.
+ */
+const RETIRED_DELIVERY_METHOD_NAMES = ['Kurier', 'Paczkomat'] as const;
+
 async function seedDeliveryMethods(): Promise<void> {
+  for (const retiredName of RETIRED_DELIVERY_METHOD_NAMES) {
+    const retired = await prisma.deliveryMethod.updateMany({
+      where: { namePl: retiredName, isActive: true },
+      data: { isActive: false },
+    });
+    if (retired.count > 0) {
+      console.log(`DeliveryMethod: deactivated superseded "${retiredName}" (${retired.count} row(s))`);
+    }
+  }
+
   for (const seed of DELIVERY_METHOD_SEEDS) {
     const existing = await prisma.deliveryMethod.findFirst({ where: { namePl: seed.namePl } });
     if (existing !== null) {
       console.log(`DeliveryMethod: "${seed.namePl}" already exists, leaving it alone`);
       continue;
     }
-    const created = await prisma.deliveryMethod.create({ data: { ...seed, isActive: true } });
-    console.log(`DeliveryMethod: created "${created.namePl}"`);
+    const { weightTiers, ...fields } = seed;
+    const created = await prisma.deliveryMethod.create({
+      data: { ...fields, weightTiers: { create: weightTiers.map(({ sortOrder, ...tier }) => ({ ...tier, sortOrder })) } },
+    });
+    console.log(`DeliveryMethod: created "${created.namePl}" with ${weightTiers.length} weight tier(s)`);
   }
 }
 

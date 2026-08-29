@@ -121,6 +121,17 @@ export function MaterialForm({ material }: { readonly material?: AdminMaterialDe
             <TextField
               fullWidth
               type="number"
+              label={ADMIN.materialFieldDensityPl}
+              name="densityKgPerM3"
+              defaultValue={fieldValue('densityKgPerM3', String(material?.densityKgPerM3 ?? 600))}
+              helperText={ADMIN.materialFieldDensityHelperPl}
+              size="small"
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4 }}>
+            <TextField
+              fullWidth
+              type="number"
               label={ADMIN.materialFieldMaxSheetWidthPl}
               name="maxSheetWidthMm"
               defaultValue={fieldValue('maxSheetWidthMm', String(material?.maxSheetWidthMm ?? 1000))}

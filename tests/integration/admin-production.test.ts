@@ -49,6 +49,7 @@ async function seedOrder(status: OrderStatus, itemSnapshots: readonly OrderItemS
       status,
       paymentMethod: 'BANK_TRANSFER',
       email: `${PREFIX}${crypto.randomUUID()}@example.test`,
+      phone: '+48123456789',
       firstName: 'Test',
       lastName: 'Test',
       street: 'Test 1',

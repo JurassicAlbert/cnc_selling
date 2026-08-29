@@ -48,6 +48,7 @@ async function seedOrder(overrides: {
       paymentMethod: 'BANK_TRANSFER',
       paymentStatus: overrides.paymentStatus ?? 'AWAITING',
       email: `${PREFIX}${crypto.randomUUID()}@example.test`,
+      phone: '+48123456789',
       firstName: 'Test',
       lastName: 'Test',
       street: 'Test 1',

@@ -27,7 +27,7 @@ import { priceAndValidateSelections } from '@/server/configurator/validate-and-p
 import type { ValidatedPricing } from '@/server/configurator/validate-and-price';
 import { recordAnalyticsEvent } from '@/server/analytics/record-event';
 import { mailer } from '@/server/mail/mailer';
-import { computeShippingGrosze } from '@/domain/checkout/delivery';
+import { resolveDeliveryMethodsForCart } from '@/server/repositories/delivery-methods';
 import { findPickupPointById } from '@/server/delivery/pickup-points';
 import { SITE } from '@/content/pl/site';
 import type { OrderItemSnapshot } from './snapshot';
@@ -39,7 +39,8 @@ export type CreateOrderInput = {
   readonly sessionToken: string | null;
   readonly userId: string | null;
   readonly email: string;
-  readonly phone: string | null;
+  /** Required, per owner request — never `null` (§ schema comment on `Order.phone`). */
+  readonly phone: string;
   readonly firstName: string;
   readonly lastName: string;
   readonly companyName: string | null;
@@ -51,6 +52,10 @@ export type CreateOrderInput = {
   readonly deliveryMethodId: string;
   /** Required (and re-validated against `server/delivery/pickup-points.ts`) only when the chosen `DeliveryMethod.requiresPickupPoint` is true — `null` otherwise. */
   readonly pickupPointId: string | null;
+  /** Instructions FOR the courier (gate code, floor, "leave with neighbour") — shown on shipping labels/handed to the courier, never to internal staff-only views. */
+  readonly courierNotePl: string | null;
+  /** A note FOR US about the shipment — nothing to do with production, staff-visible only. */
+  readonly internalShipmentNotePl: string | null;
 };
 
 export type CreateOrderResult =
@@ -74,25 +79,25 @@ function toJsonInput<T>(value: T): Prisma.InputJsonValue {
 }
 
 export async function createOrder(input: CreateOrderInput): Promise<CreateOrderResult> {
-  const [cart, deliveryMethod, paymentMethodConfig] = await Promise.all([
-    findCartForRequest({ userId: input.userId, sessionToken: input.sessionToken }),
-    prisma.deliveryMethod.findFirst({
-      where: { id: input.deliveryMethodId, isActive: true },
-      select: { namePl: true, priceGrosze: true, freeShippingThresholdGrosze: true, requiresPickupPoint: true },
-    }),
+  const cart = await findCartForRequest({ userId: input.userId, sessionToken: input.sessionToken });
+  if (cart.items.length === 0) {
+    return { ok: false, code: 'CART_EMPTY' };
+  }
+
+  // `resolveDeliveryMethodsForCart` re-runs the EXACT same real weight/
+  // locker-fit/free-threshold evaluation the checkout page used to render
+  // the picker — never trusts a price the client last rendered, and never
+  // trusts that a method still exists, is still active, or is still
+  // feasible for this cart between page load and submission.
+  const [deliveryMethods, paymentMethodConfig] = await Promise.all([
+    resolveDeliveryMethodsForCart(cart),
     prisma.paymentMethodConfig.findFirst({
       where: { id: input.paymentMethodConfigId, isActive: true, isConnected: true },
       select: { provider: true },
     }),
   ]);
-  if (cart.items.length === 0) {
-    return { ok: false, code: 'CART_EMPTY' };
-  }
-  // Re-checked here, not trusted from whatever the form last rendered: the
-  // method could have been deactivated between page load and submission,
-  // same "never trust client-side prices" discipline as the per-item
-  // re-pricing loop below.
-  if (deliveryMethod === null) {
+  const deliveryMethod = deliveryMethods.find((method) => method.id === input.deliveryMethodId) ?? null;
+  if (deliveryMethod === null || !deliveryMethod.feasible) {
     return { ok: false, code: 'DELIVERY_METHOD_INVALID' };
   }
   // `isConnected: false` (an unconnected provider like Przelewy24) is
@@ -106,9 +111,10 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   // trusts the id/label the client last rendered — the id is re-looked-up
   // in the same static dataset the picker searched, same "never trust the
   // client" discipline as the delivery/payment method checks just above.
-  const pickupPoint = deliveryMethod.requiresPickupPoint
-    ? (input.pickupPointId !== null ? findPickupPointById(input.pickupPointId) : null)
-    : null;
+  const pickupPoint =
+    deliveryMethod.requiresPickupPoint && deliveryMethod.carrier !== null && input.pickupPointId !== null
+      ? findPickupPointById(deliveryMethod.carrier, input.pickupPointId)
+      : null;
   if (deliveryMethod.requiresPickupPoint && pickupPoint === null) {
     return { ok: false, code: 'PICKUP_POINT_INVALID' };
   }
@@ -135,11 +141,13 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
 
   const subtotalNetGrosze = sumGrosze(revalidated.map((r) => r.lineNetGrosze));
   const vatGrosze = sumGrosze(revalidated.map((r) => r.lineVatGrosze));
-  // Free-shipping thresholds are set and understood in gross terms (what a
-  // customer actually sees as "spend over X zł"), so the comparison uses
-  // the pre-shipping gross total, not the net figure — matches what the
-  // checkout page's own live estimate shows the customer before submission.
-  const shippingGrosze = computeShippingGrosze(deliveryMethod, subtotalNetGrosze + vatGrosze);
+  // `deliveryMethod.priceGrosze` here is already the real, fully evaluated
+  // price for THIS cart (weight tier / free-shipping threshold / flat-rate
+  // fallback — `resolveDeliveryMethodsForCart` above) — every per-item
+  // price in `revalidated` was just confirmed to match `cart`'s own cached
+  // figures, so re-deriving it again from the post-revalidation total would
+  // only ever agree, never differ.
+  const shippingGrosze = deliveryMethod.priceGrosze;
   const totalGrossGrosze = subtotalNetGrosze + vatGrosze + shippingGrosze;
 
   const accessToken = randomBytes(32).toString('base64url');
@@ -187,6 +195,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
         deliveryMethodNamePl: deliveryMethod.namePl,
         pickupPointId: pickupPoint?.id ?? null,
         pickupPointLabel: pickupPoint?.label ?? null,
+        courierNotePl: input.courierNotePl,
+        internalShipmentNotePl: input.internalShipmentNotePl,
         termsVersion: TERMS_VERSION,
         termsAcceptedAt: now,
         withdrawalExemptionTextPl: SITE.checkoutWithdrawalExemptionTextPl,

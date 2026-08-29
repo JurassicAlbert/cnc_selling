@@ -25,6 +25,7 @@ async function seedOrder(overrides: { readonly userId?: string } = {}) {
       deliveryMethodNamePl: 'Test',
       userId: overrides.userId ?? null,
       email: `${uid()}@example.test`,
+      phone: '+48123456789',
       firstName: 'Test',
       lastName: 'Test',
       street: 'Test 1',

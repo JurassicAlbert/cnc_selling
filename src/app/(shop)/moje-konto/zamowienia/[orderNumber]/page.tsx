@@ -9,6 +9,7 @@ import { getStoreSettings } from '@/server/repositories/store-settings';
 import { submitAccountReview } from '@/server/actions/reviews';
 import { submitOrderSupportRequest } from '@/server/actions/support-requests';
 import { Heading } from '@/ui/primitives/Heading';
+import { OrderStatusBanner } from '@/ui/primitives/OrderStatusBanner';
 import { Text } from '@/ui/primitives/Text';
 import { ThemeRegistry } from '@/ui/theme/ThemeRegistry';
 import { AccountOrderDetail } from '@/ui/islands/AccountOrderDetail';
@@ -40,6 +41,7 @@ export default async function AccountOrderDetailPage({ params }: AccountOrderDet
     <div>
       <Heading level={1}>{SITE.orderNumberLabelPl}: {order.orderNumber}</Heading>
       <Text muted>{order.email}</Text>
+      <OrderStatusBanner status={order.status} />
 
       <div style={{ marginBlockStart: 24 }}>
         <ThemeRegistry>

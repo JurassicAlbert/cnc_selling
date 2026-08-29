@@ -72,6 +72,7 @@ test('uploads a custom design, completes checkout, and lands in DESIGN_REVIEW', 
   await expect(page.getByText('Cena tej konfiguracji uległa zmianie')).not.toBeVisible();
 
   await page.getByLabel('E-mail').fill('e2e-custom-upload@example.com');
+  await page.getByLabel('Telefon').fill('+48123456789');
   await page.getByLabel('Imię').fill('Test');
   await page.getByLabel('Nazwisko').fill('E2E');
   await page.getByLabel('Ulica i numer').fill('Testowa 1');

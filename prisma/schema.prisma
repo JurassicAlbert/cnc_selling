@@ -242,6 +242,13 @@ model Material {
   characteristicsPl String         @db.Text
   imageUrl          String
   pricePerM2Grosze  Int
+  /// 2026-08-29, owner request: real shipping weight, computed instead of
+  /// guessed, needs a real material density. Sourced from standard,
+  /// published wood-density reference values (seasoned/kiln-dried, ~12%
+  /// moisture) and porcelain-stoneware (gres) reference density — see
+  /// `prisma/seed.ts`'s `MATERIAL_SEEDS` for the actual figures used and
+  /// their sourcing note. Never a business-specific fabricated number.
+  densityKgPerM3    Int
   isAvailable       Boolean        @default(true)
   sortOrder         Int            @default(0)
 
@@ -833,8 +840,41 @@ model DeliveryMethod {
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
   orders                      Order[]
+  /// 2026-08-29, owner request: "cena powinna być przeliczana na podstawie
+  /// wielkości i wagi produktu zgodnie z danymi cenowymi wybranego kuriera"
+  /// — real weight-tier pricing, sourced from each carrier's own real,
+  /// published price list (see `prisma/seed.ts`'s `DELIVERY_WEIGHT_TIER_SEEDS`
+  /// for the exact source URL cited per method). Empty for a method with no
+  /// real published tiers yet (e.g. `Odbiór osobisty`, or a carrier row
+  /// prepared but not yet priced) — `priceGrosze`/`freeShippingThresholdGrosze`
+  /// above stay the fallback flat rate for exactly that case.
+  weightTiers                  DeliveryWeightTier[]
 
   @@index([isActive, sortOrder])
+}
+
+/// One weight bracket of one real carrier's own published price list —
+/// `computeShippingGrosze` (`domain/checkout/delivery.ts`) picks the
+/// cheapest tier whose `maxWeightGrams` is at or above the cart's real
+/// total weight (`domain/shipping/weight.ts`, computed from each item's
+/// real dimensions × its material's real density — never a guessed
+/// per-product number). `maxWidthMm`/`maxHeightMm`/`maxDepthMm` are only
+/// set for a genuine physical-locker constraint (InPost Paczkomat's real
+/// door/compartment dimensions) — `null` for a courier with no such limit
+/// in its own published data.
+model DeliveryWeightTier {
+  id               String         @id @default(cuid())
+  deliveryMethodId String
+  deliveryMethod   DeliveryMethod @relation(fields: [deliveryMethodId], references: [id], onDelete: Cascade)
+  labelPl          String
+  maxWeightGrams   Int
+  priceGrosze      Int
+  maxWidthMm       Int?
+  maxHeightMm      Int?
+  maxDepthMm       Int?
+  sortOrder        Int            @default(0)
+
+  @@index([deliveryMethodId, sortOrder])
 }
 
 model Order {
@@ -857,7 +897,11 @@ model Order {
   // Buyer data is CAPTURED, never re-read from the user profile: a customer
   // who moves house must not retroactively change where an old order went.
   email       String
-  phone       String?
+  /// 2026-08-29, owner request: required, not optional — a status/shipment
+  /// update needs a real contact channel beyond email. Historical rows from
+  /// before this requirement backfill to `''` (migration), distinguishable
+  /// from a real number, never `null`.
+  phone       String
   firstName   String
   lastName    String
   companyName String?
@@ -888,6 +932,14 @@ model Order {
   /// what a customer actually picked must never move under them).
   pickupPointId        String?
   pickupPointLabel     String?
+  /// 2026-08-29, owner request: the "shipping form" is really two different
+  /// audiences — instructions FOR the courier (gate code, "leave with
+  /// neighbour", floor number) vs a note FOR US about the shipment (nothing
+  /// to do with production). Both customer-submitted at checkout, both
+  /// optional, kept as two separate columns rather than one so staff and a
+  /// courier label print never accidentally show the other's note.
+  courierNotePl           String? @db.Text
+  internalShipmentNotePl  String? @db.Text
 
   // Acknowledgements, stored verbatim: a consent record is only evidence if
   // it captures WHAT was agreed to. Custom-made goods are exempt from the

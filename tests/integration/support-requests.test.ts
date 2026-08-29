@@ -40,6 +40,7 @@ async function seedOrder() {
       paymentMethod: 'BANK_TRANSFER',
       deliveryMethodNamePl: 'Test',
       email: `${uid()}@example.test`,
+      phone: '+48123456789',
       firstName: 'Test',
       lastName: 'Test',
       street: 'Test 1',

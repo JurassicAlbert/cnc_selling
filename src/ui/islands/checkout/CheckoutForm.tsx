@@ -19,40 +19,38 @@
  * remount after each submission specifically so the server's echoed-back
  * `state.values` actually shows up.
  *
- * P9 phase 5: converted from raw `<input>`/`<fieldset>` to real MUI —
- * `ThemeRegistry` now mounted around this island from the checkout page,
- * same "mount where warranted" precedent the product page's Configurator
- * already set (`ThemeRegistry` stays off the root layout for measured
- * mobile-LCP reasons). Also gained a real delivery-method selector, DB-
- * driven (`ActiveDeliveryMethod[]`) — the shown price is for display only;
- * `createOrder` always recomputes it server-side from the real row, never
- * trusting whatever this form last rendered (§15.3).
- *
- * P9 phase 6: the two hardcoded payment radios became a real DB-driven
- * selector too, sourced from `listActivePaymentMethods()` — which is
- * already filtered to `isConnected: true` only, so an unconnected
- * provider (e.g. Przelewy24) never even appears as an option here, not
- * just "shown but disabled."
- *
- * 2026-08-29, owner request: a real pickup-point ("paczkomat/punkt
- * odbioru") picker, shown only for a delivery method with
- * `requiresPickupPoint: true`. `pickupPoints` is the full static dataset
- * (`server/delivery/pickup-points.ts`) passed down once from the checkout
- * page — small enough (a dozen rows) that filtering it client-side needs
- * no extra request. `submitCheckout`/`createOrder` re-validate the chosen
- * id against that same dataset server-side (§15's "never trust the
- * client" discipline) — this is search/filter UX only, not the source of
- * truth.
+ * 2026-08-29 rewrite, owner feedback: "Formularz zamówienia również ma
+ * bardzo biedne UI/UX" — a real two-column layout (form left, sticky
+ * order-summary card right on desktop), section icons, and every method's
+ * price now REAL and pre-computed server-side (`ActiveDeliveryMethod` —
+ * see `server/repositories/delivery-methods.ts`'s `resolveDeliveryMethodsForCart`)
+ * rather than derived client-side from a flat rate — this component no
+ * longer imports or calls anything from `domain/checkout/delivery.ts`. An
+ * infeasible method (too heavy, or a real item too large for a locker) is
+ * shown disabled with its real reason, never silently hidden. Phone is now
+ * required, and delivery gained two real, separate note fields (FOR the
+ * courier vs FOR us) — the owner's own "shipping form" restructure
+ * request. The pickup-point picker is carrier-scoped to whichever method
+ * is selected (`searchPickupPoints(carrier, query)`) and says outright
+ * that its list is a preliminary sample, not a live directory — see that
+ * file's own header comment for why (a real InPost/DPD account is needed
+ * for a live one).
  */
 
+import Image from 'next/image';
+import type { ReactNode } from 'react';
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import {
   Alert,
+  Box,
   Button,
   Checkbox,
+  Chip,
+  Divider,
   FormControlLabel,
   FormHelperText,
+  Grid,
   List,
   ListItemButton,
   ListItemText,
@@ -68,9 +66,10 @@ import { checkoutIssueMessage } from '@/content/pl/messages';
 import { COPY } from '@/content/pl/messages';
 import { SITE } from '@/content/pl/site';
 import { formatPln } from '@/domain/money/money';
+import { formatMmAsCentimetres } from '@/domain/text/numeric-input';
 import { submitCheckout } from '@/server/actions/checkout';
 import type { CheckoutFormState } from '@/server/actions/checkout';
-import { computeShippingGrosze } from '@/domain/checkout/delivery';
+import type { CartView } from '@/server/repositories/cart';
 import type { ActiveDeliveryMethod } from '@/server/repositories/delivery-methods';
 import type { ActivePaymentMethod } from '@/server/repositories/payment-methods';
 // A plain-data module (no `prisma`/Node-only imports) — safe to import as a
@@ -83,14 +82,13 @@ import { findPickupPointById, searchPickupPoints } from '@/server/delivery/picku
 const INITIAL_CHECKOUT_STATE: CheckoutFormState = { fieldErrors: {}, formError: null, values: {} };
 
 export function CheckoutForm({
+  cart,
   deliveryMethods,
   paymentMethods,
-  subtotalGrossGrosze,
 }: {
+  readonly cart: CartView;
   readonly deliveryMethods: readonly ActiveDeliveryMethod[];
   readonly paymentMethods: readonly ActivePaymentMethod[];
-  /** Pre-shipping gross total, for the live estimate shown below — `createOrder` always recomputes the real, final figure server-side (§15.3); this is display-only. */
-  readonly subtotalGrossGrosze: number;
 }) {
   const [state, formAction] = useActionState(submitCheckout, INITIAL_CHECKOUT_STATE);
   const [renderKey, setRenderKey] = useState(0);
@@ -105,265 +103,400 @@ export function CheckoutForm({
   }, [state]);
 
   const v = state.values;
-  const defaultDeliveryMethodId = v.deliveryMethodId ?? deliveryMethods[0]?.id ?? '';
+  const firstFeasibleId = deliveryMethods.find((m) => m.feasible)?.id ?? deliveryMethods[0]?.id ?? '';
+  const defaultDeliveryMethodId = v.deliveryMethodId ?? firstFeasibleId;
   const [selectedDeliveryId, setSelectedDeliveryId] = useState(defaultDeliveryMethodId);
   const selectedDelivery = deliveryMethods.find((m) => m.id === selectedDeliveryId) ?? null;
   const defaultPaymentMethodConfigId = v.paymentMethodConfigId ?? paymentMethods[0]?.id ?? '';
 
   const [pickupPointQuery, setPickupPointQuery] = useState('');
   const [selectedPickupPointId, setSelectedPickupPointId] = useState<string | null>(v.pickupPointId ?? null);
-  const pickupPointMatches = useMemo(() => searchPickupPoints(pickupPointQuery), [pickupPointQuery]);
-  const selectedPickupPoint = selectedPickupPointId !== null ? findPickupPointById(selectedPickupPointId) : null;
+  const pickupCarrier = selectedDelivery?.carrier ?? null;
+  const pickupPointMatches = useMemo(
+    () => (pickupCarrier !== null ? searchPickupPoints(pickupCarrier, pickupPointQuery) : []),
+    [pickupCarrier, pickupPointQuery],
+  );
+  const selectedPickupPoint =
+    selectedPickupPointId !== null && pickupCarrier !== null ? findPickupPointById(pickupCarrier, selectedPickupPointId) : null;
+
+  const shippingGrosze = selectedDelivery?.feasible === true ? selectedDelivery.priceGrosze : null;
+  const totalGrossGrosze = shippingGrosze !== null ? cart.subtotalGrossGrosze + shippingGrosze : null;
+  const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <form key={renderKey} action={formAction}>
-      <Stack spacing={4} sx={{ maxWidth: 560 }}>
-        {state.formError === 'CART_EMPTY' && <Alert severity="error">{SITE.checkoutEmptyCartRedirectPl}</Alert>}
-        {state.formError === 'PRICE_CHANGED' && <Alert severity="error">{COPY.priceChanged}</Alert>}
-        {state.formError === 'DELIVERY_METHOD_INVALID' && <Alert severity="error">{SITE.checkoutDeliveryMethodInvalidPl}</Alert>}
-        {state.formError === 'PAYMENT_METHOD_INVALID' && <Alert severity="error">{SITE.checkoutPaymentMethodInvalidPl}</Alert>}
-        {state.formError === 'PICKUP_POINT_INVALID' && <Alert severity="error">{SITE.checkoutPickupPointInvalidPl}</Alert>}
+      <Grid container spacing={4}>
+        <Grid size={{ xs: 12, md: 7 }}>
+          <Stack spacing={4}>
+            {state.formError === 'CART_EMPTY' && <Alert severity="error">{SITE.checkoutEmptyCartRedirectPl}</Alert>}
+            {state.formError === 'PRICE_CHANGED' && <Alert severity="error">{COPY.priceChanged}</Alert>}
+            {state.formError === 'DELIVERY_METHOD_INVALID' && <Alert severity="error">{SITE.checkoutDeliveryMethodInvalidPl}</Alert>}
+            {state.formError === 'PAYMENT_METHOD_INVALID' && <Alert severity="error">{SITE.checkoutPaymentMethodInvalidPl}</Alert>}
+            {state.formError === 'PICKUP_POINT_INVALID' && <Alert severity="error">{SITE.checkoutPickupPointInvalidPl}</Alert>}
 
-        <Stack spacing={2}>
-          <Typography variant="subtitle1">{SITE.checkoutBuyerSectionHeadingPl}</Typography>
-          <TextField
-            label={SITE.checkoutEmailLabelPl}
-            name="email"
-            type="email"
-            defaultValue={v.email}
-            error={state.fieldErrors.email !== undefined}
-            helperText={state.fieldErrors.email !== undefined ? checkoutIssueMessage(state.fieldErrors.email) : undefined}
-            size="small"
-            fullWidth
-          />
-          <TextField
-            label={SITE.checkoutPhoneLabelPl}
-            name="phone"
-            type="tel"
-            defaultValue={v.phone}
-            error={state.fieldErrors.phone !== undefined}
-            helperText={state.fieldErrors.phone !== undefined ? checkoutIssueMessage(state.fieldErrors.phone) : undefined}
-            size="small"
-            fullWidth
-          />
-          <TextField
-            label={SITE.checkoutFirstNameLabelPl}
-            name="firstName"
-            defaultValue={v.firstName}
-            error={state.fieldErrors.firstName !== undefined}
-            helperText={state.fieldErrors.firstName !== undefined ? checkoutIssueMessage(state.fieldErrors.firstName) : undefined}
-            size="small"
-            fullWidth
-          />
-          <TextField
-            label={SITE.checkoutLastNameLabelPl}
-            name="lastName"
-            defaultValue={v.lastName}
-            error={state.fieldErrors.lastName !== undefined}
-            helperText={state.fieldErrors.lastName !== undefined ? checkoutIssueMessage(state.fieldErrors.lastName) : undefined}
-            size="small"
-            fullWidth
-          />
-        </Stack>
+            <SectionCard heading={SITE.checkoutBuyerSectionHeadingPl}>
+              <TextField
+                label={SITE.checkoutEmailLabelPl}
+                name="email"
+                type="email"
+                required
+                defaultValue={v.email}
+                error={state.fieldErrors.email !== undefined}
+                helperText={state.fieldErrors.email !== undefined ? checkoutIssueMessage(state.fieldErrors.email) : undefined}
+                size="small"
+                fullWidth
+              />
+              <TextField
+                label={SITE.checkoutPhoneLabelPl}
+                name="phone"
+                type="tel"
+                required
+                defaultValue={v.phone}
+                error={state.fieldErrors.phone !== undefined}
+                helperText={state.fieldErrors.phone !== undefined ? checkoutIssueMessage(state.fieldErrors.phone) : undefined}
+                size="small"
+                fullWidth
+              />
+              <TextField
+                label={SITE.checkoutFirstNameLabelPl}
+                name="firstName"
+                required
+                defaultValue={v.firstName}
+                error={state.fieldErrors.firstName !== undefined}
+                helperText={state.fieldErrors.firstName !== undefined ? checkoutIssueMessage(state.fieldErrors.firstName) : undefined}
+                size="small"
+                fullWidth
+              />
+              <TextField
+                label={SITE.checkoutLastNameLabelPl}
+                name="lastName"
+                required
+                defaultValue={v.lastName}
+                error={state.fieldErrors.lastName !== undefined}
+                helperText={state.fieldErrors.lastName !== undefined ? checkoutIssueMessage(state.fieldErrors.lastName) : undefined}
+                size="small"
+                fullWidth
+              />
+            </SectionCard>
 
-        <Stack spacing={2}>
-          <Typography variant="subtitle1">{SITE.checkoutInvoiceSectionHeadingPl}</Typography>
-          <TextField label={SITE.checkoutCompanyNameLabelPl} name="companyName" defaultValue={v.companyName} size="small" fullWidth />
-          <TextField
-            label={SITE.checkoutNipLabelPl}
-            name="nip"
-            defaultValue={v.nip}
-            error={state.fieldErrors.nip !== undefined}
-            helperText={state.fieldErrors.nip !== undefined ? checkoutIssueMessage(state.fieldErrors.nip) : undefined}
-            size="small"
-            fullWidth
-          />
-        </Stack>
+            <SectionCard heading={SITE.checkoutInvoiceSectionHeadingPl}>
+              <TextField label={SITE.checkoutCompanyNameLabelPl} name="companyName" defaultValue={v.companyName} size="small" fullWidth />
+              <TextField
+                label={SITE.checkoutNipLabelPl}
+                name="nip"
+                defaultValue={v.nip}
+                error={state.fieldErrors.nip !== undefined}
+                helperText={state.fieldErrors.nip !== undefined ? checkoutIssueMessage(state.fieldErrors.nip) : undefined}
+                size="small"
+                fullWidth
+              />
+            </SectionCard>
 
-        <Stack spacing={2}>
-          <Typography variant="subtitle1">{SITE.checkoutAddressSectionHeadingPl}</Typography>
-          <TextField
-            label={SITE.checkoutStreetLabelPl}
-            name="street"
-            defaultValue={v.street}
-            error={state.fieldErrors.street !== undefined}
-            helperText={state.fieldErrors.street !== undefined ? checkoutIssueMessage(state.fieldErrors.street) : undefined}
-            size="small"
-            fullWidth
-          />
-          <TextField
-            label={SITE.checkoutPostalCodeLabelPl}
-            name="postalCode"
-            placeholder="00-001"
-            defaultValue={v.postalCode}
-            error={state.fieldErrors.postalCode !== undefined}
-            helperText={state.fieldErrors.postalCode !== undefined ? checkoutIssueMessage(state.fieldErrors.postalCode) : undefined}
-            size="small"
-            fullWidth
-          />
-          <TextField
-            label={SITE.checkoutCityLabelPl}
-            name="city"
-            defaultValue={v.city}
-            error={state.fieldErrors.city !== undefined}
-            helperText={state.fieldErrors.city !== undefined ? checkoutIssueMessage(state.fieldErrors.city) : undefined}
-            size="small"
-            fullWidth
-          />
-        </Stack>
+            <SectionCard heading={SITE.checkoutAddressSectionHeadingPl}>
+              <TextField
+                label={SITE.checkoutStreetLabelPl}
+                name="street"
+                required
+                defaultValue={v.street}
+                error={state.fieldErrors.street !== undefined}
+                helperText={state.fieldErrors.street !== undefined ? checkoutIssueMessage(state.fieldErrors.street) : undefined}
+                size="small"
+                fullWidth
+              />
+              <Stack direction="row" spacing={2}>
+                <TextField
+                  label={SITE.checkoutPostalCodeLabelPl}
+                  name="postalCode"
+                  placeholder="00-001"
+                  required
+                  defaultValue={v.postalCode}
+                  error={state.fieldErrors.postalCode !== undefined}
+                  helperText={state.fieldErrors.postalCode !== undefined ? checkoutIssueMessage(state.fieldErrors.postalCode) : undefined}
+                  size="small"
+                  sx={{ flex: 1 }}
+                />
+                <TextField
+                  label={SITE.checkoutCityLabelPl}
+                  name="city"
+                  required
+                  defaultValue={v.city}
+                  error={state.fieldErrors.city !== undefined}
+                  helperText={state.fieldErrors.city !== undefined ? checkoutIssueMessage(state.fieldErrors.city) : undefined}
+                  size="small"
+                  sx={{ flex: 2 }}
+                />
+              </Stack>
+            </SectionCard>
 
-        <Stack spacing={1}>
-          <Typography variant="subtitle1">{SITE.checkoutDeliverySectionHeadingPl}</Typography>
-          {deliveryMethods.length === 0 ? (
-            <Alert severity="warning">{SITE.checkoutNoDeliveryMethodsPl}</Alert>
-          ) : (
-            <RadioGroup name="deliveryMethodId" value={selectedDeliveryId} onChange={(e) => setSelectedDeliveryId(e.target.value)}>
-              {deliveryMethods.map((method) => (
-                <Paper key={method.id} variant="outlined" sx={{ p: 1.5, mb: 1 }}>
-                  <FormControlLabel
-                    value={method.id}
-                    control={<Radio size="small" />}
-                    sx={{ alignItems: 'flex-start', width: '100%', m: 0 }}
-                    label={
-                      <Stack sx={{ pt: 0.25 }}>
-                        <Stack direction="row" sx={{ justifyContent: 'space-between', gap: 2 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                            {method.namePl}
-                          </Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                            {formatPln(method.priceGrosze)}
+            <SectionCard heading={SITE.checkoutDeliverySectionHeadingPl}>
+              {deliveryMethods.length === 0 ? (
+                <Alert severity="warning">{SITE.checkoutNoDeliveryMethodsPl}</Alert>
+              ) : (
+                <RadioGroup name="deliveryMethodId" value={selectedDeliveryId} onChange={(e) => setSelectedDeliveryId(e.target.value)}>
+                  <Stack spacing={1.5}>
+                    {deliveryMethods.map((method) => (
+                      <Paper
+                        key={method.id}
+                        variant="outlined"
+                        sx={{
+                          p: 1.5,
+                          opacity: method.feasible ? 1 : 0.6,
+                          borderColor: method.id === selectedDeliveryId ? 'secondary.main' : undefined,
+                          transition: 'border-color 0.15s ease',
+                        }}
+                      >
+                        <FormControlLabel
+                          value={method.id}
+                          disabled={!method.feasible}
+                          control={<Radio size="small" />}
+                          sx={{ alignItems: 'flex-start', width: '100%', m: 0 }}
+                          label={
+                            <Stack sx={{ pt: 0.25 }} spacing={0.5}>
+                              <Stack direction="row" sx={{ justifyContent: 'space-between', gap: 2 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  {method.namePl}
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                  {method.feasible ? formatPln(method.priceGrosze) : '—'}
+                                </Typography>
+                              </Stack>
+                              <Typography variant="caption" color="text.secondary">
+                                {method.descPl}
+                              </Typography>
+                              {method.feasible && method.matchedTierLabelPl !== null && (
+                                <Typography variant="caption" color="text.secondary">
+                                  {SITE.checkoutDeliveryMatchedTierPl(method.matchedTierLabelPl)}
+                                </Typography>
+                              )}
+                              {method.feasible && method.priceGrosze === 0 && method.matchedTierLabelPl === null && (
+                                <Typography variant="caption" color="success.main">
+                                  {SITE.checkoutFreeShippingAppliedPl}
+                                </Typography>
+                              )}
+                              {!method.feasible && (
+                                <Chip size="small" color="warning" variant="outlined" label={SITE.checkoutDeliveryInfeasibleTagPl} sx={{ alignSelf: 'flex-start' }} />
+                              )}
+                              {!method.feasible && method.infeasibleReasonPl !== null && (
+                                <Typography variant="caption" color="warning.main">
+                                  {method.infeasibleReasonPl}
+                                </Typography>
+                              )}
+                            </Stack>
+                          }
+                        />
+                      </Paper>
+                    ))}
+                  </Stack>
+                </RadioGroup>
+              )}
+              {selectedDelivery !== null && (
+                <Typography variant="caption" color="text.secondary">
+                  {SITE.checkoutDeliveryEstimateLabelPl} {selectedDelivery.estimatedDaysMin}–{selectedDelivery.estimatedDaysMax}{' '}
+                  {SITE.checkoutDeliveryEstimateUnitPl}
+                </Typography>
+              )}
+              {state.fieldErrors.deliveryMethodId !== undefined && (
+                <FormHelperText error>{checkoutIssueMessage(state.fieldErrors.deliveryMethodId)}</FormHelperText>
+              )}
+
+              {selectedDelivery?.requiresPickupPoint === true && pickupCarrier !== null && (
+                <Stack spacing={1} sx={{ pt: 1 }}>
+                  <Typography variant="subtitle2">{SITE.checkoutPickupPointLabelPl}</Typography>
+                  <input type="hidden" name="pickupPointId" value={selectedPickupPointId ?? ''} />
+                  <TextField
+                    size="small"
+                    placeholder={SITE.checkoutPickupPointSearchPl}
+                    value={pickupPointQuery}
+                    onChange={(e) => setPickupPointQuery(e.target.value)}
+                  />
+                  {selectedPickupPoint !== null && (
+                    <Alert severity="success" sx={{ py: 0.5 }}>
+                      {selectedPickupPoint.label}
+                    </Alert>
+                  )}
+                  <Paper variant="outlined" sx={{ maxHeight: 220, overflowY: 'auto' }}>
+                    {pickupPointMatches.length === 0 ? (
+                      <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+                        {SITE.checkoutPickupPointNoneFoundPl}
+                      </Typography>
+                    ) : (
+                      <List dense disablePadding>
+                        {pickupPointMatches.map((point) => (
+                          <ListItemButton
+                            key={point.id}
+                            selected={point.id === selectedPickupPointId}
+                            onClick={() => setSelectedPickupPointId(point.id)}
+                          >
+                            <ListItemText primary={point.label} secondary={point.carrier} />
+                          </ListItemButton>
+                        ))}
+                      </List>
+                    )}
+                  </Paper>
+                  <Typography variant="caption" color="text.secondary">
+                    {SITE.checkoutPickupPointSampleNoticePl}
+                  </Typography>
+                </Stack>
+              )}
+
+              <Divider sx={{ my: 1 }} />
+              <TextField
+                label={SITE.checkoutCourierNoteLabelPl}
+                name="courierNotePl"
+                defaultValue={v.courierNotePl}
+                helperText={SITE.checkoutCourierNoteHelperPl}
+                size="small"
+                multiline
+                minRows={2}
+                fullWidth
+              />
+              <TextField
+                label={SITE.checkoutInternalNoteLabelPl}
+                name="internalShipmentNotePl"
+                defaultValue={v.internalShipmentNotePl}
+                helperText={SITE.checkoutInternalNoteHelperPl}
+                size="small"
+                multiline
+                minRows={2}
+                fullWidth
+              />
+            </SectionCard>
+
+            <SectionCard heading={SITE.checkoutPaymentSectionHeadingPl}>
+              {paymentMethods.length === 0 ? (
+                <Alert severity="warning">{SITE.checkoutNoPaymentMethodsPl}</Alert>
+              ) : (
+                <RadioGroup name="paymentMethodConfigId" defaultValue={defaultPaymentMethodConfigId}>
+                  {paymentMethods.map((method) => (
+                    <FormControlLabel
+                      key={method.id}
+                      value={method.id}
+                      control={<Radio size="small" />}
+                      label={
+                        <Stack sx={{ py: 0.25 }}>
+                          <Typography variant="body2">{method.namePl}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {method.descPl}
                           </Typography>
                         </Stack>
-                        <Typography variant="caption" color="text.secondary">
-                          {method.descPl}
-                        </Typography>
-                      </Stack>
-                    }
-                  />
-                </Paper>
-              ))}
-            </RadioGroup>
-          )}
-          {selectedDelivery !== null && (
-            <Typography variant="caption" color="text.secondary">
-              {SITE.checkoutDeliveryEstimateLabelPl} {selectedDelivery.estimatedDaysMin}–{selectedDelivery.estimatedDaysMax}{' '}
-              {SITE.checkoutDeliveryEstimateUnitPl}
-            </Typography>
-          )}
-          {state.fieldErrors.deliveryMethodId !== undefined && (
-            <FormHelperText error>{checkoutIssueMessage(state.fieldErrors.deliveryMethodId)}</FormHelperText>
-          )}
-        </Stack>
-
-        {selectedDelivery?.requiresPickupPoint === true && (
-          <Stack spacing={1}>
-            <Typography variant="subtitle2">{SITE.checkoutPickupPointLabelPl}</Typography>
-            <input type="hidden" name="pickupPointId" value={selectedPickupPointId ?? ''} />
-            <TextField
-              size="small"
-              placeholder={SITE.checkoutPickupPointSearchPl}
-              value={pickupPointQuery}
-              onChange={(e) => setPickupPointQuery(e.target.value)}
-            />
-            {selectedPickupPoint !== null && (
-              <Alert severity="success" sx={{ py: 0.5 }}>
-                {selectedPickupPoint.label}
-              </Alert>
-            )}
-            <Paper variant="outlined" sx={{ maxHeight: 220, overflowY: 'auto' }}>
-              {pickupPointMatches.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
-                  {SITE.checkoutPickupPointNoneFoundPl}
-                </Typography>
-              ) : (
-                <List dense disablePadding>
-                  {pickupPointMatches.map((point) => (
-                    <ListItemButton
-                      key={point.id}
-                      selected={point.id === selectedPickupPointId}
-                      onClick={() => setSelectedPickupPointId(point.id)}
-                    >
-                      <ListItemText primary={point.label} secondary={point.carrier} />
-                    </ListItemButton>
+                      }
+                    />
                   ))}
-                </List>
+                </RadioGroup>
               )}
-            </Paper>
-          </Stack>
-        )}
+              {state.fieldErrors.paymentMethodConfigId !== undefined && (
+                <FormHelperText error>{checkoutIssueMessage(state.fieldErrors.paymentMethodConfigId)}</FormHelperText>
+              )}
+            </SectionCard>
 
-        <Stack spacing={1}>
-          <Typography variant="subtitle1">{SITE.checkoutPaymentSectionHeadingPl}</Typography>
-          {paymentMethods.length === 0 ? (
-            <Alert severity="warning">{SITE.checkoutNoPaymentMethodsPl}</Alert>
-          ) : (
-            <RadioGroup name="paymentMethodConfigId" defaultValue={defaultPaymentMethodConfigId}>
-              {paymentMethods.map((method) => (
-                <FormControlLabel
-                  key={method.id}
-                  value={method.id}
-                  control={<Radio size="small" />}
-                  label={
-                    <Stack sx={{ py: 0.25 }}>
-                      <Typography variant="body2">{method.namePl}</Typography>
+            <Stack spacing={1}>
+              <FormControlLabel control={<Checkbox name="termsAccepted" size="small" />} label={SITE.checkoutTermsLabelPl} />
+              {state.fieldErrors.terms !== undefined && <FormHelperText error>{checkoutIssueMessage(state.fieldErrors.terms)}</FormHelperText>}
+
+              <FormControlLabel control={<Checkbox name="withdrawalAcknowledged" size="small" />} label={SITE.checkoutWithdrawalExemptionTextPl} />
+              {state.fieldErrors.withdrawal !== undefined && <FormHelperText error>{checkoutIssueMessage(state.fieldErrors.withdrawal)}</FormHelperText>}
+            </Stack>
+          </Stack>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 5 }}>
+          <Box sx={{ position: { md: 'sticky' }, top: { md: 24 } }}>
+            <Paper variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                {SITE.checkoutOrderSummaryHeadingPl}
+              </Typography>
+              <Stack spacing={1.5} sx={{ maxHeight: 320, overflowY: 'auto', pr: 0.5 }}>
+                {cart.items.map((item) => (
+                  <Stack key={item.cartItemId} direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+                    <Box sx={{ position: 'relative', width: 48, height: 48, borderRadius: 1, overflow: 'hidden', flexShrink: 0, bgcolor: 'action.hover' }}>
+                      {item.imageUrl !== null && <Image src={item.imageUrl} alt="" fill sizes="48px" style={{ objectFit: 'cover' }} />}
+                    </Box>
+                    <Stack sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography variant="body2" noWrap>
+                        {item.productNamePl}
+                      </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {method.descPl}
+                        × {item.quantity}
+                        {item.widthMm !== null && item.heightMm !== null
+                          ? ` · ${formatMmAsCentimetres(item.widthMm)}×${formatMmAsCentimetres(item.heightMm)} cm`
+                          : ''}
                       </Typography>
                     </Stack>
+                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                      {item.priceGrossGrosze !== null ? formatPln(item.priceGrossGrosze * item.quantity) : '—'}
+                    </Typography>
+                  </Stack>
+                ))}
+              </Stack>
+
+              <Divider sx={{ my: 2 }} />
+
+              <Stack spacing={0.75}>
+                <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {SITE.checkoutSubtotalLabelPl} ({itemCount})
+                  </Typography>
+                  <Typography variant="body2">{formatPln(cart.subtotalGrossGrosze)}</Typography>
+                </Stack>
+                <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {SITE.checkoutShippingLabelPl}
+                  </Typography>
+                  <Typography variant="body2">{shippingGrosze !== null ? formatPln(shippingGrosze) : '—'}</Typography>
+                </Stack>
+                <Divider sx={{ my: 0.5 }} />
+                <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
+                  <Typography variant="subtitle1">{SITE.orderTotalLabelPl}</Typography>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                    {totalGrossGrosze !== null ? formatPln(totalGrossGrosze) : '—'}
+                  </Typography>
+                </Stack>
+              </Stack>
+
+              <Box sx={{ mt: 3 }}>
+                <SubmitButton
+                  disabledReason={
+                    selectedDelivery?.requiresPickupPoint === true && selectedPickupPointId === null
+                      ? 'pickup'
+                      : selectedDelivery === null || !selectedDelivery.feasible
+                        ? 'delivery'
+                        : null
                   }
                 />
-              ))}
-            </RadioGroup>
-          )}
-          {state.fieldErrors.paymentMethodConfigId !== undefined && (
-            <FormHelperText error>{checkoutIssueMessage(state.fieldErrors.paymentMethodConfigId)}</FormHelperText>
-          )}
-        </Stack>
-
-        <Stack spacing={1}>
-          <FormControlLabel control={<Checkbox name="termsAccepted" size="small" />} label={SITE.checkoutTermsLabelPl} />
-          {state.fieldErrors.terms !== undefined && <FormHelperText error>{checkoutIssueMessage(state.fieldErrors.terms)}</FormHelperText>}
-
-          <FormControlLabel control={<Checkbox name="withdrawalAcknowledged" size="small" />} label={SITE.checkoutWithdrawalExemptionTextPl} />
-          {state.fieldErrors.withdrawal !== undefined && <FormHelperText error>{checkoutIssueMessage(state.fieldErrors.withdrawal)}</FormHelperText>}
-        </Stack>
-
-        <Paper variant="outlined" sx={{ p: 2 }}>
-          <Stack spacing={0.5}>
-            <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
-              <Typography variant="body2" color="text.secondary">
-                {SITE.checkoutSubtotalLabelPl}
-              </Typography>
-              <Typography variant="body2">{formatPln(subtotalGrossGrosze)}</Typography>
-            </Stack>
-            <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
-              <Typography variant="body2" color="text.secondary">
-                {SITE.checkoutShippingLabelPl}
-              </Typography>
-              <Typography variant="body2">
-                {selectedDelivery !== null ? formatPln(computeShippingGrosze(selectedDelivery, subtotalGrossGrosze)) : '—'}
-              </Typography>
-            </Stack>
-            <Stack direction="row" sx={{ justifyContent: 'space-between', pt: 0.5, borderTop: 1, borderColor: 'divider' }}>
-              <Typography variant="subtitle1">{SITE.orderTotalLabelPl}</Typography>
-              <Typography variant="subtitle1">
-                {formatPln(subtotalGrossGrosze + (selectedDelivery !== null ? computeShippingGrosze(selectedDelivery, subtotalGrossGrosze) : 0))}
-              </Typography>
-            </Stack>
-          </Stack>
-        </Paper>
-
-        <SubmitButton pickupPointMissing={selectedDelivery?.requiresPickupPoint === true && selectedPickupPointId === null} />
-      </Stack>
+              </Box>
+            </Paper>
+          </Box>
+        </Grid>
+      </Grid>
     </form>
   );
 }
 
-function SubmitButton({ pickupPointMissing }: { readonly pickupPointMissing: boolean }) {
+function SectionCard({ heading, children }: { readonly heading: string; readonly children: ReactNode }) {
+  return (
+    <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>
+      <Stack spacing={2}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+          {heading}
+        </Typography>
+        {children}
+      </Stack>
+    </Paper>
+  );
+}
+
+function SubmitButton({ disabledReason }: { readonly disabledReason: 'pickup' | 'delivery' | null }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant="contained" size="large" disabled={pending || pickupPointMissing} sx={{ alignSelf: 'flex-start' }}>
-      {SITE.checkoutSubmitPl}
-    </Button>
+    <Stack spacing={1}>
+      <Button type="submit" variant="contained" size="large" fullWidth disabled={pending || disabledReason !== null}>
+        {SITE.checkoutSubmitPl}
+      </Button>
+      {disabledReason === 'pickup' && (
+        <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+          {SITE.checkoutPickupPointRequiredHintPl}
+        </Typography>
+      )}
+    </Stack>
   );
 }

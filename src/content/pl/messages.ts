@@ -207,6 +207,7 @@ export type CheckoutFieldIssueCode =
   | 'EMAIL_INVALID'
   | 'FIRST_NAME_REQUIRED'
   | 'LAST_NAME_REQUIRED'
+  | 'PHONE_REQUIRED'
   | 'PHONE_INVALID'
   | 'NIP_INVALID'
   | 'STREET_REQUIRED'
@@ -234,6 +235,8 @@ export function checkoutIssueMessage(code: CheckoutFieldIssueCode): string {
       return 'Podaj imię.';
     case 'LAST_NAME_REQUIRED':
       return 'Podaj nazwisko.';
+    case 'PHONE_REQUIRED':
+      return 'Podaj numer telefonu.';
     case 'PHONE_INVALID':
       return 'Podaj poprawny numer telefonu.';
     case 'NIP_INVALID':

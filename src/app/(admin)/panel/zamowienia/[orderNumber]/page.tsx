@@ -79,6 +79,22 @@ export default async function AdminOrderDetailPage({ params }: OrderDetailPagePr
           {order.nip !== null && <Typography>NIP: {order.nip}</Typography>}
 
           <Typography variant="h6" sx={{ mt: 4 }}>
+            {ADMIN.orderDeliveryHeadingPl}
+          </Typography>
+          <Typography>{order.deliveryMethodNamePl}</Typography>
+          {order.pickupPointLabel !== null && <Typography color="text.secondary">{order.pickupPointLabel}</Typography>}
+          {order.courierNotePl !== null && (
+            <Typography sx={{ mt: 0.5 }}>
+              {ADMIN.orderCourierNoteLabelPl}: {order.courierNotePl}
+            </Typography>
+          )}
+          {order.internalShipmentNotePl !== null && (
+            <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+              {ADMIN.orderInternalShipmentNoteLabelPl}: {order.internalShipmentNotePl}
+            </Typography>
+          )}
+
+          <Typography variant="h6" sx={{ mt: 4 }}>
             {ADMIN.orderProductionNotesHeadingPl}
           </Typography>
           <Typography color={order.productionNotes === null ? 'text.secondary' : undefined}>

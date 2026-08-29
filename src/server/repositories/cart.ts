@@ -28,6 +28,8 @@ export type CartItemView = {
   readonly widthMm: number | null;
   readonly heightMm: number | null;
   readonly thicknessMm: number | null;
+  /** The chosen material's real density — `domain/shipping/weight.ts` computes real shipping weight from this, not a fabricated per-product number. `null` only for a configuration with no material at all. */
+  readonly materialDensityKgPerM3: number | null;
   readonly personalizationText: string | null;
   readonly isComplete: boolean;
   readonly priceGrossGrosze: number | null;
@@ -193,7 +195,7 @@ export async function findCartForRequest(params: {
               customDesignId: true,
               product: { select: { slug: true, namePl: true, images: { where: { isPrimary: true }, select: { url: true }, take: 1 } } },
               design: { select: { namePl: true, code: true } },
-              material: { select: { namePl: true } },
+              material: { select: { namePl: true, densityKgPerM3: true } },
               finish: { select: { namePl: true } },
               font: { select: { namePl: true } },
               customDesign: { select: { status: true } },
@@ -222,6 +224,7 @@ export async function findCartForRequest(params: {
     widthMm: configuration.widthMm,
     heightMm: configuration.heightMm,
     thicknessMm: configuration.thicknessMm,
+    materialDensityKgPerM3: configuration.material?.densityKgPerM3 ?? null,
     personalizationText: configuration.personalizationText,
     isComplete: configuration.isComplete,
     priceGrossGrosze: configuration.priceGrossGrosze,

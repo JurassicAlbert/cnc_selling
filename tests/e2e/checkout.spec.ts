@@ -50,6 +50,7 @@ test('adds a configuration to the cart and completes checkout as a guest', async
   await expect(page).toHaveURL('/koszyk/zamowienie');
 
   await page.getByLabel('E-mail').fill('e2e-checkout@example.com');
+  await page.getByLabel('Telefon').fill('+48123456789');
   await page.getByLabel('Imię').fill('Test');
   await page.getByLabel('Nazwisko').fill('E2E');
   await page.getByLabel('Ulica i numer').fill('Testowa 1');

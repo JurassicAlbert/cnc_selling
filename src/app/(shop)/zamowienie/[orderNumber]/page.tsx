@@ -11,6 +11,7 @@ import { submitOrderSupportRequest } from '@/server/actions/support-requests';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
 import { OrderShipmentInfo } from '@/ui/primitives/OrderShipmentInfo';
+import { OrderStatusBanner } from '@/ui/primitives/OrderStatusBanner';
 import { OrderSummary } from '@/ui/primitives/OrderSummary';
 import { Section } from '@/ui/primitives/Section';
 import { Text } from '@/ui/primitives/Text';
@@ -69,6 +70,7 @@ export default async function OrderConfirmationPage({ params, searchParams }: Or
           </Text>
         </div>
 
+        <OrderStatusBanner status={order.status} />
         <OrderSummary order={order} bankDetails={storeSettings} />
         <OrderShipmentInfo shipment={order.shipment} />
 

@@ -132,6 +132,7 @@ test('an order placed while logged in shows up in order history', async ({ page 
   await page.getByRole('link', { name: 'Przejdź do zamówienia' }).click();
   await expect(page).toHaveURL('/koszyk/zamowienie');
   await fillReliably(page.getByLabel('E-mail'), email);
+  await fillReliably(page.getByLabel('Telefon'), '+48123456789');
   await fillReliably(page.getByLabel('Imię'), 'E2E');
   await fillReliably(page.getByLabel('Nazwisko'), 'Order');
   await fillReliably(page.getByLabel('Ulica i numer'), 'Testowa 1');

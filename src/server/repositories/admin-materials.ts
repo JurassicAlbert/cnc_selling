@@ -36,6 +36,7 @@ export type AdminMaterialDetail = {
   readonly characteristicsPl: string;
   readonly imageUrl: string;
   readonly pricePerM2Grosze: number;
+  readonly densityKgPerM3: number;
   readonly isAvailable: boolean;
   readonly sortOrder: number;
   readonly maxSheetWidthMm: number;
@@ -67,6 +68,7 @@ export async function findMaterialForAdmin(id: string): Promise<AdminMaterialDet
     characteristicsPl: material.characteristicsPl,
     imageUrl: material.imageUrl,
     pricePerM2Grosze: material.pricePerM2Grosze,
+    densityKgPerM3: material.densityKgPerM3,
     isAvailable: material.isAvailable,
     sortOrder: material.sortOrder,
     maxSheetWidthMm: material.maxSheetWidthMm,

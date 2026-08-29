@@ -17,6 +17,7 @@ async function seedOrder() {
       status: 'AWAITING_PAYMENT',
       paymentMethod: 'BANK_TRANSFER',
       email: `${PREFIX}${crypto.randomUUID()}@example.test`,
+      phone: '+48123456789',
       firstName: 'Search',
       lastName: 'Test',
       street: 'Test 1',

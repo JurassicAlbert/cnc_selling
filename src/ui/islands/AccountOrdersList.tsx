@@ -70,7 +70,12 @@ export function AccountOrdersList({ orders }: { readonly orders: readonly OrderS
                     <Typography variant="subtitle1">{formatPln(order.totalGrossGrosze)}</Typography>
                   </Stack>
                   <Stack direction="row" sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                    <Chip size="small" label={orderStatusMessage(order.status)} />
+                    <Chip
+                      size="small"
+                      label={orderStatusMessage(order.status)}
+                      color={order.status === 'AWAITING_PAYMENT' ? 'warning' : order.status === 'CANCELLED' ? 'error' : 'default'}
+                      variant={order.status === 'AWAITING_PAYMENT' || order.status === 'CANCELLED' ? 'filled' : 'outlined'}
+                    />
                     {order.shipmentStatus !== null && (
                       <Chip size="small" variant="outlined" label={shipmentStatusMessage(order.shipmentStatus)} />
                     )}

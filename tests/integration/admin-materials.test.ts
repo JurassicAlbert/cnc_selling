@@ -37,6 +37,7 @@ function materialFormData(overrides: Record<string, string> = {}): FormData {
     shortDescPl: 'Krótki opis',
     characteristicsPl: 'Charakterystyka',
     pricePerM2Pln: '150',
+    densityKgPerM3: '600',
     maxSheetWidthMm: '1000',
     maxSheetHeightMm: '1000',
     minLineWidthUm: '1000',

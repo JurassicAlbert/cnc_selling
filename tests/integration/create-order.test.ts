@@ -100,7 +100,7 @@ function baseInput(overrides: {
     sessionToken: overrides.sessionToken,
     userId: null,
     email: 'test@example.test',
-    phone: null,
+    phone: '+48123456789',
     firstName: 'Test',
     lastName: 'Testowy',
     companyName: null,
@@ -111,6 +111,8 @@ function baseInput(overrides: {
     deliveryMethodId: overrides.deliveryMethodId,
     paymentMethodConfigId: overrides.paymentMethodConfigId,
     pickupPointId: overrides.pickupPointId ?? null,
+    courierNotePl: null,
+    internalShipmentNotePl: null,
   };
 }
 

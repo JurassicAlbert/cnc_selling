@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
 
 import { getActiveCollectionBySlug, listActiveCollections, listActiveProductsByCollectionSlug } from '@/server/repositories/collections';
@@ -26,6 +27,31 @@ export default async function CollectionDetailPage({ params }: CollectionDetailP
     <Section>
       <Container>
         <Breadcrumbs trail={[{ labelPl: SITE.collectionsHeadingPl, href: '/kolekcje' }, { labelPl: collection.namePl, href: `/kolekcje/${collection.slug}` }]} />
+
+        {/*
+         * 2026-08-29, owner feedback (paraphrased): the collection photo
+         * showed up on the /kolekcje card but never on the collection's own
+         * page — a real bug: `getActiveCollectionBySlug` already returned
+         * `imageUrl`, it was only ever used in `generateMetadata`'s
+         * OpenGraph tags below, never actually rendered on the page a
+         * visitor sees. Real hero image now, same width as the page.
+         */}
+        {collection.imageUrl !== null && (
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              aspectRatio: '21 / 9',
+              borderRadius: 'var(--radius-card)',
+              overflow: 'hidden',
+              marginBlockEnd: 24,
+              boxShadow: 'var(--shadow-sm)',
+            }}
+          >
+            <Image src={collection.imageUrl} alt="" fill sizes="(max-width: 900px) 100vw, 900px" style={{ objectFit: 'cover' }} priority />
+          </div>
+        )}
+
         <div
           style={{
             display: 'inline-block',

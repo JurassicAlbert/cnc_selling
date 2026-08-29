@@ -218,6 +218,9 @@ export const ADMIN = {
 
   orderNotFoundPl: 'Nie znaleziono zamówienia.',
   orderBuyerHeadingPl: 'Dane zamawiającego',
+  orderDeliveryHeadingPl: 'Dostawa',
+  orderCourierNoteLabelPl: 'Uwagi dla kuriera',
+  orderInternalShipmentNoteLabelPl: 'Uwagi wewnętrzne o przesyłce',
   orderProductionNotesHeadingPl: 'Notatki produkcyjne',
   orderProductionNotesEmptyPl: 'Brak notatek.',
   orderEventsHeadingPl: 'Historia statusów',
@@ -261,6 +264,8 @@ export const ADMIN = {
   materialFieldImagePl: 'Zdjęcie',
   materialFieldImageReplacePl: 'Nowe zdjęcie (opcjonalnie, zastąpi obecne)',
   materialFieldPricePl: 'Cena za m² (zł)',
+  materialFieldDensityPl: 'Gęstość (kg/m³)',
+  materialFieldDensityHelperPl: 'Do wyliczenia realnej wagi przesyłki.',
   materialFieldMaxSheetWidthPl: 'Maks. szerokość arkusza (mm)',
   materialFieldMaxSheetHeightPl: 'Maks. wysokość arkusza (mm)',
   materialFieldMinLineWidthPl: 'Min. szerokość linii (µm)',

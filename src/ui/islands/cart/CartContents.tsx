@@ -15,11 +15,21 @@
  * added by this directive — MUI's `Button`/`IconButton`/`Paper` were
  * already Client Components being rendered from the server tree either
  * way; this only changes how `CartContents` itself is evaluated.
+ *
+ * 2026-08-29 visual pass, owner feedback: "Taka zwykła biała karta w
+ * koszyku ... za mało polished" — same hover-lift/accent-border language
+ * `AccountOrdersList.tsx` already established for order cards (this
+ * project's own real precedent for "polished," not an arbitrary new
+ * style), a real quantity-stepper "pill" instead of three loose icon
+ * buttons, and the numeric quantity field promoted from a raw `<input>` to
+ * a real MUI `TextField` (safe now — this file is already a client
+ * boundary; no reason left to keep one control less polished than the
+ * rest).
  */
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Box, Button, IconButton, Paper, Stack, Typography } from '@mui/material';
+import { Box, Button, Divider, IconButton, Paper, Stack, TextField, Typography } from '@mui/material';
 
 import { formatPln } from '@/domain/money/money';
 import { formatMmAsCentimetres } from '@/domain/text/numeric-input';
@@ -28,7 +38,7 @@ import { SITE } from '@/content/pl/site';
 import type { CartItemView, CartView } from '@/server/repositories/cart';
 import { adjustCartItemQuantity, duplicateCartItem, removeCartItem, updateCartItemQuantity } from '@/server/actions/cart';
 import { writeSelectionsToSearch } from '@/ui/islands/configurator/selections-url';
-import { AddIcon, ContentCopyIcon, DeleteIcon, RemoveIcon } from '@/ui/icons';
+import { AddIcon, CartIcon, ContentCopyIcon, DeleteIcon, RemoveIcon } from '@/ui/icons';
 import { Text } from '@/ui/primitives/Text';
 
 /**
@@ -38,15 +48,14 @@ import { Text } from '@/ui/primitives/Text';
  * §2.1: `@mui/material` is lint-forbidden inside `(marketing)/(shop)`
  * Server Components (`biome.json`'s own override) — "put the interactive
  * part in `src/ui/islands` and render it as a child," exactly what this
- * is. Still not a client island in the React sense: no `'use client'`, no
- * hooks — every control is STILL a zero-client-JS `<form action={...}>`
- * bound directly to a Server Action; MUI's `Button`/`IconButton` just
- * render a plain native `<button>` under the hood. `koszyk/page.tsx`
- * fetches the cart and wraps this in `ThemeRegistry`.
+ * is. Every control is STILL a zero-client-JS `<form action={...}>` bound
+ * directly to a Server Action — the `'use client'` directive is required
+ * for `component={Link}` (see the header comment above), not because any
+ * control needs client-side state.
  */
 export function CartContents({ cart }: { readonly cart: CartView }) {
   return (
-    <Stack spacing={2} sx={{ marginBlockStart: 4, maxWidth: 880 }}>
+    <Stack spacing={2} sx={{ marginBlockStart: 4, maxWidth: 900 }}>
       <Typography variant="body2" color="text.secondary">
         {SITE.cartItemsCountPl(cart.items.reduce((sum, item) => sum + item.quantity, 0))}
       </Typography>
@@ -55,10 +64,32 @@ export function CartContents({ cart }: { readonly cart: CartView }) {
         <CartRow key={item.cartItemId} item={item} />
       ))}
 
-      <Paper variant="outlined" sx={{ p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
-        <Typography variant="h6">
-          {SITE.cartSubtotalLabelPl}: {formatPln(cart.subtotalGrossGrosze)}
-        </Typography>
+      <Paper
+        variant="outlined"
+        sx={{
+          p: 3,
+          borderRadius: 3,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 2,
+          flexWrap: 'wrap',
+          bgcolor: 'action.hover',
+        }}
+      >
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+          <Box sx={{ width: 40, height: 40, borderRadius: '50%', bgcolor: 'secondary.main', color: 'background.paper', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <CartIcon size={20} />
+          </Box>
+          <Stack>
+            <Typography variant="caption" color="text.secondary">
+              {SITE.cartSubtotalLabelPl}
+            </Typography>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+              {formatPln(cart.subtotalGrossGrosze)}
+            </Typography>
+          </Stack>
+        </Stack>
         <Button component={Link} href="/koszyk/zamowienie" variant="contained" size="large">
           {SITE.cartCheckoutCtaPl}
         </Button>
@@ -72,13 +103,26 @@ function CartRow({ item }: { readonly item: CartItemView }) {
   const atMax = item.quantity >= MAX_CART_ITEM_QUANTITY;
 
   return (
-    <Paper variant="outlined" sx={{ p: 2, display: 'grid', gridTemplateColumns: { xs: '72px 1fr', sm: '96px 1fr auto' }, gap: 2 }}>
-      <Box sx={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 1, overflow: 'hidden' }}>
-        {item.imageUrl !== null && <Image src={item.imageUrl} alt="" fill sizes="96px" style={{ objectFit: 'cover' }} />}
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 2,
+        borderRadius: 3,
+        display: 'grid',
+        gridTemplateColumns: { xs: '80px 1fr', sm: '112px 1fr auto' },
+        gap: 2.5,
+        transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+        '&:hover': { borderColor: 'secondary.main', boxShadow: 'var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.06))' },
+      }}
+    >
+      <Box sx={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 2, overflow: 'hidden', bgcolor: 'action.hover' }}>
+        {item.imageUrl !== null && <Image src={item.imageUrl} alt="" fill sizes="112px" style={{ objectFit: 'cover' }} />}
       </Box>
 
       <Stack spacing={0.5} sx={{ minWidth: 0 }}>
-        <Typography variant="subtitle1">{item.productNamePl}</Typography>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+          {item.productNamePl}
+        </Typography>
         <Text muted>
           {[item.materialNamePl, item.designNamePl, item.finishNamePl, item.fontNamePl]
             .filter((value): value is string => value !== null)
@@ -100,17 +144,21 @@ function CartRow({ item }: { readonly item: CartItemView }) {
             {SITE.cartEditPl}
           </Link>
 
-          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+          <Stack
+            direction="row"
+            spacing={0}
+            sx={{ alignItems: 'center', border: 1, borderColor: 'divider', borderRadius: 999, overflow: 'hidden' }}
+          >
             <form action={adjustCartItemQuantity.bind(null, item.cartItemId, -1)}>
-              <IconButton type="submit" size="small" aria-label={SITE.cartQuantityDecreasePl} disabled={item.quantity <= 1}>
+              <IconButton type="submit" size="small" aria-label={SITE.cartQuantityDecreasePl} disabled={item.quantity <= 1} sx={{ borderRadius: 0 }}>
                 <RemoveIcon size={16} />
               </IconButton>
             </form>
-            <Typography variant="body2" sx={{ minWidth: 24, textAlign: 'center' }} aria-live="polite">
+            <Typography variant="body2" sx={{ minWidth: 28, textAlign: 'center', fontWeight: 600 }} aria-live="polite">
               {item.quantity}
             </Typography>
             <form action={adjustCartItemQuantity.bind(null, item.cartItemId, 1)}>
-              <IconButton type="submit" size="small" aria-label={SITE.cartQuantityIncreasePl} disabled={atMax}>
+              <IconButton type="submit" size="small" aria-label={SITE.cartQuantityIncreasePl} disabled={atMax} sx={{ borderRadius: 0 }}>
                 <AddIcon size={16} />
               </IconButton>
             </form>
@@ -135,31 +183,34 @@ function CartRow({ item }: { readonly item: CartItemView }) {
           </Typography>
         )}
 
+        <Divider sx={{ my: 0.5, maxWidth: 320 }} />
+
         {/* Direct numeric entry for a bigger jump than the +/- stepper — still zero-JS, still clamped server-side (`updateCartItemQuantity`). */}
         <form action={updateCartItemQuantity.bind(null, item.cartItemId)} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <label style={{ display: 'flex', gap: 6, alignItems: 'center', font: 'var(--mui-font-caption)' }}>
-            {SITE.cartQuantityLabelPl}
-            <input
-              type="number"
-              name="quantity"
-              min={1}
-              max={MAX_CART_ITEM_QUANTITY}
-              defaultValue={item.quantity}
-              style={{ width: 56, padding: 4 }}
-            />
-          </label>
+          <TextField
+            type="number"
+            name="quantity"
+            label={SITE.cartQuantityLabelPl}
+            size="small"
+            defaultValue={item.quantity}
+            slotProps={{ htmlInput: { min: 1, max: MAX_CART_ITEM_QUANTITY } }}
+            sx={{ width: 96 }}
+          />
           {/* `formNoValidate`: the `max` attribute above is a UX hint only —
               the real enforcement is server-side (`updateCartItemQuantity`'s
               `clampCartQuantity` call). Without this, the browser's own
               HTML5 constraint validation would silently block submission of
               an out-of-range value before it ever reached the server. */}
-          <Button type="submit" size="small" variant="text" formNoValidate>
+          <Button type="submit" size="small" variant="outlined" formNoValidate>
             {SITE.cartUpdateQuantityPl}
           </Button>
         </form>
       </Stack>
 
-      <Typography variant="subtitle1" sx={{ textAlign: { xs: 'left', sm: 'right' }, gridColumn: { xs: '1 / -1', sm: 'auto' } }}>
+      <Typography
+        variant="h6"
+        sx={{ fontWeight: 700, textAlign: { xs: 'left', sm: 'right' }, gridColumn: { xs: '1 / -1', sm: 'auto' } }}
+      >
         {item.priceGrossGrosze !== null ? formatPln(item.priceGrossGrosze * item.quantity) : null}
       </Typography>
     </Paper>

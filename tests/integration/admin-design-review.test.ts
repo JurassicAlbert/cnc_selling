@@ -81,6 +81,7 @@ describe('applyDesignReviewDecision', () => {
         status: 'DESIGN_REVIEW',
         paymentMethod: 'BANK_TRANSFER',
         email: `${PREFIX}${crypto.randomUUID()}@example.test`,
+        phone: '+48123456789',
         firstName: 'Test',
         lastName: 'Test',
         street: 'Test 1',

@@ -1009,6 +1009,26 @@ stepper and navbar cart badge updating together, the "Kolekcje"
 dropdown, and the Paczkomat picker filtering and recording a real
 selection. See `docs/HANDOVER.md` §9z51.
 
+**Post-P9, round 9 — 2026-08-29.** Real weight-based shipping pricing,
+a real collection-detail-page bug fix, a genuine cart/checkout visual
+redesign, required phone, and courier-vs-internal shipment notes —
+all direct follow-up feedback on round 8. Shipping price is now
+computed from a configuration's REAL geometry (width×height×thickness)
+× its material's real density (standard published reference figures,
+cited in the seed) against each carrier's own real published price
+tiers — InPost's real Kurier/Paczkomat cenniki and DPD's real official
+Pickup price list (hand-pasted by the owner after `WebFetch` was
+blocked by DPD's bot protection). GEIS was searched for honestly and
+seeded `isActive: false` — no real published price list exists to
+source from, and inventing one was explicitly forbidden. The
+pickup-point picker is now carrier-scoped (no more DPD points showing
+up under an InPost selection) and says outright that its list is a
+preliminary sample, not a live directory. 23 new/extended test cases,
+full suite 766/766. A real regression was caught and fixed by the e2e
+suite itself (three checkout specs broke when `phone` became
+required, because none of them filled it in) — fixed the tests, not
+the requirement. See `docs/HANDOVER.md` §9z52.
+
 ---
 
 ## Getting set up

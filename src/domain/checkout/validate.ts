@@ -35,9 +35,11 @@ export function validatePostalCode(code: string): boolean {
 }
 
 /**
- * Lenient on purpose — `Order.phone` is optional, and Polish phone numbers
- * appear in many written forms (with/without `+48`, spaces, dashes). This
- * rejects obvious garbage, not anything that isn't the one canonical format.
+ * Lenient on purpose — `Order.phone` is required (2026-08-29 owner
+ * request), but Polish phone numbers appear in many written forms
+ * (with/without `+48`, spaces, dashes). This rejects obvious garbage, not
+ * anything that isn't the one canonical format; emptiness itself is
+ * checked separately by the caller, not here.
  */
 export function validatePhone(phone: string): boolean {
   const digitsOnly = phone.replace(/[\s-]/g, '');

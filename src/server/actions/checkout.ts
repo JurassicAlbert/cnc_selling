@@ -62,6 +62,10 @@ export async function submitCheckout(
   const deliveryMethodId = field(formData, 'deliveryMethodId');
   const pickupPointIdRaw = field(formData, 'pickupPointId');
   const pickupPointId = pickupPointIdRaw.length > 0 ? pickupPointIdRaw : null;
+  const courierNoteRaw = field(formData, 'courierNotePl');
+  const courierNotePl = courierNoteRaw.length > 0 ? courierNoteRaw : null;
+  const internalShipmentNoteRaw = field(formData, 'internalShipmentNotePl');
+  const internalShipmentNotePl = internalShipmentNoteRaw.length > 0 ? internalShipmentNoteRaw : null;
   const termsAccepted = formData.get('termsAccepted') === 'on';
   const withdrawalAcknowledged = formData.get('withdrawalAcknowledged') === 'on';
 
@@ -70,7 +74,10 @@ export async function submitCheckout(
   else if (!isPlausibleEmail(email)) fieldErrors.email = 'EMAIL_INVALID';
   if (firstName.length === 0) fieldErrors.firstName = 'FIRST_NAME_REQUIRED';
   if (lastName.length === 0) fieldErrors.lastName = 'LAST_NAME_REQUIRED';
-  if (phone.length > 0 && !validatePhone(phone)) fieldErrors.phone = 'PHONE_INVALID';
+  // 2026-08-29, owner request: required, not optional — a status/shipment
+  // update needs a real contact channel beyond email.
+  if (phone.length === 0) fieldErrors.phone = 'PHONE_REQUIRED';
+  else if (!validatePhone(phone)) fieldErrors.phone = 'PHONE_INVALID';
   if (nip.length > 0 && !validateNip(nip)) fieldErrors.nip = 'NIP_INVALID';
   if (street.length === 0) fieldErrors.street = 'STREET_REQUIRED';
   if (!validatePostalCode(postalCode)) fieldErrors.postalCode = 'POSTAL_CODE_INVALID';
@@ -93,6 +100,8 @@ export async function submitCheckout(
     paymentMethodConfigId,
     deliveryMethodId,
     pickupPointId: pickupPointId ?? '',
+    courierNotePl: courierNotePl ?? '',
+    internalShipmentNotePl: internalShipmentNotePl ?? '',
   };
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -104,7 +113,7 @@ export async function submitCheckout(
     sessionToken,
     userId: session?.userId ?? null,
     email,
-    phone: phone.length > 0 ? phone : null,
+    phone,
     firstName,
     lastName,
     companyName: companyName.length > 0 ? companyName : null,
@@ -115,6 +124,8 @@ export async function submitCheckout(
     paymentMethodConfigId,
     deliveryMethodId,
     pickupPointId,
+    courierNotePl,
+    internalShipmentNotePl,
   });
 
   if (!result.ok) {

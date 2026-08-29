@@ -6,7 +6,9 @@ import {
   applyUpdateDeliveryMethod,
 } from '@/server/actions/admin-delivery-methods';
 import { listDeliveryMethodsForAdmin } from '@/server/repositories/admin-delivery-methods';
-import { listActiveDeliveryMethods } from '@/server/repositories/delivery-methods';
+import { resolveDeliveryMethodsForCart } from '@/server/repositories/delivery-methods';
+
+const EMPTY_CART = { subtotalGrossGrosze: 0, items: [] };
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';
 
@@ -111,11 +113,11 @@ describe('applySetDeliveryMethodActive', () => {
     const created = await applyCreateDeliveryMethod(staff, formData());
     if (!created.ok) throw new Error('setup failed');
 
-    expect((await listActiveDeliveryMethods()).some((m) => m.id === created.id)).toBe(true);
+    expect((await resolveDeliveryMethodsForCart(EMPTY_CART)).some((m) => m.id === created.id)).toBe(true);
 
     await applySetDeliveryMethodActive(staff, created.id, false);
 
-    expect((await listActiveDeliveryMethods()).some((m) => m.id === created.id)).toBe(false);
+    expect((await resolveDeliveryMethodsForCart(EMPTY_CART)).some((m) => m.id === created.id)).toBe(false);
     expect((await listDeliveryMethodsForAdmin()).some((m) => m.id === created.id)).toBe(true);
     expect(await prisma.deliveryMethod.findUnique({ where: { id: created.id } })).not.toBeNull();
   });
