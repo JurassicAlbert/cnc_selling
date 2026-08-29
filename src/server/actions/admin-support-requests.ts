@@ -1,59 +1,26 @@
 'use server';
 
 /**
- * Staff `SupportRequest` mutations — status + internal notes only. Same
- * `applyXxx(staff, ...)` / `xxx(...)` split as every other admin action
- * file. No delete — a real record of a real customer contact.
+ * Server Action surface for `@/server/operations/admin-support-requests` — the thin half.
+ *
+ * Every export of a `'use server'` module is a public HTTP endpoint, so
+ * this file exports ONLY the session-deriving wrappers. The real logic,
+ * and the `apply*(actor, …)` functions integration tests call directly,
+ * live in the operations module, which is a plain module and therefore
+ * reachable only from server code that already authenticated the caller.
+ *
+ * See `docs/AUDIT-2026-08-30.md` P0-1 for the hole this closed, and
+ * `tests/unit/server-action-boundary.test.ts` for the guard that keeps it
+ * closed. Forwarding via `Parameters`/`ReturnType` rather than a copied
+ * signature is deliberate: it cannot drift from the real one.
  */
 
-import { revalidatePath } from 'next/cache';
+import * as operations from '@/server/operations/admin-support-requests';
 
-import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
-import type { CurrentSession } from '@/server/auth/session';
-import { writeAuditLog } from '@/server/audit/write-audit-log';
-import type { SupportRequestStatus } from '@/generated/prisma/enums';
+export type { SupportRequestMutationResult } from '@/server/operations/admin-support-requests';
 
-export type SupportRequestMutationResult = { readonly ok: true } | { readonly ok: false; readonly detail: string };
-
-const VALID_STATUSES: readonly SupportRequestStatus[] = ['NEW', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
-
-export async function applyUpdateSupportRequest(
-  staff: CurrentSession,
-  id: string,
-  status: SupportRequestStatus,
-  adminNotesPl: string | null,
-): Promise<SupportRequestMutationResult> {
-  if (!VALID_STATUSES.includes(status)) {
-    return { ok: false, detail: 'Nieprawidłowy status zgłoszenia.' };
-  }
-  const current = await prisma.supportRequest.findUnique({ where: { id }, select: { status: true, adminNotesPl: true } });
-  if (current === null) {
-    return { ok: false, detail: 'Zgłoszenie nie istnieje.' };
-  }
-
-  await prisma.supportRequest.update({ where: { id }, data: { status, adminNotesPl } });
-  await writeAuditLog({
-    actor: staff,
-    entity: 'SupportRequest',
-    entityId: id,
-    action: 'update',
-    diff: { status: { from: current.status, to: status }, adminNotesPl: { from: current.adminNotesPl, to: adminNotesPl } },
-  });
-
-  return { ok: true };
-}
-
-export async function updateSupportRequest(id: string, formData: FormData): Promise<SupportRequestMutationResult> {
-  const staff = await requireStaffSession();
-  const status = String(formData.get('status') ?? 'NEW') as SupportRequestStatus;
-  const adminNotesRaw = formData.get('adminNotesPl');
-  const adminNotesPl = typeof adminNotesRaw === 'string' && adminNotesRaw.trim().length > 0 ? adminNotesRaw.trim() : null;
-
-  const result = await applyUpdateSupportRequest(staff, id, status, adminNotesPl);
-  if (result.ok) {
-    revalidatePath(`/panel/kontakt/${id}`);
-    revalidatePath('/panel/kontakt');
-  }
-  return result;
+export async function updateSupportRequest(
+  ...args: Parameters<typeof operations.updateSupportRequest>
+): ReturnType<typeof operations.updateSupportRequest> {
+  return operations.updateSupportRequest(...args);
 }

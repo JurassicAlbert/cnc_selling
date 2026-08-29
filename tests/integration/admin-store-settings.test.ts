@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyUpdateStoreSettings } from '@/server/actions/admin-store-settings';
+import { applyUpdateStoreSettings } from '@/server/operations/admin-store-settings';
 import { getStoreSettings } from '@/server/repositories/store-settings';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';

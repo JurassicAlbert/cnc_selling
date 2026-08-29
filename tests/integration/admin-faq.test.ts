@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyCreateFaq, applySetFaqActive, applyUpdateFaq } from '@/server/actions/admin-faq';
+import { applyCreateFaq, applySetFaqActive, applyUpdateFaq } from '@/server/operations/admin-faq';
 import { listActiveFaqs } from '@/server/repositories/faq';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';

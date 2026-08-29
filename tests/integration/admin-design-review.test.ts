@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyDesignReviewDecision } from '@/server/actions/admin-design-review';
-import { applyOrderStatusTransition } from '@/server/actions/admin-orders';
+import { applyDesignReviewDecision } from '@/server/operations/admin-design-review';
+import { applyOrderStatusTransition } from '@/server/operations/admin-orders';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';
 

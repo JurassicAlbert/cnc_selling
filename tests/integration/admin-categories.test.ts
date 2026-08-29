@@ -7,8 +7,8 @@ import {
   applySetCategoryActive,
   applySetCategorySortOrder,
   applyUpdateCategory,
-} from '@/server/actions/admin-categories';
-import type { CategoryFormInput } from '@/server/actions/admin-categories';
+} from '@/server/operations/admin-categories';
+import type { CategoryFormInput } from '@/server/operations/admin-categories';
 import { listActiveCategories } from '@/server/repositories/categories';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';

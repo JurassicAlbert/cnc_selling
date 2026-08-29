@@ -1,25 +1,26 @@
 'use server';
 
-/** Staff analytics-retention action — ADMIN-only, same gate as pricing (a real, irreversible bulk delete, not a toggle). */
+/**
+ * Server Action surface for `@/server/operations/admin-analytics` — the thin half.
+ *
+ * Every export of a `'use server'` module is a public HTTP endpoint, so
+ * this file exports ONLY the session-deriving wrappers. The real logic,
+ * and the `apply*(actor, …)` functions integration tests call directly,
+ * live in the operations module, which is a plain module and therefore
+ * reachable only from server code that already authenticated the caller.
+ *
+ * See `docs/AUDIT-2026-08-30.md` P0-1 for the hole this closed, and
+ * `tests/unit/server-action-boundary.test.ts` for the guard that keeps it
+ * closed. Forwarding via `Parameters`/`ReturnType` rather than a copied
+ * signature is deliberate: it cannot drift from the real one.
+ */
 
-import { revalidatePath } from 'next/cache';
+import * as operations from '@/server/operations/admin-analytics';
 
-import { requireAdminSession } from '@/server/auth/session';
-import type { CurrentSession } from '@/server/auth/session';
-import { pruneOldAnalyticsEvents } from '@/server/analytics/prune';
-import { writeAuditLog } from '@/server/audit/write-audit-log';
+export type { PruneAnalyticsResult } from '@/server/operations/admin-analytics';
 
-export type PruneAnalyticsResult = { readonly ok: true; readonly deletedCount: number };
-
-export async function applyPruneAnalyticsEvents(admin: CurrentSession): Promise<PruneAnalyticsResult> {
-  const { deletedCount } = await pruneOldAnalyticsEvents();
-  await writeAuditLog({ actor: admin, entity: 'AnalyticsEvent', entityId: 'bulk', action: 'update', diff: { prunedOlderThan12Months: deletedCount } });
-  return { ok: true, deletedCount };
-}
-
-export async function pruneAnalyticsEvents(): Promise<PruneAnalyticsResult> {
-  const admin = await requireAdminSession();
-  const result = await applyPruneAnalyticsEvents(admin);
-  revalidatePath('/panel/ustawienia');
-  return result;
+export async function pruneAnalyticsEvents(
+  ...args: Parameters<typeof operations.pruneAnalyticsEvents>
+): ReturnType<typeof operations.pruneAnalyticsEvents> {
+  return operations.pruneAnalyticsEvents(...args);
 }

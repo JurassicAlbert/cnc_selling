@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyUpsertShipment } from '@/server/actions/admin-shipments';
+import { applyUpsertShipment } from '@/server/operations/admin-shipments';
 import { findShipmentForOrder } from '@/server/repositories/admin-shipments';
 import { findOrderForUser, findOrderForConfirmation } from '@/server/repositories/orders';
 import type { CurrentSession } from '@/server/auth/session';

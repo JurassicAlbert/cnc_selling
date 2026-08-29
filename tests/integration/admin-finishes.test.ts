@@ -6,7 +6,7 @@ import {
   applySetFinishAvailable,
   applySetFinishSortOrder,
   applyUpdateFinish,
-} from '@/server/actions/admin-finishes';
+} from '@/server/operations/admin-finishes';
 import { listFinishOptionsForAdmin } from '@/server/repositories/admin-finishes';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyUpdateSupportRequest } from '@/server/actions/admin-support-requests';
+import { applyUpdateSupportRequest } from '@/server/operations/admin-support-requests';
 import { findSupportRequestForAdmin, listSupportRequestsForAdmin } from '@/server/repositories/admin-support-requests';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';

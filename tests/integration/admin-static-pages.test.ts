@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyCreateStaticPage, applySetStaticPageActive, applyUpdateStaticPage } from '@/server/actions/admin-static-pages';
+import { applyCreateStaticPage, applySetStaticPageActive, applyUpdateStaticPage } from '@/server/operations/admin-static-pages';
 import { getActiveStaticPageBySlug } from '@/server/repositories/static-pages';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';

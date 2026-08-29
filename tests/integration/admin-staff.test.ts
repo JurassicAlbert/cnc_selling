@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyChangeStaffRole, applyInviteStaffUser } from '@/server/actions/admin-staff';
+import { applyChangeStaffRole, applyInviteStaffUser } from '@/server/operations/admin-staff';
 import { listStaffUsers } from '@/server/repositories/admin-staff';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';

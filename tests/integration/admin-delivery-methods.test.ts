@@ -4,7 +4,7 @@ import {
   applyCreateDeliveryMethod,
   applySetDeliveryMethodActive,
   applyUpdateDeliveryMethod,
-} from '@/server/actions/admin-delivery-methods';
+} from '@/server/operations/admin-delivery-methods';
 import { listDeliveryMethodsForAdmin } from '@/server/repositories/admin-delivery-methods';
 import { resolveDeliveryMethodsForCart } from '@/server/repositories/delivery-methods';
 

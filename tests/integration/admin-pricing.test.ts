@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyCreatePricingDraft, applyPublishPricingVersion } from '@/server/actions/admin-pricing';
-import type { PricingDraftInput } from '@/server/actions/admin-pricing';
+import { applyCreatePricingDraft, applyPublishPricingVersion } from '@/server/operations/admin-pricing';
+import type { PricingDraftInput } from '@/server/operations/admin-pricing';
 import { getActivePricingVersion, getPricingVersionByNumber } from '@/server/repositories/admin-pricing';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';

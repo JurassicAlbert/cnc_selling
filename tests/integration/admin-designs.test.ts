@@ -13,8 +13,8 @@ import {
   applySetDesignSortOrder,
   applyUpdateCollection,
   applyUpdateDesign,
-} from '@/server/actions/admin-designs';
-import { applyAddDesignMaterial } from '@/server/actions/admin-design-materials';
+} from '@/server/operations/admin-designs';
+import { applyAddDesignMaterial } from '@/server/operations/admin-design-materials';
 import { listDesignOptionsForAdmin } from '@/server/repositories/admin-products';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';

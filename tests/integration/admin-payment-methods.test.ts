@@ -4,7 +4,7 @@ import {
   applyCreatePaymentMethodConfig,
   applySetPaymentMethodConfigActive,
   applyUpdatePaymentMethodConfig,
-} from '@/server/actions/admin-payment-methods';
+} from '@/server/operations/admin-payment-methods';
 import { listPaymentMethodConfigsForAdmin } from '@/server/repositories/admin-payment-methods';
 import { listActivePaymentMethods } from '@/server/repositories/payment-methods';
 import type { CurrentSession } from '@/server/auth/session';

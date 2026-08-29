@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyCreateBlogPost, applySetBlogPostActive, applyUpdateBlogPost } from '@/server/actions/admin-blog';
+import { applyCreateBlogPost, applySetBlogPostActive, applyUpdateBlogPost } from '@/server/operations/admin-blog';
 import { findBlogPostForAdmin, listBlogPostsForAdmin } from '@/server/repositories/admin-blog';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';

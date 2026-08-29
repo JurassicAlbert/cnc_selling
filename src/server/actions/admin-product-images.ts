@@ -1,84 +1,38 @@
 'use server';
 
-/** Product photo upload/reorder/alt-text/delete. Uses `public-images.ts`, not `local-disk.ts` — see that module's header for why these are a different class of file. */
+/**
+ * Server Action surface for `@/server/operations/admin-product-images` — the thin half.
+ *
+ * Every export of a `'use server'` module is a public HTTP endpoint, so
+ * this file exports ONLY the session-deriving wrappers. The real logic,
+ * and the `apply*(actor, …)` functions integration tests call directly,
+ * live in the operations module, which is a plain module and therefore
+ * reachable only from server code that already authenticated the caller.
+ *
+ * See `docs/AUDIT-2026-08-30.md` P0-1 for the hole this closed, and
+ * `tests/unit/server-action-boundary.test.ts` for the guard that keeps it
+ * closed. Forwarding via `Parameters`/`ReturnType` rather than a copied
+ * signature is deliberate: it cannot drift from the real one.
+ */
 
-import { revalidatePath } from 'next/cache';
+import * as operations from '@/server/operations/admin-product-images';
 
-import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
-import type { CurrentSession } from '@/server/auth/session';
-import { writeAuditLog } from '@/server/audit/write-audit-log';
-import { deletePublicImage, savePublicImage } from '@/server/storage/public-images';
+export type { ActionResult } from '@/server/operations/admin-product-images';
 
-export type ActionResult = { readonly ok: true } | { readonly ok: false; readonly detail: string };
-
-function revalidateProduct(productId: string): void {
-  revalidatePath(`/panel/produkty/${productId}`);
+export async function uploadProductImage(
+  ...args: Parameters<typeof operations.uploadProductImage>
+): ReturnType<typeof operations.uploadProductImage> {
+  return operations.uploadProductImage(...args);
 }
 
-export async function applyUploadProductImage(
-  staff: CurrentSession,
-  productId: string,
-  formData: FormData,
-): Promise<ActionResult> {
-  const file = formData.get('file');
-  const altPl = String(formData.get('altPl') ?? '').trim();
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, detail: 'Wybierz plik.' };
-  }
-  if (altPl.length === 0) {
-    return { ok: false, detail: 'Tekst alternatywny jest wymagany.' };
-  }
-
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const saved = await savePublicImage('products', productId, bytes);
-  if (!saved.ok) {
-    return { ok: false, detail: saved.detail };
-  }
-
-  const existingCount = await prisma.productImage.count({ where: { productId } });
-  await prisma.productImage.create({
-    data: { productId, url: saved.url, altPl, isPrimary: existingCount === 0, sortOrder: existingCount },
-  });
-  await writeAuditLog({ actor: staff, entity: 'Product', entityId: productId, action: 'update', diff: { addImage: saved.url } });
-
-  return { ok: true };
+export async function setPrimaryProductImage(
+  ...args: Parameters<typeof operations.setPrimaryProductImage>
+): ReturnType<typeof operations.setPrimaryProductImage> {
+  return operations.setPrimaryProductImage(...args);
 }
 
-export async function uploadProductImage(productId: string, formData: FormData): Promise<ActionResult> {
-  const staff = await requireStaffSession();
-  const result = await applyUploadProductImage(staff, productId, formData);
-  if (result.ok) {
-    revalidateProduct(productId);
-  }
-  return result;
-}
-
-export async function applySetPrimaryProductImage(staff: CurrentSession, productId: string, imageId: string): Promise<void> {
-  await prisma.$transaction([
-    prisma.productImage.updateMany({ where: { productId }, data: { isPrimary: false } }),
-    prisma.productImage.update({ where: { id: imageId }, data: { isPrimary: true } }),
-  ]);
-  await writeAuditLog({ actor: staff, entity: 'Product', entityId: productId, action: 'update', diff: { setPrimaryImage: imageId } });
-}
-
-export async function setPrimaryProductImage(productId: string, imageId: string): Promise<void> {
-  const staff = await requireStaffSession();
-  await applySetPrimaryProductImage(staff, productId, imageId);
-  revalidateProduct(productId);
-}
-
-export async function applyRemoveProductImage(staff: CurrentSession, productId: string, imageId: string): Promise<void> {
-  const image = await prisma.productImage.findUnique({ where: { id: imageId }, select: { url: true } });
-  await prisma.productImage.delete({ where: { id: imageId } }).catch(() => undefined);
-  if (image !== null) {
-    await deletePublicImage(image.url);
-  }
-  await writeAuditLog({ actor: staff, entity: 'Product', entityId: productId, action: 'update', diff: { removeImage: imageId } });
-}
-
-export async function removeProductImage(productId: string, imageId: string): Promise<void> {
-  const staff = await requireStaffSession();
-  await applyRemoveProductImage(staff, productId, imageId);
-  revalidateProduct(productId);
+export async function removeProductImage(
+  ...args: Parameters<typeof operations.removeProductImage>
+): ReturnType<typeof operations.removeProductImage> {
+  return operations.removeProductImage(...args);
 }

@@ -6,7 +6,7 @@ import {
   applySetProductCollectionActive,
   applySetProductCollectionItem,
   applyUpdateProductCollection,
-} from '@/server/actions/admin-product-collections';
+} from '@/server/operations/admin-product-collections';
 import { listProductCollectionItemsForAdmin } from '@/server/repositories/admin-product-collections';
 import { listActiveCollections, listActiveProductsByCollectionSlug } from '@/server/repositories/collections';
 import type { CurrentSession } from '@/server/auth/session';

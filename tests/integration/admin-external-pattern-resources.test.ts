@@ -4,7 +4,7 @@ import {
   applyCreateExternalPatternResource,
   applySetExternalPatternResourceActive,
   applyUpdateExternalPatternResource,
-} from '@/server/actions/admin-external-pattern-resources';
+} from '@/server/operations/admin-external-pattern-resources';
 import { listExternalPatternResourcesForAdmin } from '@/server/repositories/admin-external-pattern-resources';
 import { listActiveExternalPatternResources } from '@/server/repositories/external-pattern-resources';
 import type { CurrentSession } from '@/server/auth/session';

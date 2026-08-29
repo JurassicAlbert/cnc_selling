@@ -884,6 +884,15 @@ model Order {
   user                  User?                @relation(fields: [userId], references: [id])
   /// Guest order lookup. 32 random bytes, compared in constant time.
   accessToken           String               @unique
+  /// 2026-08-30 (`docs/AUDIT-2026-08-30.md` P0-2): one checkout render's
+  /// own submission id. Minted server-side per render of
+  /// `/koszyk/zamowienie` and carried in a hidden field, so a double click,
+  /// a retried request after a dropped connection, or a back-and-resubmit
+  /// all arrive carrying the SAME value — the `@unique` here is what makes
+  /// the second one return the first one's order instead of creating a
+  /// second real order for one purchase. Nullable only for rows written
+  /// before this column existed; every new order sets it.
+  idempotencyKey        String?              @unique
   status                OrderStatus          @default(NEW)
   paymentMethod         PaymentMethod
   paymentStatus         PaymentStatus        @default(AWAITING)

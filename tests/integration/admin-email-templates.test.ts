@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyUpdateEmailTemplate } from '@/server/actions/admin-email-templates';
+import { applyUpdateEmailTemplate } from '@/server/operations/admin-email-templates';
 import { findEmailTemplate, listEmailTemplates } from '@/server/repositories/admin-email-templates';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';

@@ -8,9 +8,9 @@ import {
   applySetProductActive,
   applySetProductSortOrder,
   applyUpdateProduct,
-} from '@/server/actions/admin-products';
-import type { ProductCoreInput } from '@/server/actions/admin-products';
-import { applySetProductMaterial } from '@/server/actions/admin-product-catalogue';
+} from '@/server/operations/admin-products';
+import type { ProductCoreInput } from '@/server/operations/admin-products';
+import { applySetProductMaterial } from '@/server/operations/admin-product-catalogue';
 import { listActiveProductsByCategorySlug } from '@/server/repositories/products';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';

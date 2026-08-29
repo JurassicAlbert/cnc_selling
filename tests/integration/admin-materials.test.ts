@@ -7,8 +7,8 @@ import {
   applySetMaterialAvailable,
   applySetMaterialSortOrder,
   applyUpdateMaterial,
-} from '@/server/actions/admin-materials';
-import { applyAddMaterialFinish } from '@/server/actions/admin-material-finishes';
+} from '@/server/operations/admin-materials';
+import { applyAddMaterialFinish } from '@/server/operations/admin-material-finishes';
 import { listMaterialOptionsForAdmin } from '@/server/repositories/admin-products';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';

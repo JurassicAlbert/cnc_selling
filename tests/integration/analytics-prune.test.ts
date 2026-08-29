@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyPruneAnalyticsEvents } from '@/server/actions/admin-analytics';
+import { applyPruneAnalyticsEvents } from '@/server/operations/admin-analytics';
 import { countPrunableAnalyticsEvents, pruneOldAnalyticsEvents } from '@/server/analytics/prune';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';

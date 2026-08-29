@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applySubmitOrderSupportRequest, applySubmitSupportRequest } from '@/server/actions/support-requests';
+import { applySubmitOrderSupportRequest, applySubmitSupportRequest } from '@/server/operations/support-requests';
 import { listSupportRequestsForUser } from '@/server/repositories/support-requests';
 import { prisma } from '@/server/db/client';
 

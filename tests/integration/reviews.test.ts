@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applySubmitAccountReview, submitGuestReview } from '@/server/actions/reviews';
-import { applySetReviewStatus } from '@/server/actions/admin-reviews';
+import { applySubmitAccountReview, submitGuestReview } from '@/server/operations/reviews';
+import { applySetReviewStatus } from '@/server/operations/admin-reviews';
 import { listApprovedReviews } from '@/server/repositories/reviews';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';

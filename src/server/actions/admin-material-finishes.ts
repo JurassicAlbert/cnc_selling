@@ -1,46 +1,32 @@
 'use server';
 
-/** Material↔finish compatibility — a plain toggle, no extra fields on `MaterialFinish` (unlike `ProductMaterial`'s `priceFactorBp`). Deletable freely, same reasoning as slice 1's `ProductMaterial`/`ProductDesign` editors. */
+/**
+ * Server Action surface for `@/server/operations/admin-material-finishes` — the thin half.
+ *
+ * Every export of a `'use server'` module is a public HTTP endpoint, so
+ * this file exports ONLY the session-deriving wrappers. The real logic,
+ * and the `apply*(actor, …)` functions integration tests call directly,
+ * live in the operations module, which is a plain module and therefore
+ * reachable only from server code that already authenticated the caller.
+ *
+ * See `docs/AUDIT-2026-08-30.md` P0-1 for the hole this closed, and
+ * `tests/unit/server-action-boundary.test.ts` for the guard that keeps it
+ * closed. Forwarding via `Parameters`/`ReturnType` rather than a copied
+ * signature is deliberate: it cannot drift from the real one.
+ */
 
-import { revalidatePath } from 'next/cache';
+import * as operations from '@/server/operations/admin-material-finishes';
 
-import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
-import type { CurrentSession } from '@/server/auth/session';
-import { writeAuditLog } from '@/server/audit/write-audit-log';
+export type { ActionResult } from '@/server/operations/admin-material-finishes';
 
-export type ActionResult = { readonly ok: true } | { readonly ok: false; readonly detail: string };
-
-function revalidateMaterial(materialId: string): void {
-  revalidatePath(`/panel/materialy/${materialId}`);
+export async function addMaterialFinish(
+  ...args: Parameters<typeof operations.addMaterialFinish>
+): ReturnType<typeof operations.addMaterialFinish> {
+  return operations.addMaterialFinish(...args);
 }
 
-export async function applyAddMaterialFinish(staff: CurrentSession, materialId: string, finishId: string): Promise<ActionResult> {
-  await prisma.materialFinish.upsert({
-    where: { materialId_finishId: { materialId, finishId } },
-    create: { materialId, finishId },
-    update: {},
-  });
-  await writeAuditLog({ actor: staff, entity: 'Material', entityId: materialId, action: 'update', diff: { addFinish: finishId } });
-  return { ok: true };
-}
-
-export async function addMaterialFinish(materialId: string, finishId: string): Promise<ActionResult> {
-  const staff = await requireStaffSession();
-  const result = await applyAddMaterialFinish(staff, materialId, finishId);
-  if (result.ok) {
-    revalidateMaterial(materialId);
-  }
-  return result;
-}
-
-export async function applyRemoveMaterialFinish(staff: CurrentSession, materialId: string, finishId: string): Promise<void> {
-  await prisma.materialFinish.delete({ where: { materialId_finishId: { materialId, finishId } } }).catch(() => undefined);
-  await writeAuditLog({ actor: staff, entity: 'Material', entityId: materialId, action: 'update', diff: { removeFinish: finishId } });
-}
-
-export async function removeMaterialFinish(materialId: string, finishId: string): Promise<void> {
-  const staff = await requireStaffSession();
-  await applyRemoveMaterialFinish(staff, materialId, finishId);
-  revalidateMaterial(materialId);
+export async function removeMaterialFinish(
+  ...args: Parameters<typeof operations.removeMaterialFinish>
+): ReturnType<typeof operations.removeMaterialFinish> {
+  return operations.removeMaterialFinish(...args);
 }

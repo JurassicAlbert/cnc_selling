@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyToggleFavoriteDesign } from '@/server/actions/design-favorites';
+import { applyToggleFavoriteDesign } from '@/server/operations/design-favorites';
 import { listFavoriteDesigns, listFavoritedDesignIds } from '@/server/repositories/design-favorites';
 import { prisma } from '@/server/db/client';
 

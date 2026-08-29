@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyAnonymizeCustomer } from '@/server/actions/admin-customers';
+import { applyAnonymizeCustomer } from '@/server/operations/admin-customers';
 import {
   buildCustomerExport,
   findCustomerForAdmin,

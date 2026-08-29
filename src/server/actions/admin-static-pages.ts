@@ -1,129 +1,38 @@
 'use server';
 
-/** Staff static-page mutations. Same `applyXxx(staff, ...)` / `xxx(...)` split as every other admin action file. No delete — `isActive` toggle only. */
+/**
+ * Server Action surface for `@/server/operations/admin-static-pages` — the thin half.
+ *
+ * Every export of a `'use server'` module is a public HTTP endpoint, so
+ * this file exports ONLY the session-deriving wrappers. The real logic,
+ * and the `apply*(actor, …)` functions integration tests call directly,
+ * live in the operations module, which is a plain module and therefore
+ * reachable only from server code that already authenticated the caller.
+ *
+ * See `docs/AUDIT-2026-08-30.md` P0-1 for the hole this closed, and
+ * `tests/unit/server-action-boundary.test.ts` for the guard that keeps it
+ * closed. Forwarding via `Parameters`/`ReturnType` rather than a copied
+ * signature is deliberate: it cannot drift from the real one.
+ */
 
-import { revalidatePath } from 'next/cache';
+import * as operations from '@/server/operations/admin-static-pages';
 
-import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
-import type { CurrentSession } from '@/server/auth/session';
-import { writeAuditLog } from '@/server/audit/write-audit-log';
+export type { StaticPageFormInput, StaticPageMutationResult } from '@/server/operations/admin-static-pages';
 
-export type StaticPageFormInput = {
-  readonly slug: string;
-  readonly titlePl: string;
-  readonly bodyPl: string;
-  readonly seoTitlePl: string;
-  readonly seoDescPl: string;
-  readonly sortOrder: number;
-};
-
-export type StaticPageMutationResult =
-  | { readonly ok: true; readonly id: string }
-  | { readonly ok: false; readonly detail: string };
-
-const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-
-function validateStaticPageInput(input: StaticPageFormInput): string | null {
-  if (!SLUG_PATTERN.test(input.slug)) {
-    return 'Identyfikator URL może zawierać tylko małe litery, cyfry i myślniki.';
-  }
-  if (input.titlePl.trim().length === 0) {
-    return 'Tytuł jest wymagany.';
-  }
-  if (input.bodyPl.trim().length === 0) {
-    return 'Treść jest wymagana.';
-  }
-  return null;
+export async function createStaticPage(
+  ...args: Parameters<typeof operations.createStaticPage>
+): ReturnType<typeof operations.createStaticPage> {
+  return operations.createStaticPage(...args);
 }
 
-export async function applyCreateStaticPage(staff: CurrentSession, input: StaticPageFormInput): Promise<StaticPageMutationResult> {
-  const issue = validateStaticPageInput(input);
-  if (issue !== null) {
-    return { ok: false, detail: issue };
-  }
-  const existing = await prisma.staticPage.findUnique({ where: { slug: input.slug }, select: { id: true } });
-  if (existing !== null) {
-    return { ok: false, detail: 'Strona z tym identyfikatorem URL już istnieje.' };
-  }
-  const page = await prisma.staticPage.create({ data: input });
-  await writeAuditLog({ actor: staff, entity: 'StaticPage', entityId: page.id, action: 'create', diff: input });
-  return { ok: true, id: page.id };
+export async function updateStaticPage(
+  ...args: Parameters<typeof operations.updateStaticPage>
+): ReturnType<typeof operations.updateStaticPage> {
+  return operations.updateStaticPage(...args);
 }
 
-export async function createStaticPage(input: StaticPageFormInput): Promise<StaticPageMutationResult> {
-  const staff = await requireStaffSession();
-  const result = await applyCreateStaticPage(staff, input);
-  if (result.ok) {
-    revalidatePath('/panel/strony');
-    revalidatePath(`/strony/${input.slug}`);
-  }
-  return result;
-}
-
-export async function applyUpdateStaticPage(
-  staff: CurrentSession,
-  id: string,
-  input: StaticPageFormInput,
-): Promise<StaticPageMutationResult> {
-  const issue = validateStaticPageInput(input);
-  if (issue !== null) {
-    return { ok: false, detail: issue };
-  }
-  const current = await prisma.staticPage.findUnique({ where: { id } });
-  if (current === null) {
-    return { ok: false, detail: 'Strona nie istnieje.' };
-  }
-  if (current.slug !== input.slug) {
-    const clashing = await prisma.staticPage.findUnique({ where: { slug: input.slug }, select: { id: true } });
-    if (clashing !== null) {
-      return { ok: false, detail: 'Strona z tym identyfikatorem URL już istnieje.' };
-    }
-  }
-  await prisma.staticPage.update({ where: { id }, data: input });
-  await writeAuditLog({
-    actor: staff,
-    entity: 'StaticPage',
-    entityId: id,
-    action: 'update',
-    diff: { before: current, after: input },
-  });
-  return { ok: true, id };
-}
-
-export async function updateStaticPage(id: string, input: StaticPageFormInput): Promise<StaticPageMutationResult> {
-  const staff = await requireStaffSession();
-  const result = await applyUpdateStaticPage(staff, id, input);
-  if (result.ok) {
-    revalidatePath('/panel/strony');
-    revalidatePath(`/panel/strony/${id}`);
-    revalidatePath(`/strony/${input.slug}`);
-  }
-  return result;
-}
-
-export async function applySetStaticPageActive(staff: CurrentSession, id: string, isActive: boolean): Promise<void> {
-  const current = await prisma.staticPage.findUnique({ where: { id }, select: { isActive: true, slug: true } });
-  if (current === null) {
-    return;
-  }
-  await prisma.staticPage.update({ where: { id }, data: { isActive } });
-  await writeAuditLog({
-    actor: staff,
-    entity: 'StaticPage',
-    entityId: id,
-    action: 'update',
-    diff: { isActive: { from: current.isActive, to: isActive } },
-  });
-}
-
-export async function setStaticPageActive(id: string, isActive: boolean): Promise<void> {
-  const staff = await requireStaffSession();
-  const current = await prisma.staticPage.findUnique({ where: { id }, select: { slug: true } });
-  await applySetStaticPageActive(staff, id, isActive);
-  revalidatePath('/panel/strony');
-  revalidatePath(`/panel/strony/${id}`);
-  if (current !== null) {
-    revalidatePath(`/strony/${current.slug}`);
-  }
+export async function setStaticPageActive(
+  ...args: Parameters<typeof operations.setStaticPageActive>
+): ReturnType<typeof operations.setStaticPageActive> {
+  return operations.setStaticPageActive(...args);
 }

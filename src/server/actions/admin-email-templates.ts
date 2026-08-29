@@ -1,52 +1,26 @@
 'use server';
 
 /**
- * Email-template edits — subject/body only, the same closed set `mailer.ts`
- * already knows about (`EmailTemplate.key` matches `MailTemplate`). No
- * create/delete action exists: every key this project will ever have is
- * already seeded (`prisma/seed.ts`'s `seedEmailTemplates`).
+ * Server Action surface for `@/server/operations/admin-email-templates` — the thin half.
+ *
+ * Every export of a `'use server'` module is a public HTTP endpoint, so
+ * this file exports ONLY the session-deriving wrappers. The real logic,
+ * and the `apply*(actor, …)` functions integration tests call directly,
+ * live in the operations module, which is a plain module and therefore
+ * reachable only from server code that already authenticated the caller.
+ *
+ * See `docs/AUDIT-2026-08-30.md` P0-1 for the hole this closed, and
+ * `tests/unit/server-action-boundary.test.ts` for the guard that keeps it
+ * closed. Forwarding via `Parameters`/`ReturnType` rather than a copied
+ * signature is deliberate: it cannot drift from the real one.
  */
 
-import { revalidatePath } from 'next/cache';
+import * as operations from '@/server/operations/admin-email-templates';
 
-import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
-import type { CurrentSession } from '@/server/auth/session';
-import { writeAuditLog } from '@/server/audit/write-audit-log';
-
-export type UpdateEmailTemplateResult = { readonly ok: true } | { readonly ok: false; readonly detail: string };
-
-export async function applyUpdateEmailTemplate(
-  staff: CurrentSession,
-  key: string,
-  input: { readonly subjectPl: string; readonly bodyPl: string },
-): Promise<UpdateEmailTemplateResult> {
-  const subjectPl = input.subjectPl.trim();
-  const bodyPl = input.bodyPl.trim();
-  if (subjectPl.length === 0 || bodyPl.length === 0) {
-    return { ok: false, detail: 'Temat i treść są wymagane.' };
-  }
-
-  const existing = await prisma.emailTemplate.findUnique({ where: { key }, select: { id: true } });
-  if (existing === null) {
-    return { ok: false, detail: 'Nie znaleziono szablonu.' };
-  }
-
-  await prisma.emailTemplate.update({ where: { key }, data: { subjectPl, bodyPl, updatedByEmail: staff.email } });
-  await writeAuditLog({ actor: staff, entity: 'EmailTemplate', entityId: key, action: 'update', diff: { subjectPl, bodyPl } });
-
-  return { ok: true };
-}
+export type { UpdateEmailTemplateResult } from '@/server/operations/admin-email-templates';
 
 export async function updateEmailTemplate(
-  key: string,
-  input: { readonly subjectPl: string; readonly bodyPl: string },
-): Promise<UpdateEmailTemplateResult> {
-  const staff = await requireStaffSession();
-  const result = await applyUpdateEmailTemplate(staff, key, input);
-  if (result.ok) {
-    revalidatePath('/panel/ustawienia/szablony');
-    revalidatePath(`/panel/ustawienia/szablony/${key}`);
-  }
-  return result;
+  ...args: Parameters<typeof operations.updateEmailTemplate>
+): ReturnType<typeof operations.updateEmailTemplate> {
+  return operations.updateEmailTemplate(...args);
 }

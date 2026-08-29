@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyPostCustomerDesignComment } from '@/server/actions/design-review';
+import { applyPostCustomerDesignComment } from '@/server/operations/design-review';
 import { findOwnedDesignStatus } from '@/server/repositories/design-review';
 import { prisma } from '@/server/db/client';
 

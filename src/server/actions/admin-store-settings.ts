@@ -1,71 +1,26 @@
 'use server';
 
 /**
- * Store settings mutation — same `applyXxx`/`xxx` split as every other
- * staff mutation. Bank fields are trimmed to `null` when left blank (so
- * clearing a field genuinely un-configures it, not stores an empty
- * string), matching `StoreSettings`'s own nullable-means-not-configured
- * contract.
+ * Server Action surface for `@/server/operations/admin-store-settings` — the thin half.
+ *
+ * Every export of a `'use server'` module is a public HTTP endpoint, so
+ * this file exports ONLY the session-deriving wrappers. The real logic,
+ * and the `apply*(actor, …)` functions integration tests call directly,
+ * live in the operations module, which is a plain module and therefore
+ * reachable only from server code that already authenticated the caller.
+ *
+ * See `docs/AUDIT-2026-08-30.md` P0-1 for the hole this closed, and
+ * `tests/unit/server-action-boundary.test.ts` for the guard that keeps it
+ * closed. Forwarding via `Parameters`/`ReturnType` rather than a copied
+ * signature is deliberate: it cannot drift from the real one.
  */
 
-import { revalidatePath } from 'next/cache';
+import * as operations from '@/server/operations/admin-store-settings';
 
-import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
-import type { CurrentSession } from '@/server/auth/session';
-import { writeAuditLog } from '@/server/audit/write-audit-log';
+export type { UpdateStoreSettingsInput, UpdateStoreSettingsResult } from '@/server/operations/admin-store-settings';
 
-export type UpdateStoreSettingsInput = {
-  readonly bankAccountNumber: string;
-  readonly bankAccountHolderPl: string;
-  readonly shippingFlatRateGrosze: number;
-};
-
-export type UpdateStoreSettingsResult = { readonly ok: true } | { readonly ok: false; readonly detail: string };
-
-function blankToNull(value: string): string | null {
-  const trimmed = value.trim();
-  return trimmed.length === 0 ? null : trimmed;
-}
-
-export async function applyUpdateStoreSettings(
-  staff: CurrentSession,
-  input: UpdateStoreSettingsInput,
-): Promise<UpdateStoreSettingsResult> {
-  if (!Number.isInteger(input.shippingFlatRateGrosze) || input.shippingFlatRateGrosze < 0) {
-    return { ok: false, detail: 'Stawka wysyłki musi być liczbą całkowitą, nie mniejszą niż 0.' };
-  }
-
-  const before = await prisma.storeSettings.findUniqueOrThrow({ where: { id: 1 } });
-  const after = await prisma.storeSettings.update({
-    where: { id: 1 },
-    data: {
-      bankAccountNumber: blankToNull(input.bankAccountNumber),
-      bankAccountHolderPl: blankToNull(input.bankAccountHolderPl),
-      shippingFlatRateGrosze: input.shippingFlatRateGrosze,
-      updatedByEmail: staff.email,
-    },
-  });
-  await writeAuditLog({
-    actor: staff,
-    entity: 'StoreSettings',
-    entityId: '1',
-    action: 'update',
-    diff: {
-      before: { bankAccountNumber: before.bankAccountNumber, shippingFlatRateGrosze: before.shippingFlatRateGrosze },
-      after: { bankAccountNumber: after.bankAccountNumber, shippingFlatRateGrosze: after.shippingFlatRateGrosze },
-    },
-  });
-
-  return { ok: true };
-}
-
-export async function updateStoreSettings(input: UpdateStoreSettingsInput): Promise<UpdateStoreSettingsResult> {
-  const staff = await requireStaffSession();
-  const result = await applyUpdateStoreSettings(staff, input);
-  if (result.ok) {
-    revalidatePath('/panel/ustawienia');
-    revalidatePath('/koszyk/zamowienie');
-  }
-  return result;
+export async function updateStoreSettings(
+  ...args: Parameters<typeof operations.updateStoreSettings>
+): ReturnType<typeof operations.updateStoreSettings> {
+  return operations.updateStoreSettings(...args);
 }

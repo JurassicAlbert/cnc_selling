@@ -1,94 +1,38 @@
 'use server';
 
-/** Staff FAQ mutations. Same `applyXxx(staff, ...)` / `xxx(...)` split as every other admin action file — `revalidatePath` only in the wrapper. No delete — `isActive` toggle only, consistent with every other panel entity. */
+/**
+ * Server Action surface for `@/server/operations/admin-faq` — the thin half.
+ *
+ * Every export of a `'use server'` module is a public HTTP endpoint, so
+ * this file exports ONLY the session-deriving wrappers. The real logic,
+ * and the `apply*(actor, …)` functions integration tests call directly,
+ * live in the operations module, which is a plain module and therefore
+ * reachable only from server code that already authenticated the caller.
+ *
+ * See `docs/AUDIT-2026-08-30.md` P0-1 for the hole this closed, and
+ * `tests/unit/server-action-boundary.test.ts` for the guard that keeps it
+ * closed. Forwarding via `Parameters`/`ReturnType` rather than a copied
+ * signature is deliberate: it cannot drift from the real one.
+ */
 
-import { revalidatePath } from 'next/cache';
+import * as operations from '@/server/operations/admin-faq';
 
-import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
-import type { CurrentSession } from '@/server/auth/session';
-import { writeAuditLog } from '@/server/audit/write-audit-log';
+export type { FaqFormInput, FaqMutationResult } from '@/server/operations/admin-faq';
 
-export type FaqFormInput = {
-  readonly questionPl: string;
-  readonly answerPl: string;
-  readonly sortOrder: number;
-};
-
-export type FaqMutationResult = { readonly ok: true; readonly id: string } | { readonly ok: false; readonly detail: string };
-
-function validateFaqInput(input: FaqFormInput): string | null {
-  if (input.questionPl.trim().length === 0) {
-    return 'Pytanie jest wymagane.';
-  }
-  if (input.answerPl.trim().length === 0) {
-    return 'Odpowiedź jest wymagana.';
-  }
-  return null;
+export async function createFaq(
+  ...args: Parameters<typeof operations.createFaq>
+): ReturnType<typeof operations.createFaq> {
+  return operations.createFaq(...args);
 }
 
-export async function applyCreateFaq(staff: CurrentSession, input: FaqFormInput): Promise<FaqMutationResult> {
-  const issue = validateFaqInput(input);
-  if (issue !== null) {
-    return { ok: false, detail: issue };
-  }
-  const faq = await prisma.faq.create({ data: input });
-  await writeAuditLog({ actor: staff, entity: 'Faq', entityId: faq.id, action: 'create', diff: input });
-  return { ok: true, id: faq.id };
+export async function updateFaq(
+  ...args: Parameters<typeof operations.updateFaq>
+): ReturnType<typeof operations.updateFaq> {
+  return operations.updateFaq(...args);
 }
 
-export async function createFaq(input: FaqFormInput): Promise<FaqMutationResult> {
-  const staff = await requireStaffSession();
-  const result = await applyCreateFaq(staff, input);
-  if (result.ok) {
-    revalidatePath('/panel/faq');
-    revalidatePath('/faq');
-  }
-  return result;
-}
-
-export async function applyUpdateFaq(staff: CurrentSession, id: string, input: FaqFormInput): Promise<FaqMutationResult> {
-  const issue = validateFaqInput(input);
-  if (issue !== null) {
-    return { ok: false, detail: issue };
-  }
-  const current = await prisma.faq.findUnique({ where: { id } });
-  if (current === null) {
-    return { ok: false, detail: 'Pytanie nie istnieje.' };
-  }
-  await prisma.faq.update({ where: { id }, data: input });
-  await writeAuditLog({ actor: staff, entity: 'Faq', entityId: id, action: 'update', diff: { before: current, after: input } });
-  return { ok: true, id };
-}
-
-export async function updateFaq(id: string, input: FaqFormInput): Promise<FaqMutationResult> {
-  const staff = await requireStaffSession();
-  const result = await applyUpdateFaq(staff, id, input);
-  if (result.ok) {
-    revalidatePath('/panel/faq');
-    revalidatePath('/faq');
-  }
-  return result;
-}
-
-export async function applySetFaqActive(staff: CurrentSession, id: string, isActive: boolean): Promise<void> {
-  const current = await prisma.faq.findUnique({ where: { id }, select: { isActive: true } });
-  if (current === null) {
-    return;
-  }
-  await prisma.faq.update({ where: { id }, data: { isActive } });
-  await writeAuditLog({
-    actor: staff,
-    entity: 'Faq',
-    entityId: id,
-    action: 'update',
-    diff: { isActive: { from: current.isActive, to: isActive } },
-  });
-}
-
-export async function setFaqActive(id: string, isActive: boolean): Promise<void> {
-  const staff = await requireStaffSession();
-  await applySetFaqActive(staff, id, isActive);
-  revalidatePath('/panel/faq');
-  revalidatePath('/faq');
+export async function setFaqActive(
+  ...args: Parameters<typeof operations.setFaqActive>
+): ReturnType<typeof operations.setFaqActive> {
+  return operations.setFaqActive(...args);
 }

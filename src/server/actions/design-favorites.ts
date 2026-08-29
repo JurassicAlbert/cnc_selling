@@ -1,44 +1,26 @@
 'use server';
 
 /**
- * P9 continuation, 2026-08-28 — "wzory, które dodał do ulubionych" (owner
- * feedback). `applyToggleFavoriteDesign` takes the userId explicitly
- * (testable); `toggleFavoriteDesign` derives it from the real session —
- * same `applyXxx`/`xxx` split as every other mutation in this codebase.
+ * Server Action surface for `@/server/operations/design-favorites` — the thin half.
+ *
+ * Every export of a `'use server'` module is a public HTTP endpoint, so
+ * this file exports ONLY the session-deriving wrappers. The real logic,
+ * and the `apply*(actor, …)` functions integration tests call directly,
+ * live in the operations module, which is a plain module and therefore
+ * reachable only from server code that already authenticated the caller.
+ *
+ * See `docs/AUDIT-2026-08-30.md` P0-1 for the hole this closed, and
+ * `tests/unit/server-action-boundary.test.ts` for the guard that keeps it
+ * closed. Forwarding via `Parameters`/`ReturnType` rather than a copied
+ * signature is deliberate: it cannot drift from the real one.
  */
 
-import { revalidatePath } from 'next/cache';
+import * as operations from '@/server/operations/design-favorites';
 
-import { prisma } from '@/server/db/client';
-import { getSession } from '@/server/auth/session';
+export type { ToggleFavoriteDesignResult } from '@/server/operations/design-favorites';
 
-export type ToggleFavoriteDesignResult =
-  | { readonly ok: true; readonly favorited: boolean }
-  | { readonly ok: false; readonly code: 'NOT_LOGGED_IN' | 'DESIGN_NOT_FOUND' };
-
-export async function applyToggleFavoriteDesign(userId: string, designId: string): Promise<ToggleFavoriteDesignResult> {
-  const design = await prisma.design.findUnique({ where: { id: designId }, select: { id: true } });
-  if (design === null) {
-    return { ok: false, code: 'DESIGN_NOT_FOUND' };
-  }
-  const existing = await prisma.designFavorite.findUnique({ where: { userId_designId: { userId, designId } } });
-  if (existing !== null) {
-    await prisma.designFavorite.delete({ where: { userId_designId: { userId, designId } } });
-    return { ok: true, favorited: false };
-  }
-  await prisma.designFavorite.create({ data: { userId, designId } });
-  return { ok: true, favorited: true };
-}
-
-export async function toggleFavoriteDesign(designId: string): Promise<ToggleFavoriteDesignResult> {
-  const session = await getSession();
-  if (session === null) {
-    return { ok: false, code: 'NOT_LOGGED_IN' };
-  }
-  const result = await applyToggleFavoriteDesign(session.userId, designId);
-  if (result.ok) {
-    revalidatePath('/wzory');
-    revalidatePath('/moje-konto');
-  }
-  return result;
+export async function toggleFavoriteDesign(
+  ...args: Parameters<typeof operations.toggleFavoriteDesign>
+): ReturnType<typeof operations.toggleFavoriteDesign> {
+  return operations.toggleFavoriteDesign(...args);
 }
