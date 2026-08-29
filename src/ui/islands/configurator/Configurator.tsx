@@ -475,7 +475,16 @@ export function Configurator({
 
         {(steps.includes('DESIGN') || steps.includes('MATERIAL') || steps.includes('FINISH') || steps.includes('SIZE')) && (
           <>
-            <Breadcrumbs separator="›" aria-label={SITE.configuratorHeadingPl}>
+            {/* MUI's default Breadcrumbs list is a non-wrapping flex row —
+                fine on desktop, but on a narrow viewport the fourth crumb
+                (e.g. "Wymiary") gets clipped off the right edge with no way
+                to reach it. `flexWrap: 'wrap'` lets the trail spill onto a
+                second line instead of overflowing. */}
+            <Breadcrumbs
+              separator="›"
+              aria-label={SITE.configuratorHeadingPl}
+              sx={{ '& > ol': { flexWrap: 'wrap', rowGap: 0.5 } }}
+            >
               {steps.includes('DESIGN') && (
                 <CrumbLink
                   label={STEP_LABEL.DESIGN}
