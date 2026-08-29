@@ -3537,6 +3537,82 @@ The owner placed a real order end to end and reported back what they actually sa
 
 `typecheck`/`lint`/`test` (766/766, unchanged — this round rewired existing fields into existing views, not new domain logic) /`build` all clean. Full Playwright e2e 28/30; `checkout.spec.ts` itself fully green, the 2 failures on unrelated specs matching this session's own already-documented parallel-contention pattern.
 
+## 9z54. Full production-readiness audit and the P0/P1 fixes it found (2026-08-30)
+
+A full read-only audit of the whole application before touching anything —
+architecture, routes, schema, actions, auth, cart, checkout, payment,
+delivery, tests, config. Written up in `docs/AUDIT-2026-08-30.md`, including
+the realistic-failure scenario matrix (double-clicks, two tabs, retried
+requests, races) and the ranked plan. Baseline going in: typecheck clean,
+766/766 tests. Coming out: 808/808, all fixes verified.
+
+- **The worst finding was structural, not a typo.** Every file in
+  `src/server/actions/` starts with `'use server'`, and every export of such
+  a module is a public HTTP endpoint — not just the ones a component
+  imports. This codebase's `applyXxx(actor, …)` / `xxx(…)` testability split
+  had BOTH halves exported from the same file, so roughly 80 endpoints
+  accepted the caller's identity as argument 1 and did no session check at
+  all: `applyChangeStaffRole`, `applyPublishPricingVersion`,
+  `applyMarkOrderPaid`, `applyAnonymizeCustomer`, `applySubmitAccountReview`.
+  The action id is a build hash rather than the function name, so it was not
+  trivially exploitable — but that is obscurity of an identifier, not
+  authorization, and §16.1's own rule ("no id is ever trusted from the
+  request body") was being violated wholesale. **The split itself was a good
+  idea; putting both halves in one `'use server'` module was the mistake.**
+  Fixed by moving all 31 modules to `src/server/operations/`, with
+  `tests/unit/server-action-boundary.test.ts` scanning the directory so it
+  cannot come back.
+- **Checkout could genuinely create two orders for one purchase, and the UI
+  guard hid how exposed it was.** `useFormStatus()` disables the submit
+  button while pending, which covers a plain double-click in one tab and
+  nothing else — not two tabs, not a retried request after a dropped
+  connection, not a back-and-resubmit, not a direct POST. There was no
+  server-side idempotency of any kind. Two guards now, deliberately covering
+  different cases: `Order.idempotencyKey` (minted per checkout render, so a
+  resubmission returns the FIRST order and the customer still lands on their
+  confirmation page) and claiming the cart rows as the transaction's first
+  write (so two different renders racing can't both win). Proven by
+  disabling both and watching the test produce 2 orders, then re-enabling.
+- **Two more real bugs came out of writing the cart tests, neither on the
+  list going in**: `prisma.cart.upsert` is not atomic against a concurrent
+  insert, so a first-time visitor who double-clicked "Dodaj do koszyka" got
+  a unique-constraint 500; and `removeCartItem` used `delete`, which throws
+  "record not found" if the bin icon is clicked twice. Both are the kind of
+  thing only a concurrency test finds — nobody clicking carefully once will
+  ever see either.
+- **The tests caught a bug in the audit's own fix, which is the point of
+  writing them first.** The first cart-line signature encoding used a NUL
+  byte as its "unset field" marker; Postgres flatly refuses to store `0x00`
+  in a `text` column. Replaced with `JSON.stringify` of a fixed-length
+  array, which has neither the null-marker nor the separator-injection
+  problem.
+- **Not everything found got fixed, on purpose.** Rate limits on order
+  creation and login (§16.1 requires them; only uploads have one) need a
+  decision about where per-attempt state lives — a Postgres table or a real
+  Redis — and choosing wrong is the expensive part. And §16.3 says `STAFF`
+  is catalogue-read-only while the code lets `STAFF` write the whole
+  catalogue; which side is wrong is the owner's call, not a unilateral
+  tightening of ~20 actions. Both are written up in `docs/OPEN_ITEMS.md`
+  §6–§7 rather than quietly done or quietly dropped.
+- **No tests were written for payment callbacks.** Duplicate callbacks,
+  delayed callbacks, "payment succeeded but order creation failed" — all on
+  the audit brief, all untestable, because there is no payment provider
+  connected (`docs/OPEN_ITEMS.md` §1). Writing tests against a handler that
+  does not exist would be coverage theatre.
+
+### Verified
+
+`typecheck`/`lint` clean, 808/808 tests (766 at baseline, +42), `next build`
+succeeds. Live browser verification on the real dev server: the checkout
+form's idempotency field is present and unique per render; the cart badge
+updates on a *different* page immediately after a cart mutation (P1-5); the
+identical-configuration merge works end to end (1 → 2 on one row, "3 produkty
+w koszyku"); the new root 404 renders with full storefront chrome and three
+real exits; the order-lookup form renders as real MUI. One note on the browser
+work: the long-running dev server had a stale Prisma client after the
+migration and threw a real 500 until restarted — the same stale-cache pattern
+this project has hit before, not an application bug.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

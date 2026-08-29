@@ -75,6 +75,38 @@ for the full technical detail behind each line here).
   deciding whether to keep converting page-by-page as flagged, or do one
   deliberate systematic sweep across the storefront in a dedicated round.
 
+## 6. Rate limits on order creation and login (§16.1)
+
+- `ARCHITECTURE.md` §16.1 requires rate limits on "uploads per session/
+  hour, **order creation per IP**, **auth attempts**". Only the upload
+  limiter exists (`src/server/upload/rate-limit.ts`). Order creation and
+  login are unthrottled — found by the 2026-08-30 audit (P1-8).
+- **Not a code gap so much as a missing decision.** The upload limiter
+  works by counting real `UploadedFile` rows in a time window, which does
+  not transfer: a failed login leaves no row to count, and counting order
+  attempts per IP needs somewhere to keep per-IP state that survives
+  across serverless invocations.
+- **What's needed from the owner**: a call on where that state lives —
+  a small `RateLimit` table in Postgres (simplest, no new infrastructure,
+  a write per attempt), or a real Redis/Upstash instance (correct at
+  scale, another service to run and pay for). Either is a couple of hours
+  of work once chosen; choosing wrong is the expensive part.
+
+## 7. Should `STAFF` be able to edit the catalogue?
+
+- `ARCHITECTURE.md` §16.3 says `STAFF` gets "pricing and catalogue
+  **read-only**", and §16.2's own test matrix lists "`STAFF` → catalogue
+  write → 403". The code does not do that: every catalogue mutation uses
+  `requireStaffSession()`, so `STAFF` can create, edit and retire
+  products, materials, designs, finishes, categories and collections.
+  Pricing *is* correctly `ADMIN`-only.
+- Not a security hole — no customer can reach any of it — but the docs
+  and the code genuinely disagree, and only the owner can say which one
+  is right.
+- **What's needed**: a decision. Either relax the docs (if staff are
+  trusted to run the catalogue day to day), or tighten ~20 actions to
+  `requireAdminSession()`. Cheap either way once decided.
+
 ---
 
 *Update this file (don't just let it go stale) whenever one of these

@@ -246,6 +246,10 @@ export const SITE = {
   orderLookupOrderNumberLabelPl: 'Numer zamówienia',
   orderLookupTokenLabelPl: 'Kod dostępu (z potwierdzenia zamówienia)',
   orderLookupSubmitPl: 'Sprawdź',
+  orderLookupIntroPl: 'Podaj numer zamówienia i kod dostępu z e-maila z potwierdzeniem, aby zobaczyć jego status.',
+  orderLookupOrderNumberHelperPl: 'W formacie 2026/08/0042 — znajdziesz go w e-mailu z potwierdzeniem.',
+  orderLookupTokenHelperPl: 'Długi ciąg znaków z linku w e-mailu z potwierdzeniem zamówienia.',
+  orderLookupAccountAlternativePl: 'Masz konto? Sprawdź w swoich zamówieniach',
 
   footerCategoriesHeadingPl: 'Kategorie',
   footerInfoHeadingPl: 'Informacje',
@@ -356,6 +360,17 @@ export const SITE = {
   errorPageBodyPl: 'Wystąpił nieoczekiwany błąd. Spróbuj odświeżyć stronę.',
   errorPageRetryPl: 'Spróbuj ponownie',
   errorPageCorrelationIdLabelPl: 'Numer błędu',
+  errorPageCorrelationIdHelpPl: 'Podaj ten numer, jeśli napiszesz do nas o tym błędzie — pozwoli nam szybko znaleźć, co się stało.',
+  /**
+   * The catch-all 404 (`src/app/not-found.tsx`). Deliberately offers real
+   * ways onward rather than only announcing the failure — an error page
+   * with no exit is a dead end (`docs/AUDIT-2026-08-30.md` P2-10).
+   */
+  notFoundHeadingPl: 'Nie znaleziono takiej strony',
+  notFoundBodyPl: 'Strona, której szukasz, nie istnieje albo została przeniesiona.',
+  notFoundHomeCtaPl: 'Wróć na stronę główną',
+  notFoundPatternsCtaPl: 'Przeglądaj wzory',
+  notFoundContactCtaPl: 'Napisz do nas',
 
   blogHeadingPl: 'Blog',
   blogSeoTitlePl: 'Blog — RYT',

@@ -5,48 +5,31 @@ import { lookupOrder } from '@/server/actions/checkout';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
 import { Section } from '@/ui/primitives/Section';
+import { ThemeRegistry } from '@/ui/theme/ThemeRegistry';
+import { OrderLookupForm } from '@/ui/islands/OrderLookupForm';
 
 export const metadata: Metadata = {
   title: SITE.orderLookupHeadingPl,
 };
 
 /**
- * Zero-client-JS, same as the cart page's own forms — this just redirects
- * to the real confirmation URL, which does the actual lookup and
- * constant-time token check.
+ * Still zero-client-JS in the way that matters: the form just redirects to
+ * the real confirmation URL, which does the actual lookup and constant-time
+ * token check. Only the rendering moved into an island — `@mui/material` is
+ * lint-forbidden directly inside `(shop)` Server Components
+ * (`ARCHITECTURE.md` §2.1), so a real form has to live in
+ * `src/ui/islands/`. `docs/AUDIT-2026-08-30.md` P2-10.
  */
 export default function OrderLookupPage() {
   return (
     <Section>
       <Container>
         <Heading level={1}>{SITE.orderLookupHeadingPl}</Heading>
-
-        <form
-          action={lookupOrder}
-          style={{ marginBlockStart: 24, display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 360 }}
-        >
-          <label style={{ display: 'block' }}>
-            {SITE.orderLookupOrderNumberLabelPl}
-            <input type="text" name="orderNumber" placeholder="2026/08/0042" style={{ display: 'block', width: '100%' }} />
-          </label>
-          <label style={{ display: 'block' }}>
-            {SITE.orderLookupTokenLabelPl}
-            <input type="text" name="token" style={{ display: 'block', width: '100%' }} />
-          </label>
-          <button
-            type="submit"
-            style={{
-              font: 'var(--mui-font-button)',
-              padding: '12px 24px',
-              background: 'var(--mui-palette-primary-main)',
-              color: 'var(--mui-palette-background-paper)',
-              border: 'none',
-              borderRadius: 2,
-            }}
-          >
-            {SITE.orderLookupSubmitPl}
-          </button>
-        </form>
+        <div style={{ marginBlockStart: 24 }}>
+          <ThemeRegistry>
+            <OrderLookupForm action={lookupOrder} />
+          </ThemeRegistry>
+        </div>
       </Container>
     </Section>
   );

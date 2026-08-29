@@ -151,7 +151,8 @@ cnc_selling/
 │   │   └── money/                 ← grosz arithmetic, VAT
 │   ├── server/                    ← impure: Prisma repos, actions, services
 │   │   ├── repositories/
-│   │   ├── actions/               ← Server Actions (thin: parse → domain → persist)
+│   │   ├── actions/               ← 'use server' ONLY. Thin wrappers: derive actor, call operations, revalidate.
+│   │   ├── operations/            ← the real mutation logic, incl. every applyXxx(actor, …). NO 'use server'.
 │   │   ├── services/
 │   │   │   ├── storage/           ← FileStorage interface + adapters
 │   │   │   ├── mail/              ← Mailer interface + adapters
