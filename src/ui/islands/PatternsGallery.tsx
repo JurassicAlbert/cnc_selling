@@ -49,6 +49,7 @@ import { EMPTY_SELECTIONS } from '@/domain/configuration/steps';
 import { SITE } from '@/content/pl/site';
 import type { PublicDesignListItem } from '@/server/repositories/designs';
 import type { ExternalPatternResourceEntry } from '@/server/repositories/external-pattern-resources';
+import { useMemo, useState } from 'react';
 import { writeSelectionsToSearch } from '@/ui/islands/configurator/selections-url';
 import { FavoriteDesignButton } from '@/ui/islands/FavoriteDesignButton';
 import { Heading } from '@/ui/primitives/Heading';
@@ -70,6 +71,25 @@ export function PatternsGallery({
   readonly loggedIn: boolean;
 }) {
   const favoritedIdSet = new Set(favoritedIds);
+
+  // 2026-08-29, owner request: real pattern categories — `DesignCollection`
+  // (admin CRUD already existed, `/panel/kolekcje`; seeded rows are new,
+  // `prisma/seed.ts`'s `DESIGN_COLLECTION_SEEDS`) surfaced here as a real
+  // filter, not just a label. A pattern with no collection (still real and
+  // shown) simply never matches a category filter other than "Wszystkie".
+  const [activeCollectionSlug, setActiveCollectionSlug] = useState<string | null>(null);
+  const collections = useMemo(() => {
+    const bySlug = new Map<string, PublicDesignListItem['collection'] & object>();
+    for (const design of designs) {
+      if (design.collection !== null) bySlug.set(design.collection.slug, design.collection);
+    }
+    return Array.from(bySlug.values());
+  }, [designs]);
+  const visibleDesigns =
+    activeCollectionSlug === null
+      ? designs
+      : designs.filter((design) => design.collection?.slug === activeCollectionSlug);
+
   return (
     <Box>
       <Heading level={1}>{SITE.patternsHeadingPl}</Heading>
@@ -77,7 +97,29 @@ export function PatternsGallery({
         {SITE.patternsIntroPl}
       </Typography>
 
-      {designs.length === 0 ? (
+      {collections.length > 0 && (
+        <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap', mt: 3 }}>
+          <Chip
+            label={SITE.patternsAllCategoriesPl}
+            size="small"
+            color={activeCollectionSlug === null ? 'secondary' : 'default'}
+            variant={activeCollectionSlug === null ? 'filled' : 'outlined'}
+            onClick={() => setActiveCollectionSlug(null)}
+          />
+          {collections.map((collection) => (
+            <Chip
+              key={collection.slug}
+              label={collection.namePl}
+              size="small"
+              color={activeCollectionSlug === collection.slug ? 'secondary' : 'default'}
+              variant={activeCollectionSlug === collection.slug ? 'filled' : 'outlined'}
+              onClick={() => setActiveCollectionSlug(collection.slug)}
+            />
+          ))}
+        </Stack>
+      )}
+
+      {visibleDesigns.length === 0 ? (
         <Typography color="text.secondary" sx={{ mt: 3 }}>
           {SITE.patternsEmptyPl}
         </Typography>
@@ -90,7 +132,7 @@ export function PatternsGallery({
             gap: 3,
           }}
         >
-          {designs.map((design) => (
+          {visibleDesigns.map((design) => (
             <Card
               key={design.id}
               variant="outlined"
@@ -118,6 +160,9 @@ export function PatternsGallery({
               </Box>
               <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <Typography variant="h6">{design.namePl}</Typography>
+                {design.collection !== null && (
+                  <Chip label={design.collection.namePl} size="small" color="secondary" variant="outlined" sx={{ alignSelf: 'flex-start' }} />
+                )}
                 {design.descPl !== null && (
                   <Typography variant="body2" color="text.secondary">
                     {design.descPl}

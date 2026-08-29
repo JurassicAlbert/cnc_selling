@@ -57,6 +57,11 @@ export const SITE = {
   configuratorPersonalizationUnavailablePl:
     'Ten produkt nie oferuje jeszcze personalizacji tekstem. Ten krok można pominąć.',
   configuratorPersonalizationLabelPl: 'Tekst do wygrawerowania',
+  // 2026-08-29, owner feedback: personalization becomes a very small,
+  // disabled-for-now stub — the real character limit still shown, so it
+  // never overpromises what the product will actually allow once enabled.
+  configuratorPersonalizationComingSoonPl: (maxCharacters: number) =>
+    `Wkrótce dostępne — do ${maxCharacters} znaków`,
   configuratorFontLabelPl: 'Krój pisma',
   configuratorFontRequiredPl: 'Wybierz krój pisma, aby sprawdzić, czy wpisany tekst może zostać wykonany.',
   configuratorPreviewHeadingPl: 'Podgląd',
@@ -338,6 +343,8 @@ export const SITE = {
     'To linki do niezależnych, zewnętrznych serwisów z darmowymi wzorami do grawerowania i cięcia CNC. Nie są to nasze materiały — każdy link prowadzi do strony innego dostawcy, gdzie obowiązują jego własne zasady korzystania i licencje.',
   patternsExternalBadgePl: 'zasób zewnętrzny',
   patternsFeaturedBadgePl: 'Wyróżniony',
+  // 2026-08-29: real category-filter chips above the grid — DesignCollection groupings, seeded in prisma/seed.ts's DESIGN_COLLECTION_SEEDS.
+  patternsAllCategoriesPl: 'Wszystkie',
   patternsExternalEmptyPl: 'Obecnie nie mamy poleconych zewnętrznych źródeł wzorów.',
 
   collectionsHeadingPl: 'Kolekcje',

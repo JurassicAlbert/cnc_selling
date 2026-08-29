@@ -250,28 +250,31 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
                 away from the product. The old pattern-thumbnails section
                 that linked out to /wzory is gone; the DESIGN band inside
                 the configurator below already covers "pick a ready-made
-                pattern" without leaving the page. */}
+                pattern" without leaving the page.
+                2026-08-29, owner feedback: no "Skonfiguruj produkt" section
+                heading either — the breadcrumb trail (rendered by
+                `Configurator` itself, right after the price/chips above)
+                IS the configurator now; a heading announcing it as a
+                separate section would be exactly the "porozwalane" (spread
+                into scattered sections) look the owner explicitly rejected. */}
             {configuratorData !== null && (
-              <div style={{ marginBlockStart: 32 }}>
-                <Heading level={2}>{SITE.configuratorHeadingPl}</Heading>
-                <div style={{ marginBlockStart: 16 }}>
-                  <ThemeRegistry>
-                    <Configurator
-                      productSlug={product.slug}
-                      options={configuratorData.options}
-                      materialNotesPl={product.materialNotesPl}
-                      requiresExactSize={product.requiresExactSize}
-                      dimensionEnvelope={{
-                        minWidthMm: product.minWidthMm,
-                        maxWidthMm: product.maxWidthMm,
-                        minHeightMm: product.minHeightMm,
-                        maxHeightMm: product.maxHeightMm,
-                      }}
-                      isPreview={isStaffPreview}
-                      savedDesigns={savedDesigns}
-                    />
-                  </ThemeRegistry>
-                </div>
+              <div style={{ marginBlockStart: 24 }}>
+                <ThemeRegistry>
+                  <Configurator
+                    productSlug={product.slug}
+                    options={configuratorData.options}
+                    materialNotesPl={product.materialNotesPl}
+                    requiresExactSize={product.requiresExactSize}
+                    dimensionEnvelope={{
+                      minWidthMm: product.minWidthMm,
+                      maxWidthMm: product.maxWidthMm,
+                      minHeightMm: product.minHeightMm,
+                      maxHeightMm: product.maxHeightMm,
+                    }}
+                    isPreview={isStaffPreview}
+                    savedDesigns={savedDesigns}
+                  />
+                </ThemeRegistry>
               </div>
             )}
           </div>

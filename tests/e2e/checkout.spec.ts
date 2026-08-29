@@ -25,37 +25,19 @@ import { expect, test } from '@playwright/test';
  * clicks every swatch/fills every field directly, in the same order as
  * before, but with no "Dalej" clicks between them.
  *
- * 2026-08-29: DESIGN/MATERIAL/FINISH/SIZE moved into a breadcrumb trail —
- * each is a crumb `<button>` (still inside `<main>`) that opens a `Menu`
- * or `Popover` rendered in a React portal outside `<main>`, so their
- * contents are queried unscoped (`page.getByRole`), not `main.getByRole`.
+ * 2026-08-29, owner feedback: "The price for the product should be clear,
+ * no waiting for configure — we have price". DESIGN/MATERIAL/WYKOŃCZENIE/
+ * WYMIARY now default to a real, already-feasible selection (the product's
+ * own first design/material/finish and its middle `ProductPresetSize`, 70×70
+ * cm for this product's real seeded envelope) the instant the page loads —
+ * verified by hand this session to price cleanly with no feasibility
+ * -blocking findings. No crumb click is needed at all; this test goes
+ * straight to "Dodaj do koszyka".
  */
 test('adds a configuration to the cart and completes checkout as a guest', async ({ page }) => {
   await page.goto('/produkt/obraz-drewniany-z-grawerem');
 
   const main = page.getByRole('main');
-
-  // Wzór (design)
-  await main.getByRole('button', { name: 'Wzór' }).click();
-  await page.getByRole('menuitem', { name: 'Wzór podstawowy — do zastąpienia' }).click();
-
-  // Materiał
-  await main.getByRole('button', { name: 'Materiał' }).click();
-  await page.getByRole('menuitem', { name: 'Dąb', exact: true }).click();
-
-  // Wymiary — a size verified to price with no blocking feasibility issues.
-  await main.getByRole('button', { name: 'Wymiary' }).click();
-  await page.getByRole('textbox', { name: 'Szerokość (cm)' }).fill('70');
-  await page.getByRole('textbox', { name: 'Szerokość (cm)' }).blur();
-  await page.getByRole('textbox', { name: 'Wysokość (cm)' }).fill('50');
-  await page.getByRole('textbox', { name: 'Wysokość (cm)' }).blur();
-
-  // Wykończenie
-  await main.getByRole('button', { name: 'Wykończenie' }).click();
-  await page.getByRole('menuitem', { name: 'Olejowanie' }).click();
-
-  // Personalizacja — optional, left blank.
-
   const addToCartButton = main.getByRole('button', { name: 'Dodaj do koszyka' });
   await expect(addToCartButton).toBeEnabled();
   await addToCartButton.click();

@@ -173,6 +173,17 @@ export async function getConfiguratorProductData(
             priceFactorBp: true,
           },
         },
+        presetSizes: {
+          select: { id: true, widthMm: true, heightMm: true, labelPl: true },
+          orderBy: { sortOrder: 'asc' },
+        },
+        // 2026-08-29: which finishes are excluded for THIS product even when
+        // the material otherwise allows them (`ProductFinishExclusion`'s own
+        // schema comment — e.g. bejcowanie/lakierowanie off by default for
+        // the wall-art "Obrazy" product). A `Set` of ids, filtered against
+        // below — never trusted as "the only finishes", since a material's
+        // own `MaterialFinish` compatibility still applies first.
+        finishExclusions: { select: { finishId: true } },
       },
     }),
     prisma.machineSettings.findUnique({ where: { id: 1 } }),
@@ -182,6 +193,8 @@ export async function getConfiguratorProductData(
   if (product === null || machine === null || pricing === null) {
     return null;
   }
+
+  const excludedFinishIds = new Set(product.finishExclusions.map((row) => row.finishId));
 
   // A second round trip, deliberately: `allowedFontIds` only exists once we
   // have `product.personalization`, so this cannot join into the query
@@ -221,10 +234,12 @@ export async function getConfiguratorProductData(
 
   const finishesById = new Map(
     product.materials.flatMap(({ material }) =>
-      material.finishes.map(({ finish }) => [
-        finish.id,
-        { pricePerM2Grosze: finish.pricePerM2Grosze, setupFeeGrosze: finish.setupFeeGrosze },
-      ]),
+      material.finishes
+        .filter(({ finish }) => !excludedFinishIds.has(finish.id))
+        .map(({ finish }) => [
+          finish.id,
+          { pricePerM2Grosze: finish.pricePerM2Grosze, setupFeeGrosze: finish.setupFeeGrosze },
+        ]),
     ),
   );
 
@@ -287,12 +302,14 @@ export async function getConfiguratorProductData(
       namePl: material.namePl,
       isAvailable: material.isAvailable,
       imageUrl: material.imageUrl,
-      finishes: material.finishes.map(({ finish }) => ({
-        id: finish.id,
-        namePl: finish.namePl,
-        isAvailable: finish.isAvailable,
-        imageUrl: finish.imageUrl,
-      })),
+      finishes: material.finishes
+        .filter(({ finish }) => !excludedFinishIds.has(finish.id))
+        .map(({ finish }) => ({
+          id: finish.id,
+          namePl: finish.namePl,
+          isAvailable: finish.isAvailable,
+          imageUrl: finish.imageUrl,
+        })),
     })),
     designs: product.designs.map(({ design }) => ({
       id: design.id,
@@ -315,6 +332,12 @@ export async function getConfiguratorProductData(
       maxThicknessMm: variant.maxThicknessMm,
     })),
     fonts: fonts.map((font) => ({ id: font.id, namePl: font.namePl, fileUrl: font.fileUrl })),
+    presetSizes: product.presetSizes.map((preset) => ({
+      id: preset.id,
+      widthMm: preset.widthMm,
+      heightMm: preset.heightMm,
+      labelPl: preset.labelPl,
+    })),
   };
 
   return {

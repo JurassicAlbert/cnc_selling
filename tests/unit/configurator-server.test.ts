@@ -100,6 +100,7 @@ const optionData: ConfiguratorOptionData = {
     },
   ],
   fonts: [{ id: 'inter', namePl: 'Inter', fileUrl: '/fonts/Inter-Variable.ttf' }],
+  presetSizes: [],
 };
 
 describe('resolveOptions', () => {

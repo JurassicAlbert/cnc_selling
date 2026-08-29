@@ -162,17 +162,18 @@ model Product {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  presetSizes     ProductPresetSize[]
-  materials       ProductMaterial[]
-  designs         ProductDesign[]
-  thicknesses     ProductThickness[]
-  images          ProductImage[]
-  personalization PersonalizationSpec?
-  installVariants InstallationVariant[]
-  configurations  Configuration[]
+  presetSizes      ProductPresetSize[]
+  materials        ProductMaterial[]
+  designs          ProductDesign[]
+  thicknesses      ProductThickness[]
+  images           ProductImage[]
+  personalization  PersonalizationSpec?
+  installVariants  InstallationVariant[]
+  configurations   Configuration[]
+  finishExclusions ProductFinishExclusion[]
   /// P9 phase 4: membership in a `ProductCollection` ("ready-made" curated
   /// grouping) — unrelated to `DesignCollection`, which groups *patterns*.
-  collectionItems ProductCollectionItem[]
+  collectionItems  ProductCollectionItem[]
 
   @@index([categoryId, isActive])
   @@index([typeCode, isActive])
@@ -317,8 +318,9 @@ model Finish {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  materials      MaterialFinish[]
-  configurations Configuration[]
+  materials         MaterialFinish[]
+  configurations    Configuration[]
+  productExclusions ProductFinishExclusion[]
 
   @@index([isAvailable, sortOrder])
 }
@@ -331,6 +333,26 @@ model MaterialFinish {
   finish     Finish   @relation(fields: [finishId], references: [id], onDelete: Cascade)
 
   @@id([materialId, finishId])
+  @@index([finishId])
+}
+
+/// 2026-08-29: `MaterialFinish` is a per-material rule ("oak may be
+/// oiled/stained/varnished") — real, but not enough on its own once two
+/// products share a material yet should offer different finishes (owner
+/// request: bejcowanie/lakierowanie stay off by default for the "Obrazy"
+/// wall-art product even though dąb itself supports them elsewhere). A row
+/// here means "this finish is excluded for this product" even when the
+/// material otherwise allows it — resolved as an extra filter on top of
+/// `MaterialFinish`, never instead of it. No admin UI yet (seeded directly);
+/// a real gap, same "establishes the pattern, not a full sweep" scoping
+/// this session's admin-polish passes already used elsewhere.
+model ProductFinishExclusion {
+  productId String
+  finishId  String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  finish    Finish  @relation(fields: [finishId], references: [id], onDelete: Cascade)
+
+  @@id([productId, finishId])
   @@index([finishId])
 }
 

@@ -29,12 +29,15 @@ import { expect, test } from '@playwright/test';
  * swatch/field picker). Every field is filled/clicked directly now, no
  * "Dalej" clicks between them.
  *
- * 2026-08-29: MATERIAL/FINISH/SIZE moved into a breadcrumb trail — each is
- * a crumb `<button>` (still inside `<main>`) that opens a `Menu` or
- * `Popover` rendered in a React portal outside `<main>`, so their contents
- * are queried unscoped (`page.getByRole`), not `main.getByRole`. This
- * product's `CUSTOM_UPLOAD` step (no DESIGN) stays a plain accordion band,
- * unaffected — its content is still inside `<main>`.
+ * 2026-08-29, owner feedback: "The price for the product should be clear,
+ * no waiting for configure — we have price". MATERIAL/WYKOŃCZENIE/WYMIARY
+ * now default to a real, already-feasible selection (the product's own
+ * first material/finish and its middle `ProductPresetSize`) the instant the
+ * page loads — no crumb click needed for any of them, even on this product.
+ * The one real prerequisite left is CUSTOM_UPLOAD itself: this `CUSTOM`
+ * -type product has no catalogue DESIGN, so pricing only becomes available
+ * once a real file is uploaded (`selections.customUploadId` set) — it stays
+ * a plain accordion band, unaffected by the breadcrumb redesign.
  */
 test('uploads a custom design, completes checkout, and lands in DESIGN_REVIEW', async ({ page }) => {
   await page.goto('/produkt/wlasny-projekt-z-grawerem');
@@ -48,22 +51,7 @@ test('uploads a custom design, completes checkout, and lands in DESIGN_REVIEW', 
   await main.getByRole('button', { name: 'Prześlij projekt' }).click();
   await expect(main.getByText('Projekt został przesłany.')).toBeVisible();
 
-  // Materiał
-  await main.getByRole('button', { name: 'Materiał' }).click();
-  await page.getByRole('menuitem', { name: 'Dąb', exact: true }).click();
-
-  // Wymiary — within the product's 200-1200mm envelope.
-  await main.getByRole('button', { name: 'Wymiary' }).click();
-  await page.getByRole('textbox', { name: 'Szerokość (cm)' }).fill('40');
-  await page.getByRole('textbox', { name: 'Szerokość (cm)' }).blur();
-  await page.getByRole('textbox', { name: 'Wysokość (cm)' }).fill('40');
-  await page.getByRole('textbox', { name: 'Wysokość (cm)' }).blur();
-
-  // Wykończenie
-  await main.getByRole('button', { name: 'Wykończenie' }).click();
-  await page.getByRole('menuitem', { name: 'Olejowanie' }).click();
-
-  // Personalizacja — optional, left blank.
+  // Materiał/Wykończenie/Wymiary — already defaulted on load.
 
   // Podsumowanie — the honest "this is an estimate" notice (P4).
   await expect(

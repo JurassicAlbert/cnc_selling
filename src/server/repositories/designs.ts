@@ -14,6 +14,11 @@ export type PublicDesignProductLink = {
   readonly namePl: string;
 };
 
+export type PublicDesignCollectionLink = {
+  readonly slug: string;
+  readonly namePl: string;
+};
+
 export type PublicDesignListItem = {
   readonly id: string;
   readonly slug: string;
@@ -22,6 +27,8 @@ export type PublicDesignListItem = {
   readonly thumbnailUrl: string;
   readonly tags: readonly string[];
   readonly featured: boolean;
+  /** 2026-08-29: real `DesignCollection` grouping — `null` for a pattern deliberately left uncategorised (see `DESIGN_COLLECTION_SEEDS`'s own seed comment). */
+  readonly collection: PublicDesignCollectionLink | null;
   /**
    * Which real, currently-active products this pattern can actually be
    * picked on — 2026-08-28 owner feedback: `/wzory` used to be a dead-end
@@ -46,6 +53,7 @@ export async function listActiveDesignsForBrowsing(): Promise<readonly PublicDes
       thumbnailUrl: true,
       tags: true,
       featured: true,
+      collection: { select: { slug: true, namePl: true } },
       products: {
         where: { product: { isActive: true, category: { isActive: true } } },
         select: { product: { select: { slug: true, namePl: true } } },

@@ -39,6 +39,24 @@
  * entry, not per step) — that mechanism is exactly what a real dropdown
  * needs, unchanged.
  *
+ * **2026-08-29 second follow-up, direct owner feedback**: "The price for
+ * the product should be clear, no waiting for configure... we have price" —
+ * `selections` no longer starts at `EMPTY_SELECTIONS`. `computeDefaultSelections`
+ * fills DESIGN/MATERIAL/FINISH/SIZE with the product's own real first
+ * catalogue entries on mount (see its own doc comment), so a price is
+ * already in flight on first render; changing material or finish afterwards
+ * re-fetches and updates it the same way any other change always has —
+ * "no waiting for configure" turned out to be a defaults problem, not a
+ * new mechanism. SIZE itself is now picked from a real `ProductPresetSize`
+ * dropdown (owner: "realne dostępne rozmiary predefiniowane, a nie
+ * wpisywane przez klienta") instead of typed centimetres, except for
+ * `requiresExactSize` products, which keep the typed `Popover` — an exact,
+ * per-installation measurement is the entire point of that flag, not a UI
+ * preference to design around. `ConfiguratorPreview` (the material+design
+ * photo composite) is gone entirely — owner: "nie pokazujemy żadnych
+ * symulacji materiałów, rozmiarów" (no material/size simulations) — the
+ * product's own real photography already shows what the customer gets.
+ *
  * State ownership, deliberately split three ways (unchanged by the
  * redesign above — this is presentation-only, no state/domain logic moved):
  *   - `selections`  — what the customer has picked. Local React state, and
@@ -49,9 +67,7 @@
  *     `getConfiguratorSnapshot` Server Action (§10.2: prices are
  *     server-authoritative, full stop).
  *
- * Not yet built, honestly: quantity (belongs to the cart, P5), the 2D
- * preview (§7.3 — `ConfiguratorPreview` covers material/design overlay,
- * not a full render).
+ * Not yet built, honestly: quantity (belongs to the cart, P5).
  */
 
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
@@ -63,7 +79,6 @@ import AccordionDetails from '@mui/material/AccordionDetails';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import Breadcrumbs from '@mui/material/Breadcrumbs';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -71,6 +86,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Link from '@mui/material/Link';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import Paper from '@mui/material/Paper';
 import Popover from '@mui/material/Popover';
 import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
@@ -87,8 +103,6 @@ import {
 import type { DimensionIssue } from '@/domain/dimensions/dimensions';
 import type { FeasibilityCode } from '@/domain/feasibility/rules';
 import { formatPln } from '@/domain/money/money';
-import { countPersonalizationCharacters } from '@/domain/personalization/validate';
-import type { PersonalizationIssue } from '@/domain/personalization/validate';
 import { formatMmAsCentimetres, parseCentimetresToMm } from '@/domain/text/numeric-input';
 import {
   COPY,
@@ -118,7 +132,6 @@ import { addToCart, updateCartItemConfiguration } from '@/server/actions/cart';
 import { uploadCustomDesign } from '@/server/actions/upload';
 import type { OwnedCustomerDesignListItem } from '@/server/repositories/customer-designs';
 import type { UploadCustomDesignResult } from '@/server/actions/upload';
-import { ConfiguratorPreview } from './ConfiguratorPreview';
 import type { SwatchEntry } from './ImageSwatchGroup';
 import { readSelectionsFromSearch, writeSelectionsToSearch } from './selections-url';
 
@@ -144,6 +157,64 @@ const QUANTITY = 1;
  * has no band any more would open nothing and silently do nothing.
  */
 const BREADCRUMB_STEPS: readonly StepCode[] = ['DESIGN', 'MATERIAL', 'FINISH', 'SIZE'];
+
+function cmInputFor(mm: number | null): string {
+  return mm === null ? '' : formatMmAsCentimetres(mm);
+}
+
+/**
+ * A real, immediately-priceable starting configuration — the product's own
+ * first catalogue design, first material, that material's first available
+ * finish, and a preset size (empty when the product has none, e.g.
+ * `requiresExactSize` floor elements, which genuinely need the customer's
+ * own measurement). Every field it fills stays a real breadcrumb the
+ * customer can still change; this only removes the "nothing chosen yet"
+ * starting state, never removes the choice itself.
+ *
+ * The size default prefers the MIDDLE preset ("Średni"), not the smallest
+ * — found live, not assumed: the smallest preset on a real product
+ * (`obraz-drewniany-z-grawerem`, 20×20 cm) is genuinely too small for that
+ * design's minimum line width, so defaulting to it landed a first-time
+ * visitor on an immediate, correct-but-unwelcoming feasibility warning.
+ * The middle preset is the far more likely to be feasible starting point
+ * for a product's own real dimension envelope.
+ */
+function computeDefaultSelections(options: ConfiguratorOptionData): Selections {
+  const defaultMaterial = options.materials[0] ?? null;
+  const defaultFinish = defaultMaterial?.finishes.find((finish) => finish.isAvailable) ?? null;
+  const defaultPreset =
+    options.presetSizes[Math.floor(options.presetSizes.length / 2)] ?? options.presetSizes[0] ?? null;
+  return {
+    ...EMPTY_SELECTIONS,
+    designId: options.designs[0]?.id ?? null,
+    materialId: defaultMaterial?.id ?? null,
+    finishId: defaultFinish?.id ?? null,
+    widthMm: defaultPreset?.widthMm ?? null,
+    heightMm: defaultPreset?.heightMm ?? null,
+  };
+}
+
+/**
+ * The URL is still the source of truth wherever it says something (a
+ * shared link, a cart "Edytuj" link, a `/wzory` deep link) — `defaults`
+ * only fills in whatever the URL left unset, so an explicit link (which
+ * always carries every field a saved `Configuration` needs) is a no-op
+ * here, and a bare product-page landing gets a fully real starting price.
+ */
+function mergeWithDefaults(fromUrl: Selections, defaults: Selections): Selections {
+  return {
+    designId: fromUrl.designId ?? defaults.designId,
+    customUploadId: fromUrl.customUploadId,
+    materialId: fromUrl.materialId ?? defaults.materialId,
+    widthMm: fromUrl.widthMm ?? defaults.widthMm,
+    heightMm: fromUrl.heightMm ?? defaults.heightMm,
+    thicknessMm: fromUrl.thicknessMm,
+    finishId: fromUrl.finishId ?? defaults.finishId,
+    installationVariant: fromUrl.installationVariant,
+    personalizationText: fromUrl.personalizationText,
+    fontId: fromUrl.fontId,
+  };
+}
 
 type ConfiguratorProps = {
   readonly productSlug: string;
@@ -174,14 +245,23 @@ export function Configurator({
   savedDesigns = [],
 }: ConfiguratorProps) {
   const router = useRouter();
-  const [selections, setSelections] = useState<Selections>(EMPTY_SELECTIONS);
+  // 2026-08-29, owner feedback, verbatim: "The price for the product should
+  // be clear, no waiting for configure... we have price" — the page must
+  // show a real price the moment it loads, not an empty "Podaj wymiary"
+  // placeholder. `computeDefaultSelections` fills every dimension with the
+  // product's own real first catalogue entry (first design, first material,
+  // that material's first available finish, its first preset size) instead
+  // of starting from `EMPTY_SELECTIONS` — the snapshot effect below then
+  // fires on mount exactly as it does on any later change, so the very
+  // first render already has a real price in flight.
+  const [selections, setSelections] = useState<Selections>(() => computeDefaultSelections(options));
   const [snapshot, setSnapshot] = useState<ConfiguratorSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [acknowledged, setAcknowledged] = useState<ReadonlySet<FeasibilityCode>>(new Set());
   const [exactSizeAcknowledged, setExactSizeAcknowledged] = useState(false);
   const [clearedNotice, setClearedNotice] = useState<string | null>(null);
-  const [widthInput, setWidthInput] = useState('');
-  const [heightInput, setHeightInput] = useState('');
+  const [widthInput, setWidthInput] = useState(() => cmInputFor(selections.widthMm));
+  const [heightInput, setHeightInput] = useState(() => cmInputFor(selections.heightMm));
   const [widthError, setWidthError] = useState<string | null>(null);
   const [heightError, setHeightError] = useState<string | null>(null);
   const [editConfigurationId, setEditConfigurationId] = useState<string | null>(null);
@@ -213,15 +293,19 @@ export function Configurator({
     setOpenCrumbStep(null);
   }, []);
 
-  const applyUrlSelections = useCallback((search: string) => {
-    const restored = readSelectionsFromSearch(search);
-    setSelections(restored);
-    setWidthInput(restored.widthMm !== null ? formatMmAsCentimetres(restored.widthMm) : '');
-    setHeightInput(restored.heightMm !== null ? formatMmAsCentimetres(restored.heightMm) : '');
-    setWidthError(null);
-    setHeightError(null);
-    return restored;
-  }, []);
+  const applyUrlSelections = useCallback(
+    (search: string) => {
+      const fromUrl = readSelectionsFromSearch(search);
+      const restored = mergeWithDefaults(fromUrl, computeDefaultSelections(options));
+      setSelections(restored);
+      setWidthInput(cmInputFor(restored.widthMm));
+      setHeightInput(cmInputFor(restored.heightMm));
+      setWidthError(null);
+      setHeightError(null);
+      return restored;
+    },
+    [options],
+  );
 
   // Hydrate from the URL exactly once, on mount, so a refresh or a shared
   // link resumes where the customer left off (brief §36).
@@ -457,16 +541,28 @@ export function Configurator({
       ? `${formatMmAsCentimetres(selections.widthMm)}×${formatMmAsCentimetres(selections.heightMm)} cm`
       : null;
 
+  const crumbEntries: readonly { readonly step: StepCode; readonly label: string; readonly value: string | null }[] = [
+    ...(steps.includes('DESIGN')
+      ? [{ step: 'DESIGN' as const, label: STEP_LABEL.DESIGN, value: selectedLabelOf(designSwatches, selections.designId) }]
+      : []),
+    ...(steps.includes('MATERIAL')
+      ? [{ step: 'MATERIAL' as const, label: STEP_LABEL.MATERIAL, value: selectedMaterial?.namePl ?? null }]
+      : []),
+    ...(steps.includes('FINISH')
+      ? [
+          {
+            step: 'FINISH' as const,
+            label: STEP_LABEL.FINISH,
+            value: finishOptions.find((f) => f.id === selections.finishId)?.namePl ?? null,
+          },
+        ]
+      : []),
+    ...(steps.includes('SIZE') ? [{ step: 'SIZE' as const, label: STEP_LABEL.SIZE, value: sizeLabel }] : []),
+  ];
+
   return (
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 72 }}>
-        <ConfiguratorPreview
-          selections={selections}
-          options={options}
-          dimensionEnvelope={dimensionEnvelope}
-          moduleLayout={snapshot?.pricing.status === 'priced' ? snapshot.pricing.moduleLayout : null}
-        />
-
         {clearedNotice !== null && (
           <Alert severity="info" onClose={() => setClearedNotice(null)}>
             {clearedNotice}
@@ -475,41 +571,26 @@ export function Configurator({
 
         {(steps.includes('DESIGN') || steps.includes('MATERIAL') || steps.includes('FINISH') || steps.includes('SIZE')) && (
           <>
-            {/* MUI's default Breadcrumbs list is a non-wrapping flex row —
-                fine on desktop, but on a narrow viewport the fourth crumb
-                (e.g. "Wymiary") gets clipped off the right edge with no way
-                to reach it. `flexWrap: 'wrap'` lets the trail spill onto a
-                second line instead of overflowing. */}
-            <Breadcrumbs
-              separator="›"
+            {/* 2026-08-29 second follow-up, owner feedback: not MUI
+                `Breadcrumbs` (a navigation-trail widget, chevron separators
+                implying "you are here in a hierarchy") — each selector is
+                its own separate, elevated, rounded-rectangle `Paper` chip
+                with real margin between them, not one unified block — the
+                same low-profile surface a `Snackbar` uses, per item, rather
+                than one transient auto-hiding message ("the snackbar should
+                work like list"). `flexWrap: 'wrap'` still applies — on a
+                narrow viewport the row spills onto a second line instead of
+                clipping the last chip off-screen. */}
+            <Box
               aria-label={SITE.configuratorHeadingPl}
-              sx={{ '& > ol': { flexWrap: 'wrap', rowGap: 0.5 } }}
+              sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}
             >
-              {steps.includes('DESIGN') && (
-                <CrumbLink
-                  label={STEP_LABEL.DESIGN}
-                  value={selectedLabelOf(designSwatches, selections.designId)}
-                  onOpen={(el) => openCrumb('DESIGN', el)}
-                />
-              )}
-              {steps.includes('MATERIAL') && (
-                <CrumbLink
-                  label={STEP_LABEL.MATERIAL}
-                  value={selectedMaterial?.namePl ?? null}
-                  onOpen={(el) => openCrumb('MATERIAL', el)}
-                />
-              )}
-              {steps.includes('FINISH') && (
-                <CrumbLink
-                  label={STEP_LABEL.FINISH}
-                  value={finishOptions.find((f) => f.id === selections.finishId)?.namePl ?? null}
-                  onOpen={(el) => openCrumb('FINISH', el)}
-                />
-              )}
-              {steps.includes('SIZE') && (
-                <CrumbLink label={STEP_LABEL.SIZE} value={sizeLabel} onOpen={(el) => openCrumb('SIZE', el)} />
-              )}
-            </Breadcrumbs>
+              {crumbEntries.map((entry) => (
+                <Paper key={entry.step} elevation={2} sx={{ borderRadius: 3, px: 2, py: 1 }}>
+                  <CrumbLink label={entry.label} value={entry.value} onOpen={(el) => openCrumb(entry.step, el)} />
+                </Paper>
+              ))}
+            </Box>
 
             <Menu anchorEl={crumbAnchor} open={openCrumbStep === 'DESIGN'} onClose={closeCrumb}>
               {designSwatches.length === 0 ? (
@@ -562,27 +643,61 @@ export function Configurator({
               )}
             </Menu>
 
-            <Popover
-              anchorEl={crumbAnchor}
-              open={openCrumbStep === 'SIZE'}
-              onClose={closeCrumb}
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-            >
-              <Box sx={{ p: 2.5, minWidth: 240 }}>
-                <SizeFields
-                  widthInput={widthInput}
-                  heightInput={heightInput}
-                  widthError={widthError}
-                  heightError={heightError}
-                  dimensionEnvelope={dimensionEnvelope}
-                  onWidthChange={setWidthInput}
-                  onHeightChange={setHeightInput}
-                  onCommitWidth={commitWidth}
-                  onCommitHeight={commitHeight}
-                  dimensionIssues={snapshot?.pricing.status === 'dimension_invalid' ? snapshot.pricing.issues : []}
-                />
-              </Box>
-            </Popover>
+            {/* 2026-08-29, owner feedback: real available sizes, predefined,
+                rather than typed by the customer — a real dropdown of the
+                product's own `ProductPresetSize` rows, same interaction as
+                DESIGN/MATERIAL/FINISH. Falls back to the typed `Popover`
+                only when the product genuinely has no preset list —
+                `requiresExactSize` floor elements never get presets seeded
+                (an exact, per-installation measurement is the whole point
+                of that flag), and any other product that simply has none
+                yet. */}
+            {options.presetSizes.length > 0 ? (
+              <Menu anchorEl={crumbAnchor} open={openCrumbStep === 'SIZE'} onClose={closeCrumb}>
+                {options.presetSizes.map((preset) => (
+                  <MenuItem
+                    key={preset.id}
+                    selected={selections.widthMm === preset.widthMm && selections.heightMm === preset.heightMm}
+                    onClick={() => {
+                      const next = { ...selections, widthMm: preset.widthMm, heightMm: preset.heightMm };
+                      setSelections(next);
+                      setWidthInput(cmInputFor(preset.widthMm));
+                      setHeightInput(cmInputFor(preset.heightMm));
+                      setWidthError(null);
+                      setHeightError(null);
+                      closeCrumb();
+                    }}
+                  >
+                    <span style={{ flex: 1 }}>{preset.labelPl}</span>
+                    {selections.widthMm === preset.widthMm && selections.heightMm === preset.heightMm && (
+                      <CheckIcon fontSize="small" color="secondary" sx={{ ml: 1.5 }} />
+                    )}
+                  </MenuItem>
+                ))}
+              </Menu>
+            ) : (
+              <Popover
+                anchorEl={crumbAnchor}
+                open={openCrumbStep === 'SIZE'}
+                onClose={closeCrumb}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+              >
+                <Box sx={{ p: 2.5, minWidth: 240 }}>
+                  <SizeFields
+                    widthInput={widthInput}
+                    heightInput={heightInput}
+                    widthError={widthError}
+                    heightError={heightError}
+                    dimensionEnvelope={dimensionEnvelope}
+                    onWidthChange={setWidthInput}
+                    onHeightChange={setHeightInput}
+                    onCommitWidth={commitWidth}
+                    onCommitHeight={commitHeight}
+                    dimensionIssues={snapshot?.pricing.status === 'dimension_invalid' ? snapshot.pricing.issues : []}
+                  />
+                </Box>
+              </Popover>
+            )}
           </>
         )}
 
@@ -642,29 +757,15 @@ export function Configurator({
           </ConfigSection>
         )}
 
-        {steps.includes('PERSONALIZATION') && (
-          <ConfigSection
-            step="PERSONALIZATION"
-            heading={STEP_LABEL.PERSONALIZATION}
-            selectedLabel={selections.personalizationText !== null && selections.personalizationText !== '' ? selections.personalizationText : null}
-            expanded={expandedStep === 'PERSONALIZATION'}
-            onToggle={() => setExpandedStep((prev) => (prev === 'PERSONALIZATION' ? null : 'PERSONALIZATION'))}
-          >
-            <PersonalizationStep
-              personalization={snapshot?.personalization ?? null}
-              fonts={snapshot?.availability.fonts ?? []}
-              text={selections.personalizationText ?? ''}
-              fontId={selections.fontId}
-              issues={snapshot?.pricing.status === 'priced' ? snapshot.pricing.personalizationIssues : []}
-              fontRequired={
-                snapshot?.pricing.status === 'priced' ? snapshot.pricing.personalizationFontRequired : false
-              }
-              onTextChange={(text) =>
-                setSelections((prev) => ({ ...prev, personalizationText: text === '' ? null : text }))
-              }
-              onFontChange={(fontId) => setSelections((prev) => ({ ...prev, fontId }))}
-            />
-          </ConfigSection>
+        {/* 2026-08-29 second follow-up, owner feedback: hidden entirely
+            when the product has no real personalization configured — the
+            step being nominally present on this product TYPE
+            (`stepsForProductType`) doesn't mean this specific product's own
+            `PersonalizationSpec` actually exists/`isEnabled`. Showing a
+            disabled stub for a feature the product will never actually get
+            would be advertising something false, not "coming soon". */}
+        {steps.includes('PERSONALIZATION') && snapshot?.personalization != null && (
+          <PersonalizationStub maxCharacters={snapshot.personalization.maxCharacters} />
         )}
 
         {steps.includes('CUSTOM_UPLOAD') && (
@@ -879,6 +980,32 @@ function ConfigSection({
 }
 
 /**
+ * 2026-08-29, owner feedback, verbatim: "tekst do wygrawerowania - this
+ * should be very small section - disabled for now, and number of
+ * characters should match with the product" — a real disabled `TextField`,
+ * not a full form: the placeholder states it's not enabled yet and shows
+ * this exact product's own real `PersonalizationSpec.maxCharacters`
+ * (`null` — no spec at all, or one not enabled — falls back to a generic
+ * "not offered" placeholder, same honesty `PersonalizationStep` used to
+ * apply). No accordion band, no breadcrumb — just this one small field.
+ */
+function PersonalizationStub({ maxCharacters }: { readonly maxCharacters: number | null }) {
+  return (
+    <TextField
+      label={STEP_LABEL.PERSONALIZATION}
+      placeholder={
+        maxCharacters !== null
+          ? SITE.configuratorPersonalizationComingSoonPl(maxCharacters)
+          : SITE.configuratorPersonalizationUnavailablePl
+      }
+      disabled
+      fullWidth
+      size="small"
+    />
+  );
+}
+
+/**
  * The SIZE crumb's popover content — two plain, precise `TextField`s.
  * 2026-08-29, owner feedback, verbatim: "you don't need to visualize the
  * wood size or look" — the previous pass's `Slider` (a visual, drag-driven
@@ -1060,74 +1187,6 @@ function OptionStep({
         </DisabledExplanation>
       ))}
     </ToggleButtonGroup>
-  );
-}
-
-/**
- * `personalization === null` covers three cases the same way, deliberately:
- * no `PersonalizationSpec` row at all (loft furniture, today), a spec with
- * `isEnabled: false`, and a spec with no fonts assigned yet — every one of
- * them means there is nothing real to offer, so all three fall back to the
- * same honest "not available yet, skippable" notice rather than a half-built
- * form. `docs/HANDOVER.md` documents which products actually have one.
- */
-function PersonalizationStep({
-  personalization,
-  fonts,
-  text,
-  fontId,
-  issues,
-  fontRequired,
-  onTextChange,
-  onFontChange,
-}: {
-  readonly personalization: { readonly maxCharacters: number; readonly maxLines: number } | null;
-  readonly fonts: readonly OptionAvailability[];
-  readonly text: string;
-  readonly fontId: string | null;
-  readonly issues: readonly PersonalizationIssue[];
-  readonly fontRequired: boolean;
-  readonly onTextChange: (text: string) => void;
-  readonly onFontChange: (fontId: string) => void;
-}) {
-  if (personalization === null) {
-    return <Alert severity="info">{SITE.configuratorPersonalizationUnavailablePl}</Alert>;
-  }
-
-  const characterCount = countPersonalizationCharacters(text);
-  const multiline = personalization.maxLines > 1;
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 480 }}>
-      <TextField
-        label={SITE.configuratorPersonalizationLabelPl}
-        value={text}
-        onChange={(e) => onTextChange(e.target.value)}
-        multiline={multiline}
-        minRows={multiline ? 2 : 1}
-        maxRows={multiline ? personalization.maxLines : 1}
-        error={characterCount > personalization.maxCharacters}
-        helperText={`${characterCount}/${personalization.maxCharacters}`}
-        size="small"
-      />
-      <div>
-        <Text muted>{SITE.configuratorFontLabelPl}</Text>
-        <div style={{ marginTop: 4 }}>
-          <OptionStep
-            title={SITE.configuratorFontLabelPl}
-            entries={fonts}
-            selectedId={fontId}
-            onSelect={onFontChange}
-          />
-        </div>
-      </div>
-      {fontRequired && <Alert severity="warning">{SITE.configuratorFontRequiredPl}</Alert>}
-      {issues.map((issue) => (
-        <Alert severity="error" key={issue.code}>
-          {personalizationMessage(issue)}
-        </Alert>
-      ))}
-    </div>
   );
 }
 
@@ -1381,25 +1440,45 @@ function SummaryStep({
         </Alert>
       )}
 
-      {pricing.feasibility.map((finding) => (
-        <Alert
-          key={finding.code}
-          severity={finding.severity === 'error' ? 'error' : finding.severity === 'warning' ? 'warning' : 'info'}
-        >
-          <div>{feasibilityMessage(finding)}</div>
-          {finding.requiresAcknowledgement && (
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={acknowledged.has(finding.code)}
-                  onChange={(e) => onAcknowledge(finding.code, e.target.checked)}
-                />
-              }
-              label={SITE.configuratorAcknowledgeRequiredPl}
-            />
-          )}
-        </Alert>
-      ))}
+      {/* 2026-08-29 second follow-up, owner feedback: "dymki" (alert
+          bubbles) shouldn't carry information that isn't actually a
+          reactive per-selection warning. NATURAL_VARIATION is true for
+          every selection of a natural-variable material regardless of size
+          — real product specification, not something the customer needs
+          to acknowledge or react to — so it renders as a plain caption
+          below instead of a boxed `Alert`. Everything else here (line
+          width, detail spacing, and anything requiring acknowledgement)
+          stays a real `Alert`: those genuinely depend on the current
+          material/size/design combination and can genuinely block
+          production. */}
+      {pricing.feasibility
+        .filter((finding) => finding.code !== 'NATURAL_VARIATION')
+        .map((finding) => (
+          <Alert
+            key={finding.code}
+            severity={finding.severity === 'error' ? 'error' : finding.severity === 'warning' ? 'warning' : 'info'}
+          >
+            <div>{feasibilityMessage(finding)}</div>
+            {finding.requiresAcknowledgement && (
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={acknowledged.has(finding.code)}
+                    onChange={(e) => onAcknowledge(finding.code, e.target.checked)}
+                  />
+                }
+                label={SITE.configuratorAcknowledgeRequiredPl}
+              />
+            )}
+          </Alert>
+        ))}
+      {pricing.feasibility
+        .filter((finding) => finding.code === 'NATURAL_VARIATION')
+        .map((finding) => (
+          <Typography key={finding.code} variant="caption" color="text.secondary">
+            {feasibilityMessage(finding)}
+          </Typography>
+        ))}
 
       {pricing.moduleLayout.totalModules > 1 && (
         <div>

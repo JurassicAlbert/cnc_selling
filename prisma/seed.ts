@@ -79,6 +79,7 @@ import opentype from 'opentype.js';
 
 import { PrismaClient } from '../src/generated/prisma/client';
 import { POLISH_SPECIFIC_LETTERS } from '../src/domain/personalization/validate';
+import { formatMmAsCentimetres } from '../src/domain/text/numeric-input';
 
 const adapter = new PrismaPg({ connectionString: requireEnv('DATABASE_URL') });
 const prisma = new PrismaClient({ adapter });
@@ -109,10 +110,11 @@ async function main(): Promise<void> {
   const finishes = await seedFinishes();
   await seedMaterialFinishCompatibility(materials, finishes);
   const designs = await seedDesigns();
+  await seedDesignCollections(designs);
   const font = await seedFont();
 
   const categories = await seedCategories();
-  await seedProducts(categories, materials, designs, font);
+  await seedProducts(categories, materials, finishes, designs, font);
   await seedBlogPosts();
   await seedFaqs();
   await seedExternalPatternResources();
@@ -276,17 +278,33 @@ async function seedFirstAdmin(): Promise<void> {
 // 2. Catalogue — materials, finishes, the placeholder design
 // ---------------------------------------------------------------------------
 
-type SeededMaterials = { readonly dab: { readonly id: string }; readonly gres: { readonly id: string } };
+type SeededMaterials = {
+  readonly dab: { readonly id: string };
+  readonly gres: { readonly id: string };
+  readonly swierk: { readonly id: string };
+  readonly modrzew: { readonly id: string };
+  readonly sosna: { readonly id: string };
+};
 
 /**
- * Two materials, deliberately minimal: oak (wood, used by four of the five
- * real categories) and white gres (ceramic, used by the gres category
- * itself). Metal and leather for the jewellery line exist as a decision —
- * "keep hidden for now, possible to unlock" — but are NOT seeded here.
- * Leather needs no schema change when that day comes (the `LEATHER`
- * `MaterialFamily` value already exists); metal does (no `METAL` value
- * exists yet). Both are deferred rather than half-seeded as invisible rows,
- * so there is nothing to forget was there.
+ * 2026-08-29, owner request: "add more material (dąb, świerk, modrzew,
+ * sosna)" — three real, distinct softwood species alongside the existing
+ * dąb (oak, hardwood) and gres (ceramic, unrelated). No real photography
+ * exists for any of the three yet, so each gets the same honest "photo
+ * pending" placeholder SVG `wzor-podstawowy.svg` already established
+ * (`seedDesigns`'s own header comment) — never dąb's real photo reused
+ * under a different name, which would misrepresent what the material
+ * actually looks like. `pricePerM2Grosze` values are placeholder estimates
+ * (`TODO_PRICING`, same discipline as every other price in this file) —
+ * softwood cheaper than dąb, modrzew (larch — denser, weather-resistant)
+ * priced above świerk/sosna (spruce/pine).
+ *
+ * Metal and leather for the jewellery line exist as a decision — "keep
+ * hidden for now, possible to unlock" — but are NOT seeded here. Leather
+ * needs no schema change when that day comes (the `LEATHER` `MaterialFamily`
+ * value already exists); metal does (no `METAL` value exists yet). Both are
+ * deferred rather than half-seeded as invisible rows, so there is nothing
+ * to forget was there.
  */
 async function seedMaterials(): Promise<SeededMaterials> {
   const dab = await prisma.material.upsert({
@@ -338,12 +356,94 @@ async function seedMaterials(): Promise<SeededMaterials> {
     update: {},
   });
 
-  console.log(`Material: ${dab.namePl}, ${gres.namePl}`);
-  return { dab, gres };
+  const swierk = await prisma.material.upsert({
+    where: { slug: 'swierk' },
+    create: {
+      slug: 'swierk',
+      namePl: 'Świerk',
+      family: 'SOLID_WOOD',
+      shortDescPl: 'Lite drewno świerkowe, jasny ton, delikatny rysunek słojów.',
+      characteristicsPl:
+        'Drewno naturalne — usłojenie, odcień i ewentualne sęki różnią się w każdym egzemplarzu.',
+      imageUrl: PLACEHOLDER_IMAGE('material-swierk'),
+      pricePerM2Grosze: 9_000, // TODO_PRICING
+      maxSheetWidthMm: 1200,
+      maxSheetHeightMm: 2400,
+      minLineWidthUm: 1_200,
+      minDetailSpacingUm: 2_000,
+      minTextHeightUm: 6_000,
+      grainDirection: 'LENGTHWISE',
+      supportsCnc: true,
+      supportsLaser: true,
+      isNaturalVariable: true,
+      isAvailable: true,
+    },
+    update: {},
+  });
+
+  const modrzew = await prisma.material.upsert({
+    where: { slug: 'modrzew' },
+    create: {
+      slug: 'modrzew',
+      namePl: 'Modrzew',
+      family: 'SOLID_WOOD',
+      shortDescPl: 'Lite drewno modrzewiowe, ciepły czerwonawy ton, odporne na warunki zewnętrzne.',
+      characteristicsPl:
+        'Drewno naturalne — usłojenie, odcień i ewentualne sęki różnią się w każdym egzemplarzu.',
+      imageUrl: PLACEHOLDER_IMAGE('material-modrzew'),
+      pricePerM2Grosze: 12_000, // TODO_PRICING
+      maxSheetWidthMm: 1200,
+      maxSheetHeightMm: 2400,
+      minLineWidthUm: 1_200,
+      minDetailSpacingUm: 2_000,
+      minTextHeightUm: 6_000,
+      grainDirection: 'LENGTHWISE',
+      supportsCnc: true,
+      supportsLaser: true,
+      isNaturalVariable: true,
+      isAvailable: true,
+    },
+    update: {},
+  });
+
+  const sosna = await prisma.material.upsert({
+    where: { slug: 'sosna' },
+    create: {
+      slug: 'sosna',
+      namePl: 'Sosna',
+      family: 'SOLID_WOOD',
+      shortDescPl: 'Lite drewno sosnowe, jasny ton, wyraźne sęki.',
+      characteristicsPl:
+        'Drewno naturalne — usłojenie, odcień i ewentualne sęki różnią się w każdym egzemplarzu.',
+      imageUrl: PLACEHOLDER_IMAGE('material-sosna'),
+      pricePerM2Grosze: 8_000, // TODO_PRICING
+      maxSheetWidthMm: 1200,
+      maxSheetHeightMm: 2400,
+      minLineWidthUm: 1_200,
+      minDetailSpacingUm: 2_000,
+      minTextHeightUm: 6_000,
+      grainDirection: 'LENGTHWISE',
+      supportsCnc: true,
+      supportsLaser: true,
+      isNaturalVariable: true,
+      isAvailable: true,
+    },
+    update: {},
+  });
+
+  console.log(
+    `Material: ${dab.namePl}, ${gres.namePl}, ${swierk.namePl}, ${modrzew.namePl}, ${sosna.namePl}`,
+  );
+  return { dab, gres, swierk, modrzew, sosna };
 }
 
-type SeededFinishes = { readonly olejowanie: { readonly id: string } };
+type SeededFinishes = {
+  readonly olejowanie: { readonly id: string };
+  readonly bejcowanie: { readonly id: string };
+  readonly lakierowanie: { readonly id: string };
+};
 
+/** 2026-08-29, owner request: "add more ... wykończenie (olejowanie, bejcowanie, lakierowanie)" — real, distinct finish kinds, both `FinishKind` values already existed in the schema (`STAIN`, `VARNISH`). Availability per material/product is a separate, later step (`seedMaterialFinishCompatibility`/`seedProductFinishExclusions`) — this function only creates the three real rows. */
 async function seedFinishes(): Promise<SeededFinishes> {
   const olejowanie = await prisma.finish.upsert({
     where: { slug: 'olejowanie' },
@@ -361,28 +461,97 @@ async function seedFinishes(): Promise<SeededFinishes> {
     },
     update: {},
   });
-  console.log(`Finish: ${olejowanie.namePl}`);
-  return { olejowanie };
+
+  const bejcowanie = await prisma.finish.upsert({
+    where: { slug: 'bejcowanie' },
+    create: {
+      slug: 'bejcowanie',
+      namePl: 'Bejcowanie',
+      kind: 'STAIN',
+      descPl: 'Bejca barwiąca drewno przy zachowaniu widocznego usłojenia.',
+      imageUrl: STOCK_PHOTO('material-dab'),
+      pricePerM2Grosze: 5_000, // TODO_PRICING
+      setupFeeGrosze: 0,
+      extraDaysMin: 1,
+      extraDaysMax: 3,
+      isAvailable: true,
+    },
+    update: {},
+  });
+
+  const lakierowanie = await prisma.finish.upsert({
+    where: { slug: 'lakierowanie' },
+    create: {
+      slug: 'lakierowanie',
+      namePl: 'Lakierowanie',
+      kind: 'VARNISH',
+      descPl: 'Bezbarwny lakier, najwyższa odporność na wilgoć i zarysowania.',
+      imageUrl: STOCK_PHOTO('material-dab'),
+      pricePerM2Grosze: 6_000, // TODO_PRICING
+      setupFeeGrosze: 0,
+      extraDaysMin: 2,
+      extraDaysMax: 4,
+      isAvailable: true,
+    },
+    update: {},
+  });
+
+  console.log(`Finish: ${olejowanie.namePl}, ${bejcowanie.namePl}, ${lakierowanie.namePl}`);
+  return { olejowanie, bejcowanie, lakierowanie };
 }
 
+/**
+ * 2026-08-29: every solid-wood material now supports all three finishes at
+ * the *material* level — dąb/świerk/modrzew/sosna can each genuinely be
+ * oiled, stained, or varnished. Which of those a given *product* actually
+ * offers is a separate, narrower rule (`seedProductFinishExclusions`,
+ * below) — a real e.g. "Obrazy" wall-art product can still be restricted to
+ * olejowanie only even though dąb itself supports all three. Gres is not
+ * finished the same way — no row for it, which means the FINISH step for
+ * gres products currently has nothing to offer. Acceptable for P2
+ * (catalogue display); a real gap for P3 (configurator) to close before
+ * that step ships for KITCHEN_TILE.
+ */
 async function seedMaterialFinishCompatibility(
   materials: SeededMaterials,
   finishes: SeededFinishes,
 ): Promise<void> {
-  // Oak can be oiled. Gres is not finished the same way — no row for it,
-  // which means the FINISH step for gres products currently has nothing to
-  // offer. Acceptable for P2 (catalogue display); a real gap for P3
-  // (configurator) to close before that step ships for KITCHEN_TILE.
-  await prisma.materialFinish.upsert({
-    where: {
-      materialId_finishId: { materialId: materials.dab.id, finishId: finishes.olejowanie.id },
-    },
-    create: { materialId: materials.dab.id, finishId: finishes.olejowanie.id },
-    update: {},
-  });
+  const woods = [materials.dab, materials.swierk, materials.modrzew, materials.sosna];
+  const allFinishes = [finishes.olejowanie, finishes.bejcowanie, finishes.lakierowanie];
+  for (const material of woods) {
+    for (const finish of allFinishes) {
+      await prisma.materialFinish.upsert({
+        where: { materialId_finishId: { materialId: material.id, finishId: finish.id } },
+        create: { materialId: material.id, finishId: finish.id },
+        update: {},
+      });
+    }
+  }
 }
 
-type SeededDesign = { readonly id: string };
+/**
+ * 2026-08-29, owner request, verbatim: "bejcowanie and lakierowanie is not
+ * available by default for Obrazy" — the "Obrazy" category's one product
+ * (`obraz-drewniany-z-grawerem`) keeps only olejowanie even though its
+ * material (dąb) supports all three at the compatibility level above. See
+ * `ProductFinishExclusion`'s own schema comment for why this needs a
+ * product-scoped rule rather than a material-scoped one: other dąb products
+ * (loft, panel, szachownica) are NOT excluded, so they keep all three.
+ */
+async function seedProductFinishExclusions(
+  productId: string,
+  finishIds: readonly string[],
+): Promise<void> {
+  for (const finishId of finishIds) {
+    await prisma.productFinishExclusion.upsert({
+      where: { productId_finishId: { productId, finishId } },
+      create: { productId, finishId },
+      update: {},
+    });
+  }
+}
+
+type SeededDesign = { readonly id: string; readonly slug: string };
 
 const PATTERN_IMAGE = (slug: string) => `/images/patterns/${slug}.svg`;
 
@@ -503,6 +672,59 @@ async function seedDesigns(): Promise<readonly SeededDesign[]> {
     designs.push(design);
   }
   return designs;
+}
+
+type DesignCollectionSeedInput = {
+  readonly slug: string;
+  readonly namePl: string;
+  readonly descPl: string;
+  readonly sortOrder: number;
+  readonly memberSlugs: readonly string[];
+};
+
+/**
+ * 2026-08-29, owner request: "make [patterns] into pattern's categories".
+ * `DesignCollection` already existed (admin CRUD at `/panel/kolekcje`,
+ * unrelated to `ProductCollection`) but had zero seeded rows before this —
+ * these two groupings sort this session's own six original patterns
+ * (`DESIGN_SEEDS`, above) by real visual theme. `wzor-podstawowy` (still a
+ * placeholder) and `fala-drewna` (a wood-grain motif, not roślinny or
+ * geometryczny) are deliberately left uncategorised rather than forced into
+ * a bucket that doesn't fit — same "don't force it" discipline as every
+ * other real/honest-gap decision in this file.
+ */
+const DESIGN_COLLECTION_SEEDS: readonly DesignCollectionSeedInput[] = [
+  {
+    slug: 'motywy-roslinne',
+    namePl: 'Motywy roślinne',
+    descPl: 'Wzory czerpiące z natury — gałązki, liście, kwiatowe mandale.',
+    sortOrder: 1,
+    memberSlugs: ['galazka-oliwna', 'mandala-botaniczna'],
+  },
+  {
+    slug: 'motywy-geometryczne',
+    namePl: 'Motywy geometryczne',
+    descPl: 'Symetryczne, precyzyjne wzory — kompasy, okręgi, linie.',
+    sortOrder: 2,
+    memberSlugs: ['kompas-nawigacyjny', 'wzor-geometryczny'],
+  },
+];
+
+async function seedDesignCollections(designs: readonly SeededDesign[]): Promise<void> {
+  const designIdBySlug = new Map(designs.map((design) => [design.slug, design.id]));
+  for (const input of DESIGN_COLLECTION_SEEDS) {
+    const collection = await prisma.designCollection.upsert({
+      where: { slug: input.slug },
+      create: { slug: input.slug, namePl: input.namePl, descPl: input.descPl, sortOrder: input.sortOrder, isActive: true },
+      update: {},
+    });
+    for (const memberSlug of input.memberSlugs) {
+      const designId = designIdBySlug.get(memberSlug);
+      if (designId === undefined) continue;
+      await prisma.design.update({ where: { id: designId }, data: { collectionId: collection.id } });
+    }
+    console.log(`DesignCollection: ${collection.namePl} (${input.memberSlugs.length} wzorów)`);
+  }
 }
 
 /**
@@ -995,6 +1217,27 @@ const EXTERNAL_PATTERN_RESOURCE_SEEDS: readonly ExternalPatternResourceSeed[] = 
     sourceLabel: 'freelaserfile.com',
     sortOrder: 3,
   },
+  /**
+   * 2026-08-29, owner request. Visited and checked directly (`Browser`),
+   * same as every other row here — real red flag found and disclosed
+   * rather than hidden: unlike the three resources above (genuinely free,
+   * no account needed), Magnific (the rebranded Freepik) is a large stock
+   * -content marketplace whose "grawer" category is overwhelmingly labelled
+   * "Premium" (paid licence) or "Wygenerowano przez AI", not a free-file
+   * repository — the description below says so plainly rather than
+   * implying it belongs in the same "free to use" bucket as the rest of
+   * this list. No artwork or files from this site were copied into this
+   * project's own `Design` catalogue (§12/rights discipline) — it's linked
+   * as a paid reference/inspiration source only.
+   */
+  {
+    namePl: 'Magnific (dawniej Freepik) — grawer, głównie treści płatne',
+    url: 'https://www.magnific.com/pl/darmowe-zdjecie-wektory/grawer',
+    descPl:
+      'Duży, zewnętrzny serwis stockowy (dawniej Freepik) z wektorami/zdjęciami na temat grawerunku. Większość wyników jest oznaczona jako Premium (płatna licencja) lub wygenerowana przez AI — to nie jest baza darmowych plików jak pozostałe pozycje na tej liście. To nie są nasze materiały — żaden plik stąd nie został skopiowany do naszego katalogu wzorów; przed jakimkolwiek użyciem sprawdź licencję konkretnego zasobu na tej stronie.',
+    sourceLabel: 'magnific.com',
+    sortOrder: 4,
+  },
 ];
 
 async function seedExternalPatternResources(): Promise<void> {
@@ -1170,6 +1413,7 @@ async function seedPaymentMethodConfigs(): Promise<void> {
 async function seedProducts(
   categories: Record<string, { readonly id: string }>,
   materials: SeededMaterials,
+  finishes: SeededFinishes,
   designs: readonly SeededDesign[],
   font: { readonly id: string },
 ): Promise<void> {
@@ -1217,8 +1461,9 @@ async function seedProducts(
     { thicknessMm: 27, labelPl: '27 mm' },
     { thicknessMm: 40, labelPl: '40 mm' },
   ]);
-  await seedProductMaterial(loftStool.id, materials.dab.id);
+  await seedProductMaterials(loftStool.id, [materials.dab.id, materials.swierk.id, materials.modrzew.id, materials.sosna.id]);
   await seedProductDesigns(loftStool.id, designs);
+  await seedProductPresetSizes(loftStool.id, { minWidthMm: 250, maxWidthMm: 400, minHeightMm: 250, maxHeightMm: 400 });
   await seedProductImage(loftStool.id, STOCK_PHOTO('loft'), 'Stołek loftowy z grawerem — stal i drewno w stylu loft');
   await seedPersonalizationSpec(loftStool.id, {
     maxCharacters: 30,
@@ -1247,8 +1492,9 @@ async function seedProducts(
     minHeightMm: 15,
     maxHeightMm: 30,
   });
-  await seedProductMaterial(bransoletka.id, materials.dab.id);
+  await seedProductMaterials(bransoletka.id, [materials.dab.id, materials.swierk.id, materials.modrzew.id, materials.sosna.id]);
   await seedProductDesigns(bransoletka.id, designs);
+  await seedProductPresetSizes(bransoletka.id, { minWidthMm: 40, maxWidthMm: 220, minHeightMm: 15, maxHeightMm: 30 });
   await seedProductImage(
     bransoletka.id,
     STOCK_PHOTO('amulety-i-bransoletki'),
@@ -1284,6 +1530,7 @@ async function seedProducts(
   });
   await seedProductMaterial(fartuch.id, materials.gres.id);
   await seedProductDesigns(fartuch.id, designs);
+  await seedProductPresetSizes(fartuch.id, { minWidthMm: 300, maxWidthMm: 1200, minHeightMm: 300, maxHeightMm: 700 });
   await seedProductImage(fartuch.id, STOCK_PHOTO('gres'), 'Biały gres z grawerowanym wzorem');
   await seedInstallationVariant(fartuch.id, {
     code: 'ON_TOP',
@@ -1318,8 +1565,11 @@ async function seedProducts(
     { thicknessMm: 14, labelPl: '14 mm' },
     { thicknessMm: 20, labelPl: '20 mm' },
   ]);
-  await seedProductMaterial(panel.id, materials.dab.id);
+  await seedProductMaterials(panel.id, [materials.dab.id, materials.swierk.id, materials.modrzew.id, materials.sosna.id]);
   await seedProductDesigns(panel.id, designs);
+  // No seedProductPresetSizes call — this product's own requiresExactSize:
+  // true above means a fixed S/M/L list would be actively wrong, not just
+  // unhelpful (see ProductPresetSize's own use in Configurator.tsx).
   await seedProductImage(
     panel.id,
     STOCK_PHOTO('panele-podlogowe'),
@@ -1346,8 +1596,12 @@ async function seedProducts(
     minHeightMm: 200,
     maxHeightMm: 1200,
   });
-  await seedProductMaterial(obraz.id, materials.dab.id);
+  await seedProductMaterials(obraz.id, [materials.dab.id, materials.swierk.id, materials.modrzew.id, materials.sosna.id]);
   await seedProductDesigns(obraz.id, designs);
+  await seedProductPresetSizes(obraz.id, { minWidthMm: 200, maxWidthMm: 1200, minHeightMm: 200, maxHeightMm: 1200 });
+  // Owner request, verbatim: "bejcowanie and lakierowanie is not available
+  // by default for Obrazy" — this is the "Obrazy" category's one product.
+  await seedProductFinishExclusions(obraz.id, [finishes.bejcowanie.id, finishes.lakierowanie.id]);
   await seedProductImage(
     obraz.id,
     STOCK_PHOTO('obrazy-drewniane'),
@@ -1395,8 +1649,9 @@ async function seedProducts(
     minHeightMm: 300,
     maxHeightMm: 600,
   });
-  await seedProductMaterial(szachownica.id, materials.dab.id);
+  await seedProductMaterials(szachownica.id, [materials.dab.id, materials.swierk.id, materials.modrzew.id, materials.sosna.id]);
   await seedProductDesigns(szachownica.id, designs);
+  await seedProductPresetSizes(szachownica.id, { minWidthMm: 300, maxWidthMm: 600, minHeightMm: 300, maxHeightMm: 600 });
   await seedPersonalizationSpec(szachownica.id, {
     maxCharacters: 30,
     maxLines: 1,
@@ -1439,7 +1694,8 @@ async function seedProducts(
     minHeightMm: 200,
     maxHeightMm: 1200,
   });
-  await seedProductMaterial(wlasnyProjekt.id, materials.dab.id);
+  await seedProductMaterials(wlasnyProjekt.id, [materials.dab.id, materials.swierk.id, materials.modrzew.id, materials.sosna.id]);
+  await seedProductPresetSizes(wlasnyProjekt.id, { minWidthMm: 200, maxWidthMm: 1200, minHeightMm: 200, maxHeightMm: 1200 });
   await seedProductImage(wlasnyProjekt.id, STOCK_PHOTO('inne'), 'Dębowy element przygotowany pod własny grawerowany projekt');
   await seedPersonalizationSpec(wlasnyProjekt.id, {
     maxCharacters: 40,
@@ -1530,6 +1786,52 @@ async function seedProductMaterial(productId: string, materialId: string): Promi
     create: { productId, materialId },
     update: {},
   });
+}
+
+/** Plural form for the 2026-08-29 four-wood-species catalogue — every wood product now offers dąb/świerk/modrzew/sosna, not just dąb alone. */
+async function seedProductMaterials(productId: string, materialIds: readonly string[]): Promise<void> {
+  for (const materialId of materialIds) {
+    await seedProductMaterial(productId, materialId);
+  }
+}
+
+/**
+ * S/M/L, computed from the product's own real dimension envelope
+ * (`minWidthMm`/`maxWidthMm`/`minHeightMm`/`maxHeightMm`) rather than
+ * invented numbers — real bounds a product's own `upsertProduct` call
+ * already declared, just surfaced as three concrete pick-one choices
+ * instead of a free-typed range. Skipped entirely for `requiresExactSize`
+ * products (floor elements) — see `ProductPresetSize`'s use in
+ * `Configurator.tsx` for why a fixed list makes no sense there.
+ */
+async function seedProductPresetSizes(
+  productId: string,
+  envelope: { readonly minWidthMm: number; readonly maxWidthMm: number; readonly minHeightMm: number; readonly maxHeightMm: number },
+): Promise<void> {
+  const mid = (min: number, max: number) => Math.round((min + max) / 2);
+  const presets = [
+    { widthMm: envelope.minWidthMm, heightMm: envelope.minHeightMm, labelPl: 'Mały', sortOrder: 0 },
+    {
+      widthMm: mid(envelope.minWidthMm, envelope.maxWidthMm),
+      heightMm: mid(envelope.minHeightMm, envelope.maxHeightMm),
+      labelPl: 'Średni',
+      sortOrder: 1,
+    },
+    { widthMm: envelope.maxWidthMm, heightMm: envelope.maxHeightMm, labelPl: 'Duży', sortOrder: 2 },
+  ];
+  for (const preset of presets) {
+    await prisma.productPresetSize.upsert({
+      where: { productId_widthMm_heightMm: { productId, widthMm: preset.widthMm, heightMm: preset.heightMm } },
+      create: {
+        productId,
+        widthMm: preset.widthMm,
+        heightMm: preset.heightMm,
+        labelPl: `${preset.labelPl} (${formatMmAsCentimetres(preset.widthMm)}×${formatMmAsCentimetres(preset.heightMm)} cm)`,
+        sortOrder: preset.sortOrder,
+      },
+      update: {},
+    });
+  }
 }
 
 async function seedProductDesign(productId: string, designId: string): Promise<void> {

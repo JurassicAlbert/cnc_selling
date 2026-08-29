@@ -70,6 +70,14 @@ export type FontOptionRow = {
   readonly fileUrl: string;
 };
 
+/** A real `ProductPresetSize` row — 2026-08-29: SIZE picked from a short, real, staff-curated list instead of typed free-form, wherever the product doesn't require an exact customer-supplied size (`Product.requiresExactSize`). */
+export type PresetSizeOptionRow = {
+  readonly id: string;
+  readonly widthMm: number;
+  readonly heightMm: number;
+  readonly labelPl: string;
+};
+
 export type ConfiguratorOptionData = {
   readonly materials: readonly (MaterialOptionRow & {
     readonly finishes: readonly FinishOptionRow[];
@@ -79,6 +87,8 @@ export type ConfiguratorOptionData = {
   readonly installVariants: readonly InstallationVariantOptionRow[];
   /** Already scoped to this product's `PersonalizationSpec.allowedFontIds` — never every Font row. */
   readonly fonts: readonly FontOptionRow[];
+  /** Empty for a product with none seeded yet, or for one where `requiresExactSize` makes a fixed list nonsensical. */
+  readonly presetSizes: readonly PresetSizeOptionRow[];
 };
 
 export type ResolvedOptions = {

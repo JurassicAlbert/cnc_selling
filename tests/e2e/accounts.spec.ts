@@ -84,25 +84,18 @@ async function login(page: Page, params: { readonly email: string; readonly pass
 // swatch/field picker) — every swatch/field below is clicked/filled
 // directly, no "Dalej" clicks between them.
 //
-// 2026-08-29: DESIGN/MATERIAL/FINISH/SIZE moved into a breadcrumb trail —
-// each is a crumb `<button>` (still inside `<main>`) that opens a `Menu`
-// or `Popover` rendered in a React portal outside `<main>`, so their
-// contents are queried unscoped (`page.getByRole`), not `main.getByRole`.
+// 2026-08-29, owner feedback: "The price for the product should be clear,
+// no waiting for configure — we have price". DESIGN/MATERIAL/WYKOŃCZENIE/
+// WYMIARY now default to a real, already-feasible selection (the product's
+// own first design/material/finish and its middle `ProductPresetSize`) the
+// instant the page loads — this test needs nothing beyond that default, so
+// it goes straight to "Dodaj do koszyka". No crumb click needed at all.
 async function addSampleConfigurationToCart(page: Page): Promise<void> {
   await page.goto('/produkt/obraz-drewniany-z-grawerem');
   const main = page.getByRole('main');
-  await main.getByRole('button', { name: 'Wzór' }).click();
-  await page.getByRole('menuitem', { name: 'Wzór podstawowy — do zastąpienia' }).click();
-  await main.getByRole('button', { name: 'Materiał' }).click();
-  await page.getByRole('menuitem', { name: 'Dąb', exact: true }).click();
-  await main.getByRole('button', { name: 'Wymiary' }).click();
-  await fillReliably(page.getByRole('textbox', { name: 'Szerokość (cm)' }), '70');
-  await page.getByRole('textbox', { name: 'Szerokość (cm)' }).blur();
-  await fillReliably(page.getByRole('textbox', { name: 'Wysokość (cm)' }), '50');
-  await page.getByRole('textbox', { name: 'Wysokość (cm)' }).blur();
-  await main.getByRole('button', { name: 'Wykończenie' }).click();
-  await page.getByRole('menuitem', { name: 'Olejowanie' }).click();
-  await main.getByRole('button', { name: 'Dodaj do koszyka' }).click();
+  const addToCartButton = main.getByRole('button', { name: 'Dodaj do koszyka' });
+  await expect(addToCartButton).toBeEnabled();
+  await addToCartButton.click();
   await expect(page).toHaveURL('/koszyk');
 }
 
