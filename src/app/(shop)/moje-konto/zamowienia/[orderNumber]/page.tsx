@@ -41,10 +41,10 @@ export default async function AccountOrderDetailPage({ params }: AccountOrderDet
     <div>
       <Heading level={1}>{SITE.orderNumberLabelPl}: {order.orderNumber}</Heading>
       <Text muted>{order.email}</Text>
-      <OrderStatusBanner status={order.status} />
 
       <div style={{ marginBlockStart: 24 }}>
         <ThemeRegistry>
+          <OrderStatusBanner status={order.status} />
           <AccountOrderDetail order={order} bankDetails={storeSettings} />
 
           {order.status === 'COMPLETED' && (

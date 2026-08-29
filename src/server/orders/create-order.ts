@@ -16,6 +16,8 @@
 
 import { randomBytes } from 'node:crypto';
 
+import { revalidatePath } from 'next/cache';
+
 import { sumGrosze } from '@/domain/money/money';
 import { checkOrderStatusTransition } from '@/domain/order-status/transitions';
 import type { OrderStatus } from '@/domain/order-status/transitions';
@@ -247,6 +249,17 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
 
     return { orderId: order.id, orderNumber: number };
   });
+
+  // 2026-08-29, owner feedback: "koszyk nie restuje się od razu po
+  // skończeniu zamówienia" — a real bug, not a display choice. The cart
+  // rows ARE deleted above, but Next.js's client Router Cache can keep
+  // serving the PREVIOUS cached render of the root layout (which is what
+  // renders `SiteHeader`'s cart badge) for up to 30s after a soft
+  // navigation, since nothing here ever told it that layout's data had
+  // changed. `revalidatePath('/', 'layout')` invalidates that cached
+  // render so the very next request — including the redirect below —
+  // picks up the now-empty cart immediately, not eventually.
+  revalidatePath('/', 'layout');
 
   // After commit, never inside the transaction — network I/O must not hold
   // a pooled DB connection open, and a mailer failure must never undo an

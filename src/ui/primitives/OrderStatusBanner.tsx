@@ -1,7 +1,8 @@
+import { Alert, AlertTitle } from '@mui/material';
+
 import type { OrderStatus } from '@/generated/prisma/enums';
 import { orderStatusMessage } from '@/content/pl/messages';
 import { SITE } from '@/content/pl/site';
-import { Text } from '@/ui/primitives/Text';
 
 /**
  * 2026-08-29, owner feedback: "Jeśli zamówienie zostało rozpoczęte, ale
@@ -9,9 +10,13 @@ import { Text } from '@/ui/primitives/Text';
  * być możliwość i informacja do kontynuowania z konta klienta" — a real,
  * prominent status banner at the top of both order-confirmation surfaces
  * (guest `/zamowienie/[orderNumber]`, account `/moje-konto/zamowienia/
- * [orderNumber]`), not just a `Chip` buried lower on the page. Plain RSC
- * styling (no MUI — both call sites live under `(shop)`, where
- * `ARCHITECTURE.md` §2.1 forbids importing it directly).
+ * [orderNumber]`), not just a `Chip` buried lower on the page.
+ *
+ * 2026-08-29 rewrite (same day, next round): first version was raw HTML —
+ * owner called it out directly ("Dymki z informacjami to dalej typowy
+ * vanilla/raw html/css"). Real MUI `Alert` now (no `'use client'`
+ * needed — see `OrderSummary.tsx`'s own header comment for why that's
+ * safe here).
  *
  * `AWAITING_PAYMENT`/`CANCELLED` get an explicit, actionable note; every
  * other status just shows the plain status message — `OrderSummary`
@@ -21,23 +26,13 @@ import { Text } from '@/ui/primitives/Text';
  * impossible to miss first.
  */
 export function OrderStatusBanner({ status }: { readonly status: OrderStatus }) {
-  const tone = status === 'CANCELLED' ? 'var(--mui-palette-error-main)' : status === 'AWAITING_PAYMENT' ? 'var(--mui-palette-warning-main, #b26a00)' : 'var(--mui-palette-secondary-main)';
+  const severity = status === 'CANCELLED' ? 'error' : status === 'AWAITING_PAYMENT' ? 'warning' : 'info';
 
   return (
-    <div
-      style={{
-        marginBlockStart: 16,
-        padding: '12px 16px',
-        borderRadius: 'var(--radius-card)',
-        border: `1px solid ${tone}`,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 4,
-      }}
-    >
-      <p style={{ font: 'var(--mui-font-subtitle1)', color: tone, fontWeight: 600, margin: 0 }}>{orderStatusMessage(status)}</p>
-      {status === 'AWAITING_PAYMENT' && <Text muted>{SITE.orderAwaitingPaymentNoticePl}</Text>}
-      {status === 'CANCELLED' && <Text muted>{SITE.orderCancelledNoticePl}</Text>}
-    </div>
+    <Alert severity={severity} variant="outlined" sx={{ mb: 3 }}>
+      <AlertTitle sx={{ fontWeight: 600 }}>{orderStatusMessage(status)}</AlertTitle>
+      {status === 'AWAITING_PAYMENT' && SITE.orderAwaitingPaymentNoticePl}
+      {status === 'CANCELLED' && SITE.orderCancelledNoticePl}
+    </Alert>
   );
 }

@@ -13,6 +13,7 @@
  */
 
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import { Alert, Box, Card, CardContent, Chip, Divider, Stack, Typography } from '@mui/material';
 
@@ -156,6 +157,18 @@ export function AccountOrderDetail({
             <Alert severity="info" sx={{ mt: 3 }}>
               {SITE.orderContactArrangedNoticePl}
             </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card variant="outlined">
+        <CardContent>
+          <CardHeading icon={LocationOnIcon} heading={SITE.orderDeliveryMethodHeadingPl} />
+          <Typography variant="body2">{order.deliveryMethodNamePl}</Typography>
+          {order.pickupPointLabel !== null && (
+            <Typography variant="body2" color="text.secondary">
+              {order.pickupPointLabel}
+            </Typography>
           )}
         </CardContent>
       </Card>

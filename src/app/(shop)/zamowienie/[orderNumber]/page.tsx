@@ -70,32 +70,43 @@ export default async function OrderConfirmationPage({ params, searchParams }: Or
           </Text>
         </div>
 
-        <OrderStatusBanner status={order.status} />
-        <OrderSummary order={order} bankDetails={storeSettings} />
-        <OrderShipmentInfo shipment={order.shipment} />
-
+        {/*
+         * 2026-08-29, owner feedback: the status banner/order summary/
+         * shipment info were still raw HTML ("Dymki z informacjami to
+         * dalej typowy vanilla/raw html/css") — all real MUI now, so they
+         * move inside the same `ThemeRegistry` the review/support forms
+         * already needed, instead of sitting outside it as plain HTML.
+         */}
         <div style={{ marginBlockStart: 24 }}>
-          <Text muted>{SITE.orderEmailFollowUpNoticePl}</Text>
-          <Text muted>{COPY.orderReceived}</Text>
+          <ThemeRegistry>
+            <OrderStatusBanner status={order.status} />
+            <div style={{ marginBlockStart: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <OrderSummary order={order} bankDetails={storeSettings} />
+              <OrderShipmentInfo shipment={order.shipment} />
+            </div>
+
+            <div style={{ marginBlockStart: 24 }}>
+              <Text muted>{SITE.orderEmailFollowUpNoticePl}</Text>
+              <Text muted>{COPY.orderReceived}</Text>
+            </div>
+
+            {order.status === 'COMPLETED' &&
+              (reviewStatus !== null ? (
+                <Text muted>{SITE.reviewAlreadySubmittedPl}</Text>
+              ) : (
+                <ReviewForm action={submitGuestReview.bind(null, order.orderNumber, token)} />
+              ))}
+
+            <div style={{ marginBlockStart: 32 }}>
+              <SupportRequestForm
+                action={submitOrderSupportRequest.bind(null, order.orderNumber, token)}
+                heading={SITE.contactOrderContextHeadingPl}
+                intro={SITE.contactOrderContextIntroPl}
+                defaultEmail={order.email}
+              />
+            </div>
+          </ThemeRegistry>
         </div>
-
-        <ThemeRegistry>
-          {order.status === 'COMPLETED' &&
-            (reviewStatus !== null ? (
-              <Text muted>{SITE.reviewAlreadySubmittedPl}</Text>
-            ) : (
-              <ReviewForm action={submitGuestReview.bind(null, order.orderNumber, token)} />
-            ))}
-
-          <div style={{ marginBlockStart: 32 }}>
-            <SupportRequestForm
-              action={submitOrderSupportRequest.bind(null, order.orderNumber, token)}
-              heading={SITE.contactOrderContextHeadingPl}
-              intro={SITE.contactOrderContextIntroPl}
-              defaultEmail={order.email}
-            />
-          </div>
-        </ThemeRegistry>
       </Container>
     </Section>
   );

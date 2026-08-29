@@ -1,8 +1,8 @@
+import { Alert, Chip, Paper, Stack, Typography } from '@mui/material';
+
 import { shipmentStatusMessage } from '@/content/pl/messages';
 import { SITE } from '@/content/pl/site';
 import type { OrderShipmentView } from '@/server/repositories/orders';
-import { Heading } from '@/ui/primitives/Heading';
-import { Text } from '@/ui/primitives/Text';
 
 const dateFormatter = new Intl.DateTimeFormat('pl-PL', { dateStyle: 'long' });
 
@@ -11,53 +11,64 @@ const dateFormatter = new Intl.DateTimeFormat('pl-PL', { dateStyle: 'long' });
  * honest about being manually updated: no live carrier polling exists
  * anywhere in this project (§9/§15), and this component says so directly
  * rather than presenting a status that looks automatically fresh.
+ *
+ * 2026-08-29 rewrite, owner feedback: real MUI, not raw HTML (no
+ * `'use client'` needed — see `OrderSummary.tsx`'s own header comment for
+ * why that's safe here).
  */
 export function OrderShipmentInfo({ shipment }: { readonly shipment: OrderShipmentView | null }) {
   return (
-    <div style={{ marginBlockStart: 24 }}>
-      <Heading level={2}>{SITE.orderShipmentHeadingPl}</Heading>
+    <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>
+      <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+        {SITE.orderShipmentHeadingPl}
+      </Typography>
 
       {shipment === null ? (
-        <Text muted>{SITE.orderShipmentNotYetPreparedPl}</Text>
+        <Typography variant="body2" color="text.secondary">
+          {SITE.orderShipmentNotYetPreparedPl}
+        </Typography>
       ) : (
-        <div style={{ marginBlockStart: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <Text>
-            {SITE.orderShipmentStatusLabelPl}: {shipmentStatusMessage(shipment.status)}
-          </Text>
+        <Stack spacing={1}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            <Typography variant="body2">{SITE.orderShipmentStatusLabelPl}:</Typography>
+            <Chip size="small" label={shipmentStatusMessage(shipment.status)} />
+          </Stack>
           {shipment.carrier !== null && (
-            <Text muted>
+            <Typography variant="body2" color="text.secondary">
               {SITE.orderShipmentCarrierLabelPl}: {shipment.carrier}
-            </Text>
+            </Typography>
           )}
           {shipment.trackingNumber !== null && (
-            <Text muted>
+            <Typography variant="body2" color="text.secondary">
               {SITE.orderShipmentTrackingNumberLabelPl}: {shipment.trackingNumber}
-            </Text>
+            </Typography>
           )}
           {shipment.shippedAt !== null && (
-            <Text muted>
+            <Typography variant="body2" color="text.secondary">
               {SITE.orderShipmentShippedAtLabelPl}: {dateFormatter.format(shipment.shippedAt)}
-            </Text>
+            </Typography>
           )}
           {shipment.estimatedDeliveryAt !== null && (
-            <Text muted>
+            <Typography variant="body2" color="text.secondary">
               {SITE.orderShipmentEstimatedDeliveryLabelPl}: {dateFormatter.format(shipment.estimatedDeliveryAt)}
-            </Text>
+            </Typography>
           )}
           {shipment.deliveredAt !== null && (
-            <Text muted>
+            <Typography variant="body2" color="text.secondary">
               {SITE.orderShipmentDeliveredAtLabelPl}: {dateFormatter.format(shipment.deliveredAt)}
-            </Text>
+            </Typography>
           )}
-          {shipment.customerNotesPl !== null && <Text muted>{shipment.customerNotesPl}</Text>}
+          {shipment.customerNotesPl !== null && <Typography variant="body2">{shipment.customerNotesPl}</Typography>}
           {shipment.issueDescriptionPl !== null && (
-            <Text muted>
+            <Alert severity="warning" sx={{ mt: 0.5 }}>
               {SITE.orderShipmentIssueLabelPl}: {shipment.issueDescriptionPl}
-            </Text>
+            </Alert>
           )}
-          <Text muted>{SITE.orderShipmentManualNoticePl}</Text>
-        </div>
+          <Typography variant="caption" color="text.secondary">
+            {SITE.orderShipmentManualNoticePl}
+          </Typography>
+        </Stack>
       )}
-    </div>
+    </Paper>
   );
 }

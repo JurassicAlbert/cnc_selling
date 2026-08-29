@@ -212,6 +212,7 @@ export const SITE = {
 
   orderConfirmationHeadingPl: 'Zamówienie przyjęte',
   orderItemsHeadingPl: 'Zamówione produkty',
+  orderDeliveryMethodHeadingPl: 'Sposób dostawy',
   orderNumberLabelPl: 'Numer zamówienia',
   orderTotalLabelPl: 'Do zapłaty',
   orderBankTransferHeadingPl: 'Dane do przelewu',

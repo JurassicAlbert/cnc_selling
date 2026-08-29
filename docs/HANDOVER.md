@@ -3525,6 +3525,18 @@ Direct, pointed feedback on round 8's own work — including one real bug (the c
 
 `typecheck`/`lint`/`test` (766/766, +23) /`build` all clean. New migration `20260829020000_add_real_shipping_weight_pricing` applied to dev + test DBs; dev DB reseeded (old flat-rate "Kurier"/"Paczkomat" rows deactivated non-destructively, real weight-tier rows created alongside them). Full Playwright e2e: every previously-affected spec green on a clean serial run across both browser projects; the full parallel run's residual failures land on a different, unrelated test each time — the same documented contention pattern, not a new regression class.
 
+## 9z53. Post-P9 round 10: three real confirmation-page bugs, order-page MUI conversion, honest Przelewy24/BLIK/card status (2026-08-29)
+
+The owner placed a real order end to end and reported back what they actually saw, not a hypothetical — the single most useful kind of feedback this session gets, and it found three genuinely real bugs round 9 missed.
+
+- **The cart-badge staleness bug is worth understanding, not just fixing**: `createOrder` correctly deletes the `CartItem` rows inside its transaction — the DATA was never wrong. What was missing is that Next.js's client Router Cache can keep serving a previously-rendered copy of the root layout (where `SiteHeader`'s cart badge lives) for up to 30 seconds after a soft navigation, and nothing in the checkout flow ever told it that layout's data had changed. `revalidatePath('/', 'layout')` is the fix — one line, but only findable by actually understanding what the Router Cache does and doesn't invalidate on its own, not by staring at the (correct) database code.
+- **A duplication caught and resolved, not left to drift**: `AccountOrderDetail.tsx` turned out to already be a full, separate, real-MUI reimplementation of what `OrderSummary.tsx`/`OrderShipmentInfo.tsx` do — built in an earlier round specifically because the guest confirmation page had no MUI mounted at the time. Now that all three surfaces are real MUI, the two components still aren't merged into one (a real, acknowledged shortcut given the round's scope) — noted here so a future round doesn't have to rediscover the duplication from scratch.
+- **The Przelewy24/BLIK/card ask got a direct, honest answer, not a demo**: the owner clarified they want real BLIK/card/Przelewy24 selectable, not just bank transfer. The real Przelewy24 API client already exists (round 8) and needs exactly one thing this session cannot provide: a real merchant account with Przelewy24, which only the owner can register for. Said so plainly, along with the practical detail that BLIK and card normally come bundled through that same Przelewy24 integration once it's connected — not three separate integrations — so registering once likely solves all three asks at once.
+
+### Verified
+
+`typecheck`/`lint`/`test` (766/766, unchanged — this round rewired existing fields into existing views, not new domain logic) /`build` all clean. Full Playwright e2e 28/30; `checkout.spec.ts` itself fully green, the 2 failures on unrelated specs matching this session's own already-documented parallel-contention pattern.
+
 ## 10. Working style the owner expects
 
 Be direct. Flag genuine risks rather than agreeing pleasantly — the previous

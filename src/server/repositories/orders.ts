@@ -36,6 +36,9 @@ export type OrderConfirmationView = {
   readonly paymentMethod: PaymentMethod;
   readonly totalGrossGrosze: number;
   readonly email: string;
+  /** 2026-08-29, owner feedback: the customer-facing confirmation never showed which delivery method or pickup point they'd actually chosen — a real gap, not by design. */
+  readonly deliveryMethodNamePl: string;
+  readonly pickupPointLabel: string | null;
   readonly items: readonly OrderConfirmationItemView[];
   readonly shipment: OrderShipmentView | null;
 };
@@ -101,6 +104,8 @@ export async function findOrderForUser(orderNumber: string, userId: string): Pro
       paymentMethod: true,
       totalGrossGrosze: true,
       email: true,
+      deliveryMethodNamePl: true,
+      pickupPointLabel: true,
       items: {
         select: { quantity: true, lineGrossGrosze: true, snapshot: true },
       },
@@ -117,6 +122,8 @@ export async function findOrderForUser(orderNumber: string, userId: string): Pro
     paymentMethod: order.paymentMethod,
     totalGrossGrosze: order.totalGrossGrosze,
     email: order.email,
+    deliveryMethodNamePl: order.deliveryMethodNamePl,
+    pickupPointLabel: order.pickupPointLabel,
     items: order.items.map((item) => ({
       quantity: item.quantity,
       lineGrossGrosze: item.lineGrossGrosze,
@@ -139,6 +146,8 @@ export async function findOrderForConfirmation(
       paymentMethod: true,
       totalGrossGrosze: true,
       email: true,
+      deliveryMethodNamePl: true,
+      pickupPointLabel: true,
       items: {
         select: { quantity: true, lineGrossGrosze: true, snapshot: true },
       },
@@ -165,6 +174,8 @@ export async function findOrderForConfirmation(
     paymentMethod: order.paymentMethod,
     totalGrossGrosze: order.totalGrossGrosze,
     email: order.email,
+    deliveryMethodNamePl: order.deliveryMethodNamePl,
+    pickupPointLabel: order.pickupPointLabel,
     items: order.items.map((item) => ({
       quantity: item.quantity,
       lineGrossGrosze: item.lineGrossGrosze,
