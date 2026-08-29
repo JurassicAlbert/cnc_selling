@@ -39,6 +39,34 @@ export default async function CollectionsIndexPage() {
             <Text muted>{SITE.collectionsEmptyPl}</Text>
           </div>
         ) : (
+          <>
+            {/* 2026-08-29, owner request: the same simple, small
+                breadcrumb-style category selection `/wzory` used for its
+                pattern categories — a real quick-jump row, not just the
+                image cards below. Plain RSC-safe pill links (no MUI —
+                ARCHITECTURE.md §2.1, `(shop)` server components can't
+                import it directly), same badge/pill styling this file
+                already uses for `collectionsBadgePl` below. */}
+            <div style={{ marginBlockStart: 24, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {collections.map((collection) => (
+                <Link
+                  key={collection.slug}
+                  href={`/kolekcje/${collection.slug}`}
+                  style={{
+                    display: 'inline-block',
+                    font: 'var(--mui-font-body2)',
+                    color: 'var(--mui-palette-text-primary)',
+                    textDecoration: 'none',
+                    border: '1px solid var(--mui-palette-divider)',
+                    borderRadius: 999,
+                    padding: '6px 16px',
+                  }}
+                >
+                  {collection.namePl}
+                </Link>
+              ))}
+            </div>
+
           <div
             style={{
               marginBlockStart: 32,
@@ -93,6 +121,7 @@ export default async function CollectionsIndexPage() {
               </Link>
             ))}
           </div>
+          </>
         )}
       </Container>
     </Section>

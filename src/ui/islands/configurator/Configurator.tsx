@@ -158,6 +158,20 @@ const QUANTITY = 1;
  */
 const BREADCRUMB_STEPS: readonly StepCode[] = ['DESIGN', 'MATERIAL', 'FINISH', 'SIZE'];
 
+/**
+ * 2026-08-29, owner feedback, verbatim: "sekcja wzorów jest do dupy... nie
+ * usuwajmy tej funkcji zostawmy na przyszłość - tylko wyłącz totalnie z
+ * wizualizacji i ui opcje wybierania wzorów w produktach" (the patterns
+ * section isn't working out — don't remove the feature, leave it for the
+ * future, just turn pattern selection off entirely from the UI). Every
+ * DESIGN-related mechanism stays real and working underneath (the crumb
+ * component, `computeDefaultSelections` still picks a real default design
+ * so WALL_ART-style pricing keeps working, the domain step machine is
+ * untouched) — flipping this one flag back to `true` is the entire
+ * re-enable path, no further code changes needed.
+ */
+const PATTERN_SELECTION_ENABLED = false;
+
 function cmInputFor(mm: number | null): string {
   return mm === null ? '' : formatMmAsCentimetres(mm);
 }
@@ -542,7 +556,7 @@ export function Configurator({
       : null;
 
   const crumbEntries: readonly { readonly step: StepCode; readonly label: string; readonly value: string | null }[] = [
-    ...(steps.includes('DESIGN')
+    ...(PATTERN_SELECTION_ENABLED && steps.includes('DESIGN')
       ? [{ step: 'DESIGN' as const, label: STEP_LABEL.DESIGN, value: selectedLabelOf(designSwatches, selections.designId) }]
       : []),
     ...(steps.includes('MATERIAL')
@@ -592,23 +606,25 @@ export function Configurator({
               ))}
             </Box>
 
-            <Menu anchorEl={crumbAnchor} open={openCrumbStep === 'DESIGN'} onClose={closeCrumb}>
-              {designSwatches.length === 0 ? (
-                <MenuItem disabled>{SITE.configuratorNoOptionsPl}</MenuItem>
-              ) : (
-                designSwatches.map((entry) => (
-                  <DesignMenuItem
-                    key={entry.id}
-                    entry={entry}
-                    selected={entry.id === selections.designId}
-                    onSelect={(id) => {
-                      setSelections({ ...selections, designId: id });
-                      closeCrumb();
-                    }}
-                  />
-                ))
-              )}
-            </Menu>
+            {PATTERN_SELECTION_ENABLED && (
+              <Menu anchorEl={crumbAnchor} open={openCrumbStep === 'DESIGN'} onClose={closeCrumb}>
+                {designSwatches.length === 0 ? (
+                  <MenuItem disabled>{SITE.configuratorNoOptionsPl}</MenuItem>
+                ) : (
+                  designSwatches.map((entry) => (
+                    <DesignMenuItem
+                      key={entry.id}
+                      entry={entry}
+                      selected={entry.id === selections.designId}
+                      onSelect={(id) => {
+                        setSelections({ ...selections, designId: id });
+                        closeCrumb();
+                      }}
+                    />
+                  ))
+                )}
+              </Menu>
+            )}
 
             <Menu anchorEl={crumbAnchor} open={openCrumbStep === 'MATERIAL'} onClose={closeCrumb}>
               {materialOptions.length === 0 ? (

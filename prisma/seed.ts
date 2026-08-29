@@ -1334,34 +1334,99 @@ async function seedExternalPatternResources(): Promise<void> {
  * Create-only, matched by slug, same non-destructive precedent as every
  * other seed function in this file.
  */
+type ProductCollectionSeed = {
+  readonly slug: string;
+  readonly namePl: string;
+  readonly descPl: string;
+  readonly sortOrder: number;
+  readonly memberSlugs: readonly string[];
+};
+
+/**
+ * 2026-08-29, owner request: five real new collections, alongside the
+ * original "Polecane na prezent". Three (`ryfle`, `linoryt`,
+ * `sztuka-japonska`) name real techniques the business's 4-axis CNC can do
+ * (owner, verbatim: "the site sales everything from wood... ryflowanie
+ * drewna, linoryty... Sztuka japońska (łączenie drewna według sztuki
+ * japońskiej)") but that have no matching seeded `Product` rows yet — real,
+ * disclosed gaps, seeded with zero members rather than forcing an
+ * ill-fitting existing product in, same "prepared, not yet populated"
+ * precedent this file already uses elsewhere (`ryfle`/`linoryt`/
+ * `sztuka-japonska` all resolve to `memberSlugs: []`). Real photography for
+ * these was explicitly deferred by the owner to their own future upload,
+ * not something to invent here.
+ */
+const PRODUCT_COLLECTION_SEEDS: readonly ProductCollectionSeed[] = [
+  {
+    slug: 'polecane-na-prezent',
+    namePl: 'Polecane na prezent',
+    descPl:
+      'Nasz gotowy, samodzielnie dobrany wybór produktów, które najczęściej sprawdzają się jako prezent — bez konieczności przechodzenia przez pełną konfigurację. Każdy z nich można też skonfigurować od podstaw z poziomu jego własnej strony produktu.',
+    sortOrder: 1,
+    memberSlugs: ['bransoletka-z-grawerem', 'obraz-drewniany-z-grawerem'],
+  },
+  {
+    slug: 'gry-planszowe-i-figury',
+    namePl: 'Gry planszowe i figury',
+    descPl: 'Drewniane gry planszowe i figury z grawerowanym wykończeniem.',
+    sortOrder: 2,
+    memberSlugs: ['szachownica-z-grawerem'],
+  },
+  {
+    slug: 'ryfle',
+    namePl: 'Ryfle',
+    descPl: 'Ryflowane panele drewniane — regularne, frezowane rowki nadające powierzchni fakturę i głębię.',
+    sortOrder: 3,
+    memberSlugs: [],
+  },
+  {
+    slug: 'linoryt',
+    namePl: 'Linoryt',
+    descPl: 'Obrazy w drewnie inspirowane techniką linorytu — kontrastowa, graficzna kompozycja.',
+    sortOrder: 4,
+    memberSlugs: [],
+  },
+  {
+    slug: 'komplety-restauracje-i-kuchnia',
+    namePl: 'Komplety dla restauracji i do kuchni',
+    descPl: 'Zestawy i elementy wykończenia z drewna i gresu dopasowane do restauracji i kuchni.',
+    sortOrder: 5,
+    memberSlugs: ['fartuch-kuchenny-z-grawerem'],
+  },
+  {
+    slug: 'sztuka-japonska',
+    namePl: 'Sztuka japońska',
+    descPl: 'Łączenie drewna według tradycyjnej sztuki japońskiej — bez gwoździ i kleju, samą precyzją cięcia.',
+    sortOrder: 6,
+    memberSlugs: [],
+  },
+];
+
 async function seedProductCollections(): Promise<void> {
-  const existing = await prisma.productCollection.findUnique({ where: { slug: 'polecane-na-prezent' } });
-  if (existing !== null) {
-    console.log('ProductCollection: "Polecane na prezent" already exists, leaving it alone');
-    return;
-  }
+  for (const seed of PRODUCT_COLLECTION_SEEDS) {
+    const existing = await prisma.productCollection.findUnique({ where: { slug: seed.slug } });
+    if (existing !== null) {
+      console.log(`ProductCollection: "${seed.namePl}" already exists, leaving it alone`);
+      continue;
+    }
 
-  const memberSlugs = ['bransoletka-z-grawerem', 'obraz-drewniany-z-grawerem'];
-  const members = await prisma.product.findMany({ where: { slug: { in: memberSlugs } }, select: { id: true, slug: true } });
-  if (members.length === 0) {
-    console.log('ProductCollection: no matching seeded products found, skipping');
-    return;
-  }
+    const members =
+      seed.memberSlugs.length === 0
+        ? []
+        : await prisma.product.findMany({ where: { slug: { in: [...seed.memberSlugs] } }, select: { id: true } });
 
-  const collection = await prisma.productCollection.create({
-    data: {
-      slug: 'polecane-na-prezent',
-      namePl: 'Polecane na prezent',
-      descPl:
-        'Nasz gotowy, samodzielnie dobrany wybór produktów, które najczęściej sprawdzają się jako prezent — bez konieczności przechodzenia przez pełną konfigurację. Każdy z nich można też skonfigurować od podstaw z poziomu jego własnej strony produktu.',
-      isActive: true,
-      sortOrder: 1,
-      items: {
-        create: members.map((member, index) => ({ productId: member.id, sortOrder: index })),
+    const collection = await prisma.productCollection.create({
+      data: {
+        slug: seed.slug,
+        namePl: seed.namePl,
+        descPl: seed.descPl,
+        isActive: true,
+        sortOrder: seed.sortOrder,
+        items: { create: members.map((member, index) => ({ productId: member.id, sortOrder: index })) },
       },
-    },
-  });
-  console.log(`ProductCollection: created "${collection.namePl}" with ${members.length} product(s)`);
+    });
+    console.log(`ProductCollection: created "${collection.namePl}" with ${members.length} product(s)`);
+  }
 }
 
 type DeliveryMethodSeed = {

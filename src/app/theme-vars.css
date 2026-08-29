@@ -151,6 +151,55 @@ body {
   color: var(--mui-palette-secondary-main);
 }
 
+/*
+ * Navbar dropdowns ("Produkty", account) — native `<details>`/`<summary>`,
+ * zero client JS (2026-08-29, real navbar restructure). `<summary>` gets
+ * the default disclosure triangle suppressed via `list-style: none` on the
+ * element itself (inline, `SiteHeader.tsx`); this block only styles the
+ * panel `<details>` reveals and its items.
+ */
+.nav-dropdown {
+  position: relative;
+}
+.nav-dropdown summary::-webkit-details-marker {
+  display: none;
+}
+.nav-dropdown-panel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  padding: var(--space-2);
+  background-color: var(--mui-palette-background-paper);
+  border: 1px solid var(--mui-palette-divider);
+  border-radius: 4px;
+  box-shadow: var(--shadow-md);
+}
+.nav-dropdown-item {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  border-radius: 4px;
+  color: var(--mui-palette-text-primary);
+  text-decoration: none;
+  font: var(--mui-font-body2);
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.nav-dropdown-item:hover,
+.nav-dropdown-item:focus-visible {
+  background-color: var(--mui-palette-action-hover, rgba(0, 0, 0, 0.04));
+  color: var(--mui-palette-secondary-main);
+}
+.nav-dropdown-item--button {
+  width: 100%;
+  font-family: inherit;
+}
+
 .category-tile {
   display: block;
   box-shadow: var(--shadow-sm);

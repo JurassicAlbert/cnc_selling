@@ -232,6 +232,10 @@ export const SITE = {
   headerAccountLinkPl: 'Moje konto',
   headerLoginLinkPl: 'Zaloguj się',
   headerLogoutPl: 'Wyloguj się',
+  // 2026-08-29, owner request — real navbar restructure: a "Produkty"
+  // dropdown (every category) plus real "O nas"/"FAQ" entries.
+  headerProductsMenuPl: 'Produkty',
+  headerFaqLinkPl: 'FAQ',
 
   authLoginHeadingPl: 'Logowanie',
   authRegisterHeadingPl: 'Rejestracja',
@@ -375,6 +379,25 @@ export const SITE = {
   reviewFormThankYouPl: 'Dziękujemy za opinię! Zostanie opublikowana po weryfikacji.',
   reviewAlreadySubmittedPl: 'Opinia dla tego zamówienia została już przesłana.',
   reviewLinkPl: 'Zostaw opinię o tym zamówieniu',
+
+  // 2026-08-29, owner request — a real "O nas" (About us) page for the new
+  // navbar. Written from facts already established elsewhere in this
+  // project (RYT, CNC/laser precision + real craftsmanship, wood + gres,
+  // real 4-axis CNC, personalization) — nothing invented.
+  aboutHeadingPl: 'O nas',
+  aboutSeoTitlePl: 'O nas — RYT',
+  aboutSeoDescPl: 'Poznaj RYT — pracownię łączącą precyzję CNC z rzemiosłem w drewnie i gresie.',
+  aboutIntroPl:
+    'RYT to pracownia łącząca precyzję maszyn CNC z rzemieślniczym wykończeniem. Każdy grawer, każdy detal i każdy element powstaje na realnym sprzęcie — 4-osiowym centrum CNC — nie jest to grafika generowana ani prefabrykat z katalogu.',
+  aboutCraftHeadingPl: 'Jak pracujemy',
+  aboutCraftBodyPl:
+    'Pracujemy w drewnie (dąb, świerk, modrzew, sosna) i gresie, łącząc grawer laserowy i frezowanie CNC. 4-osiowe centrum pozwala nam wychodzić poza płaski grawer — w stronę reliefu, ryflowania i form przestrzennych, które dopiero zaczynamy wprowadzać do oferty.',
+  aboutMaterialsHeadingPl: 'Materiał ma znaczenie',
+  aboutMaterialsBodyPl:
+    'Drewno naturalne — usłojenie, odcień i sęki różnią się w każdym egzemplarzu, dlatego każdy gotowy produkt jest w pewnym sensie niepowtarzalny. Gres wybieramy tam, gdzie liczy się odporność na wilgoć i jednolita powierzchnia.',
+  aboutPersonalizationHeadingPl: 'Personalizacja',
+  aboutPersonalizationBodyPl:
+    'Wiele naszych produktów można personalizować grawerowanym tekstem. Każde zamówienie na indywidualne zlecenie sprawdzamy pod kątem wykonalności, zanim trafi do produkcji.',
 
   contactHeadingPl: 'Kontakt',
   contactSeoTitlePl: 'Kontakt — RYT',

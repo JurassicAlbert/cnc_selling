@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 
 import { getSession } from '@/server/auth/session';
 import { listActiveDesignsForBrowsing } from '@/server/repositories/designs';
@@ -28,6 +29,16 @@ export const metadata: Metadata = {
  * part" precedent every other MUI page here uses.
  */
 export default async function PatternsPage() {
+  // 2026-08-29, owner feedback, verbatim: "sekcja wzorów jest do dupy...
+  // ukryj na razie podstronę dla wzorów" (the patterns section isn't
+  // working out, hide the page for now). The route, the repository layer,
+  // the admin CRUD, and every underlying `Design`/`DesignCollection` row
+  // are all untouched — only public access to this one page is gated, the
+  // same "hidden, not deleted" precedent every other `isActive`-style
+  // toggle in this project already uses. Removing this one line is the
+  // entire re-enable path.
+  notFound();
+
   const [designs, externalResources, session] = await Promise.all([
     listActiveDesignsForBrowsing(),
     listActiveExternalPatternResources(),
