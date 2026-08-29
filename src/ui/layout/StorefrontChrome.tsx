@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react';
 
 import { listActiveCategories } from '@/server/repositories/categories';
+import { listActiveCollections } from '@/server/repositories/collections';
+import { getCartSummaryForRequest } from '@/server/repositories/cart';
 import { getSession } from '@/server/auth/session';
+import { readGuestSessionToken } from '@/server/session/read-guest-session';
 import { readConsentChoice } from '@/server/session/consent';
 import { CookieConsentBanner } from '@/ui/islands/consent/CookieConsentBanner';
 import { Footer } from '@/ui/primitives/Footer';
@@ -30,15 +33,26 @@ import { SiteHeader } from '@/ui/primitives/SiteHeader';
  * the lower-risk, equally-correct way to the same result.
  */
 export async function StorefrontChrome({ children }: { readonly children: ReactNode }) {
-  const [categories, session, consentChoice] = await Promise.all([
+  const [categories, collections, session, consentChoice, sessionToken] = await Promise.all([
     listActiveCategories(),
+    listActiveCollections(),
     getSession(),
     readConsentChoice(),
+    readGuestSessionToken(),
   ]);
+  // Cart summary depends on `session`/`sessionToken` above, so it's a
+  // second read rather than folded into the first `Promise.all` — both
+  // still run before any JSX, same "read everything, then render" shape.
+  const cartSummary = await getCartSummaryForRequest({ userId: session?.userId ?? null, sessionToken });
 
   return (
     <>
-      <SiteHeader categories={categories} session={session === null ? null : { name: session.name }} />
+      <SiteHeader
+        categories={categories}
+        collections={collections}
+        cartSummary={cartSummary}
+        session={session === null ? null : { name: session.name }}
+      />
       <SearchBar />
       <main>{children}</main>
       <Footer categories={categories} />

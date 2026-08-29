@@ -27,6 +27,7 @@ type DeliveryMethodFields = {
   readonly estimatedDaysMax: number;
   readonly carrier: string | null;
   readonly trackingAvailable: boolean;
+  readonly requiresPickupPoint: boolean;
   readonly sortOrder: number;
 };
 
@@ -42,6 +43,7 @@ function readDeliveryMethodFields(formData: FormData): DeliveryMethodFields {
     estimatedDaysMax: Number(formData.get('estimatedDaysMax') ?? 0),
     carrier: carrierRaw.length > 0 ? carrierRaw : null,
     trackingAvailable: formData.get('trackingAvailable') === 'on',
+    requiresPickupPoint: formData.get('requiresPickupPoint') === 'on',
     sortOrder: Number(formData.get('sortOrder') ?? 0),
   };
 }

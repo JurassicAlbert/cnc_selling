@@ -149,6 +149,12 @@ export const SITE = {
   cartRemovePl: 'Usuń',
   cartDuplicatePl: 'Duplikuj',
   cartEditPl: 'Edytuj',
+  // 2026-08-29, cart UI/UX pass — real MUI stepper + a hard per-line cap
+  // ("żeby nie było sytuacji w której klient kupuje 10000 sztuk produktu").
+  cartQuantityDecreasePl: 'Zmniejsz ilość',
+  cartQuantityIncreasePl: 'Zwiększ ilość',
+  cartQuantityMaxNoticePl: (max: number) => `Maksymalnie ${max} szt. na jedną pozycję. Większe zamówienia — napisz do nas.`,
+  cartItemsCountPl: (count: number) => `${count} ${count === 1 ? 'produkt' : count < 5 ? 'produkty' : 'produktów'} w koszyku`,
   cartSubtotalLabelPl: 'Suma',
   cartCheckoutCtaPl: 'Przejdź do zamówienia',
   cartIncompleteNoticePl:
@@ -172,6 +178,10 @@ export const SITE = {
   checkoutDeliveryEstimateLabelPl: 'Przewidywany czas dostawy:',
   checkoutDeliveryEstimateUnitPl: 'dni roboczych',
   checkoutDeliveryMethodInvalidPl: 'Wybrana metoda dostawy jest już niedostępna — wybierz inną i spróbuj ponownie.',
+  checkoutPickupPointLabelPl: 'Wybierz paczkomat lub punkt odbioru',
+  checkoutPickupPointSearchPl: 'Wpisz miasto lub kod pocztowy',
+  checkoutPickupPointNoneFoundPl: 'Brak punktów dla podanej frazy — spróbuj innego miasta.',
+  checkoutPickupPointInvalidPl: 'Wybierz punkt odbioru z listy, aby kontynuować — wybrany punkt jest nieprawidłowy lub nie został jeszcze wybrany.',
   checkoutPaymentMethodInvalidPl: 'Wybrana metoda płatności jest już niedostępna — wybierz inną i spróbuj ponownie.',
   checkoutNoPaymentMethodsPl: 'Obecnie żadna metoda płatności nie jest dostępna. Skontaktuj się z nami, aby dokończyć zamówienie.',
   checkoutPaymentSectionHeadingPl: 'Płatność',
@@ -236,6 +246,9 @@ export const SITE = {
   // dropdown (every category) plus real "O nas"/"FAQ" entries.
   headerProductsMenuPl: 'Produkty',
   headerFaqLinkPl: 'FAQ',
+  // 2026-08-29: "Kolekcje" becomes a dropdown too, same shape as "Produkty".
+  headerCollectionsMenuPl: 'Kolekcje',
+  headerAllCollectionsLinkPl: 'Wszystkie kolekcje',
 
   authLoginHeadingPl: 'Logowanie',
   authRegisterHeadingPl: 'Rejestracja',

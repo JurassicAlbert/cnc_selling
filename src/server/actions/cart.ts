@@ -23,6 +23,7 @@
 import { revalidatePath } from 'next/cache';
 
 import type { Selections } from '@/domain/configuration/steps';
+import { clampCartQuantity } from '@/domain/cart/quantity';
 import { prisma } from '@/server/db/client';
 import type { Prisma } from '@/generated/prisma/client';
 import type { InstallationVariantCode } from '@/generated/prisma/enums';
@@ -123,7 +124,7 @@ export async function addToCart(
       : await prisma.cart.upsert({ where: { sessionToken }, create: { sessionToken }, update: {} });
 
   await prisma.cartItem.create({
-    data: { cartId: cart.id, configurationId: configuration.id, quantity },
+    data: { cartId: cart.id, configurationId: configuration.id, quantity: clampCartQuantity(quantity) },
   });
 
   void recordAnalyticsEvent({
@@ -171,17 +172,46 @@ async function requireOwnedCartItem(cartItemId: string) {
  * so this can be bound with `.bind(null, cartItemId)` and used directly as
  * a `<form action>` on the cart page's own per-row quantity form, the same
  * zero-client-JS pattern as `CategoryFilterForm`.
+ *
+ * A non-numeric or missing value is left alone (same "just don't apply it"
+ * behaviour as before) — but anything numeric, however large, is clamped
+ * through `clampCartQuantity` rather than trusted verbatim. A direct POST
+ * with `quantity=10000` bypassing the UI entirely still lands at
+ * `MAX_CART_ITEM_QUANTITY`, never higher.
  */
 export async function updateCartItemQuantity(cartItemId: string, formData: FormData): Promise<void> {
-  const quantity = Number(formData.get('quantity'));
-  if (!Number.isInteger(quantity) || quantity < 1) {
+  const raw = Number(formData.get('quantity'));
+  if (!Number.isFinite(raw)) {
     return;
   }
   const owned = await requireOwnedCartItem(cartItemId);
   if (owned === null) {
     return;
   }
-  await prisma.cartItem.update({ where: { id: cartItemId }, data: { quantity } });
+  await prisma.cartItem.update({ where: { id: cartItemId }, data: { quantity: clampCartQuantity(raw) } });
+  revalidatePath('/koszyk');
+}
+
+/**
+ * The cart page's +/- stepper — a pair of zero-JS forms bound with
+ * `.bind(null, cartItemId, 1)` / `.bind(null, cartItemId, -1)`. Reads the
+ * CURRENT quantity from the database rather than trusting one echoed back
+ * from the client, then clamps the result — consistent with every other
+ * mutation in this file never trusting a client-supplied number on its own.
+ */
+export async function adjustCartItemQuantity(cartItemId: string, delta: 1 | -1): Promise<void> {
+  const owned = await requireOwnedCartItem(cartItemId);
+  if (owned === null) {
+    return;
+  }
+  const current = await prisma.cartItem.findUnique({ where: { id: cartItemId }, select: { quantity: true } });
+  if (current === null) {
+    return;
+  }
+  await prisma.cartItem.update({
+    where: { id: cartItemId },
+    data: { quantity: clampCartQuantity(current.quantity + delta) },
+  });
   revalidatePath('/koszyk');
 }
 

@@ -129,6 +129,9 @@ body {
  * alongside the header/footer/card depth pass.
  */
 .nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   color: var(--mui-palette-text-primary);
   text-decoration: none;
   transition: color 0.15s ease;
@@ -136,6 +139,10 @@ body {
 .nav-link:hover,
 .nav-link:focus-visible {
   color: var(--mui-palette-secondary-main);
+}
+/* The nav icon set is decorative — the link text alone is the accessible name. */
+.nav-link svg {
+  flex-shrink: 0;
 }
 
 .cart-link {
@@ -152,6 +159,31 @@ body {
 }
 
 /*
+ * 2026-08-29, navbar UX pass: a live count+price badge on the cart icon
+ * ("koło koszyka dodać jakieś ładne UX pokazujące cenę i ilość elementów w
+ * koszyku na bieżąco"). `itemCount`/`totalGrossGrosze` come from
+ * `StorefrontChrome`'s own server-side read (`getCartSummaryForRequest`) —
+ * "na bieżąco" here means "correct on every real navigation", the same
+ * honest live-enough guarantee the header's own login state already relies
+ * on (a Server Action's `redirect()` re-renders this layout), not a
+ * client-side polling loop.
+ */
+.cart-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background-color: var(--mui-palette-secondary-main);
+  color: var(--mui-palette-secondary-contrastText, #fff);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+/*
  * Navbar dropdowns ("Produkty", account) — native `<details>`/`<summary>`,
  * zero client JS (2026-08-29, real navbar restructure). `<summary>` gets
  * the default disclosure triangle suppressed via `list-style: none` on the
@@ -163,6 +195,13 @@ body {
 }
 .nav-dropdown summary::-webkit-details-marker {
   display: none;
+}
+/* Chevron flips to point up while the panel is open — `ExpandMoreIcon`, rotated, not a second icon. */
+.nav-dropdown-chevron {
+  transition: transform 0.15s ease;
+}
+.nav-dropdown[open] .nav-dropdown-chevron {
+  transform: rotate(180deg);
 }
 .nav-dropdown-panel {
   position: absolute;

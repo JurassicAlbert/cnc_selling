@@ -33,9 +33,19 @@
  * already filtered to `isConnected: true` only, so an unconnected
  * provider (e.g. Przelewy24) never even appears as an option here, not
  * just "shown but disabled."
+ *
+ * 2026-08-29, owner request: a real pickup-point ("paczkomat/punkt
+ * odbioru") picker, shown only for a delivery method with
+ * `requiresPickupPoint: true`. `pickupPoints` is the full static dataset
+ * (`server/delivery/pickup-points.ts`) passed down once from the checkout
+ * page — small enough (a dozen rows) that filtering it client-side needs
+ * no extra request. `submitCheckout`/`createOrder` re-validate the chosen
+ * id against that same dataset server-side (§15's "never trust the
+ * client" discipline) — this is search/filter UX only, not the source of
+ * truth.
  */
 
-import { useActionState, useEffect, useRef, useState } from 'react';
+import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import {
   Alert,
@@ -43,6 +53,9 @@ import {
   Checkbox,
   FormControlLabel,
   FormHelperText,
+  List,
+  ListItemButton,
+  ListItemText,
   Paper,
   Radio,
   RadioGroup,
@@ -60,6 +73,10 @@ import type { CheckoutFormState } from '@/server/actions/checkout';
 import { computeShippingGrosze } from '@/domain/checkout/delivery';
 import type { ActiveDeliveryMethod } from '@/server/repositories/delivery-methods';
 import type { ActivePaymentMethod } from '@/server/repositories/payment-methods';
+// A plain-data module (no `prisma`/Node-only imports) — safe to import as a
+// real value here, unlike `delivery-methods.ts`'s own type-only import
+// above (see that file's comment on why THAT one can't cross this boundary).
+import { findPickupPointById, searchPickupPoints } from '@/server/delivery/pickup-points';
 
 // Not exported from checkout.ts itself: a 'use server' file may only
 // export async functions, never a plain data constant.
@@ -93,6 +110,11 @@ export function CheckoutForm({
   const selectedDelivery = deliveryMethods.find((m) => m.id === selectedDeliveryId) ?? null;
   const defaultPaymentMethodConfigId = v.paymentMethodConfigId ?? paymentMethods[0]?.id ?? '';
 
+  const [pickupPointQuery, setPickupPointQuery] = useState('');
+  const [selectedPickupPointId, setSelectedPickupPointId] = useState<string | null>(v.pickupPointId ?? null);
+  const pickupPointMatches = useMemo(() => searchPickupPoints(pickupPointQuery), [pickupPointQuery]);
+  const selectedPickupPoint = selectedPickupPointId !== null ? findPickupPointById(selectedPickupPointId) : null;
+
   return (
     <form key={renderKey} action={formAction}>
       <Stack spacing={4} sx={{ maxWidth: 560 }}>
@@ -100,6 +122,7 @@ export function CheckoutForm({
         {state.formError === 'PRICE_CHANGED' && <Alert severity="error">{COPY.priceChanged}</Alert>}
         {state.formError === 'DELIVERY_METHOD_INVALID' && <Alert severity="error">{SITE.checkoutDeliveryMethodInvalidPl}</Alert>}
         {state.formError === 'PAYMENT_METHOD_INVALID' && <Alert severity="error">{SITE.checkoutPaymentMethodInvalidPl}</Alert>}
+        {state.formError === 'PICKUP_POINT_INVALID' && <Alert severity="error">{SITE.checkoutPickupPointInvalidPl}</Alert>}
 
         <Stack spacing={2}>
           <Typography variant="subtitle1">{SITE.checkoutBuyerSectionHeadingPl}</Typography>
@@ -232,6 +255,43 @@ export function CheckoutForm({
           )}
         </Stack>
 
+        {selectedDelivery?.requiresPickupPoint === true && (
+          <Stack spacing={1}>
+            <Typography variant="subtitle2">{SITE.checkoutPickupPointLabelPl}</Typography>
+            <input type="hidden" name="pickupPointId" value={selectedPickupPointId ?? ''} />
+            <TextField
+              size="small"
+              placeholder={SITE.checkoutPickupPointSearchPl}
+              value={pickupPointQuery}
+              onChange={(e) => setPickupPointQuery(e.target.value)}
+            />
+            {selectedPickupPoint !== null && (
+              <Alert severity="success" sx={{ py: 0.5 }}>
+                {selectedPickupPoint.label}
+              </Alert>
+            )}
+            <Paper variant="outlined" sx={{ maxHeight: 220, overflowY: 'auto' }}>
+              {pickupPointMatches.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+                  {SITE.checkoutPickupPointNoneFoundPl}
+                </Typography>
+              ) : (
+                <List dense disablePadding>
+                  {pickupPointMatches.map((point) => (
+                    <ListItemButton
+                      key={point.id}
+                      selected={point.id === selectedPickupPointId}
+                      onClick={() => setSelectedPickupPointId(point.id)}
+                    >
+                      <ListItemText primary={point.label} secondary={point.carrier} />
+                    </ListItemButton>
+                  ))}
+                </List>
+              )}
+            </Paper>
+          </Stack>
+        )}
+
         <Stack spacing={1}>
           <Typography variant="subtitle1">{SITE.checkoutPaymentSectionHeadingPl}</Typography>
           {paymentMethods.length === 0 ? (
@@ -293,16 +353,16 @@ export function CheckoutForm({
           </Stack>
         </Paper>
 
-        <SubmitButton />
+        <SubmitButton pickupPointMissing={selectedDelivery?.requiresPickupPoint === true && selectedPickupPointId === null} />
       </Stack>
     </form>
   );
 }
 
-function SubmitButton() {
+function SubmitButton({ pickupPointMissing }: { readonly pickupPointMissing: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant="contained" size="large" disabled={pending} sx={{ alignSelf: 'flex-start' }}>
+    <Button type="submit" variant="contained" size="large" disabled={pending || pickupPointMissing} sx={{ alignSelf: 'flex-start' }}>
       {SITE.checkoutSubmitPl}
     </Button>
   );

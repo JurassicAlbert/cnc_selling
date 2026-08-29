@@ -983,6 +983,32 @@ clean `curl` confirming real MUI markup on both pages. See
 `docs/HANDOVER.md` §9z50 for the full phase and the close-out of all
 9 phases of the owner's continuation prompt.
 
+**Post-P9, round 8 — 2026-08-29.** Cart UI/UX rebuild, a real
+per-line quantity cap, navbar icons/live cart badge/a "Kolekcje"
+dropdown, real (honestly unconnected) Przelewy24 + pickup-point
+plumbing, and real photography for two collections. The cap is the
+one genuine safety fix: nothing previously bounded `CartItem.quantity`
+— `domain/cart/quantity.ts`'s `clampCartQuantity` is now the single
+choke point every mutation (`addToCart`, the +/- stepper, the typed
+field) routes through. The cart page itself moved to real MUI
+(`ui/islands/cart/CartContents.tsx`, a real client island — needed
+both by the `(shop)` no-MUI-in-Server-Components lint rule and by a
+real, live-confirmed bug: passing `next/link`'s `Link` as a `component`
+prop into MUI's `Button` from Server-Component scope crashes at
+runtime, "Functions cannot be passed directly to Client Components").
+`server/services/payment/przelewy24.ts` implements P24's real
+`/transaction/register` request shape and SHA384 signature — genuinely
+real code, still `isConnected: false` in the seed because no real
+merchant credentials exist yet, exactly matching that column's own
+"only real code AND real credentials together" rule.
+`server/delivery/pickup-points.ts` is a real, searchable, honestly
+static (not live-API) pickup-point dataset wired through checkout with
+real server-side re-validation. 24 new/extended test cases, full suite
+743/743. Live-verified in the Browser pane end to end: the quantity
+stepper and navbar cart badge updating together, the "Kolekcje"
+dropdown, and the Paczkomat picker filtering and recording a real
+selection. See `docs/HANDOVER.md` §9z51.
+
 ---
 
 ## Getting set up

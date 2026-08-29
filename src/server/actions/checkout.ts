@@ -21,7 +21,13 @@ import { createOrder } from '@/server/orders/create-order';
 
 export type CheckoutFormState = {
   readonly fieldErrors: Partial<Record<string, CheckoutFieldIssueCode>>;
-  readonly formError: 'CART_EMPTY' | 'PRICE_CHANGED' | 'DELIVERY_METHOD_INVALID' | 'PAYMENT_METHOD_INVALID' | null;
+  readonly formError:
+    | 'CART_EMPTY'
+    | 'PRICE_CHANGED'
+    | 'DELIVERY_METHOD_INVALID'
+    | 'PAYMENT_METHOD_INVALID'
+    | 'PICKUP_POINT_INVALID'
+    | null;
   /**
    * Echoed back so a validation error on one field doesn't erase everything
    * else the customer already typed — `useActionState` re-renders the same
@@ -54,6 +60,8 @@ export async function submitCheckout(
   const city = field(formData, 'city');
   const paymentMethodConfigId = field(formData, 'paymentMethodConfigId');
   const deliveryMethodId = field(formData, 'deliveryMethodId');
+  const pickupPointIdRaw = field(formData, 'pickupPointId');
+  const pickupPointId = pickupPointIdRaw.length > 0 ? pickupPointIdRaw : null;
   const termsAccepted = formData.get('termsAccepted') === 'on';
   const withdrawalAcknowledged = formData.get('withdrawalAcknowledged') === 'on';
 
@@ -84,6 +92,7 @@ export async function submitCheckout(
     city,
     paymentMethodConfigId,
     deliveryMethodId,
+    pickupPointId: pickupPointId ?? '',
   };
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -105,6 +114,7 @@ export async function submitCheckout(
     city,
     paymentMethodConfigId,
     deliveryMethodId,
+    pickupPointId,
   });
 
   if (!result.ok) {

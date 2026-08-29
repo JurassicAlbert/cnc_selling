@@ -27,6 +27,7 @@ export type AdminDeliveryMethodDetail = {
   readonly estimatedDaysMax: number;
   readonly carrier: string | null;
   readonly trackingAvailable: boolean;
+  readonly requiresPickupPoint: boolean;
   readonly sortOrder: number;
   readonly isActive: boolean;
 };
@@ -44,6 +45,7 @@ export async function findDeliveryMethodForAdmin(id: string): Promise<AdminDeliv
       estimatedDaysMax: true,
       carrier: true,
       trackingAvailable: true,
+      requiresPickupPoint: true,
       sortOrder: true,
       isActive: true,
     },

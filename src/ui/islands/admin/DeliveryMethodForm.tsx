@@ -112,6 +112,10 @@ export function DeliveryMethodForm({ method }: { readonly method?: AdminDelivery
           control={<Checkbox key={resetKey} name="trackingAvailable" defaultChecked={fieldChecked('trackingAvailable', method?.trackingAvailable ?? false)} />}
           label={ADMIN.deliveryMethodFieldTrackingAvailablePl}
         />
+        <FormControlLabel
+          control={<Checkbox key={resetKey} name="requiresPickupPoint" defaultChecked={fieldChecked('requiresPickupPoint', method?.requiresPickupPoint ?? false)} />}
+          label={ADMIN.deliveryMethodFieldRequiresPickupPointPl}
+        />
 
         <SubmitButton />
       </Stack>

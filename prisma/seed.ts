@@ -1340,6 +1340,7 @@ type ProductCollectionSeed = {
   readonly descPl: string;
   readonly sortOrder: number;
   readonly memberSlugs: readonly string[];
+  readonly imageUrl: string | null;
 };
 
 /**
@@ -1352,9 +1353,15 @@ type ProductCollectionSeed = {
  * disclosed gaps, seeded with zero members rather than forcing an
  * ill-fitting existing product in, same "prepared, not yet populated"
  * precedent this file already uses elsewhere (`ryfle`/`linoryt`/
- * `sztuka-japonska` all resolve to `memberSlugs: []`). Real photography for
- * these was explicitly deferred by the owner to their own future upload,
- * not something to invent here.
+ * `sztuka-japonska` all resolve to `memberSlugs: []`).
+ *
+ * 2026-08-29 follow-up: the owner supplied real photography for two of
+ * these directly (`public/images/collections/*.png` — files named
+ * `ChatGPT*.png` in their own Downloads folder, copied in and renamed
+ * here) — `ryfle` and `linoryt` now show a real representative image even
+ * with `memberSlugs: []`. `sztuka-japonska` still has no matching image
+ * (none of the supplied photos are wood-joinery work) — left `null`,
+ * honestly, rather than reusing an unrelated one.
  */
 const PRODUCT_COLLECTION_SEEDS: readonly ProductCollectionSeed[] = [
   {
@@ -1364,6 +1371,7 @@ const PRODUCT_COLLECTION_SEEDS: readonly ProductCollectionSeed[] = [
       'Nasz gotowy, samodzielnie dobrany wybór produktów, które najczęściej sprawdzają się jako prezent — bez konieczności przechodzenia przez pełną konfigurację. Każdy z nich można też skonfigurować od podstaw z poziomu jego własnej strony produktu.',
     sortOrder: 1,
     memberSlugs: ['bransoletka-z-grawerem', 'obraz-drewniany-z-grawerem'],
+    imageUrl: null,
   },
   {
     slug: 'gry-planszowe-i-figury',
@@ -1371,6 +1379,7 @@ const PRODUCT_COLLECTION_SEEDS: readonly ProductCollectionSeed[] = [
     descPl: 'Drewniane gry planszowe i figury z grawerowanym wykończeniem.',
     sortOrder: 2,
     memberSlugs: ['szachownica-z-grawerem'],
+    imageUrl: null,
   },
   {
     slug: 'ryfle',
@@ -1378,6 +1387,7 @@ const PRODUCT_COLLECTION_SEEDS: readonly ProductCollectionSeed[] = [
     descPl: 'Ryflowane panele drewniane — regularne, frezowane rowki nadające powierzchni fakturę i głębię.',
     sortOrder: 3,
     memberSlugs: [],
+    imageUrl: '/images/collections/ryfle-lamele.png',
   },
   {
     slug: 'linoryt',
@@ -1385,6 +1395,7 @@ const PRODUCT_COLLECTION_SEEDS: readonly ProductCollectionSeed[] = [
     descPl: 'Obrazy w drewnie inspirowane techniką linorytu — kontrastowa, graficzna kompozycja.',
     sortOrder: 4,
     memberSlugs: [],
+    imageUrl: '/images/collections/linoryt-zamek.png',
   },
   {
     slug: 'komplety-restauracje-i-kuchnia',
@@ -1392,6 +1403,7 @@ const PRODUCT_COLLECTION_SEEDS: readonly ProductCollectionSeed[] = [
     descPl: 'Zestawy i elementy wykończenia z drewna i gresu dopasowane do restauracji i kuchni.',
     sortOrder: 5,
     memberSlugs: ['fartuch-kuchenny-z-grawerem'],
+    imageUrl: null,
   },
   {
     slug: 'sztuka-japonska',
@@ -1399,14 +1411,24 @@ const PRODUCT_COLLECTION_SEEDS: readonly ProductCollectionSeed[] = [
     descPl: 'Łączenie drewna według tradycyjnej sztuki japońskiej — bez gwoździ i kleju, samą precyzją cięcia.',
     sortOrder: 6,
     memberSlugs: [],
+    imageUrl: null,
   },
 ];
 
 async function seedProductCollections(): Promise<void> {
   for (const seed of PRODUCT_COLLECTION_SEEDS) {
-    const existing = await prisma.productCollection.findUnique({ where: { slug: seed.slug } });
+    const existing = await prisma.productCollection.findUnique({ where: { slug: seed.slug }, select: { id: true, namePl: true, imageUrl: true } });
     if (existing !== null) {
-      console.log(`ProductCollection: "${seed.namePl}" already exists, leaving it alone`);
+      // Create-only for everything else, but a `null` image is a real,
+      // later-discovered gap this seed can now honestly fill — never
+      // overwrites a real `imageUrl` an admin (or an earlier run of this
+      // same seed) already set.
+      if (existing.imageUrl === null && seed.imageUrl !== null) {
+        await prisma.productCollection.update({ where: { id: existing.id }, data: { imageUrl: seed.imageUrl } });
+        console.log(`ProductCollection: "${existing.namePl}" already exists — added missing imageUrl`);
+      } else {
+        console.log(`ProductCollection: "${existing.namePl}" already exists, leaving it alone`);
+      }
       continue;
     }
 
@@ -1420,6 +1442,7 @@ async function seedProductCollections(): Promise<void> {
         slug: seed.slug,
         namePl: seed.namePl,
         descPl: seed.descPl,
+        imageUrl: seed.imageUrl,
         isActive: true,
         sortOrder: seed.sortOrder,
         items: { create: members.map((member, index) => ({ productId: member.id, sortOrder: index })) },
@@ -1438,6 +1461,7 @@ type DeliveryMethodSeed = {
   readonly estimatedDaysMax: number;
   readonly carrier: string | null;
   readonly trackingAvailable: boolean;
+  readonly requiresPickupPoint: boolean;
   readonly sortOrder: number;
 };
 
@@ -1449,6 +1473,10 @@ type DeliveryMethodSeed = {
  * tracking claimed for either (§9/§15: `trackingAvailable: false` for
  * both, since no carrier API is integrated). Create-only, matched by
  * `namePl` (no natural key), same non-destructive precedent as `seedFaqs`.
+ *
+ * 2026-08-29 addition: a third method, "Paczkomat", with
+ * `requiresPickupPoint: true` — exercises the real pickup-point picker
+ * (`server/delivery/pickup-points.ts`) end-to-end at checkout.
  */
 const DELIVERY_METHOD_SEEDS: readonly DeliveryMethodSeed[] = [
   {
@@ -1460,6 +1488,7 @@ const DELIVERY_METHOD_SEEDS: readonly DeliveryMethodSeed[] = [
     estimatedDaysMax: 3,
     carrier: null,
     trackingAvailable: false,
+    requiresPickupPoint: false,
     sortOrder: 1,
   },
   {
@@ -1471,7 +1500,20 @@ const DELIVERY_METHOD_SEEDS: readonly DeliveryMethodSeed[] = [
     estimatedDaysMax: 5,
     carrier: null,
     trackingAvailable: false,
+    requiresPickupPoint: false,
     sortOrder: 2,
+  },
+  {
+    namePl: 'Paczkomat',
+    descPl: 'Dostawa do wybranego paczkomatu lub punktu odbioru. Wybierz konkretny punkt w kolejnym kroku.',
+    priceGrosze: 1_200,
+    freeShippingThresholdGrosze: 30_000,
+    estimatedDaysMin: 1,
+    estimatedDaysMax: 3,
+    carrier: 'InPost Paczkomaty',
+    trackingAvailable: false,
+    requiresPickupPoint: true,
+    sortOrder: 3,
   },
 ];
 

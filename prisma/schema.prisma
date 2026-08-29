@@ -822,6 +822,12 @@ model DeliveryMethod {
   estimatedDaysMax            Int
   carrier                     String?
   trackingAvailable           Boolean  @default(false)
+  /// 2026-08-29: does this method need a real pickup point picked at
+  /// checkout (a parcel locker, a courier's own pickup point) rather than
+  /// just a home address? `server/delivery/pickup-points.ts` is the
+  /// (honestly static, non-live) dataset the checkout picker searches —
+  /// see that file's own header comment.
+  requiresPickupPoint         Boolean  @default(false)
   isActive                    Boolean  @default(true)
   sortOrder                   Int      @default(0)
   createdAt                   DateTime @default(now())
@@ -875,6 +881,13 @@ model Order {
   deliveryMethodId     String?
   deliveryMethod       DeliveryMethod? @relation(fields: [deliveryMethodId], references: [id])
   deliveryMethodNamePl String
+  /// 2026-08-29: set only when `deliveryMethod.requiresPickupPoint` was
+  /// true at checkout — the id/label of the point chosen from the static
+  /// dataset in `server/delivery/pickup-points.ts`, snapshotted the same
+  /// way `deliveryMethodNamePl` is (that dataset could change shape later;
+  /// what a customer actually picked must never move under them).
+  pickupPointId        String?
+  pickupPointLabel     String?
 
   // Acknowledgements, stored verbatim: a consent record is only evidence if
   // it captures WHAT was agreed to. Custom-made goods are exempt from the

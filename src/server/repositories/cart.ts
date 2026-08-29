@@ -114,6 +114,45 @@ export async function listConfigurationsForUser(userId: string): Promise<readonl
   }));
 }
 
+export type CartSummary = {
+  readonly itemCount: number;
+  readonly totalGrossGrosze: number;
+};
+
+const EMPTY_CART_SUMMARY: CartSummary = { itemCount: 0, totalGrossGrosze: 0 };
+
+/**
+ * A lightweight read for `SiteHeader`'s cart badge — item count (summed
+ * quantity, not row count) and running total, without `findCartForRequest`'s
+ * full per-item catalogue joins. Called from `StorefrontChrome` on every
+ * page render, so it stays a single narrow `select`.
+ */
+export async function getCartSummaryForRequest(params: {
+  readonly userId: string | null;
+  readonly sessionToken: string | null;
+}): Promise<CartSummary> {
+  const { userId, sessionToken } = params;
+  if (userId === null && sessionToken === null) {
+    return EMPTY_CART_SUMMARY;
+  }
+  const cart = await prisma.cart.findFirst({
+    where: userId !== null ? { userId } : { sessionToken },
+    select: {
+      items: { select: { quantity: true, configuration: { select: { priceGrossGrosze: true } } } },
+    },
+  });
+  if (cart === null) {
+    return EMPTY_CART_SUMMARY;
+  }
+  return cart.items.reduce<CartSummary>(
+    (summary, item) => ({
+      itemCount: summary.itemCount + item.quantity,
+      totalGrossGrosze: summary.totalGrossGrosze + (item.configuration.priceGrossGrosze ?? 0) * item.quantity,
+    }),
+    EMPTY_CART_SUMMARY,
+  );
+}
+
 export async function findCartForRequest(params: {
   readonly userId: string | null;
   readonly sessionToken: string | null;

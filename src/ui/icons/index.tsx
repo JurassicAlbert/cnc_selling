@@ -24,10 +24,12 @@ import type { CSSProperties } from 'react';
 type IconProps = {
   readonly size?: number;
   readonly style?: CSSProperties;
+  /** Used by `SiteHeader`'s `.nav-dropdown-chevron` rotate rule — plain CSS, no client JS. */
+  readonly className?: string;
 };
 
 function makeIcon(pathD: string) {
-  return function Icon({ size = 24, style }: IconProps) {
+  return function Icon({ size = 24, style, className }: IconProps) {
     return (
       <svg
         viewBox="0 0 24 24"
@@ -36,6 +38,7 @@ function makeIcon(pathD: string) {
         fill="currentColor"
         aria-hidden="true"
         style={style}
+        className={className}
       >
         <path d={pathD} />
       </svg>
@@ -90,6 +93,38 @@ export const CartIcon = makeIcon(
 export const AccessTimeIcon = makeIcon(
   'M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2M12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8m.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z',
 );
+
+/** 2026-08-29, navbar UX pass: an icon per nav item ("dodać ikony do elementów nawigacji w navbar żeby miały przyjaźniejszy UX"). */
+export const InfoIcon = makeIcon(
+  'M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8',
+);
+
+export const HelpIcon = makeIcon(
+  'M11 18h2v-2h-2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8m0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4',
+);
+
+export const CollectionsIcon = makeIcon(
+  'M22 16V4c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2M11 12l2.03 2.71L16 11l4 5H8zM2 6v14c0 1.1.9 2 2 2h14v-2H4V6z',
+);
+
+export const PersonIcon = makeIcon(
+  'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4m0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4',
+);
+
+/** Dropdown chevron — rotated 180° via `.nav-dropdown[open] &` in `theme-vars.css`, not a second icon. */
+export const ExpandMoreIcon = makeIcon('M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z');
+
+export const ContentCopyIcon = makeIcon(
+  'M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2m0 16H8V7h11z',
+);
+
+export const DeleteIcon = makeIcon(
+  'M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z',
+);
+
+export const AddIcon = makeIcon('M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z');
+
+export const RemoveIcon = makeIcon('M19 13H5v-2h14z');
 
 export const PrecisionManufacturingIcon = makeIcon(
   'm19.93 8.35-3.6 1.68L14 7.7V6.3l2.33-2.33 3.6 1.68c.38.18.82.01 1-.36.18-.38.01-.82-.36-1l-3.92-1.83c-.38-.18-.83-.1-1.13.2L13.78 4.4c-.18-.24-.46-.4-.78-.4-.55 0-1 .45-1 1v1H8.82C8.4 4.84 7.3 4 6 4 4.34 4 3 5.34 3 7c0 1.1.6 2.05 1.48 2.58L7.08 18H6c-1.1 0-2 .9-2 2v1h13v-1c0-1.1-.9-2-2-2h-1.62L8.41 8.77c.17-.24.31-.49.41-.77H12v1c0 .55.45 1 1 1 .32 0 .6-.16.78-.4l1.74 1.74c.3.3.75.38 1.13.2l3.92-1.83c.38-.18.54-.62.36-1-.18-.37-.62-.54-1-.36M6 8c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1m5.11 10H9.17l-2.46-8h.1z',

@@ -12,6 +12,7 @@ async function seedMethod(overrides: {
   readonly freeShippingThresholdGrosze?: number | null;
   readonly isActive?: boolean;
   readonly sortOrder?: number;
+  readonly requiresPickupPoint?: boolean;
 }) {
   return prisma.deliveryMethod.create({
     data: {
@@ -23,6 +24,7 @@ async function seedMethod(overrides: {
       estimatedDaysMax: 3,
       isActive: overrides.isActive ?? true,
       sortOrder: overrides.sortOrder ?? 0,
+      requiresPickupPoint: overrides.requiresPickupPoint ?? false,
     },
   });
 }
@@ -60,5 +62,15 @@ describe('listActiveDeliveryMethods', () => {
     expect(ids).not.toContain(undefined);
     expect(ids.indexOf(first.id)).toBeLessThan(ids.indexOf(second.id));
     expect(result.some((m) => m.namePl === `${PREFIX}nieaktywna`)).toBe(false);
+  });
+
+  it('surfaces requiresPickupPoint — 2026-08-29 paczkomat/punkt-odbioru picker', async () => {
+    const withPoint = await seedMethod({ namePl: `${PREFIX}paczkomat`, requiresPickupPoint: true });
+    const withoutPoint = await seedMethod({ namePl: `${PREFIX}kurier`, requiresPickupPoint: false });
+
+    const result = await listActiveDeliveryMethods();
+
+    expect(result.find((m) => m.id === withPoint.id)?.requiresPickupPoint).toBe(true);
+    expect(result.find((m) => m.id === withoutPoint.id)?.requiresPickupPoint).toBe(false);
   });
 });

@@ -64,7 +64,7 @@ async function seedGuestCartWithOneItem() {
   return { sessionToken, product, cart };
 }
 
-async function seedDeliveryMethod(overrides: { readonly isActive?: boolean } = {}) {
+async function seedDeliveryMethod(overrides: { readonly isActive?: boolean; readonly requiresPickupPoint?: boolean } = {}) {
   return prisma.deliveryMethod.create({
     data: {
       namePl: `${PREFIX}dostawa`,
@@ -73,6 +73,7 @@ async function seedDeliveryMethod(overrides: { readonly isActive?: boolean } = {
       estimatedDaysMin: 1,
       estimatedDaysMax: 3,
       isActive: overrides.isActive ?? true,
+      requiresPickupPoint: overrides.requiresPickupPoint ?? false,
     },
   });
 }
@@ -89,7 +90,12 @@ async function seedPaymentMethodConfig(overrides: { readonly isActive?: boolean;
   });
 }
 
-function baseInput(overrides: { readonly sessionToken: string; readonly deliveryMethodId: string; readonly paymentMethodConfigId: string }) {
+function baseInput(overrides: {
+  readonly sessionToken: string;
+  readonly deliveryMethodId: string;
+  readonly paymentMethodConfigId: string;
+  readonly pickupPointId?: string | null;
+}) {
   return {
     sessionToken: overrides.sessionToken,
     userId: null,
@@ -104,6 +110,7 @@ function baseInput(overrides: { readonly sessionToken: string; readonly delivery
     city: 'Warszawa',
     deliveryMethodId: overrides.deliveryMethodId,
     paymentMethodConfigId: overrides.paymentMethodConfigId,
+    pickupPointId: overrides.pickupPointId ?? null,
   };
 }
 
@@ -178,5 +185,50 @@ describe('createOrder — payment method validation', () => {
     const result = await createOrder(baseInput({ sessionToken, deliveryMethodId: delivery.id, paymentMethodConfigId: payment.id }));
 
     expect(result).toEqual({ ok: false, code: 'PAYMENT_METHOD_INVALID' });
+  });
+});
+
+/**
+ * 2026-08-29, owner request: real pickup-point ("paczkomat/punkt odbioru")
+ * validation for a `DeliveryMethod` with `requiresPickupPoint: true` — the
+ * id is re-checked against `server/delivery/pickup-points.ts`'s own static
+ * dataset, never trusted from whatever the checkout form last rendered,
+ * same layering as the delivery/payment method checks above.
+ */
+describe('createOrder — pickup point validation', () => {
+  it('rejects a required pickup point that was never chosen', async () => {
+    const { sessionToken } = await seedGuestCartWithOneItem();
+    const delivery = await seedDeliveryMethod({ requiresPickupPoint: true });
+    const payment = await seedPaymentMethodConfig();
+
+    const result = await createOrder(baseInput({ sessionToken, deliveryMethodId: delivery.id, paymentMethodConfigId: payment.id, pickupPointId: null }));
+
+    expect(result).toEqual({ ok: false, code: 'PICKUP_POINT_INVALID' });
+  });
+
+  it('rejects a pickup point id that does not exist in the dataset — never trusts an id echoed back by the client', async () => {
+    const { sessionToken } = await seedGuestCartWithOneItem();
+    const delivery = await seedDeliveryMethod({ requiresPickupPoint: true });
+    const payment = await seedPaymentMethodConfig();
+
+    const result = await createOrder(
+      baseInput({ sessionToken, deliveryMethodId: delivery.id, paymentMethodConfigId: payment.id, pickupPointId: 'not-a-real-point' }),
+    );
+
+    expect(result).toEqual({ ok: false, code: 'PICKUP_POINT_INVALID' });
+  });
+
+  it('a pickup point id is ignored (never required) for a method that does not require one', async () => {
+    const { sessionToken } = await seedGuestCartWithOneItem();
+    const delivery = await seedDeliveryMethod({ requiresPickupPoint: false });
+    const payment = await seedPaymentMethodConfig();
+
+    const result = await createOrder(baseInput({ sessionToken, deliveryMethodId: delivery.id, paymentMethodConfigId: payment.id, pickupPointId: null }));
+
+    // Both the delivery and payment checks pass; the next real rejection is
+    // the per-item re-pricing loop, since the bare-bones seeded product has
+    // no pricing rules — proof this path is reached at all, not stuck on
+    // pickup-point validation for a method that never asked for one.
+    expect(result).toEqual({ ok: false, code: 'PRICE_CHANGED' });
   });
 });

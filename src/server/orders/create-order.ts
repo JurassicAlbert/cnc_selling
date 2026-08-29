@@ -28,6 +28,7 @@ import type { ValidatedPricing } from '@/server/configurator/validate-and-price'
 import { recordAnalyticsEvent } from '@/server/analytics/record-event';
 import { mailer } from '@/server/mail/mailer';
 import { computeShippingGrosze } from '@/domain/checkout/delivery';
+import { findPickupPointById } from '@/server/delivery/pickup-points';
 import { SITE } from '@/content/pl/site';
 import type { OrderItemSnapshot } from './snapshot';
 
@@ -48,6 +49,8 @@ export type CreateOrderInput = {
   readonly city: string;
   readonly paymentMethodConfigId: string;
   readonly deliveryMethodId: string;
+  /** Required (and re-validated against `server/delivery/pickup-points.ts`) only when the chosen `DeliveryMethod.requiresPickupPoint` is true — `null` otherwise. */
+  readonly pickupPointId: string | null;
 };
 
 export type CreateOrderResult =
@@ -55,7 +58,8 @@ export type CreateOrderResult =
   | { readonly ok: false; readonly code: 'CART_EMPTY' }
   | { readonly ok: false; readonly code: 'PRICE_CHANGED' }
   | { readonly ok: false; readonly code: 'DELIVERY_METHOD_INVALID' }
-  | { readonly ok: false; readonly code: 'PAYMENT_METHOD_INVALID' };
+  | { readonly ok: false; readonly code: 'PAYMENT_METHOD_INVALID' }
+  | { readonly ok: false; readonly code: 'PICKUP_POINT_INVALID' };
 
 type RevalidatedItem = {
   readonly item: CartItemView;
@@ -74,7 +78,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     findCartForRequest({ userId: input.userId, sessionToken: input.sessionToken }),
     prisma.deliveryMethod.findFirst({
       where: { id: input.deliveryMethodId, isActive: true },
-      select: { namePl: true, priceGrosze: true, freeShippingThresholdGrosze: true },
+      select: { namePl: true, priceGrosze: true, freeShippingThresholdGrosze: true, requiresPickupPoint: true },
     }),
     prisma.paymentMethodConfig.findFirst({
       where: { id: input.paymentMethodConfigId, isActive: true, isConnected: true },
@@ -97,6 +101,16 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   // anyone into (§15's "no fake payment" rule).
   if (paymentMethodConfig === null) {
     return { ok: false, code: 'PAYMENT_METHOD_INVALID' };
+  }
+  // A method that requires a pickup point (`requiresPickupPoint`) never
+  // trusts the id/label the client last rendered — the id is re-looked-up
+  // in the same static dataset the picker searched, same "never trust the
+  // client" discipline as the delivery/payment method checks just above.
+  const pickupPoint = deliveryMethod.requiresPickupPoint
+    ? (input.pickupPointId !== null ? findPickupPointById(input.pickupPointId) : null)
+    : null;
+  if (deliveryMethod.requiresPickupPoint && pickupPoint === null) {
+    return { ok: false, code: 'PICKUP_POINT_INVALID' };
   }
 
   const revalidated: RevalidatedItem[] = [];
@@ -171,6 +185,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
         totalGrossGrosze,
         deliveryMethodId: input.deliveryMethodId,
         deliveryMethodNamePl: deliveryMethod.namePl,
+        pickupPointId: pickupPoint?.id ?? null,
+        pickupPointLabel: pickupPoint?.label ?? null,
         termsVersion: TERMS_VERSION,
         termsAcceptedAt: now,
         withdrawalExemptionTextPl: SITE.checkoutWithdrawalExemptionTextPl,

@@ -445,6 +445,7 @@ export const ADMIN = {
   deliveryMethodFieldDaysMinPl: 'Czas dostawy od (dni)',
   deliveryMethodFieldDaysMaxPl: 'Czas dostawy do (dni)',
   deliveryMethodFieldTrackingAvailablePl: 'Śledzenie przesyłki dostępne',
+  deliveryMethodFieldRequiresPickupPointPl: 'Wymaga wyboru paczkomatu/punktu odbioru',
   deliveryMethodFieldSortOrderPl: 'Kolejność wyświetlania',
 
   paymentMethodsHeadingPl: 'Metody płatności',

@@ -1,6 +1,16 @@
 import Link from 'next/link';
 
-import { CartIcon, PrecisionManufacturingIcon } from '@/ui/icons';
+import { formatPln } from '@/domain/money/money';
+import {
+  CartIcon,
+  CollectionsIcon,
+  ExpandMoreIcon,
+  GridViewIcon,
+  HelpIcon,
+  InfoIcon,
+  PersonIcon,
+  PrecisionManufacturingIcon,
+} from '@/ui/icons';
 import { Container } from '@/ui/primitives/Container';
 import { logout } from '@/server/actions/auth';
 import { SITE } from '@/content/pl/site';
@@ -10,8 +20,20 @@ type CategoryLink = {
   readonly namePl: string;
 };
 
+type CollectionLink = {
+  readonly slug: string;
+  readonly namePl: string;
+};
+
+type CartSummary = {
+  readonly itemCount: number;
+  readonly totalGrossGrosze: number;
+};
+
 type SiteHeaderProps = {
   readonly categories: readonly CategoryLink[];
+  readonly collections: readonly CollectionLink[];
+  readonly cartSummary: CartSummary;
   readonly session: { readonly name: string } | null;
 };
 
@@ -40,8 +62,18 @@ type SiteHeaderProps = {
  * project already applies to `/faq`'s accordion and every Server Action
  * form. `<details>` closes on an outside click in every real browser
  * without extra script (native behavior, not something added here).
+ *
+ * **2026-08-29 UX pass, owner feedback**: "dodać ikony do elementów
+ * nawigacji", "strzałki w jedną/drugą stronę przy liście rozwijanej",
+ * "koło koszyka ... ładne UX pokazujące cenę i ilość elementów w koszyku
+ * na bieżąco", "nawigacja 'kolekcje' ... też powinna być listą rozwijaną".
+ * All still zero client JS: icons are the same RSC-safe inline-SVG set as
+ * the rest of `ui/icons`, the chevron is one shared `ExpandMoreIcon`
+ * rotated by the `.nav-dropdown[open]` CSS rule (`theme-vars.css`), and the
+ * cart badge is a plain number read server-side by `StorefrontChrome`
+ * (`getCartSummaryForRequest`) — never a client poll.
  */
-export function SiteHeader({ categories, session }: SiteHeaderProps) {
+export function SiteHeader({ categories, collections, cartSummary, session }: SiteHeaderProps) {
   return (
     <header
       style={{
@@ -79,7 +111,9 @@ export function SiteHeader({ categories, session }: SiteHeaderProps) {
 
           <details className="nav-dropdown">
             <summary className="nav-link" style={{ font: 'var(--mui-font-body2)', cursor: 'pointer', listStyle: 'none' }}>
+              <GridViewIcon size={18} />
               {SITE.headerProductsMenuPl}
+              <ExpandMoreIcon size={16} className="nav-dropdown-chevron" style={{ marginInlineStart: 2 }} />
             </summary>
             <div className="nav-dropdown-panel">
               {categories.map((category) => (
@@ -91,14 +125,31 @@ export function SiteHeader({ categories, session }: SiteHeaderProps) {
           </details>
 
           <Link href="/o-nas" className="nav-link" style={{ font: 'var(--mui-font-body2)' }}>
+            <InfoIcon size={18} />
             {SITE.aboutHeadingPl}
           </Link>
           <Link href="/faq" className="nav-link" style={{ font: 'var(--mui-font-body2)' }}>
+            <HelpIcon size={18} />
             {SITE.headerFaqLinkPl}
           </Link>
-          <Link href="/kolekcje" className="nav-link" style={{ font: 'var(--mui-font-body2)' }}>
-            {SITE.footerCollectionsLinkPl}
-          </Link>
+
+          <details className="nav-dropdown">
+            <summary className="nav-link" style={{ font: 'var(--mui-font-body2)', cursor: 'pointer', listStyle: 'none' }}>
+              <CollectionsIcon size={18} />
+              {SITE.headerCollectionsMenuPl}
+              <ExpandMoreIcon size={16} className="nav-dropdown-chevron" style={{ marginInlineStart: 2 }} />
+            </summary>
+            <div className="nav-dropdown-panel">
+              <Link href="/kolekcje" className="nav-dropdown-item" style={{ fontWeight: 600 }}>
+                {SITE.headerAllCollectionsLinkPl}
+              </Link>
+              {collections.map((collection) => (
+                <Link key={collection.slug} href={`/kolekcje/${collection.slug}`} className="nav-dropdown-item">
+                  {collection.namePl}
+                </Link>
+              ))}
+            </div>
+          </details>
 
           <Link
             href="/koszyk"
@@ -107,12 +158,24 @@ export function SiteHeader({ categories, session }: SiteHeaderProps) {
           >
             <CartIcon size={20} />
             {SITE.cartHeadingPl}
+            {cartSummary.itemCount > 0 && (
+              <>
+                <span className="cart-count-badge" aria-hidden="true">
+                  {cartSummary.itemCount}
+                </span>
+                <span style={{ font: 'var(--mui-font-caption)', color: 'var(--mui-palette-text-secondary)' }}>
+                  {formatPln(cartSummary.totalGrossGrosze)}
+                </span>
+              </>
+            )}
           </Link>
 
           {session !== null ? (
             <details className="nav-dropdown">
               <summary className="nav-link" style={{ font: 'var(--mui-font-body2)', cursor: 'pointer', listStyle: 'none' }}>
+                <PersonIcon size={18} />
                 {SITE.headerAccountLinkPl}
+                <ExpandMoreIcon size={16} className="nav-dropdown-chevron" style={{ marginInlineStart: 2 }} />
               </summary>
               <div className="nav-dropdown-panel" style={{ insetInlineEnd: 0, insetInlineStart: 'auto' }}>
                 <Link href="/moje-konto" className="nav-dropdown-item">
@@ -143,7 +206,9 @@ export function SiteHeader({ categories, session }: SiteHeaderProps) {
           ) : (
             <details className="nav-dropdown">
               <summary className="nav-link" style={{ font: 'var(--mui-font-body2)', cursor: 'pointer', listStyle: 'none' }}>
+                <PersonIcon size={18} />
                 {SITE.headerLoginLinkPl}
+                <ExpandMoreIcon size={16} className="nav-dropdown-chevron" style={{ marginInlineStart: 2 }} />
               </summary>
               <div className="nav-dropdown-panel" style={{ insetInlineEnd: 0, insetInlineStart: 'auto' }}>
                 <Link href="/logowanie" className="nav-dropdown-item">

@@ -24,6 +24,7 @@ export type ActiveDeliveryMethod = {
   readonly estimatedDaysMin: number;
   readonly estimatedDaysMax: number;
   readonly trackingAvailable: boolean;
+  readonly requiresPickupPoint: boolean;
 };
 
 export async function listActiveDeliveryMethods(): Promise<readonly ActiveDeliveryMethod[]> {
@@ -39,6 +40,7 @@ export async function listActiveDeliveryMethods(): Promise<readonly ActiveDelive
       estimatedDaysMin: true,
       estimatedDaysMax: true,
       trackingAvailable: true,
+      requiresPickupPoint: true,
     },
   });
 }

@@ -80,6 +80,28 @@ test('a product configured at its real maximum size (120×120cm) prices and adds
   await expect(page.getByText('120×120 cm', { exact: false })).toBeVisible();
 });
 
+/**
+ * 2026-08-29, owner feedback: "dodaj odpowiednie testy jeśli jeszcze nie ma
+ * żeby nie było sytuacji w której klient kupuje 10000 sztuk produktu" — the
+ * real-browser proof to go with `tests/unit/cart-quantity.test.ts`'s pure
+ * assertion: typing an absurd quantity directly into the cart's own field
+ * and submitting is clamped server-side (`updateCartItemQuantity`), not
+ * just prevented by the input's own `max` attribute (which a real POST can
+ * bypass entirely).
+ */
+test('typing an absurd quantity into the cart is clamped to the real maximum, not accepted as-is', async ({ page }) => {
+  await addToCart(page);
+  const main = page.getByRole('main');
+
+  const quantityInput = main.getByRole('spinbutton', { name: 'Ilość' });
+  await quantityInput.fill('10000');
+  await main.getByRole('button', { name: 'Aktualizuj' }).click();
+  await expect(page).toHaveURL('/koszyk');
+
+  await expect(page.getByRole('spinbutton', { name: 'Ilość' })).not.toHaveValue('10000');
+  await expect(page.getByRole('spinbutton', { name: 'Ilość' })).toHaveValue('25');
+});
+
 test('adding the same product twice with different dimensions creates two separate line items', async ({ page }) => {
   await addToCart(page);
   await expect(page.getByText('70×70 cm', { exact: false })).toHaveCount(1);
