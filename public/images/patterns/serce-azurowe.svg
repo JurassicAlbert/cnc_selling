@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Wzór — serce ażurowe">
+  <g fill="none" stroke="#3E2A1A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M100,165 C40,120 25,80 50,55 C68,37 92,42 100,65 C108,42 132,37 150,55 C175,80 160,120 100,165 Z" />
+    <path d="M100,140 C65,110 55,85 70,68" stroke-opacity="0.5" stroke-width="2.5" />
+    <path d="M100,140 C135,110 145,85 130,68" stroke-opacity="0.5" stroke-width="2.5" />
+  </g>
+</svg>

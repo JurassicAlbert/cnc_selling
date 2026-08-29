@@ -634,6 +634,42 @@ const DESIGN_SEEDS: readonly DesignSeedInput[] = [
     imageSlug: 'wzor-geometryczny',
     detailLevel: 2,
   },
+  {
+    slug: 'drzewo-zycia',
+    code: 'WZR-007',
+    namePl: 'Drzewo życia',
+    descPl: 'Symetryczne drzewo z gałęziami i korzeniami — motyw łączący korzenie z koroną.',
+    tags: ['roślinny', 'symboliczny'],
+    imageSlug: 'drzewo-zycia',
+    detailLevel: 3,
+  },
+  {
+    slug: 'serce-azurowe',
+    code: 'WZR-008',
+    namePl: 'Serce ażurowe',
+    descPl: 'Serce z delikatną wewnętrzną linią — prosty, popularny motyw na prezent.',
+    tags: ['symboliczny', 'minimalistyczny'],
+    imageSlug: 'serce-azurowe',
+    detailLevel: 1,
+  },
+  {
+    slug: 'faza-ksiezyca',
+    code: 'WZR-009',
+    namePl: 'Fazy księżyca',
+    descPl: 'Rząd czterech faz księżyca — od nowiu przez pełnię do ostatniej kwadry.',
+    tags: ['symboliczny', 'geometryczny'],
+    imageSlug: 'faza-ksiezyca',
+    detailLevel: 2,
+  },
+  {
+    slug: 'pioro-lesne',
+    code: 'WZR-010',
+    namePl: 'Pióro leśne',
+    descPl: 'Stylizowane pióro z symetrycznymi żyłkami po obu stronach trzonu.',
+    tags: ['roślinny', 'symboliczny'],
+    imageSlug: 'pioro-lesne',
+    detailLevel: 2,
+  },
 ];
 
 async function seedDesigns(): Promise<readonly SeededDesign[]> {
