@@ -108,11 +108,11 @@ async function main(): Promise<void> {
   const materials = await seedMaterials();
   const finishes = await seedFinishes();
   await seedMaterialFinishCompatibility(materials, finishes);
-  const design = await seedDesign();
+  const designs = await seedDesigns();
   const font = await seedFont();
 
   const categories = await seedCategories();
-  await seedProducts(categories, materials, design, font);
+  await seedProducts(categories, materials, designs, font);
   await seedBlogPosts();
   await seedFaqs();
   await seedExternalPatternResources();
@@ -384,41 +384,125 @@ async function seedMaterialFinishCompatibility(
 
 type SeededDesign = { readonly id: string };
 
+const PATTERN_IMAGE = (slug: string) => `/images/patterns/${slug}.svg`;
+
+type DesignSeedInput = {
+  readonly slug: string;
+  readonly code: string;
+  readonly namePl: string;
+  readonly descPl: string;
+  readonly tags: readonly string[];
+  readonly imageSlug: string;
+  readonly detailLevel: number;
+};
+
 /**
- * One placeholder pattern, named as one. A design's artwork is the
- * business's actual creative IP — not something to invent, same as product
- * photography. Production metadata (line width, machining time, detail
- * level) is engineering estimate, not creative content, so it gets
- * reasonable placeholder numbers rather than being left unset; nothing here
- * can be priced or feasibility-checked without them.
+ * 2026-08-29, owner feedback: the pattern list needs more than one row to
+ * actually be a real "pick a ready-made pattern" experience — a single
+ * placeholder can't populate a dropdown. A design's artwork is still the
+ * business's actual creative IP (same reasoning `wzor-podstawowy`'s own
+ * comment already gave for not inventing product photography) — these five
+ * are original, hand-authored line-art motifs (`public/images/patterns/*
+ * .svg`, transparent background, no fill/blend imported from anywhere),
+ * the same "engraved wood art" register `src/ui/primitives/engravings.tsx`
+ * already established for site decoration, not a stand-in for a real
+ * commissioned catalogue. `wzor-podstawowy` itself is left exactly as it
+ * was — still explicitly named "do zastąpienia" (to be replaced) — rather
+ * than deleted, so the "still a placeholder" signal isn't lost.
  */
-async function seedDesign(): Promise<SeededDesign> {
-  const design = await prisma.design.upsert({
-    where: { slug: 'wzor-podstawowy' },
-    create: {
-      slug: 'wzor-podstawowy',
-      code: 'WZR-001',
-      namePl: 'Wzór podstawowy — do zastąpienia',
-      descPl: 'Wzór zastępczy używany do testowania katalogu przed dodaniem prawdziwych projektów.',
-      tags: ['placeholder'],
-      thumbnailUrl: PLACEHOLDER_IMAGE('wzor-podstawowy'),
-      previewUrl: PLACEHOLDER_IMAGE('wzor-podstawowy'),
-      isActive: true,
-      referenceWidthMm: 600,
-      minLineWidthUm: 1_200,
-      minDetailSpacingUm: 2_000,
-      recommendedMethod: 'CNC_CARVE',
-      minRecommendedWidthMm: 300,
-      detailLevel: 3,
-      machiningMilliMinutesPerM2: 2_500,
-      rightsStatus: 'APPROVED_COMMERCIAL',
-      rightsNotes:
-        'Wzór zastępczy stworzony na potrzeby seeda — do wymiany na prawdziwy projekt przed uruchomieniem sklepu.',
-    },
-    update: {},
-  });
-  console.log(`Design: ${design.code} (${design.namePl})`);
-  return design;
+const DESIGN_SEEDS: readonly DesignSeedInput[] = [
+  {
+    slug: 'wzor-podstawowy',
+    code: 'WZR-001',
+    namePl: 'Wzór podstawowy — do zastąpienia',
+    descPl: 'Wzór zastępczy używany do testowania katalogu przed dodaniem prawdziwych projektów.',
+    tags: ['placeholder'],
+    imageSlug: 'placeholders/wzor-podstawowy',
+    detailLevel: 3,
+  },
+  {
+    slug: 'galazka-oliwna',
+    code: 'WZR-002',
+    namePl: 'Gałązka oliwna',
+    descPl: 'Delikatna gałązka z naprzemiennymi listkami — subtelny, roślinny motyw.',
+    tags: ['roślinny', 'minimalistyczny'],
+    imageSlug: 'galazka-oliwna',
+    detailLevel: 2,
+  },
+  {
+    slug: 'kompas-nawigacyjny',
+    code: 'WZR-003',
+    namePl: 'Kompas nawigacyjny',
+    descPl: 'Symetryczny kompas z krzyżującymi się liniami — precyzyjny, geometryczny motyw.',
+    tags: ['geometryczny', 'precyzja'],
+    imageSlug: 'kompas-nawigacyjny',
+    detailLevel: 2,
+  },
+  {
+    slug: 'fala-drewna',
+    code: 'WZR-004',
+    namePl: 'Fala drewna',
+    descPl: 'Płynące poziome linie przypominające usłojenie drewna.',
+    tags: ['organiczny', 'usłojenie'],
+    imageSlug: 'fala-drewna',
+    detailLevel: 1,
+  },
+  {
+    slug: 'mandala-botaniczna',
+    code: 'WZR-005',
+    namePl: 'Mandala botaniczna',
+    descPl: 'Promienista mandala złożona z ośmiu roślinnych płatków — najbardziej rozbudowany z wzorów.',
+    tags: ['roślinny', 'mandala'],
+    imageSlug: 'mandala-botaniczna',
+    detailLevel: 4,
+  },
+  {
+    slug: 'wzor-geometryczny',
+    code: 'WZR-006',
+    namePl: 'Wzór geometryczny',
+    descPl: 'Koncentryczne okręgi i linie tworzące symetryczny, techniczny motyw.',
+    tags: ['geometryczny'],
+    imageSlug: 'wzor-geometryczny',
+    detailLevel: 2,
+  },
+];
+
+async function seedDesigns(): Promise<readonly SeededDesign[]> {
+  const designs: SeededDesign[] = [];
+  for (const input of DESIGN_SEEDS) {
+    const imageUrl = input.imageSlug.startsWith('placeholders/')
+      ? PLACEHOLDER_IMAGE(input.imageSlug.slice('placeholders/'.length))
+      : PATTERN_IMAGE(input.imageSlug);
+    const design = await prisma.design.upsert({
+      where: { slug: input.slug },
+      create: {
+        slug: input.slug,
+        code: input.code,
+        namePl: input.namePl,
+        descPl: input.descPl,
+        tags: [...input.tags],
+        thumbnailUrl: imageUrl,
+        previewUrl: imageUrl,
+        isActive: true,
+        referenceWidthMm: 600,
+        minLineWidthUm: 1_200,
+        minDetailSpacingUm: 2_000,
+        recommendedMethod: 'CNC_CARVE',
+        minRecommendedWidthMm: 300,
+        detailLevel: input.detailLevel,
+        machiningMilliMinutesPerM2: 2_500,
+        rightsStatus: 'APPROVED_COMMERCIAL',
+        rightsNotes:
+          input.slug === 'wzor-podstawowy'
+            ? 'Wzór zastępczy stworzony na potrzeby seeda — do wymiany na prawdziwy projekt przed uruchomieniem sklepu.'
+            : 'Oryginalny wzór graficzny stworzony na potrzeby tego projektu (linia grawerska, brak zewnętrznego źródła).',
+      },
+      update: {},
+    });
+    console.log(`Design: ${design.code} (${design.namePl})`);
+    designs.push(design);
+  }
+  return designs;
 }
 
 /**
@@ -1086,7 +1170,7 @@ async function seedPaymentMethodConfigs(): Promise<void> {
 async function seedProducts(
   categories: Record<string, { readonly id: string }>,
   materials: SeededMaterials,
-  design: SeededDesign,
+  designs: readonly SeededDesign[],
   font: { readonly id: string },
 ): Promise<void> {
   const loft = categories.loft;
@@ -1134,7 +1218,7 @@ async function seedProducts(
     { thicknessMm: 40, labelPl: '40 mm' },
   ]);
   await seedProductMaterial(loftStool.id, materials.dab.id);
-  await seedProductDesign(loftStool.id, design.id);
+  await seedProductDesigns(loftStool.id, designs);
   await seedProductImage(loftStool.id, STOCK_PHOTO('loft'), 'Stołek loftowy z grawerem — stal i drewno w stylu loft');
   await seedPersonalizationSpec(loftStool.id, {
     maxCharacters: 30,
@@ -1164,7 +1248,7 @@ async function seedProducts(
     maxHeightMm: 30,
   });
   await seedProductMaterial(bransoletka.id, materials.dab.id);
-  await seedProductDesign(bransoletka.id, design.id);
+  await seedProductDesigns(bransoletka.id, designs);
   await seedProductImage(
     bransoletka.id,
     STOCK_PHOTO('amulety-i-bransoletki'),
@@ -1199,7 +1283,7 @@ async function seedProducts(
     maxHeightMm: 700,
   });
   await seedProductMaterial(fartuch.id, materials.gres.id);
-  await seedProductDesign(fartuch.id, design.id);
+  await seedProductDesigns(fartuch.id, designs);
   await seedProductImage(fartuch.id, STOCK_PHOTO('gres'), 'Biały gres z grawerowanym wzorem');
   await seedInstallationVariant(fartuch.id, {
     code: 'ON_TOP',
@@ -1235,7 +1319,7 @@ async function seedProducts(
     { thicknessMm: 20, labelPl: '20 mm' },
   ]);
   await seedProductMaterial(panel.id, materials.dab.id);
-  await seedProductDesign(panel.id, design.id);
+  await seedProductDesigns(panel.id, designs);
   await seedProductImage(
     panel.id,
     STOCK_PHOTO('panele-podlogowe'),
@@ -1263,7 +1347,7 @@ async function seedProducts(
     maxHeightMm: 1200,
   });
   await seedProductMaterial(obraz.id, materials.dab.id);
-  await seedProductDesign(obraz.id, design.id);
+  await seedProductDesigns(obraz.id, designs);
   await seedProductImage(
     obraz.id,
     STOCK_PHOTO('obrazy-drewniane'),
@@ -1312,7 +1396,7 @@ async function seedProducts(
     maxHeightMm: 600,
   });
   await seedProductMaterial(szachownica.id, materials.dab.id);
-  await seedProductDesign(szachownica.id, design.id);
+  await seedProductDesigns(szachownica.id, designs);
   await seedPersonalizationSpec(szachownica.id, {
     maxCharacters: 30,
     maxLines: 1,
@@ -1454,6 +1538,13 @@ async function seedProductDesign(productId: string, designId: string): Promise<v
     create: { productId, designId },
     update: {},
   });
+}
+
+/** Every product that offers a DESIGN step gets the full pattern catalogue — no per-product curation exists yet, so offering all of them is the honest default rather than an arbitrary subset. */
+async function seedProductDesigns(productId: string, designs: readonly SeededDesign[]): Promise<void> {
+  for (const design of designs) {
+    await seedProductDesign(productId, design.id);
+  }
 }
 
 /**

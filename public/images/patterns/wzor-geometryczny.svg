@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Wzór — geometryczny">
+  <g fill="none" stroke="#3E2A1A" stroke-width="3.5">
+    <circle cx="100" cy="100" r="80" />
+    <circle cx="100" cy="100" r="52" stroke-opacity="0.5" />
+    <line x1="28" y1="100" x2="172" y2="100" />
+    <line x1="100" y1="28" x2="100" y2="172" />
+    <line x1="49" y1="49" x2="151" y2="151" />
+    <line x1="151" y1="49" x2="49" y2="151" />
+  </g>
+  <circle cx="100" cy="100" r="6" fill="#3E2A1A" stroke="none" />
+</svg>

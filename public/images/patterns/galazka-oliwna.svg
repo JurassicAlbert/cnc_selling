@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Wzór — gałązka oliwna">
+  <g fill="none" stroke="#3E2A1A" stroke-width="4" stroke-linecap="round">
+    <path d="M25,175 Q100,140 175,25" />
+    <path d="M55,155 Q65,165 40,175" />
+    <path d="M80,125 Q90,135 100,145" />
+    <path d="M105,100 Q117,107 130,115" />
+    <path d="M128,72 Q139,78 150,85" />
+    <path d="M150,45 Q159,50 168,55" />
+  </g>
+</svg>

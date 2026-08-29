@@ -28,9 +28,19 @@
  * its own links. A customer picking a pattern here now lands on the
  * product's MATERIAL step already past DESIGN, not stepping through it
  * again from scratch.
+ *
+ * 2026-08-29, owner feedback, verbatim: "pattern should be more like png
+ * without background not some div block" — the thumbnail used to sit in a
+ * `Box` with `bgcolor: 'background.default'` behind it (a filled card, the
+ * "div block"). Every real pattern image is now a transparent SVG (see
+ * `prisma/seed.ts`'s `DESIGN_SEEDS`), so it renders as a bare `<img>` with
+ * no background/border and `objectFit: 'contain'` — the artwork floats on
+ * the card's own surface instead of sitting in its own filled tile.
+ * `next/image` is not used for this specific image: it cannot optimize SVG
+ * sources without `dangerouslyAllowSVG` (unset — same reasoning
+ * `Configurator.tsx`'s `DesignMenuItem` and the installation diagram give).
  */
 
-import Image from 'next/image';
 import Link from 'next/link';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { Box, Card, CardContent, Chip, Stack, Typography } from '@mui/material';
@@ -91,8 +101,9 @@ export function PatternsGallery({
                 '&:hover': { borderColor: 'secondary.main', transform: 'translateY(-2px)' },
               }}
             >
-              <Box sx={{ position: 'relative', aspectRatio: '1 / 1', bgcolor: 'background.default' }}>
-                <Image src={design.thumbnailUrl} alt="" fill sizes="(max-width: 768px) 50vw, 240px" style={{ objectFit: 'cover' }} />
+              <Box sx={{ position: 'relative', aspectRatio: '1 / 1' }}>
+                {/* biome-ignore lint/performance/noImgElement: transparent SVG pattern art — next/image can't optimize SVG without dangerouslyAllowSVG, same precedent as Configurator.tsx's DesignMenuItem */}
+                <img src={design.thumbnailUrl} alt="" style={{ position: 'absolute', inset: 24, objectFit: 'contain' }} />
                 {design.featured && (
                   <Chip
                     label={SITE.patternsFeaturedBadgePl}

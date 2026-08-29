@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Wzór — mandala botaniczna">
+  <g fill="none" stroke="#3E2A1A" stroke-width="3.5">
+    <circle cx="100" cy="100" r="70" stroke-opacity="0.35" />
+    <g>
+      <path d="M100,86 Q88,50 100,14 Q112,50 100,86 Z" />
+      <path d="M100,86 Q88,50 100,14 Q112,50 100,86 Z" transform="rotate(45 100 100)" />
+      <path d="M100,86 Q88,50 100,14 Q112,50 100,86 Z" transform="rotate(90 100 100)" />
+      <path d="M100,86 Q88,50 100,14 Q112,50 100,86 Z" transform="rotate(135 100 100)" />
+      <path d="M100,86 Q88,50 100,14 Q112,50 100,86 Z" transform="rotate(180 100 100)" />
+      <path d="M100,86 Q88,50 100,14 Q112,50 100,86 Z" transform="rotate(225 100 100)" />
+      <path d="M100,86 Q88,50 100,14 Q112,50 100,86 Z" transform="rotate(270 100 100)" />
+      <path d="M100,86 Q88,50 100,14 Q112,50 100,86 Z" transform="rotate(315 100 100)" />
+    </g>
+  </g>
+  <circle cx="100" cy="100" r="12" fill="#3E2A1A" stroke="none" />
+</svg>

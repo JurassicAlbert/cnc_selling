@@ -11,13 +11,21 @@
  * zachowania" (patterns/wood type/finish should be choosable in the product
  * like a t-shirt color) — this used to be a `Stepper`-gated wizard showing
  * exactly one step at a time behind "Wstecz"/"Dalej". Every applicable
- * section now renders simultaneously on one page — DESIGN/MATERIAL/FINISH
- * as real image swatches (`ImageSwatchGroup`, using photography that was
- * already fetched — `MaterialOptionRow.imageUrl`/`DesignOptionRow.
- * previewUrl`/the newly-added `FinishOptionRow.imageUrl` — just never
- * rendered as one), SIZE/PERSONALIZATION/CUSTOM_UPLOAD as their existing
- * inputs, SUMMARY always visible at the bottom. No step index, no
+ * section rendered simultaneously on one page instead, no step index, no
  * `Stepper`/`StepButton` at all.
+ *
+ * **2026-08-29 follow-up, direct owner feedback**: DESIGN/MATERIAL/FINISH/
+ * SIZE moved again — out of the accordion entirely into a compact MUI
+ * `Breadcrumbs` trail at the top ("Wzór: … › Materiał: … › Wymiary: …"),
+ * each crumb opening a `Menu` (DESIGN/MATERIAL/FINISH — a real dropdown
+ * list) or a `Popover` (SIZE — two plain fields). Only DESIGN's dropdown
+ * shows an image (the pattern's own transparent-PNG-style artwork, shown
+ * bare with no card/circle behind it — "pattern should be more like png
+ * without background not some div block"); MATERIAL/FINISH are text-only
+ * lists — "you don't need to visualize the wood size or look". THICKNESS/
+ * INSTALLATION_VARIANT/PERSONALIZATION/CUSTOM_UPLOAD stay as accordion
+ * bands below (`ConfigSection`) — none of them are a simple "pick one from
+ * a photographed list" the way the four breadcrumb steps are.
  *
  * The domain-level narrowing this used to lean on step-locking for turns
  * out to already handle "no forced order" correctly on its own:
@@ -25,11 +33,11 @@
  * from whatever `selections` currently holds on every change — before a
  * material is picked, `finishes` is genuinely empty (nothing to enumerate,
  * a material's own join table is the only source of which finishes apply),
- * which the existing `OptionStep`/section already renders as an honest
- * "not available yet" notice with zero new code. DESIGN/MATERIAL entries
- * were already individually gated (`isAvailable`/`reason` per entry, not
- * per section) — that mechanism is exactly what a real swatch picker needs,
- * unchanged.
+ * which the existing `OptionStep`/`TextMenuItem` already renders as an
+ * honest "not available yet" notice with zero new code. DESIGN/MATERIAL
+ * entries were already individually gated (`isAvailable`/`reason` per
+ * entry, not per step) — that mechanism is exactly what a real dropdown
+ * needs, unchanged.
  *
  * State ownership, deliberately split three ways (unchanged by the
  * redesign above — this is presentation-only, no state/domain logic moved):
@@ -48,17 +56,22 @@
 
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import CheckIcon from '@mui/icons-material/Check';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Accordion from '@mui/material/Accordion';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Breadcrumbs from '@mui/material/Breadcrumbs';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import Link from '@mui/material/Link';
+import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import Slider from '@mui/material/Slider';
+import Popover from '@mui/material/Popover';
 import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
@@ -106,7 +119,6 @@ import { uploadCustomDesign } from '@/server/actions/upload';
 import type { OwnedCustomerDesignListItem } from '@/server/repositories/customer-designs';
 import type { UploadCustomDesignResult } from '@/server/actions/upload';
 import { ConfiguratorPreview } from './ConfiguratorPreview';
-import { ImageSwatchGroup } from './ImageSwatchGroup';
 import type { SwatchEntry } from './ImageSwatchGroup';
 import { readSelectionsFromSearch, writeSelectionsToSearch } from './selections-url';
 
@@ -124,6 +136,14 @@ const STEP_LABEL: Record<StepCode, string> = {
 
 /** Fixed at 1 — quantity belongs to the cart (P5), not the configurator. */
 const QUANTITY = 1;
+
+/**
+ * Steps rendered as breadcrumb crumbs (dropdown Menu/Popover), not
+ * accordion bands. Excluded from `expandedStep`'s "open the first
+ * unsatisfied step" search — an accordion band auto-opening for a step that
+ * has no band any more would open nothing and silently do nothing.
+ */
+const BREADCRUMB_STEPS: readonly StepCode[] = ['DESIGN', 'MATERIAL', 'FINISH', 'SIZE'];
 
 type ConfiguratorProps = {
   readonly productSlug: string;
@@ -175,6 +195,23 @@ export function Configurator({
   const [expandedStep, setExpandedStep] = useState<StepCode | null>(null);
   const expandedStepInitialized = useRef(false);
   const hydrated = useRef(false);
+  // 2026-08-29, owner feedback: DESIGN/MATERIAL/FINISH/SIZE moved out of the
+  // accordion entirely into a compact MUI `Breadcrumbs` trail ("Wzór: ... ›
+  // Materiał: ... › Wymiary: ..."), each crumb opening a `Menu` (DESIGN/
+  // MATERIAL/FINISH — a real dropdown list, not an image-swatch grid) or a
+  // `Popover` (SIZE — two plain fields, no slider: "you don't need to
+  // visualize the wood size or look"). One shared anchor/open-step pair
+  // covers all four, since only one can be open at a time.
+  const [crumbAnchor, setCrumbAnchor] = useState<HTMLElement | null>(null);
+  const [openCrumbStep, setOpenCrumbStep] = useState<StepCode | null>(null);
+  const openCrumb = useCallback((step: StepCode, anchor: HTMLElement) => {
+    setCrumbAnchor(anchor);
+    setOpenCrumbStep(step);
+  }, []);
+  const closeCrumb = useCallback(() => {
+    setCrumbAnchor(null);
+    setOpenCrumbStep(null);
+  }, []);
 
   const applyUrlSelections = useCallback((search: string) => {
     const restored = readSelectionsFromSearch(search);
@@ -254,7 +291,9 @@ export function Configurator({
   useEffect(() => {
     if (steps.length === 0 || expandedStepInitialized.current) return;
     expandedStepInitialized.current = true;
-    const firstUnsatisfied = steps.find((step) => step !== 'SUMMARY' && !isStepSatisfied(step, selections));
+    const firstUnsatisfied = steps.find(
+      (step) => step !== 'SUMMARY' && !BREADCRUMB_STEPS.includes(step) && !isStepSatisfied(step, selections),
+    );
     setExpandedStep(firstUnsatisfied ?? null);
   }, [steps]);
 
@@ -272,7 +311,9 @@ export function Configurator({
   const advanceExpandedStep = useCallback(
     (afterStep: StepCode, updatedSelections: Selections) => {
       const index = steps.indexOf(afterStep);
-      const next = steps.slice(index + 1).find((step) => step !== 'SUMMARY' && !isStepSatisfied(step, updatedSelections));
+      const next = steps
+        .slice(index + 1)
+        .find((step) => step !== 'SUMMARY' && !BREADCRUMB_STEPS.includes(step) && !isStepSatisfied(step, updatedSelections));
       setExpandedStep(next ?? null);
     },
     [steps],
@@ -291,16 +332,22 @@ export function Configurator({
     setWidthError(width.ok ? null : numericInputMessage(width.code));
     const next = { ...selections, widthMm: width.ok ? width.mm : null };
     setSelections(next);
-    if (isStepSatisfied('SIZE', next)) advanceExpandedStep('SIZE', next);
-  }, [widthInput, selections, advanceExpandedStep]);
+    if (isStepSatisfied('SIZE', next)) {
+      advanceExpandedStep('SIZE', next);
+      closeCrumb();
+    }
+  }, [widthInput, selections, advanceExpandedStep, closeCrumb]);
 
   const commitHeight = useCallback(() => {
     const height = parseCentimetresToMm(heightInput);
     setHeightError(height.ok ? null : numericInputMessage(height.code));
     const next = { ...selections, heightMm: height.ok ? height.mm : null };
     setSelections(next);
-    if (isStepSatisfied('SIZE', next)) advanceExpandedStep('SIZE', next);
-  }, [heightInput, selections, advanceExpandedStep]);
+    if (isStepSatisfied('SIZE', next)) {
+      advanceExpandedStep('SIZE', next);
+      closeCrumb();
+    }
+  }, [heightInput, selections, advanceExpandedStep, closeCrumb]);
 
   // Clearing a dependent selection is only correct when it is ACTUALLY no
   // longer compatible — never a blanket clear on every change — and the
@@ -311,26 +358,23 @@ export function Configurator({
   const selectMaterial = useCallback(
     (materialId: string) => {
       if (selections.finishId === null) {
-        const next = { ...selections, materialId };
-        setSelections(next);
-        advanceExpandedStep('MATERIAL', next);
+        setSelections({ ...selections, materialId });
+        closeCrumb();
         return;
       }
       const stillOffered = options.materials
         .find((material) => material.id === materialId)
         ?.finishes.some((finish) => finish.id === selections.finishId && finish.isAvailable);
       if (stillOffered) {
-        const next = { ...selections, materialId };
-        setSelections(next);
-        advanceExpandedStep('MATERIAL', next);
+        setSelections({ ...selections, materialId });
+        closeCrumb();
         return;
       }
       setClearedNotice(SITE.configuratorClearedFinishPl);
-      const next = { ...selections, materialId, finishId: null };
-      setSelections(next);
-      advanceExpandedStep('MATERIAL', next);
+      setSelections({ ...selections, materialId, finishId: null });
+      closeCrumb();
     },
-    [options, selections, advanceExpandedStep],
+    [options, selections, closeCrumb],
   );
 
   const selectInstallationVariant = useCallback(
@@ -390,15 +434,19 @@ export function Configurator({
   const selectedMaterial =
     selections.materialId === null ? null : (options.materials.find((m) => m.id === selections.materialId) ?? null);
 
+  // DESIGN is the one breadcrumb dropdown that shows real artwork (owner:
+  // "pattern should be more like png without background") — the transparent
+  // pattern SVGs, shown bare with no card/circle behind them (see the
+  // `<img>` inside `DesignMenuItem` below). MATERIAL/FINISH deliberately
+  // stay text-only lists — owner: "you don't need to visualize the wood
+  // size or look" — so they use the plain `OptionAvailability` arrays
+  // directly, the same shape `OptionStep`/THICKNESS already uses, no
+  // image lookup needed.
   const designSwatches: readonly SwatchEntry[] = (snapshot?.availability.designs ?? []).map((entry) =>
     toSwatchEntry(entry, options.designs.find((d) => d.id === entry.id)?.previewUrl ?? ''),
   );
-  const materialSwatches: readonly SwatchEntry[] = (snapshot?.availability.materials ?? []).map((entry) =>
-    toSwatchEntry(entry, options.materials.find((m) => m.id === entry.id)?.imageUrl ?? ''),
-  );
-  const finishSwatches: readonly SwatchEntry[] = (snapshot?.availability.finishes ?? []).map((entry) =>
-    toSwatchEntry(entry, selectedMaterial?.finishes.find((f) => f.id === entry.id)?.imageUrl ?? ''),
-  );
+  const materialOptions = snapshot?.availability.materials ?? [];
+  const finishOptions = snapshot?.availability.finishes ?? [];
 
   const selectedThicknessLabel =
     selections.thicknessMm === null
@@ -425,98 +473,108 @@ export function Configurator({
           </Alert>
         )}
 
-        {steps.includes('DESIGN') && (
-          <ConfigSection
-            step="DESIGN"
-            heading={STEP_LABEL.DESIGN}
-            selectedLabel={selectedLabelOf(designSwatches, selections.designId)}
-            expanded={expandedStep === 'DESIGN'}
-            onToggle={() => setExpandedStep((prev) => (prev === 'DESIGN' ? null : 'DESIGN'))}
-          >
-            {designSwatches.length === 0 ? (
-              <Alert severity="info">{SITE.configuratorNoOptionsPl}</Alert>
-            ) : (
-              <ImageSwatchGroup
-                ariaLabel={STEP_LABEL.DESIGN}
-                entries={designSwatches}
-                selectedId={selections.designId}
-                onSelect={(id) => {
-                  const next = { ...selections, designId: id };
-                  setSelections(next);
-                  advanceExpandedStep('DESIGN', next);
-                }}
-              />
-            )}
-          </ConfigSection>
-        )}
+        {(steps.includes('DESIGN') || steps.includes('MATERIAL') || steps.includes('FINISH') || steps.includes('SIZE')) && (
+          <>
+            <Breadcrumbs separator="›" aria-label={SITE.configuratorHeadingPl}>
+              {steps.includes('DESIGN') && (
+                <CrumbLink
+                  label={STEP_LABEL.DESIGN}
+                  value={selectedLabelOf(designSwatches, selections.designId)}
+                  onOpen={(el) => openCrumb('DESIGN', el)}
+                />
+              )}
+              {steps.includes('MATERIAL') && (
+                <CrumbLink
+                  label={STEP_LABEL.MATERIAL}
+                  value={selectedMaterial?.namePl ?? null}
+                  onOpen={(el) => openCrumb('MATERIAL', el)}
+                />
+              )}
+              {steps.includes('FINISH') && (
+                <CrumbLink
+                  label={STEP_LABEL.FINISH}
+                  value={finishOptions.find((f) => f.id === selections.finishId)?.namePl ?? null}
+                  onOpen={(el) => openCrumb('FINISH', el)}
+                />
+              )}
+              {steps.includes('SIZE') && (
+                <CrumbLink label={STEP_LABEL.SIZE} value={sizeLabel} onOpen={(el) => openCrumb('SIZE', el)} />
+              )}
+            </Breadcrumbs>
 
-        {steps.includes('MATERIAL') && (
-          <ConfigSection
-            step="MATERIAL"
-            heading={STEP_LABEL.MATERIAL}
-            selectedLabel={selectedLabelOf(materialSwatches, selections.materialId)}
-            expanded={expandedStep === 'MATERIAL'}
-            onToggle={() => setExpandedStep((prev) => (prev === 'MATERIAL' ? null : 'MATERIAL'))}
-          >
-            {materialSwatches.length === 0 ? (
-              <Alert severity="info">{SITE.configuratorNoOptionsPl}</Alert>
-            ) : (
-              <ImageSwatchGroup
-                ariaLabel={STEP_LABEL.MATERIAL}
-                entries={materialSwatches}
-                selectedId={selections.materialId}
-                onSelect={selectMaterial}
-              />
-            )}
-          </ConfigSection>
-        )}
+            <Menu anchorEl={crumbAnchor} open={openCrumbStep === 'DESIGN'} onClose={closeCrumb}>
+              {designSwatches.length === 0 ? (
+                <MenuItem disabled>{SITE.configuratorNoOptionsPl}</MenuItem>
+              ) : (
+                designSwatches.map((entry) => (
+                  <DesignMenuItem
+                    key={entry.id}
+                    entry={entry}
+                    selected={entry.id === selections.designId}
+                    onSelect={(id) => {
+                      setSelections({ ...selections, designId: id });
+                      closeCrumb();
+                    }}
+                  />
+                ))
+              )}
+            </Menu>
 
-        {steps.includes('FINISH') && (
-          <ConfigSection
-            step="FINISH"
-            heading={STEP_LABEL.FINISH}
-            selectedLabel={selectedLabelOf(finishSwatches, selections.finishId)}
-            expanded={expandedStep === 'FINISH'}
-            onToggle={() => setExpandedStep((prev) => (prev === 'FINISH' ? null : 'FINISH'))}
-          >
-            {finishSwatches.length === 0 ? (
-              <Alert severity="info">{SITE.configuratorNoOptionsPl}</Alert>
-            ) : (
-              <ImageSwatchGroup
-                ariaLabel={STEP_LABEL.FINISH}
-                entries={finishSwatches}
-                selectedId={selections.finishId}
-                onSelect={(id) => {
-                  const next = { ...selections, finishId: id };
-                  setSelections(next);
-                  advanceExpandedStep('FINISH', next);
-                }}
-              />
-            )}
-          </ConfigSection>
-        )}
+            <Menu anchorEl={crumbAnchor} open={openCrumbStep === 'MATERIAL'} onClose={closeCrumb}>
+              {materialOptions.length === 0 ? (
+                <MenuItem disabled>{SITE.configuratorNoOptionsPl}</MenuItem>
+              ) : (
+                materialOptions.map((entry) => (
+                  <TextMenuItem
+                    key={entry.id}
+                    entry={entry}
+                    selected={entry.id === selections.materialId}
+                    onSelect={selectMaterial}
+                  />
+                ))
+              )}
+            </Menu>
 
-        {steps.includes('SIZE') && (
-          <ConfigSection
-            step="SIZE"
-            heading={STEP_LABEL.SIZE}
-            selectedLabel={sizeLabel}
-            expanded={expandedStep === 'SIZE'}
-            onToggle={() => setExpandedStep((prev) => (prev === 'SIZE' ? null : 'SIZE'))}
-          >
-            <SizeStep
-              widthInput={widthInput}
-              heightInput={heightInput}
-              widthError={widthError}
-              heightError={heightError}
-              dimensionEnvelope={dimensionEnvelope}
-              onWidthChange={setWidthInput}
-              onHeightChange={setHeightInput}
-              onCommitWidth={commitWidth}
-              onCommitHeight={commitHeight}
-              dimensionIssues={snapshot?.pricing.status === 'dimension_invalid' ? snapshot.pricing.issues : []}
-            />
-          </ConfigSection>
+            <Menu anchorEl={crumbAnchor} open={openCrumbStep === 'FINISH'} onClose={closeCrumb}>
+              {finishOptions.length === 0 ? (
+                <MenuItem disabled>{SITE.configuratorNoOptionsPl}</MenuItem>
+              ) : (
+                finishOptions.map((entry) => (
+                  <TextMenuItem
+                    key={entry.id}
+                    entry={entry}
+                    selected={entry.id === selections.finishId}
+                    onSelect={(id) => {
+                      setSelections({ ...selections, finishId: id });
+                      closeCrumb();
+                    }}
+                  />
+                ))
+              )}
+            </Menu>
+
+            <Popover
+              anchorEl={crumbAnchor}
+              open={openCrumbStep === 'SIZE'}
+              onClose={closeCrumb}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            >
+              <Box sx={{ p: 2.5, minWidth: 240 }}>
+                <SizeFields
+                  widthInput={widthInput}
+                  heightInput={heightInput}
+                  widthError={widthError}
+                  heightError={heightError}
+                  dimensionEnvelope={dimensionEnvelope}
+                  onWidthChange={setWidthInput}
+                  onHeightChange={setHeightInput}
+                  onCommitWidth={commitWidth}
+                  onCommitHeight={commitHeight}
+                  dimensionIssues={snapshot?.pricing.status === 'dimension_invalid' ? snapshot.pricing.issues : []}
+                />
+              </Box>
+            </Popover>
+          </>
         )}
 
         {steps.includes('THICKNESS') && (
@@ -670,6 +728,96 @@ function selectedLabelOf(entries: readonly SwatchEntry[], selectedId: string | n
 }
 
 /**
+ * One crumb of the top breadcrumb trail — "Wzór" when nothing is picked
+ * yet, "Wzór: Wzór podstawowy" once it is, the same "Colour: Blue" pattern
+ * the accordion bands already used. A real MUI `Link` styled as a button
+ * (not a navigation link — nothing here changes the URL), so it is a real
+ * `<button>` under the hood: keyboard-focusable, and exactly what
+ * `getByRole('button', ...)` finds in the e2e suite.
+ */
+function CrumbLink({
+  label,
+  value,
+  onOpen,
+}: {
+  readonly label: string;
+  readonly value: string | null;
+  readonly onOpen: (anchor: HTMLElement) => void;
+}) {
+  return (
+    <Link
+      component="button"
+      type="button"
+      underline="hover"
+      onClick={(e) => onOpen(e.currentTarget)}
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 0.25,
+        font: 'var(--mui-font-body1)',
+        color: value !== null ? 'text.primary' : 'primary.main',
+      }}
+    >
+      {value !== null ? `${label}: ${value}` : label}
+      <ExpandMoreIcon fontSize="inherit" />
+    </Link>
+  );
+}
+
+/**
+ * One row of the DESIGN dropdown — the one crumb that shows real artwork.
+ * 2026-08-29, owner feedback, verbatim: "pattern should be more like png
+ * without background not some div block" — a bare `<img>` (not `next/image`;
+ * these patterns are transparent SVGs, and `next/image` cannot optimize SVG
+ * without `dangerouslyAllowSVG`, same reason the installation diagram above
+ * uses a plain `<img>`), no circle/card behind it, `objectFit: contain` so
+ * the transparent padding around the motif stays intact instead of being
+ * cropped the way `objectFit: cover` would.
+ */
+function DesignMenuItem({
+  entry,
+  selected,
+  onSelect,
+}: {
+  readonly entry: SwatchEntry;
+  readonly selected: boolean;
+  readonly onSelect: (id: string) => void;
+}) {
+  const item = (
+    <MenuItem disabled={!entry.isAvailable} selected={selected} onClick={() => onSelect(entry.id)} sx={{ gap: 1.5 }}>
+      {/* biome-ignore lint/performance/noImgElement: transparent SVG pattern art — next/image can't optimize SVG without dangerouslyAllowSVG, same precedent as the installation diagram below */}
+      <img src={entry.imageUrl} alt="" width={32} height={32} style={{ objectFit: 'contain', flexShrink: 0 }} />
+      <span style={{ flex: 1 }}>{entry.namePl}</span>
+      {selected && <CheckIcon fontSize="small" color="secondary" />}
+    </MenuItem>
+  );
+  return <DisabledExplanation title={entry.reasonPl ?? undefined}>{item}</DisabledExplanation>;
+}
+
+/** One row of the MATERIAL/FINISH dropdowns — text only, no image (owner: "you don't need to visualize the wood size or look"). */
+function TextMenuItem({
+  entry,
+  selected,
+  onSelect,
+}: {
+  readonly entry: OptionAvailability;
+  readonly selected: boolean;
+  readonly onSelect: (id: string) => void;
+}) {
+  const item = (
+    <MenuItem disabled={!entry.isAvailable} selected={selected} onClick={() => onSelect(entry.id)}>
+      <span style={{ flex: 1 }}>{entry.namePl}</span>
+      {selected && <CheckIcon fontSize="small" color="secondary" sx={{ ml: 1.5 }} />}
+    </MenuItem>
+  );
+  return (
+    <DisabledExplanation title={entry.reason === null ? undefined : unavailabilityReasonMessage(entry.reason)}>
+      {item}
+    </DisabledExplanation>
+  );
+}
+
+/**
  * One collapsible "band" of the configurator — a real MUI `Accordion`,
  * closed by default except the first unsatisfied step (owner feedback,
  * 2026-08-28: "wybiera się poprzez kliknięcie na band z nazwą" — you pick
@@ -722,15 +870,15 @@ function ConfigSection({
 }
 
 /**
- * The SIZE band's control: a `Slider` for fast, visual, thumb-drag sizing
- * plus a precise `TextField` next to it for exact centimetre entry — real
- * e-commerce configurators (the same reference set as `StickyPriceBar`,
- * `docs/HANDOVER.md` §9g) pair the two rather than forcing a bare number
- * field. The slider commits on release (`onChangeCommitted`), matching the
- * existing `TextField`'s commit-on-blur pattern, so it costs exactly one
- * server round-trip per real change, not one per pixel dragged.
+ * The SIZE crumb's popover content — two plain, precise `TextField`s.
+ * 2026-08-29, owner feedback, verbatim: "you don't need to visualize the
+ * wood size or look" — the previous pass's `Slider` (a visual, drag-driven
+ * control) is gone; a compact popover triggered from a breadcrumb crumb has
+ * no room for one anyway. Each field still commits on blur, so live
+ * pricing (§10.2) is unchanged — the server round-trip fires the moment a
+ * real value is typed and the field loses focus, exactly as before.
  */
-function SizeStep({
+function SizeFields({
   widthInput,
   heightInput,
   widthError,
@@ -762,74 +910,27 @@ function SizeStep({
   const maxWidthCm = Number(formatMmAsCentimetres(dimensionEnvelope.maxWidthMm));
   const minHeightCm = Number(formatMmAsCentimetres(dimensionEnvelope.minHeightMm));
   const maxHeightCm = Number(formatMmAsCentimetres(dimensionEnvelope.maxHeightMm));
-  const widthSliderValue = Number(widthInput.replace(',', '.'));
-  const heightSliderValue = Number(heightInput.replace(',', '.'));
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 28, maxWidth: 420 }}>
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          <Typography id="configurator-width-slider-label">{SITE.configuratorWidthLabelPl}</Typography>
-          <TextField
-            aria-labelledby="configurator-width-slider-label"
-            label={SITE.configuratorWidthLabelPl}
-            value={widthInput}
-            onChange={(e) => onWidthChange(e.target.value)}
-            onBlur={onCommitWidth}
-            error={widthError !== null}
-            size="small"
-            sx={{ width: 96 }}
-            slotProps={{ htmlInput: { style: { textAlign: 'right' } } }}
-          />
-        </div>
-        <Slider
-          aria-labelledby="configurator-width-slider-label"
-          value={Number.isFinite(widthSliderValue) ? widthSliderValue : minWidthCm}
-          min={minWidthCm}
-          max={maxWidthCm}
-          step={1}
-          valueLabelDisplay="auto"
-          valueLabelFormat={(v) => `${v} cm`}
-          onChange={(_, value) => onWidthChange(String(Array.isArray(value) ? value[0] : value))}
-          onChangeCommitted={onCommitWidth}
-          sx={{ mt: 1 }}
-        />
-        <Typography variant="caption" color={widthError !== null ? 'error' : 'text.secondary'}>
-          {widthError ?? `${minWidthCm}–${maxWidthCm} cm`}
-        </Typography>
-      </div>
-
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          <Typography id="configurator-height-slider-label">{SITE.configuratorHeightLabelPl}</Typography>
-          <TextField
-            aria-labelledby="configurator-height-slider-label"
-            label={SITE.configuratorHeightLabelPl}
-            value={heightInput}
-            onChange={(e) => onHeightChange(e.target.value)}
-            onBlur={onCommitHeight}
-            error={heightError !== null}
-            size="small"
-            sx={{ width: 96 }}
-            slotProps={{ htmlInput: { style: { textAlign: 'right' } } }}
-          />
-        </div>
-        <Slider
-          aria-labelledby="configurator-height-slider-label"
-          value={Number.isFinite(heightSliderValue) ? heightSliderValue : minHeightCm}
-          min={minHeightCm}
-          max={maxHeightCm}
-          step={1}
-          valueLabelDisplay="auto"
-          valueLabelFormat={(v) => `${v} cm`}
-          onChange={(_, value) => onHeightChange(String(Array.isArray(value) ? value[0] : value))}
-          onChangeCommitted={onCommitHeight}
-          sx={{ mt: 1 }}
-        />
-        <Typography variant="caption" color={heightError !== null ? 'error' : 'text.secondary'}>
-          {heightError ?? `${minHeightCm}–${maxHeightCm} cm`}
-        </Typography>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <TextField
+        label={SITE.configuratorWidthLabelPl}
+        value={widthInput}
+        onChange={(e) => onWidthChange(e.target.value)}
+        onBlur={onCommitWidth}
+        error={widthError !== null}
+        helperText={widthError ?? `${minWidthCm}–${maxWidthCm} cm`}
+        size="small"
+      />
+      <TextField
+        label={SITE.configuratorHeightLabelPl}
+        value={heightInput}
+        onChange={(e) => onHeightChange(e.target.value)}
+        onBlur={onCommitHeight}
+        error={heightError !== null}
+        helperText={heightError ?? `${minHeightCm}–${maxHeightCm} cm`}
+        size="small"
+      />
 
       {dimensionIssues.length > 0 && (
         <Alert severity="error">
@@ -914,8 +1015,9 @@ function StickyPriceBar({
  * §7.2: an unavailable option is shown disabled with a Polish reason, not
  * hidden, so the customer learns the rule instead of wondering where an
  * option went. Text-only (`ToggleButtonGroup`) — used for THICKNESS,
- * INSTALLATION_VARIANT, and font choice, none of which have a real image;
- * DESIGN/MATERIAL/FINISH use `ImageSwatchGroup` instead.
+ * INSTALLATION_VARIANT, and font choice, the remaining accordion-band
+ * steps; DESIGN/MATERIAL/FINISH live in the breadcrumb dropdowns instead
+ * (`DesignMenuItem`/`TextMenuItem`, above).
  */
 function OptionStep({
   title,

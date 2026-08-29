@@ -19,21 +19,32 @@ import { expect, test } from '@playwright/test';
  * "Dalej" (owner feedback — every section is a real, always-visible
  * swatch/field picker, like choosing a t-shirt colour) — every
  * swatch/field below is clicked/filled directly, in any order.
+ *
+ * 2026-08-29: DESIGN/MATERIAL/FINISH/SIZE moved into a breadcrumb trail —
+ * each is now a crumb `<button>` that opens a `Menu` (DESIGN/MATERIAL/
+ * FINISH) or a `Popover` (SIZE). Both render in a React portal outside
+ * `<main>`, so their contents are queried unscoped (`page.getByRole`), not
+ * `main.getByRole` — the crumb buttons themselves stay inside `<main>`.
  */
 
 async function addToCart(page: import('@playwright/test').Page, widthCm: string, heightCm: string): Promise<void> {
   await page.goto('/produkt/obraz-drewniany-z-grawerem');
   const main = page.getByRole('main');
 
-  await main.getByRole('button', { name: 'Wzór podstawowy — do zastąpienia' }).click();
-  await main.getByRole('button', { name: 'Dąb', exact: true }).click();
+  await main.getByRole('button', { name: 'Wzór' }).click();
+  await page.getByRole('menuitem', { name: 'Wzór podstawowy — do zastąpienia' }).click();
 
-  await main.getByRole('textbox', { name: 'Szerokość (cm)' }).fill(widthCm);
-  await main.getByRole('textbox', { name: 'Szerokość (cm)' }).blur();
-  await main.getByRole('textbox', { name: 'Wysokość (cm)' }).fill(heightCm);
-  await main.getByRole('textbox', { name: 'Wysokość (cm)' }).blur();
+  await main.getByRole('button', { name: 'Materiał' }).click();
+  await page.getByRole('menuitem', { name: 'Dąb', exact: true }).click();
 
-  await main.getByRole('button', { name: 'Olejowanie' }).click();
+  await main.getByRole('button', { name: 'Wymiary' }).click();
+  await page.getByRole('textbox', { name: 'Szerokość (cm)' }).fill(widthCm);
+  await page.getByRole('textbox', { name: 'Szerokość (cm)' }).blur();
+  await page.getByRole('textbox', { name: 'Wysokość (cm)' }).fill(heightCm);
+  await page.getByRole('textbox', { name: 'Wysokość (cm)' }).blur();
+
+  await main.getByRole('button', { name: 'Wykończenie' }).click();
+  await page.getByRole('menuitem', { name: 'Olejowanie' }).click();
 
   // Personalizacja — optional, left blank.
 
