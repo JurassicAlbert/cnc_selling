@@ -64,9 +64,22 @@ export async function applyOrderStatusTransition(
     return { ok: false, detail: 'Anulowanie zamówienia wymaga podania notatki.' };
   }
 
-  await prisma.$transaction([
-    prisma.order.update({ where: { id: order.id }, data: { status: toStatus } }),
-    prisma.orderEvent.create({
+  // The status is re-asserted in the WHERE clause, not just checked above
+  // (`docs/AUDIT-2026-08-30.md` P1-6). Read-then-write left a real gap: two
+  // staff clicks — or one double-click — both passed the
+  // `checkOrderStatusTransition` check, both wrote, and the order got two
+  // `OrderEvent` rows, two audit entries and two customer emails for one
+  // real change. Matching zero rows means someone else moved this order
+  // first, which is a rejection, not a silent success.
+  const applied = await prisma.$transaction(async (tx) => {
+    const updated = await tx.order.updateMany({
+      where: { id: order.id, status: order.status },
+      data: { status: toStatus },
+    });
+    if (updated.count === 0) {
+      return false;
+    }
+    await tx.orderEvent.create({
       data: {
         orderId: order.id,
         fromStatus: order.status,
@@ -76,8 +89,12 @@ export async function applyOrderStatusTransition(
         actorEmail: staff.email,
         notePl,
       },
-    }),
-  ]);
+    });
+    return true;
+  });
+  if (!applied) {
+    return { ok: false, detail: 'Status tego zamówienia zmienił się w międzyczasie — odśwież stronę i spróbuj ponownie.' };
+  }
   await writeAuditLog({
     actor: staff,
     entity: 'Order',
@@ -129,7 +146,18 @@ export async function applyMarkOrderPaid(staff: CurrentSession, orderNumber: str
     return { ok: false, detail: 'To zamówienie jest już oznaczone jako opłacone.' };
   }
 
-  await prisma.order.update({ where: { id: order.id }, data: { paymentStatus: 'PAID' } });
+  // Conditional, so the check above and this write are one atomic step
+  // (`docs/AUDIT-2026-08-30.md` P1-6). Without it a double-clicked button
+  // had both calls pass the check and both write, leaving two audit
+  // entries for one real state change. Zero rows means the other click
+  // already did it — the same honest "already paid" answer as above.
+  const updated = await prisma.order.updateMany({
+    where: { id: order.id, paymentStatus: { not: 'PAID' } },
+    data: { paymentStatus: 'PAID' },
+  });
+  if (updated.count === 0) {
+    return { ok: false, detail: 'To zamówienie jest już oznaczone jako opłacone.' };
+  }
   await writeAuditLog({
     actor: staff,
     entity: 'Order',

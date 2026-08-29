@@ -10,6 +10,9 @@
  * this configuration still real and still this price."
  */
 
+import { randomUUID } from 'node:crypto';
+
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import { validateNip, validatePhone, validatePostalCode } from '@/domain/checkout/validate';
@@ -23,6 +26,7 @@ export type CheckoutFormState = {
   readonly fieldErrors: Partial<Record<string, CheckoutFieldIssueCode>>;
   readonly formError:
     | 'CART_EMPTY'
+    | 'CART_CHANGED'
     | 'PRICE_CHANGED'
     | 'DELIVERY_METHOD_INVALID'
     | 'PAYMENT_METHOD_INVALID'
@@ -49,6 +53,13 @@ export async function submitCheckout(
   _prevState: CheckoutFormState,
   formData: FormData,
 ): Promise<CheckoutFormState> {
+  // Minted server-side when the checkout page rendered and carried in a
+  // hidden field, so every resubmission of THIS form arrives with the same
+  // value — see `create-order.ts`'s header (`docs/AUDIT-2026-08-30.md`
+  // P0-2). Never generated here: a fresh one per invocation would make
+  // every duplicate submission look like a brand-new purchase, which is
+  // precisely the bug.
+  const idempotencyKey = field(formData, 'idempotencyKey');
   const email = field(formData, 'email');
   const phone = field(formData, 'phone');
   const firstName = field(formData, 'firstName');
@@ -110,6 +121,11 @@ export async function submitCheckout(
 
   const [sessionToken, session] = await Promise.all([readGuestSessionToken(), getSession()]);
   const result = await createOrder({
+    // A form submitted without one (only reachable by bypassing the real
+    // page) still gets a real, unguessable key — it simply gets no
+    // deduplication across requests, which is strictly no worse than the
+    // behaviour before this existed, and never blocks a genuine order.
+    idempotencyKey: idempotencyKey.length > 0 ? idempotencyKey : randomUUID(),
     sessionToken,
     userId: session?.userId ?? null,
     email,
@@ -131,6 +147,19 @@ export async function submitCheckout(
   if (!result.ok) {
     return { fieldErrors: {}, formError: result.code, values };
   }
+
+  // 2026-08-29, owner feedback: "koszyk nie restuje się od razu po
+  // skończeniu zamówienia" — a real bug, not a display choice. The cart
+  // rows are gone by now, but Next.js's client Router Cache can keep
+  // serving the PREVIOUS cached render of the layout that draws
+  // `SiteHeader`'s cart badge for up to 30s after a soft navigation, since
+  // nothing has told it that layout's data changed. Invalidating at layout
+  // scope makes the very next request — including the redirect below —
+  // pick up the now-empty cart immediately, not eventually.
+  //
+  // Lives here rather than in `createOrder` because only this layer is
+  // guaranteed to run inside a request scope (2026-08-30).
+  revalidatePath('/', 'layout');
 
   // `orderNumber` ("2026/08/0042") contains real slashes — encoded here so
   // it lands as ONE path segment; Next.js decodes `params.orderNumber`

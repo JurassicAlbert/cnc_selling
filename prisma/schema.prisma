@@ -744,7 +744,18 @@ model CartItem {
   configuration   Configuration @relation(fields: [configurationId], references: [id])
   quantity        Int           @default(1)
   addedAt         DateTime      @default(now())
-
+  /// 2026-08-30 (`docs/AUDIT-2026-08-30.md` P1-4): the line's own identity
+  /// — `domain/cart/signature.ts` builds it from exactly the selections a
+  /// customer makes, and that file's header explains which and why. The
+  /// unique index below is what makes "adding the identical thing twice
+  /// bumps the quantity" true even for two genuinely concurrent requests;
+  /// a read-then-create check alone would race, which is how the
+  /// double-click duplicate got in. Rows created before this column exists
+  /// carry a `legacy:` value derived from their own configuration id —
+  /// unique by construction, and honestly not a real signature, so they
+  /// simply never merge with anything.
+  configurationSignature String
+  @@unique([cartId, configurationSignature])
   @@index([cartId])
 }
 

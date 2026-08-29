@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 
@@ -57,7 +59,22 @@ export default async function CheckoutPage() {
 
         <div style={{ marginBlockStart: 32 }}>
           <ThemeRegistry>
-            <CheckoutForm cart={cart} deliveryMethods={deliveryMethods} paymentMethods={paymentMethods} />
+            {/**
+             * One id per render of this page, carried into the form as a
+             * hidden field — `docs/AUDIT-2026-08-30.md` P0-2. Every
+             * resubmission of this same rendered form (double click,
+             * retried request, back-and-resubmit) therefore carries the
+             * SAME value, and `createOrder` returns the first attempt's
+             * order instead of creating a second one. Generated here rather
+             * than in the action for exactly that reason: the action runs
+             * once per submission, this runs once per form.
+             */}
+            <CheckoutForm
+              cart={cart}
+              deliveryMethods={deliveryMethods}
+              paymentMethods={paymentMethods}
+              idempotencyKey={randomUUID()}
+            />
           </ThemeRegistry>
         </div>
       </Container>

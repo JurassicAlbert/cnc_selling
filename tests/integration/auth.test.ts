@@ -90,7 +90,7 @@ describe('mergeGuestCartIntoUser (P6 Part B)', () => {
       data: { sessionToken: guestToken, productId: product.id, isComplete: true },
     });
     const guestCart = await prisma.cart.create({ data: { sessionToken: guestToken } });
-    await prisma.cartItem.create({ data: { cartId: guestCart.id, configurationId: configuration.id, quantity: 1 } });
+    await prisma.cartItem.create({ data: { cartId: guestCart.id, configurationId: configuration.id, configurationSignature: configuration.id, quantity: 1 } });
 
     await mergeGuestCartIntoUser(user.id, guestToken);
 
@@ -109,13 +109,13 @@ describe('mergeGuestCartIntoUser (P6 Part B)', () => {
       data: { userId: user.id, productId: product.id, isComplete: true },
     });
     const userCart = await prisma.cart.create({ data: { userId: user.id } });
-    await prisma.cartItem.create({ data: { cartId: userCart.id, configurationId: userConfiguration.id, quantity: 1 } });
+    await prisma.cartItem.create({ data: { cartId: userCart.id, configurationId: userConfiguration.id, configurationSignature: userConfiguration.id, quantity: 1 } });
 
     const guestConfiguration = await prisma.configuration.create({
       data: { sessionToken: guestToken, productId: product.id, isComplete: true },
     });
     const guestCart = await prisma.cart.create({ data: { sessionToken: guestToken } });
-    await prisma.cartItem.create({ data: { cartId: guestCart.id, configurationId: guestConfiguration.id, quantity: 1 } });
+    await prisma.cartItem.create({ data: { cartId: guestCart.id, configurationId: guestConfiguration.id, configurationSignature: guestConfiguration.id, quantity: 1 } });
 
     await mergeGuestCartIntoUser(user.id, guestToken);
 

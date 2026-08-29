@@ -178,4 +178,48 @@ describe('applyMarkOrderPaid', () => {
     const order = await seedOrder({ paymentMethod: 'BANK_TRANSFER', paymentStatus: 'PAID' });
     expect((await applyMarkOrderPaid(staffActor(), order.orderNumber)).ok).toBe(false);
   });
+
+  /**
+   * `docs/AUDIT-2026-08-30.md` P1-6: the "is it already paid?" check and
+   * the write used to be two separate statements, so a double-clicked
+   * button had both calls pass the check and both write — one real state
+   * change, two audit-log entries claiming it happened twice. An audit
+   * trail that says a thing happened twice when it happened once is worse
+   * than no audit trail.
+   */
+  it('a double-clicked "mark paid" writes exactly one audit entry', async () => {
+    const order = await seedOrder({ paymentMethod: 'BANK_TRANSFER', paymentStatus: 'AWAITING' });
+    const staff = staffActor();
+
+    const results = await Promise.all([
+      applyMarkOrderPaid(staff, order.orderNumber),
+      applyMarkOrderPaid(staff, order.orderNumber),
+    ]);
+
+    expect(results.filter((result) => result.ok)).toHaveLength(1);
+    expect(await prisma.order.findUniqueOrThrow({ where: { id: order.id } })).toMatchObject({ paymentStatus: 'PAID' });
+    expect(await prisma.auditLog.count({ where: { entityId: order.id, action: 'update' } })).toBe(1);
+  });
+});
+
+describe('applyOrderStatusTransition — concurrency (audit P1-6)', () => {
+  /**
+   * The same read-then-write gap on the status machine, where it is worse:
+   * a duplicate here also files a second `OrderEvent` and sends the
+   * customer a second "your order is now…" email for one real change.
+   */
+  it('a double-clicked status change transitions once, files one event, and audits once', async () => {
+    const order = await seedOrder({ status: 'NEW' });
+    const staff = staffActor();
+
+    const results = await Promise.all([
+      applyOrderStatusTransition(staff, order.orderNumber, 'CONFIRMED', null),
+      applyOrderStatusTransition(staff, order.orderNumber, 'CONFIRMED', null),
+    ]);
+
+    expect(results.filter((result) => result.ok)).toHaveLength(1);
+    expect(await prisma.order.findUniqueOrThrow({ where: { id: order.id } })).toMatchObject({ status: 'CONFIRMED' });
+    expect(await prisma.orderEvent.count({ where: { orderId: order.id, toStatus: 'CONFIRMED' } })).toBe(1);
+    expect(await prisma.auditLog.count({ where: { entityId: order.id, action: 'transition' } })).toBe(1);
+  });
 });

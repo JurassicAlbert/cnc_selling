@@ -85,10 +85,13 @@ export function CheckoutForm({
   cart,
   deliveryMethods,
   paymentMethods,
+  idempotencyKey,
 }: {
   readonly cart: CartView;
   readonly deliveryMethods: readonly ActiveDeliveryMethod[];
   readonly paymentMethods: readonly ActivePaymentMethod[];
+  /** This form's own submission id, minted once per page render — see the page's own comment and `docs/AUDIT-2026-08-30.md` P0-2. */
+  readonly idempotencyKey: string;
 }) {
   const [state, formAction] = useActionState(submitCheckout, INITIAL_CHECKOUT_STATE);
   const [renderKey, setRenderKey] = useState(0);
@@ -125,10 +128,15 @@ export function CheckoutForm({
 
   return (
     <form key={renderKey} action={formAction}>
+      {/* Deliberately OUTSIDE the `renderKey` remount concern: its value comes
+          from a prop, so it survives every re-render of this form and every
+          failed submission — which is exactly what makes a retry dedupe. */}
+      <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
       <Grid container spacing={4}>
         <Grid size={{ xs: 12, md: 7 }}>
           <Stack spacing={4}>
             {state.formError === 'CART_EMPTY' && <Alert severity="error">{SITE.checkoutEmptyCartRedirectPl}</Alert>}
+            {state.formError === 'CART_CHANGED' && <Alert severity="warning">{SITE.checkoutCartChangedPl}</Alert>}
             {state.formError === 'PRICE_CHANGED' && <Alert severity="error">{COPY.priceChanged}</Alert>}
             {state.formError === 'DELIVERY_METHOD_INVALID' && <Alert severity="error">{SITE.checkoutDeliveryMethodInvalidPl}</Alert>}
             {state.formError === 'PAYMENT_METHOD_INVALID' && <Alert severity="error">{SITE.checkoutPaymentMethodInvalidPl}</Alert>}

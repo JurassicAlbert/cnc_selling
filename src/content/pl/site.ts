@@ -207,6 +207,14 @@ export const SITE = {
   checkoutWithdrawalExemptionTextPl:
     'Przyjmuję do wiadomości, że produkty wykonywane na indywidualne zamówienie, według moich specyfikacji, nie podlegają zwrotowi w ramach 14-dniowego prawa odstąpienia od umowy (art. 38 pkt 3 ustawy z dnia 30 maja 2014 r. o prawach konsumenta).',
   checkoutSubmitPl: 'Złóż zamówienie',
+  /**
+   * Shown when a second, parallel checkout of the same cart won the race
+   * (`docs/AUDIT-2026-08-30.md` P0-2). The reassurance is the important
+   * part: nothing was charged twice, and the order that DID go through is
+   * findable — so this must never read like a generic failure.
+   */
+  checkoutCartChangedPl:
+    'To zamówienie zostało już złożone w innym oknie lub na innej karcie. Nic nie zostało policzone dwa razy — sprawdź swoje zamówienia lub wiadomość e-mail z potwierdzeniem.',
   checkoutEmptyCartRedirectPl: 'Twój koszyk jest pusty — wróć do koszyka, aby dodać produkty.',
   checkoutGenericErrorPl: 'Nie udało się złożyć zamówienia. Sprawdź dane powyżej i spróbuj ponownie.',
 
