@@ -68,6 +68,7 @@ export function SearchBar() {
                 alignItems: 'center',
                 gap: 'var(--space-1)',
                 font: 'var(--mui-font-button)',
+                letterSpacing: 'var(--mui-letter-spacing-button)',
                 border: 'none',
                 borderRadius: 'var(--radius-card)',
                 backgroundColor: 'var(--mui-palette-primary-main)',

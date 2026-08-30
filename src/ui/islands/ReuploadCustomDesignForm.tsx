@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation';
 import { Alert, Button, Stack, Typography } from '@mui/material';
 
 import { SITE } from '@/content/pl/site';
+import { FileInputButton } from '@/ui/islands/FileInputButton';
 import { uploadErrorMessage, uploadWarningMessage } from '@/content/pl/messages';
 import type { UploadWarning } from '@/domain/upload/inspect';
 import { maxUploadSizeBytes } from '@/domain/upload/inspect';
@@ -76,16 +77,12 @@ export function ReuploadCustomDesignForm({ customerDesignId }: { readonly custom
       <Alert severity="warning">{SITE.designDetailNeedsChangesNoticePl}</Alert>
       <Typography variant="h6">{SITE.configuratorUploadReplacePl}</Typography>
 
-      <div>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          {SITE.configuratorUploadChooseFilePl}
-        </Typography>
-        <input
-          type="file"
-          accept=".jpg,.jpeg,.png,.svg,.pdf,image/jpeg,image/png,image/svg+xml,application/pdf"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-        />
-      </div>
+      <FileInputButton
+        accept=".jpg,.jpeg,.png,.svg,.pdf,image/jpeg,image/png,image/svg+xml,application/pdf"
+        label={SITE.configuratorUploadChooseFilePl}
+        chooseLabel={SITE.configuratorUploadChooseFilePl}
+        onFileChange={setFile}
+      />
 
       {error !== null && <Alert severity="error">{uploadErrorMessage(error, errorParams)}</Alert>}
       {successNotice && <Alert severity="success">{SITE.configuratorUploadSuccessPl}</Alert>}

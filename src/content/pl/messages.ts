@@ -74,7 +74,7 @@ export function feasibilityMessage(finding: FeasibilityFinding): string {
     // in evaluateFeasibility produces this code today; this case exists
     // only so the switch stays exhaustive over FeasibilityCode.
     case 'JOINED_PANEL_YATO_YANE':
-      return `Ten blat zostanie złożony z ${countPl(Number(finding.params.moduleCount), NOUNS.module)} połączonych techniką „${JOINERY.yatoYaneNamePl}”. ${JOINERY.yatoYaneShortDescPl}`;
+      return `Ten blat zostanie złożony z ${countPl(Number(finding.params.moduleCount), NOUNS.module)} połączonych techniką „${JOINERY.yatoYaneNamePl}”. ${JOINERY.yatoYaneShortDescPl}`;
   }
 }
 

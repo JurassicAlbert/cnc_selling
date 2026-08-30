@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation';
 import { Alert, Button, Checkbox, FormControlLabel, Stack, TextField, Typography } from '@mui/material';
 
 import { SITE } from '@/content/pl/site';
+import { FileInputButton } from '@/ui/islands/FileInputButton';
 import { UPLOAD } from '@/content/pl/upload';
 import { uploadErrorMessage, uploadWarningMessage } from '@/content/pl/messages';
 import type { UploadErrorCode } from '@/content/pl/messages';
@@ -96,16 +97,12 @@ export function CustomerDesignUploadForm() {
         size="small"
       />
 
-      <div>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          {SITE.configuratorUploadChooseFilePl}
-        </Typography>
-        <input
-          type="file"
-          accept=".jpg,.jpeg,.png,.svg,.pdf,image/jpeg,image/png,image/svg+xml,application/pdf"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-        />
-      </div>
+      <FileInputButton
+        accept=".jpg,.jpeg,.png,.svg,.pdf,image/jpeg,image/png,image/svg+xml,application/pdf"
+        label={SITE.configuratorUploadChooseFilePl}
+        chooseLabel={SITE.configuratorUploadChooseFilePl}
+        onFileChange={setFile}
+      />
 
       <Alert severity="info">{UPLOAD.ipDeclarationTextPl}</Alert>
       <FormControlLabel

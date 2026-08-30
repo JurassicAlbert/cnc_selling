@@ -25,9 +25,11 @@
  *
  * Values duplicate `src/ui/theme/theme.ts` deliberately — same convention
  * as `scripts/generate-placeholder-images.mjs`'s palette copy. If the theme
- * changes, update both; the font shorthand values (weight/size/line-height)
- * are MUI's stable default Typography scale, confirmed by reading them off
- * a live page rather than assumed. Font names reference `next/font`'s own
+ * changes, update both. The font shorthands used to be MUI's stock default
+ * Typography scale (read off a live page rather than assumed); as of
+ * 2026-08-30 they are this project's own scale, and `theme.ts`'s
+ * `typography` block is the authority for why each value is what it is.
+ * Font names reference `next/font`'s own
  * `--font-display`/`--font-body` variables (`src/ui/theme/fonts.ts`) rather
  * than repeating "Fraunces"/"Inter" a third time.
  */
@@ -43,30 +45,65 @@
   --mui-palette-error-main: #8c3a2e;
 
   /*
-   * h1-h3 use a fluid clamp() instead of a fixed size — MUI's stable desktop
-   * Typography scale is what's captured above, but the live ThemeProvider
-   * this project intentionally stopped mounting site-wide (see this file's
-   * header) is what normally applies `responsiveFontSizes()` on top of it.
-   * Without it, 6rem (96px) rendered as literal 96px text on a 375px phone
-   * and overflowed the viewport — a real bug found only by actually looking
-   * at a page at mobile width, not by any type-check. Each clamp is tuned so
-   * the MIDDLE (preferred) term equals the original fixed value exactly at
-   * 1200px, the Container's own max-width, so nothing above that width
-   * changes from what §9e already verified via getComputedStyle.
+   * The type scale, mirroring `src/ui/theme/theme.ts` exactly — see that
+   * file's `typography` comment for the reasoning behind every value. These
+   * are what the RSC primitives (`Heading`, `Text`) actually read, since
+   * `ThemeRegistry` is deliberately not mounted site-wide.
+   *
+   * Every heading is a fluid `clamp()`, tuned so the preferred term equals
+   * the desktop value exactly at 1200px (the `Container` max-width). That
+   * is not a nicety: without a live ThemeProvider there is no
+   * `responsiveFontSizes()`, and a fixed 96px `h1` rendered as literal 96px
+   * on a 375px phone and overflowed the viewport — a real bug found by
+   * looking at a page at mobile width, not by any type-check.
+   *
+   * 2026-08-30: rebuilt from MUI's stock Material scale (which was only
+   * ever family-swapped) into a real one — one consistent ratio, weight
+   * rising as size falls, line-height falling as size rises.
    */
-  --mui-font-h1: 300 clamp(2.5rem, calc(2.5rem + (100vw - 375px) * 0.0679), 6rem)/1.167 var(--font-display);
-  --mui-font-h2: 300 clamp(2rem, calc(2rem + (100vw - 375px) * 0.03394), 3.75rem)/1.2 var(--font-display);
-  --mui-font-h3: 400 clamp(1.75rem, calc(1.75rem + (100vw - 375px) * 0.02424), 3rem)/1.167 var(--font-display);
-  --mui-font-h4: 400 2.125rem/1.235 var(--font-display);
-  --mui-font-h5: 400 1.5rem/1.334 var(--font-display);
-  --mui-font-h6: 500 1.25rem/1.6 var(--font-display);
-  --mui-font-body1: 400 1rem/1.5 var(--font-body);
-  --mui-font-body2: 400 0.875rem/1.43 var(--font-body);
+  --mui-font-h1: 400 clamp(2.25rem, calc(2.25rem + (100vw - 375px) * 0.04364), 4.5rem)/1.06 var(--font-display);
+  --mui-font-h2: 400 clamp(1.875rem, calc(1.875rem + (100vw - 375px) * 0.02667), 3.25rem)/1.12 var(--font-display);
+  --mui-font-h3: 500 clamp(1.5rem, calc(1.5rem + (100vw - 375px) * 0.01455), 2.25rem)/1.2 var(--font-display);
+  --mui-font-h4: 500 clamp(1.375rem, calc(1.375rem + (100vw - 375px) * 0.00727), 1.75rem)/1.25 var(--font-display);
+  --mui-font-h5: 600 clamp(1.25rem, calc(1.25rem + (100vw - 375px) * 0.00242), 1.375rem)/1.32 var(--font-display);
+  --mui-font-h6: 600 1.125rem/1.4 var(--font-display);
+  --mui-font-body1: 400 1rem/1.65 var(--font-body);
+  --mui-font-body2: 400 0.875rem/1.55 var(--font-body);
   --mui-font-button: 600 0.875rem/1.75 var(--font-body);
-  --mui-font-subtitle1: 400 1rem/1.75 var(--font-body);
-  --mui-font-subtitle2: 500 0.875rem/1.57 var(--font-body);
-  --mui-font-caption: 400 0.75rem/1.66 var(--font-body);
-  --mui-font-overline: 400 0.75rem/2.66 var(--font-body);
+  --mui-font-subtitle1: 500 1.0625rem/1.5 var(--font-body);
+  --mui-font-subtitle2: 600 0.875rem/1.5 var(--font-body);
+  --mui-font-caption: 400 0.75rem/1.5 var(--font-body);
+  --mui-font-overline: 600 0.6875rem/1.6 var(--font-body);
+
+  /*
+   * Letter-spacing has to be its own token: the CSS `font` shorthand above
+   * carries weight, size, line-height and family, but NOT tracking — so a
+   * primitive setting `font: var(--mui-font-h1)` silently gets
+   * `letter-spacing: normal` and loses whatever the theme specified. That
+   * is exactly what used to happen: every RSC heading on the storefront
+   * rendered with default tracking, including the 96px hero.
+   */
+  --mui-letter-spacing-h1: -0.025em;
+  --mui-letter-spacing-h2: -0.02em;
+  --mui-letter-spacing-h3: -0.015em;
+  --mui-letter-spacing-h4: -0.01em;
+  --mui-letter-spacing-h5: -0.005em;
+  --mui-letter-spacing-h6: 0;
+  --mui-letter-spacing-button: 0.01em;
+  --mui-letter-spacing-caption: 0.01em;
+  --mui-letter-spacing-overline: 0.1em;
+
+  /*
+   * Reading measure. Body copy previously ran the full width of the
+   * `Container` — 1200px, about 150 characters per line, against a
+   * comfortable target of 60–75. The eye loses its place returning to the
+   * start of a line long before that.
+   *
+   * `ch` (the width of "0") tracks the font, so this stays correct if the
+   * body face is ever swapped. Applied as a MAXIMUM, so it only ever
+   * narrows a paragraph and never widens or moves anything.
+   */
+  --measure-prose: 68ch;
 
   /* Spacing scale — shared rhythm for the header/footer/card redesign
      (2026-08-25), so new components stop scattering literal pixel values. */
@@ -461,6 +498,10 @@ html {
 
 .form-button {
   font: var(--mui-font-button);
+  /* The `font` shorthand does not carry tracking — same reason `Heading`
+     applies it separately. Without this the styled native buttons sit at
+     default spacing while every MUI button on the site carries the theme's. */
+  letter-spacing: var(--mui-letter-spacing-button);
   text-transform: none;
   padding: 10px 20px;
   border: 1px solid transparent;

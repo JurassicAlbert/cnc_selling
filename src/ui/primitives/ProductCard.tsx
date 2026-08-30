@@ -95,17 +95,37 @@ export function ProductCard({
         )}
       </div>
       <div style={{ paddingTop: 'var(--space-3)' }}>
+        {/*
+         * The `overline` variant, not caption-plus-hand-rolled-uppercase:
+         * this eyebrow was setting its own `0.04em` tracking, which is far
+         * too tight for uppercase text and is exactly the arbitrary inline
+         * value the theme exists to replace. `overline` already means
+         * "small uppercase label" and now carries real 0.1em tracking
+         * (2026-08-30 typography pass).
+         */}
         <div
           style={{
-            font: 'var(--mui-font-caption)',
-            color: 'var(--mui-palette-text-secondary)',
+            font: 'var(--mui-font-overline)',
+            letterSpacing: 'var(--mui-letter-spacing-overline)',
             textTransform: 'uppercase',
-            letterSpacing: '0.04em',
+            color: 'var(--mui-palette-text-secondary)',
           }}
         >
           {categoryNamePl}
         </div>
-        <div style={{ font: 'var(--mui-font-subtitle1)', color: 'var(--mui-palette-text-primary)' }}>
+        <div
+          style={{
+            font: 'var(--mui-font-subtitle1)',
+            letterSpacing: 'var(--mui-letter-spacing-h5)',
+            color: 'var(--mui-palette-text-primary)',
+            // Product names are catalogue data of unpredictable length —
+            // `pretty` keeps a two-line name from leaving one word alone on
+            // the second line, `anywhere` stops an unbroken one overflowing
+            // the card. Neither changes where anything sits.
+            textWrap: 'pretty',
+            overflowWrap: 'anywhere',
+          }}
+        >
           {namePl}
         </div>
         <div
@@ -131,10 +151,17 @@ export function ProductCard({
             </span>
           </div>
         )}
+        {/*
+         * `subtitle2` rather than `body2` — identical size (0.875rem), so
+         * nothing reflows, but weight 600 instead of 400. Price is the one
+         * thing on a product card a customer is actually comparing, and it
+         * was the lightest text in the block: quieter than the product name
+         * above it and no heavier than the production-time meta line.
+         */}
         <div
           style={{
             marginBlockStart: 'var(--space-2)',
-            font: 'var(--mui-font-body2)',
+            font: 'var(--mui-font-subtitle2)',
             color: 'var(--mui-palette-text-primary)',
           }}
         >

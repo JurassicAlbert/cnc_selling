@@ -11,7 +11,7 @@ import { createDesign, updateDesign } from '@/server/actions/admin-designs';
 import type { DesignMutationResult } from '@/server/actions/admin-designs';
 import type { DesignRightsStatus, ProductionMethod } from '@/generated/prisma/enums';
 import { usePreservedFormValues } from '@/ui/islands/admin/usePreservedFormValues';
-import { FileInputButton } from './FileInputButton';
+import { FileInputButton } from '@/ui/islands/FileInputButton';
 
 const PRODUCTION_METHODS: readonly ProductionMethod[] = ['CNC_CARVE', 'CNC_ENGRAVE', 'LASER_ENGRAVE', 'MIXED', 'MANUAL_PREP'];
 const RIGHTS_STATUSES: readonly DesignRightsStatus[] = [

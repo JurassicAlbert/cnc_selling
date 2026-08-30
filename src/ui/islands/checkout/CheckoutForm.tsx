@@ -261,10 +261,10 @@ export function CheckoutForm({
                           label={
                             <Stack sx={{ pt: 0.25 }} spacing={0.5}>
                               <Stack direction="row" sx={{ justifyContent: 'space-between', gap: 2 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                <Typography variant="subtitle2">
                                   {method.namePl}
                                 </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                <Typography variant="subtitle2" sx={{ whiteSpace: 'nowrap' }}>
                                   {method.feasible ? formatPln(method.priceGrosze) : '—'}
                                 </Typography>
                               </Stack>
@@ -410,7 +410,7 @@ export function CheckoutForm({
         <Grid size={{ xs: 12, md: 5 }}>
           <Box sx={{ position: { md: 'sticky' }, top: { md: 24 } }}>
             <Paper variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>
+              <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
                 {SITE.checkoutOrderSummaryHeadingPl}
               </Typography>
               <Stack spacing={1.5} sx={{ maxHeight: 320, overflowY: 'auto', pr: 0.5 }}>
@@ -484,7 +484,17 @@ function SectionCard({ heading, children }: { readonly heading: string; readonly
   return (
     <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>
       <Stack spacing={2}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+        {/*
+         * `h6`, matching the order-summary panel's own heading beside it.
+         * These are peer-level section headings on the same screen, and
+         * they were rendering as two different things: `subtitle1` with an
+         * inline `fontWeight: 600` on the left, `h6` on the right — so the
+         * left column's headings were body-face while the right column's
+         * were display-face, at a different size and weight. The inline
+         * weight override goes with it; `h6` already carries 600 from the
+         * theme (2026-08-30 typography pass).
+         */}
+        <Typography variant="h6" component="h2">
           {heading}
         </Typography>
         {children}

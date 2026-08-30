@@ -8,7 +8,7 @@ import { ADMIN } from '@/content/pl/admin';
 import type { AdminProductImage } from '@/server/repositories/admin-products';
 import { removeProductImage, setPrimaryProductImage, uploadProductImage } from '@/server/actions/admin-product-images';
 import type { ActionResult } from '@/server/actions/admin-product-images';
-import { FileInputButton } from './FileInputButton';
+import { FileInputButton } from '@/ui/islands/FileInputButton';
 
 const INITIAL_STATE: ActionResult = { ok: true };
 

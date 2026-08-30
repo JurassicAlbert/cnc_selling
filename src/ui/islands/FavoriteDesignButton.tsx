@@ -1,18 +1,28 @@
 'use client';
 
 /**
- * P9 continuation, 2026-08-28 — the heart toggle on `/wzory`'s design
- * cards. Optimistic: flips immediately, rolls back only if the action
- * comes back `ok: false` (e.g. the session expired between page load and
- * click) — a network-round-trip delay on every click would make a
- * favourite toggle feel broken for something this low-stakes.
- * `loggedIn === false` renders a disabled heart pointing at `/logowanie`
- * rather than hiding the control — same "always show the real state, degrade
- * gracefully" precedent as `checkoutNoPaymentMethodsPl`.
+ * P9 continuation, 2026-08-28 — the heart toggle on the design cards.
+ * Optimistic: flips immediately, rolls back only if the action comes back
+ * `ok: false` (e.g. the session expired between page load and click) — a
+ * network round trip on every click would make a favourite toggle feel
+ * broken for something this low-stakes. `loggedIn === false` renders a
+ * disabled-looking heart pointing at `/logowanie` rather than hiding the
+ * control — the same "always show the real state, degrade gracefully"
+ * precedent as `checkoutNoPaymentMethodsPl`.
+ *
+ * 2026-08-30: real MUI `IconButton` instead of a hand-styled `<button>` and
+ * `<a>`. Both call sites already have `ThemeRegistry` above them, so this
+ * costs no additional client runtime — it just stops this one control
+ * missing the focus ring, hover state, disabled treatment and 40px touch
+ * target every other button on the site gets for free. `component={Link}`
+ * keeps the logged-out variant a real link (right-click, middle-click,
+ * "open in new tab" all keep working) while looking identical to the
+ * button beside it.
  */
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
+import { IconButton } from '@mui/material';
 
 import { SITE } from '@/content/pl/site';
 import { toggleFavoriteDesign } from '@/server/actions/design-favorites';
@@ -32,24 +42,15 @@ export function FavoriteDesignButton({
 
   if (!loggedIn) {
     return (
-      <Link
+      <IconButton
+        component={Link}
         href="/logowanie"
+        size="small"
         aria-label={SITE.patternsFavoriteLoginRequiredPl}
         title={SITE.patternsFavoriteLoginRequiredPl}
-        style={{
-          display: 'inline-flex',
-          // A 40px target, not the 20px icon — the same touch-size rule the
-          // filter form's option rows follow (§11).
-          inlineSize: 40,
-          blockSize: 40,
-          alignItems: 'center',
-          justifyContent: 'center',
-          textDecoration: 'none',
-          color: 'var(--mui-palette-text-secondary)',
-        }}
       >
         <FavoriteBorderIcon size={20} />
-      </Link>
+      </IconButton>
     );
   }
 
@@ -65,29 +66,18 @@ export function FavoriteDesignButton({
   };
 
   return (
-    <button
-      type="button"
+    <IconButton
+      size="small"
       onClick={handleClick}
       disabled={pending}
+      aria-pressed={favorited}
       aria-label={favorited ? SITE.patternsUnfavoritePl : SITE.patternsFavoritePl}
       title={favorited ? SITE.patternsUnfavoritePl : SITE.patternsFavoritePl}
-      aria-pressed={favorited}
-      style={{
-        display: 'inline-flex',
-        inlineSize: 40,
-        blockSize: 40,
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'none',
-        border: 'none',
-        borderRadius: '50%',
-        cursor: pending ? 'progress' : 'pointer',
-        padding: 0,
-        color: favorited ? 'var(--mui-palette-error-main)' : 'var(--mui-palette-text-secondary)',
-        transition: 'color 0.15s ease',
-      }}
+      // The only non-default here: a filled heart reads as "saved" and needs
+      // to say so in colour, which no `IconButton` variant expresses.
+      sx={{ color: favorited ? 'error.main' : 'text.secondary' }}
     >
       {favorited ? <FavoriteIcon size={20} /> : <FavoriteBorderIcon size={20} />}
-    </button>
+    </IconButton>
   );
 }

@@ -120,7 +120,7 @@ function CartRow({ item }: { readonly item: CartItemView }) {
       </Box>
 
       <Stack spacing={0.5} sx={{ minWidth: 0 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+        <Typography variant="subtitle1">
           {item.productNamePl}
         </Typography>
         <Text muted>

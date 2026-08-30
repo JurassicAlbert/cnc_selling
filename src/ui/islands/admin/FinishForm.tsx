@@ -11,7 +11,7 @@ import { createFinish, updateFinish } from '@/server/actions/admin-finishes';
 import type { FinishMutationResult } from '@/server/actions/admin-finishes';
 import type { FinishKind } from '@/generated/prisma/enums';
 import { usePreservedFormValues } from '@/ui/islands/admin/usePreservedFormValues';
-import { FileInputButton } from './FileInputButton';
+import { FileInputButton } from '@/ui/islands/FileInputButton';
 
 const KINDS: readonly FinishKind[] = ['NATURAL', 'OIL', 'HARDWAX_OIL', 'STAIN', 'VARNISH'];
 const INITIAL_STATE: FinishMutationResult = { ok: true, id: '' };

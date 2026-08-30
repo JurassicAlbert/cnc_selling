@@ -11,7 +11,7 @@ import { createMaterial, updateMaterial } from '@/server/actions/admin-materials
 import type { MaterialMutationResult } from '@/server/actions/admin-materials';
 import type { GrainDirection, MaterialFamily } from '@/generated/prisma/enums';
 import { usePreservedFormValues } from '@/ui/islands/admin/usePreservedFormValues';
-import { FileInputButton } from './FileInputButton';
+import { FileInputButton } from '@/ui/islands/FileInputButton';
 
 const FAMILIES: readonly MaterialFamily[] = ['SOLID_WOOD', 'PLYWOOD', 'MDF', 'CERAMIC', 'LEATHER', 'OTHER'];
 const GRAIN_DIRECTIONS: readonly GrainDirection[] = ['NONE', 'LENGTHWISE'];

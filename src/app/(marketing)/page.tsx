@@ -79,6 +79,7 @@ export default async function MarketingHomePage() {
                   style={{
                     display: 'inline-block',
                     font: 'var(--mui-font-button)',
+                letterSpacing: 'var(--mui-letter-spacing-button)',
                     textTransform: 'none',
                     padding: '12px 28px',
                     borderRadius: 'var(--radius-card)',
@@ -223,7 +224,8 @@ export default async function MarketingHomePage() {
               <Link
                 href="/blog"
                 className="nav-link"
-                style={{ font: 'var(--mui-font-button)', textTransform: 'none' }}
+                style={{ font: 'var(--mui-font-button)',
+                letterSpacing: 'var(--mui-letter-spacing-button)', textTransform: 'none' }}
               >
                 {SITE.blogViewAllPl}
               </Link>
@@ -277,7 +279,8 @@ export default async function MarketingHomePage() {
               ))}
             </div>
             <div style={{ marginBlockStart: 32 }}>
-              <Link href="/faq" className="nav-link" style={{ font: 'var(--mui-font-button)', textTransform: 'none' }}>
+              <Link href="/faq" className="nav-link" style={{ font: 'var(--mui-font-button)',
+                letterSpacing: 'var(--mui-letter-spacing-button)', textTransform: 'none' }}>
                 {SITE.faqViewAllPl}
               </Link>
             </div>

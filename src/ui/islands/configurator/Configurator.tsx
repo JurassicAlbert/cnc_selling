@@ -117,6 +117,7 @@ import {
 } from '@/content/pl/messages';
 import type { UploadErrorCode } from '@/content/pl/messages';
 import { SITE } from '@/content/pl/site';
+import { FileInputButton } from '@/ui/islands/FileInputButton';
 import { UPLOAD } from '@/content/pl/upload';
 import { maxUploadSizeBytes } from '@/domain/upload/inspect';
 import type { UploadWarning } from '@/domain/upload/inspect';
@@ -1330,15 +1331,12 @@ function CustomUploadStep({
         </div>
       )}
 
-      <div>
-        <Text muted>{SITE.configuratorUploadChooseFilePl}</Text>
-        <input
-          type="file"
-          accept=".jpg,.jpeg,.png,.svg,.pdf,image/jpeg,image/png,image/svg+xml,application/pdf"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          style={{ display: 'block', marginTop: 8 }}
-        />
-      </div>
+      <FileInputButton
+        accept=".jpg,.jpeg,.png,.svg,.pdf,image/jpeg,image/png,image/svg+xml,application/pdf"
+        label={SITE.configuratorUploadChooseFilePl}
+        chooseLabel={SITE.configuratorUploadChooseFilePl}
+        onFileChange={setFile}
+      />
 
       <Alert severity="info">{UPLOAD.ipDeclarationTextPl}</Alert>
       <FormControlLabel

@@ -30,7 +30,11 @@ export const SITE = {
   catalogueInstallationVariantsLabelPl: 'Warianty montażu',
   catalogueMaterialNotesLabelPl: 'Ważne informacje',
   catalogueAvailableDesignsLabelPl: 'Dostępne wzory',
-  catalogueEmptyCategoryPl: 'W tej kategorii nie ma jeszcze żadnych produktów.',
+  // Empty states get a way forward, not just a statement of absence — a
+  // customer who lands here should not have to reach for the back button to
+  // find out what to do next (2026-08-30 copy pass).
+  catalogueEmptyCategoryPl:
+    'W tej kategorii nie ma jeszcze produktów. Zajrzyj do pozostałych kategorii albo napisz do nas — wykonujemy też projekty na indywidualne zamówienie.',
   catalogueCategoryNotFoundPl: 'Nie znaleziono takiej kategorii.',
   catalogueProductNotFoundPl: 'Nie znaleziono takiego produktu.',
   catalogueViewProductPl: 'Zobacz produkt',
@@ -128,9 +132,9 @@ export const SITE = {
 
   filterMaterialLabelPl: 'Materiał',
   filterAllMaterialsPl: 'Wszystkie materiały',
-  filterApplyPl: 'Filtruj',
+  filterApplyPl: 'Pokaż wyniki',
   sortLabelPl: 'Sortuj',
-  sortRelevancePl: 'Domyślnie',
+  sortRelevancePl: 'Kolejność domyślna',
   sortPriceAscPl: 'Cena: od najniższej',
   sortPriceDescPl: 'Cena: od najwyższej',
 
@@ -138,8 +142,11 @@ export const SITE = {
   searchButtonLabelPl: 'Szukaj',
   searchResultsHeadingPl: 'Wyniki wyszukiwania',
   searchResultsForPl: 'Wyniki dla',
-  searchNoResultsPl: 'Nie znaleziono produktów pasujących do wyszukiwania.',
-  searchEmptyQueryPl: 'Wpisz szukaną frazę.',
+  searchNoResultsPl:
+    'Nic nie pasuje do tej frazy. Spróbuj krótszego hasła albo przejrzyj kategorie w menu.',
+  // A bare 'type something' tells a customer nothing about what this search
+  // actually indexes. Real examples do.
+  searchEmptyQueryPl: 'Wpisz, czego szukasz — np. „obraz”, „dąb” albo „bransoletka”.',
 
   cartHeadingPl: 'Koszyk',
   cartEmptyPl: 'Twój koszyk jest pusty.',
@@ -154,7 +161,7 @@ export const SITE = {
   cartQuantityDecreasePl: 'Zmniejsz ilość',
   cartQuantityIncreasePl: 'Zwiększ ilość',
   cartQuantityMaxNoticePl: (max: number) => `Maksymalnie ${max} szt. na jedną pozycję. Większe zamówienia — napisz do nas.`,
-  cartItemsCountPl: (count: number) => `${count} ${count === 1 ? 'produkt' : count < 5 ? 'produkty' : 'produktów'} w koszyku`,
+  cartItemsCountPl: (count: number) => `${count} ${count === 1 ? 'produkt' : count < 5 ? 'produkty' : 'produktów'} w koszyku`,
   cartSubtotalLabelPl: 'Suma',
   cartCheckoutCtaPl: 'Przejdź do zamówienia',
   cartIncompleteNoticePl:
@@ -181,20 +188,23 @@ export const SITE = {
   checkoutPickupPointLabelPl: 'Wybierz paczkomat lub punkt odbioru',
   checkoutPickupPointSearchPl: 'Wpisz miasto lub kod pocztowy',
   checkoutPickupPointNoneFoundPl: 'Brak punktów dla podanej frazy — spróbuj innego miasta.',
-  checkoutPickupPointInvalidPl: 'Wybierz punkt odbioru z listy, aby kontynuować — wybrany punkt jest nieprawidłowy lub nie został jeszcze wybrany.',
+  checkoutPickupPointInvalidPl: 'Wybierz punkt odbioru z listy, aby kontynuować — wybrany punkt jest nieprawidłowy lub nie został jeszcze wybrany.',
   checkoutPickupPointRequiredHintPl: 'Wybierz punkt odbioru powyżej, aby złożyć zamówienie.',
   checkoutPickupPointSampleNoticePl:
-    'Lista jest wstępna, nie w pełni aktualna — jeśli nie widzisz Twojego miasta lub konkretnego punktu, napisz do nas po złożeniu zamówienia, a ustalimy to indywidualnie.',
+    'Lista jest wstępna, nie w pełni aktualna — jeśli nie widzisz Twojego miasta lub konkretnego punktu, napisz do nas po złożeniu zamówienia, a ustalimy to indywidualnie.',
   checkoutDeliveryInfeasibleTagPl: 'Niedostępne dla Twojego koszyka',
   checkoutDeliveryMatchedTierPl: (label: string) => `Rozmiar/waga: ${label}`,
   checkoutFreeShippingAppliedPl: 'Darmowa dostawa — Twoje zamówienie kwalifikuje się do darmowej wysyłki tą metodą.',
   checkoutCourierNoteLabelPl: 'Uwagi dla kuriera (opcjonalnie)',
-  checkoutCourierNoteHelperPl: 'Np. kod do bramy, piętro, „zostawić u sąsiada" — trafi na etykietę przesyłki.',
+  // The closing mark here was a straight `"` against an opening `„` — the
+  // Polish pair is „…”, and a mismatched one is visible to any Polish
+  // reader (2026-08-30 typography pass).
+  checkoutCourierNoteHelperPl: 'Np. kod do bramy, piętro, „zostawić u sąsiada” — trafi na etykietę przesyłki.',
   checkoutInternalNoteLabelPl: 'Uwagi dla nas (opcjonalnie)',
-  checkoutInternalNoteHelperPl: 'Coś, co powinniśmy wiedzieć o wysyłce — widoczne tylko dla naszego zespołu.',
+  checkoutInternalNoteHelperPl: 'Coś, co powinniśmy wiedzieć o wysyłce — widoczne tylko dla naszego zespołu.',
   checkoutOrderSummaryHeadingPl: 'Podsumowanie zamówienia',
   orderAwaitingPaymentNoticePl:
-    'Czekamy na Twoją wpłatę — dane do przelewu znajdziesz poniżej. Możesz wrócić na tę stronę w dowolnym momencie, aby je sprawdzić.',
+    'Czekamy na Twoją wpłatę — dane do przelewu znajdziesz poniżej. Możesz wrócić na tę stronę w dowolnym momencie, aby je sprawdzić.',
   orderCancelledNoticePl: 'To zamówienie zostało anulowane. Jeśli masz pytania, napisz do nas przez formularz poniżej.',
   checkoutPaymentMethodInvalidPl: 'Wybrana metoda płatności jest już niedostępna — wybierz inną i spróbuj ponownie.',
   checkoutNoPaymentMethodsPl: 'Obecnie żadna metoda płatności nie jest dostępna. Skontaktuj się z nami, aby dokończyć zamówienie.',
@@ -214,7 +224,7 @@ export const SITE = {
    * findable — so this must never read like a generic failure.
    */
   checkoutCartChangedPl:
-    'To zamówienie zostało już złożone w innym oknie lub na innej karcie. Nic nie zostało policzone dwa razy — sprawdź swoje zamówienia lub wiadomość e-mail z potwierdzeniem.',
+    'To zamówienie zostało już złożone w innym oknie lub na innej karcie. Nic nie zostało policzone dwa razy — sprawdź swoje zamówienia lub wiadomość e-mail z potwierdzeniem.',
   checkoutEmptyCartRedirectPl: 'Twój koszyk jest pusty — wróć do koszyka, aby dodać produkty.',
   checkoutGenericErrorPl: 'Nie udało się złożyć zamówienia. Sprawdź dane powyżej i spróbuj ponownie.',
 
@@ -226,8 +236,11 @@ export const SITE = {
   orderBankTransferHeadingPl: 'Dane do przelewu',
   orderBankTransferTitlePl: 'Tytuł przelewu',
   orderBankTransferAccountLabelPl: 'Numer konta',
+  // "Nie zawiera go to potwierdzenie" is grammatical but inverted in a way
+  // no one says out loud; a customer reading it while trying to pay has to
+  // parse it twice.
   orderBankTransferAccountPendingPl:
-    'Numer konta do przelewu prześlemy osobno — e-mailem lub podczas kontaktu. Nie zawiera go to potwierdzenie.',
+    'Numer konta prześlemy osobno — e-mailem lub przy kontakcie z Tobą. Nie ma go w tym potwierdzeniu.',
   orderContactArrangedNoticePl: 'Skontaktujemy się, aby ustalić szczegóły zamówienia.',
   orderShipmentHeadingPl: 'Wysyłka',
   orderShipmentStatusLabelPl: 'Status',
@@ -244,12 +257,12 @@ export const SITE = {
   orderNotFoundPl: 'Nie znaleziono takiego zamówienia.',
   orderLookupHeadingPl: 'Sprawdź status zamówienia',
   orderLookupOrderNumberLabelPl: 'Numer zamówienia',
-  orderLookupTokenLabelPl: 'Kod dostępu (z potwierdzenia zamówienia)',
+  orderLookupTokenLabelPl: 'Kod dostępu',
   orderLookupSubmitPl: 'Sprawdź',
-  orderLookupIntroPl: 'Podaj numer zamówienia i kod dostępu z e-maila z potwierdzeniem, aby zobaczyć jego status.',
-  orderLookupOrderNumberHelperPl: 'W formacie 2026/08/0042 — znajdziesz go w e-mailu z potwierdzeniem.',
-  orderLookupTokenHelperPl: 'Długi ciąg znaków z linku w e-mailu z potwierdzeniem zamówienia.',
-  orderLookupAccountAlternativePl: 'Masz konto? Sprawdź w swoich zamówieniach',
+  orderLookupIntroPl: 'Podaj numer zamówienia i kod dostępu z e-maila z potwierdzeniem, aby zobaczyć jego status.',
+  orderLookupOrderNumberHelperPl: 'W formacie 2026/08/0042 — znajdziesz go w e-mailu z potwierdzeniem.',
+  orderLookupTokenHelperPl: 'Długi ciąg znaków z linku w e-mailu z potwierdzeniem zamówienia.',
+  orderLookupAccountAlternativePl: 'Masz konto? Sprawdź w swoich zamówieniach',
 
   footerCategoriesHeadingPl: 'Kategorie',
   footerInfoHeadingPl: 'Informacje',
@@ -320,7 +333,7 @@ export const SITE = {
   // out of being tied to any one product's configurator flow.
   accountDesignsHeadingPl: 'Moje wzory',
   accountDesignsIntroPl:
-    'Tutaj znajdziesz wszystkie pliki, które kiedykolwiek przesłałeś/przesłałaś jako własny projekt. Możesz przesłać nowy wzór lub użyć zapisanego podczas konfigurowania dowolnego produktu, który to umożliwia.',
+    'Wszystkie pliki przesłane przez Ciebie jako własny projekt. Możesz dodać nowy wzór albo użyć zapisanego przy konfigurowaniu dowolnego produktu, który na to pozwala.',
   accountDesignsEmptyPl: 'Nie masz jeszcze żadnych przesłanych wzorów.',
   accountDesignsUploadHeadingPl: 'Prześlij nowy wzór',
   accountDesignsTitleFieldLabelPl: 'Nazwa wzoru (opcjonalnie)',
@@ -328,8 +341,8 @@ export const SITE = {
   accountDesignsUploadedAtLabelPl: 'Przesłano',
   accountDesignsUntitledPl: 'Bez nazwy',
   accountFavoriteDesignsHeadingPl: 'Ulubione wzory',
-  accountFavoriteDesignsEmptyPl: 'Nie masz jeszcze żadnych ulubionych wzorów. Dodaj je z listy wzorów.',
-  accountFavoriteDesignsBrowseLinkPl: 'Przeglądaj wzory',
+  accountFavoriteDesignsEmptyPl: 'Nie masz jeszcze ulubionych wzorów.',
+  accountFavoriteDesignsBrowseLinkPl: 'Przeglądaj kolekcje',
   accountConfigurationEditPl: 'Edytuj',
   accountConfigurationAddToCartPl: 'Dodaj do koszyka',
 
@@ -338,8 +351,8 @@ export const SITE = {
   // "staff" | "customer", but no page ever showed it to the customer).
   designDetailBackToListPl: 'Wróć do listy wzorów',
   designDetailStatusLabelPl: 'Status',
-  designDetailDiscussionHeadingPl: 'Dyskusja o tym projekcie',
-  designDetailDiscussionEmptyPl: 'Brak komentarzy. Jeśli masz pytanie o ten projekt, napisz poniżej.',
+  designDetailDiscussionHeadingPl: 'Dyskusja o tym projekcie',
+  designDetailDiscussionEmptyPl: 'Brak komentarzy. Jeśli masz pytanie o ten projekt, napisz poniżej.',
   designDetailCommentStaffLabelPl: 'Zespół',
   designDetailCommentCustomerLabelPl: 'Ty',
   designDetailReplyLabelPl: 'Nowa wiadomość',
@@ -347,7 +360,7 @@ export const SITE = {
   designDetailReplyEmptyErrorPl: 'Wpisz treść wiadomości.',
   designDetailReplyErrorPl: 'Nie udało się wysłać wiadomości. Spróbuj ponownie.',
   designDetailNotFoundPl: 'Nie znaleziono takiego wzoru.',
-  designDetailNeedsChangesNoticePl: 'Ten projekt wymaga poprawy — sprawdź komentarze poniżej i prześlij poprawiony plik.',
+  designDetailNeedsChangesNoticePl: 'Ten projekt wymaga poprawy — sprawdź komentarze poniżej i prześlij poprawiony plik.',
 
   consentBannerTextPl:
     'Używamy niezbędnych plików cookie do działania koszyka i logowania oraz — za Twoją zgodą — plików analitycznych, które pomagają nam ulepszać sklep.',
@@ -367,10 +380,10 @@ export const SITE = {
    * where it appears alone, without a heading above it.
    */
   errorPageBodyPl:
-    'Wystąpił nieoczekiwany błąd po naszej stronie — nie po Twojej. Spróbuj ponownie za chwilę, a jeśli problem się powtarza, napisz do nas.',
+    'Wystąpił nieoczekiwany błąd po naszej stronie — nie po Twojej. Spróbuj ponownie za chwilę, a jeśli problem się powtarza, napisz do nas.',
   errorPageRetryPl: 'Spróbuj ponownie',
   errorPageCorrelationIdLabelPl: 'Numer błędu',
-  errorPageCorrelationIdHelpPl: 'Podaj ten numer, jeśli napiszesz do nas o tym błędzie — pozwoli nam szybko znaleźć, co się stało.',
+  errorPageCorrelationIdHelpPl: 'Podaj ten numer, jeśli napiszesz do nas o tym błędzie — pozwoli nam szybko znaleźć, co się stało.',
   /**
    * The catch-all 404 (`src/app/not-found.tsx`). Deliberately offers real
    * ways onward rather than only announcing the failure — an error page
@@ -399,9 +412,9 @@ export const SITE = {
     'Poniżej znajdziesz wzory z naszej oferty, które można wybrać przy konfiguracji wybranych produktów. Możesz też przesłać własny projekt — zapisane wzory znajdziesz na koncie w sekcji „Moje wzory”.',
   patternsEmptyPl: 'Wzory pojawią się tutaj wkrótce.',
   patternsAvailableOnLabelPl: 'Dostępny w:',
-  patternsNotAssignedPl: 'Obecnie niedostępny w żadnym zamawianym produkcie.',
+  patternsNotAssignedPl: 'Obecnie niedostępny w żadnym zamawianym produkcie.',
   patternsFavoritePl: 'Dodaj do ulubionych',
-  patternsUnfavoritePl: 'Usuń z ulubionych',
+  patternsUnfavoritePl: 'Usuń z ulubionych',
   patternsFavoriteLoginRequiredPl: 'Zaloguj się, aby dodać do ulubionych',
   patternsExternalHeadingPl: 'Zewnętrzne źródła wzorów',
   patternsExternalIntroPl:
@@ -447,15 +460,15 @@ export const SITE = {
   // real 4-axis CNC, personalization) — nothing invented.
   aboutHeadingPl: 'O nas',
   aboutSeoTitlePl: 'O nas — RYT',
-  aboutSeoDescPl: 'Poznaj RYT — pracownię łączącą precyzję CNC z rzemiosłem w drewnie i gresie.',
+  aboutSeoDescPl: 'Poznaj RYT — pracownię łączącą precyzję CNC z rzemiosłem w drewnie i gresie.',
   aboutIntroPl:
-    'RYT to pracownia łącząca precyzję maszyn CNC z rzemieślniczym wykończeniem. Każdy grawer, każdy detal i każdy element powstaje na realnym sprzęcie — 4-osiowym centrum CNC — nie jest to grafika generowana ani prefabrykat z katalogu.',
+    'RYT to pracownia łącząca precyzję maszyn CNC z rzemieślniczym wykończeniem. Każdy grawer, każdy detal i każdy element powstaje na realnym sprzęcie — 4-osiowym centrum CNC — nie jest to grafika generowana ani prefabrykat z katalogu.',
   aboutCraftHeadingPl: 'Jak pracujemy',
   aboutCraftBodyPl:
-    'Pracujemy w drewnie (dąb, świerk, modrzew, sosna) i gresie, łącząc grawer laserowy i frezowanie CNC. 4-osiowe centrum pozwala nam wychodzić poza płaski grawer — w stronę reliefu, ryflowania i form przestrzennych, które dopiero zaczynamy wprowadzać do oferty.',
+    'Pracujemy w drewnie (dąb, świerk, modrzew, sosna) i gresie, łącząc grawer laserowy i frezowanie CNC. 4-osiowe centrum pozwala nam wychodzić poza płaski grawer — w stronę reliefu, ryflowania i form przestrzennych, które dopiero zaczynamy wprowadzać do oferty.',
   aboutMaterialsHeadingPl: 'Materiał ma znaczenie',
   aboutMaterialsBodyPl:
-    'Drewno naturalne — usłojenie, odcień i sęki różnią się w każdym egzemplarzu, dlatego każdy gotowy produkt jest w pewnym sensie niepowtarzalny. Gres wybieramy tam, gdzie liczy się odporność na wilgoć i jednolita powierzchnia.',
+    'Drewno naturalne — usłojenie, odcień i sęki różnią się w każdym egzemplarzu, dlatego każdy gotowy produkt jest w pewnym sensie niepowtarzalny. Gres wybieramy tam, gdzie liczy się odporność na wilgoć i jednolita powierzchnia.',
   aboutPersonalizationHeadingPl: 'Personalizacja',
   aboutPersonalizationBodyPl:
     'Wiele naszych produktów można personalizować grawerowanym tekstem. Każde zamówienie na indywidualne zlecenie sprawdzamy pod kątem wykonalności, zanim trafi do produkcji.',
@@ -477,8 +490,8 @@ export const SITE = {
   // (owner feedback): a real account-section home for the customer's own
   // past support requests, not just a blind submission form.
   accountNavHelpPl: 'Pomoc',
-  accountHelpHeadingPl: 'Pomoc i kontakt',
-  accountHelpIntroPl: 'Tutaj znajdziesz swoje dotychczasowe zgłoszenia oraz możesz napisać do nas w nowej sprawie.',
+  accountHelpHeadingPl: 'Pomoc i kontakt',
+  accountHelpIntroPl: 'Tutaj znajdziesz swoje dotychczasowe zgłoszenia oraz możesz napisać do nas w nowej sprawie.',
   accountHelpRequestsHeadingPl: 'Twoje zgłoszenia',
   accountHelpRequestsEmptyPl: 'Nie masz jeszcze żadnych zgłoszeń.',
   accountHelpNewRequestHeadingPl: 'Nowe zgłoszenie',
