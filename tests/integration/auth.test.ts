@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { MAX_CART_ITEM_QUANTITY } from '@/domain/cart/quantity';
 import { mergeGuestCartIntoUser } from '@/server/cart/merge-guest-cart';
 import { findOrderForUser, listOrdersForUser } from '@/server/repositories/orders';
 import { listConfigurationsForUser } from '@/server/repositories/cart';
@@ -207,5 +208,81 @@ describe('order history / saved configurations ownership (P6 Part C)', () => {
 
     expect(await listConfigurationsForUser(owner.id)).toHaveLength(1);
     expect(await listConfigurationsForUser(stranger.id)).toHaveLength(0);
+  });
+});
+
+/**
+ * 2026-08-30 duplicate sweep. The merge moved every guest `CartItem` onto
+ * the user's cart with a single `updateMany`, which was fine while two
+ * identical lines were merely untidy. Once
+ * `@@unique([cartId, configurationSignature])` existed to stop identical
+ * lines, that same statement started VIOLATING it: a customer who had the
+ * same product in their logged-out cart and in their account cart hit a
+ * unique-constraint error inside the login transaction.
+ *
+ * So this is two bugs in one place — the duplicate the owner asked about,
+ * and a login that fails outright for the exact customer who has it.
+ */
+describe('mergeGuestCartIntoUser — the same product in both carts', () => {
+  it('merges the two lines into one and adds their quantities, instead of failing the login', async () => {
+    const user = await seedUser();
+    const product = await seedProduct();
+    const guestToken = uid();
+    // The same configuration identity on both sides — what a customer who
+    // added the same thing logged-out and logged-in actually has.
+    const sharedSignature = uid();
+
+    const userConfiguration = await prisma.configuration.create({
+      data: { userId: user.id, productId: product.id, isComplete: true },
+    });
+    const userCart = await prisma.cart.create({ data: { userId: user.id } });
+    await prisma.cartItem.create({
+      data: { cartId: userCart.id, configurationId: userConfiguration.id, configurationSignature: sharedSignature, quantity: 2 },
+    });
+
+    const guestConfiguration = await prisma.configuration.create({
+      data: { sessionToken: guestToken, productId: product.id, isComplete: true },
+    });
+    const guestCart = await prisma.cart.create({ data: { sessionToken: guestToken } });
+    await prisma.cartItem.create({
+      data: { cartId: guestCart.id, configurationId: guestConfiguration.id, configurationSignature: sharedSignature, quantity: 3 },
+    });
+
+    await expect(mergeGuestCartIntoUser(user.id, guestToken)).resolves.toBeUndefined();
+
+    const mergedCart = await prisma.cart.findUnique({ where: { userId: user.id }, include: { items: true } });
+    expect(mergedCart?.id).toBe(userCart.id);
+    expect(mergedCart?.items).toHaveLength(1);
+    // Nothing the customer chose is lost: 2 + 3.
+    expect(mergedCart?.items[0]?.quantity).toBe(5);
+    expect(await prisma.cart.findUnique({ where: { id: guestCart.id } })).toBeNull();
+  });
+
+  it('never merges past the per-line maximum quantity', async () => {
+    const user = await seedUser();
+    const product = await seedProduct();
+    const guestToken = uid();
+    const sharedSignature = uid();
+
+    const userConfiguration = await prisma.configuration.create({
+      data: { userId: user.id, productId: product.id, isComplete: true },
+    });
+    const userCart = await prisma.cart.create({ data: { userId: user.id } });
+    await prisma.cartItem.create({
+      data: { cartId: userCart.id, configurationId: userConfiguration.id, configurationSignature: sharedSignature, quantity: 20 },
+    });
+
+    const guestConfiguration = await prisma.configuration.create({
+      data: { sessionToken: guestToken, productId: product.id, isComplete: true },
+    });
+    const guestCart = await prisma.cart.create({ data: { sessionToken: guestToken } });
+    await prisma.cartItem.create({
+      data: { cartId: guestCart.id, configurationId: guestConfiguration.id, configurationSignature: sharedSignature, quantity: 20 },
+    });
+
+    await mergeGuestCartIntoUser(user.id, guestToken);
+
+    const mergedCart = await prisma.cart.findUnique({ where: { userId: user.id }, include: { items: true } });
+    expect(mergedCart?.items[0]?.quantity).toBe(MAX_CART_ITEM_QUANTITY);
   });
 });

@@ -8,6 +8,7 @@
  * moment staleness actually matters.
  */
 
+import { cartItemSignature } from '@/domain/cart/signature';
 import { prisma } from '@/server/db/client';
 import type { PriceBreakdown } from '@/domain/pricing/types';
 import type { ModuleLayout } from '@/domain/modules/split';
@@ -92,7 +93,37 @@ export async function listConfigurationsForUser(userId: string): Promise<readonl
     },
   });
 
-  return configurations.map((configuration) => ({
+  // Deduplicated on read as well as prevented on write (2026-08-30, owner:
+  // "client should not be able to save the same project twice").
+  //
+  // `applyAddToCart` now reuses a matching `Configuration` instead of
+  // creating a second one, which stops NEW duplicates — but it cannot undo
+  // the ones already in the database from before that, and this page lists
+  // these rows directly. Nothing is deleted: the newest row of each
+  // identical set is shown and the older twins are simply not listed, so a
+  // historical row is never destroyed on a read path.
+  const seen = new Set<string>();
+  const unique = configurations.filter((configuration) => {
+    const identity = cartItemSignature(configuration.product.slug, {
+      designId: configuration.designId,
+      customUploadId: configuration.customDesignId,
+      materialId: configuration.materialId,
+      widthMm: configuration.widthMm,
+      heightMm: configuration.heightMm,
+      thicknessMm: configuration.thicknessMm,
+      finishId: configuration.finishId,
+      installationVariant: configuration.installVariant,
+      personalizationText: configuration.personalizationText,
+      fontId: configuration.fontId,
+    });
+    if (seen.has(identity)) {
+      return false;
+    }
+    seen.add(identity);
+    return true;
+  });
+
+  return unique.map((configuration) => ({
     configurationId: configuration.id,
     productSlug: configuration.product.slug,
     productNamePl: configuration.product.namePl,

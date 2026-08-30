@@ -94,3 +94,31 @@ export async function findOwnedCustomerDesign(id: string, owner: Owner): Promise
 export async function findMyCustomerDesign(id: string): Promise<OwnedCustomerDesignListItem | null> {
   return findOwnedCustomerDesign(id, await currentOwner());
 }
+
+/**
+ * The design this owner already has for a byte-identical file, if any —
+ * 2026-08-30, owner: "client should not be able to save the same project
+ * twice."
+ *
+ * Keyed on the file's real SHA-256, which the upload inspector already
+ * computes. Not the filename: a customer can rename the same artwork, and
+ * two different customers routinely upload different artwork under the same
+ * name ("logo.png"). Scoped to the owner, so two people uploading the same
+ * stock file still get their own design and their own review thread.
+ *
+ * Lives here rather than inline in `actions/upload.ts` for the reason this
+ * file's own header gives: that action reads `next/headers` and cannot be
+ * driven from a test, so the part worth testing has to be separable.
+ */
+export async function findOwnedDesignByChecksum(owner: Owner, checksumSha256: string): Promise<{ readonly id: string } | null> {
+  if (hasNoOwner(owner)) {
+    return null;
+  }
+  return prisma.customerDesign.findFirst({
+    where: { OR: ownerOrClauses(owner), file: { checksumSha256 } },
+    select: { id: true },
+    // Newest wins: if historical duplicates exist from before this check,
+    // a re-upload should attach to the one the customer most recently saw.
+    orderBy: { createdAt: 'desc' },
+  });
+}

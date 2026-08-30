@@ -345,6 +345,7 @@ export const SITE = {
   accountFavoriteDesignsBrowseLinkPl: 'Przeglądaj kolekcje',
   accountConfigurationEditPl: 'Edytuj',
   accountConfigurationAddToCartPl: 'Dodaj do koszyka',
+  accountConfigurationDeletePl: 'Usuń',
 
   // P9 continuation, 2026-08-28 — the customer-visible half of the design
   // review "dyskusja" (`DesignReviewComment.authorType` has always been

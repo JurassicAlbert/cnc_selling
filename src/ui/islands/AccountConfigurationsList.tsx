@@ -24,7 +24,7 @@ import { Box, Button, Card, CardContent, Stack, Typography } from '@mui/material
 
 import { formatPln } from '@/domain/money/money';
 import { SITE } from '@/content/pl/site';
-import { addSavedConfigurationToCart } from '@/server/actions/cart';
+import { addSavedConfigurationToCart, deleteSavedConfiguration } from '@/server/actions/cart';
 import type { SavedConfigurationView } from '@/server/repositories/cart';
 import { writeSelectionsToSearch } from '@/ui/islands/configurator/selections-url';
 
@@ -87,6 +87,19 @@ export function AccountConfigurationsList({ configurations }: { readonly configu
                       </Button>
                     </form>
                   )}
+                  {/*
+                   * 2026-08-30: saved projects could only ever accumulate —
+                   * there was no way to remove one, which is part of why
+                   * duplicates felt permanent. A project currently in the
+                   * cart is refused server-side rather than cascaded, so
+                   * this never empties a line out of someone's cart behind
+                   * their back.
+                   */}
+                  <form action={deleteSavedConfiguration.bind(null, configuration.configurationId)}>
+                    <Button type="submit" size="small" color="error" variant="text">
+                      {SITE.accountConfigurationDeletePl}
+                    </Button>
+                  </form>
                 </Stack>
               </Stack>
             </CardContent>

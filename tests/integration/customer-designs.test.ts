@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { listOwnedCustomerDesigns } from '@/server/repositories/customer-designs';
+import { findOwnedDesignByChecksum, listOwnedCustomerDesigns } from '@/server/repositories/customer-designs';
 import { prisma } from '@/server/db/client';
 
 /**
@@ -24,6 +24,7 @@ async function seedCustomerDesign(overrides: {
   readonly titlePl?: string | null;
   readonly status?: 'PENDING_REVIEW' | 'APPROVED' | 'NEEDS_CHANGES' | 'REJECTED';
   readonly previewKey?: string | null;
+  readonly checksumSha256?: string;
 }) {
   const file = await prisma.uploadedFile.create({
     data: {
@@ -34,7 +35,7 @@ async function seedCustomerDesign(overrides: {
       originalName: 'projekt.svg',
       mimeType: 'image/svg+xml',
       sizeBytes: 1_000,
-      checksumSha256: 'a'.repeat(64),
+      checksumSha256: overrides.checksumSha256 ?? 'a'.repeat(64),
       previewKey: overrides.previewKey ?? null,
     },
   });
@@ -113,5 +114,54 @@ describe('listOwnedCustomerDesigns', () => {
     expect(result[0]?.hasPreview).toBe(true);
     expect(result[1]?.titlePl).toBe('Starszy');
     expect(result[1]?.hasPreview).toBe(false);
+  });
+});
+
+/**
+ * 2026-08-30, owner: "client should not be able to save the same project
+ * twice." `uploadCustomDesign` creates a `CustomerDesign` per upload, and
+ * `/moje-konto/wzory` lists those rows directly — so re-picking the same
+ * file, or double-submitting the form, put two identical entries in a
+ * customer's own library, each with its own review thread. This is the
+ * lookup that stops it; the action itself reads `next/headers` and can only
+ * be exercised end to end by the e2e suite.
+ */
+describe('findOwnedDesignByChecksum — one design per identical file, per owner', () => {
+  const CHECKSUM = 'b'.repeat(64);
+
+  it('finds this owner’s existing design for a byte-identical file', async () => {
+    const sessionToken = uid();
+    const design = await seedCustomerDesign({ sessionToken, checksumSha256: CHECKSUM });
+
+    const found = await findOwnedDesignByChecksum({ userId: null, sessionToken }, CHECKSUM);
+
+    expect(found?.id).toBe(design.id);
+  });
+
+  it('does not match a different file', async () => {
+    const sessionToken = uid();
+    await seedCustomerDesign({ sessionToken, checksumSha256: CHECKSUM });
+
+    expect(await findOwnedDesignByChecksum({ userId: null, sessionToken }, 'c'.repeat(64))).toBeNull();
+  });
+
+  /**
+   * The case that makes checksum-only matching wrong: two customers
+   * uploading the same stock file must each get their own design and their
+   * own review, not share one.
+   */
+  it('never returns another owner’s design for the same file', async () => {
+    const mine = uid();
+    const theirs = uid();
+    await seedCustomerDesign({ sessionToken: theirs, checksumSha256: CHECKSUM });
+
+    expect(await findOwnedDesignByChecksum({ userId: null, sessionToken: mine }, CHECKSUM)).toBeNull();
+  });
+
+  it('returns nothing for a caller with no identity at all', async () => {
+    const theirs = uid();
+    await seedCustomerDesign({ sessionToken: theirs, checksumSha256: CHECKSUM });
+
+    expect(await findOwnedDesignByChecksum({ userId: null, sessionToken: null }, CHECKSUM)).toBeNull();
   });
 });

@@ -19,7 +19,7 @@
  * from the real request.
  */
 
-import { timingSafeEqual } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 
 import { isPlausibleEmail } from '@/domain/text/email';
 import { prisma } from '@/server/db/client';
@@ -84,22 +84,108 @@ async function resolveVerifiedOrderContext(
   return { orderId: order.id, shipmentId: order.shipment?.id ?? null };
 }
 
+/**
+ * How long an identical message counts as the same submission rather than a
+ * genuinely new one (2026-08-30 duplicate sweep).
+ *
+ * The support form is a zero-JS `<form action>`, so nothing on the client
+ * disables it while the action runs: a double-click, an impatient second
+ * click, or a browser retry after a dropped connection each filed a second
+ * identical request, and staff saw the same question twice with no way to
+ * tell whether the customer had really asked twice.
+ *
+ * A window rather than a unique constraint, because a customer writing in
+ * again a week later with the same subject and message IS a real second
+ * request — usually because nobody answered the first one, which is exactly
+ * when they must not be silently swallowed.
+ */
+const DUPLICATE_SUPPORT_REQUEST_WINDOW_MS = 5 * 60 * 1000;
+
+/**
+ * NUL, written as an escape rather than as a literal byte.
+ *
+ * It cannot occur in any of the hashed fields (Postgres rejects NUL in a
+ * `text` column), so no value can impersonate a field boundary and make two
+ * different submissions hash alike. Written as `\u0000` deliberately: a
+ * literal NUL in source is invisible in review, turns the file binary to
+ * every diff tool, and has already bitten this codebase once — the first
+ * cart-signature encoding used one and Postgres refused to store it.
+ */
+const SEPARATOR = '\u0000';
+
 async function createSupportRequest(
   fields: SupportRequestFields,
   context: { readonly userId: string | null; readonly orderId: string | null; readonly shipmentId: string | null },
 ): Promise<SubmitSupportRequestResult> {
-  await prisma.supportRequest.create({
-    data: {
-      userId: context.userId,
-      orderId: context.orderId,
-      shipmentId: context.shipmentId,
+  // Two guards, because they catch different things and neither is enough
+  // alone. The window query catches a resubmission that straddles a bucket
+  // boundary; the `@unique` dedupe key is what makes two GENUINELY
+  // concurrent submissions impossible, which a read-then-write check cannot
+  // do (both reads see nothing, both insert). Same pairing, and the same
+  // reasoning, as `createOrder`'s idempotency key.
+  const duplicate = await prisma.supportRequest.findFirst({
+    where: {
       email: fields.email,
-      namePl: fields.namePl,
       subjectPl: fields.subjectPl,
       messagePl: fields.messagePl,
+      orderId: context.orderId,
+      createdAt: { gte: new Date(Date.now() - DUPLICATE_SUPPORT_REQUEST_WINDOW_MS) },
     },
+    select: { id: true },
   });
+  if (duplicate !== null) {
+    // Reported as success on purpose: from the customer's side the message
+    // HAS been sent, and telling them it failed would only make them send
+    // it a third time.
+    return { ok: true };
+  }
+
+  try {
+    await prisma.supportRequest.create({
+      data: {
+        dedupeKey: supportRequestDedupeKey(fields, context.orderId),
+        userId: context.userId,
+        orderId: context.orderId,
+        shipmentId: context.shipmentId,
+        email: fields.email,
+        namePl: fields.namePl,
+        subjectPl: fields.subjectPl,
+        messagePl: fields.messagePl,
+      },
+    });
+  } catch (error) {
+    // The other half of a genuinely concurrent double-submit lost the race
+    // on the unique index. Its message is already filed, so this is a
+    // success from the customer's side, not a failure to retry.
+    if (!isUniqueConstraintViolation(error)) {
+      throw error;
+    }
+  }
   return { ok: true };
+}
+
+/** Duck-typed rather than instance-checked, so it never depends on which generated client threw. */
+function isUniqueConstraintViolation(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && (error as { code?: unknown }).code === 'P2002';
+}
+
+/**
+ * Identity of one submission: the message itself, the order it is about,
+ * and which five-minute bucket it landed in.
+ *
+ * The bucket is deliberately coarse and deliberately not a rolling window —
+ * a unique index can only compare equal values, not ranges. Two clicks
+ * either side of a bucket boundary are caught by the time-window query
+ * above instead; between them the realistic cases are covered.
+ *
+ * Hashed rather than concatenated so an arbitrarily long message still
+ * yields a short, indexable key.
+ */
+function supportRequestDedupeKey(fields: SupportRequestFields, orderId: string | null): string {
+  const bucket = Math.floor(Date.now() / DUPLICATE_SUPPORT_REQUEST_WINDOW_MS);
+  const parts = [fields.email, fields.subjectPl, fields.messagePl, orderId ?? '', String(bucket)];
+  // `SEPARATOR` is what stops a value impersonating a field boundary.
+  return createHash('sha256').update(parts.join(SEPARATOR)).digest('hex');
 }
 
 /** Standalone `/kontakt` form — no order context. Pure/testable half. */

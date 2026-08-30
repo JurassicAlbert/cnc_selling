@@ -73,6 +73,35 @@ export type AddToCartResult =
   | { readonly ok: true }
   | { readonly ok: false; readonly code: 'CONFIGURATION_INVALID' };
 
+/**
+ * A Prisma `where` matching a `Configuration` that IS this exact set of
+ * selections — the query form of `cartItemSignature`, which is a string and
+ * cannot be queried against rows that predate the column.
+ *
+ * Every field the signature covers is listed, and that is the point: miss
+ * one and two genuinely different configurations start matching each other,
+ * which would silently merge a customer's two variants into one line. The
+ * unit tests for `cartItemSignature` are the specification both this and
+ * that function answer to.
+ */
+function selectionMatch(productId: string, selections: Selections) {
+  return {
+    productId,
+    designId: selections.designId,
+    customDesignId: selections.customUploadId,
+    materialId: selections.materialId,
+    finishId: selections.finishId,
+    thicknessMm: selections.thicknessMm,
+    widthMm: selections.widthMm,
+    heightMm: selections.heightMm,
+    installVariant: selections.installationVariant as InstallationVariantCode | null,
+    // Trimmed to match the signature's own normalisation, so " Anna " and
+    // "Anna" are one saved project rather than two.
+    personalizationText: selections.personalizationText === null ? null : selections.personalizationText.trim(),
+    fontId: selections.fontId,
+  };
+}
+
 function isUniqueConstraintViolation(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && (error as { code?: unknown }).code === 'P2002';
 }
@@ -146,6 +175,56 @@ export async function applyAddToCart(
         await tx.cartItem.update({
           where: { id: existing.id },
           data: { quantity: clampCartQuantity(existing.quantity + quantity) },
+        });
+        return;
+      }
+
+      // A line whose signature predates this column (`legacy:` backfill) or
+      // was written by "Duplikuj" (`copy:`) can still BE this exact
+      // configuration — it just cannot be found by signature. Matching on
+      // the configuration's own fields catches it, merges into it, and
+      // upgrades its signature so the fast path above handles it next time.
+      // Without this, a cart carrying a pre-existing row would keep growing
+      // a second identical line forever.
+      const legacyMatch = await tx.cartItem.findFirst({
+        where: {
+          cartId: cart.id,
+          configurationSignature: { not: signature },
+          configuration: selectionMatch(data.productId, selections),
+        },
+        select: { id: true, quantity: true },
+      });
+      if (legacyMatch !== null) {
+        await tx.cartItem.update({
+          where: { id: legacyMatch.id },
+          data: {
+            quantity: clampCartQuantity(legacyMatch.quantity + quantity),
+            configurationSignature: signature,
+          },
+        });
+        return;
+      }
+
+      // An identical configuration this owner already saved — from a line
+      // they removed, or one that became an order. Reusing it is the whole
+      // point: `/moje-konto/projekty` lists `Configuration` rows directly,
+      // so creating a second identical one is exactly "saving the same
+      // project twice" (owner, 2026-08-30). Nothing else references a
+      // `Configuration` — `OrderItem` holds an immutable snapshot, never a
+      // join — so reuse can never disturb a past order.
+      const alreadySaved = await tx.configuration.findFirst({
+        where: { ...selectionMatch(data.productId, selections), OR: ownerOrClauses(owner) },
+        select: { id: true },
+        orderBy: { updatedAt: 'desc' },
+      });
+      if (alreadySaved !== null) {
+        await tx.cartItem.create({
+          data: {
+            cartId: cart.id,
+            configurationId: alreadySaved.id,
+            configurationSignature: signature,
+            quantity: clampCartQuantity(quantity),
+          },
         });
         return;
       }
@@ -284,53 +363,37 @@ export async function applyRemoveCartItem(owner: Owner, cartItemId: string): Pro
   await prisma.cartItem.deleteMany({ where: { id: cartItemId } });
 }
 
-/** Deep-copies the `Configuration` row — a duplicate is a second independent draft, not a quantity bump. */
+/**
+ * "Duplikuj" — now a quantity change, not a second line.
+ *
+ * This used to deep-copy the `Configuration` and create an independent row,
+ * and both this comment and `CartItem`'s schema comment said so deliberately.
+ * The owner reversed it on 2026-08-30: "duplicate the same product in basket
+ * like separate product since its the same only the quantity should change."
+ *
+ * The reversal is right, and the old behaviour had a real cost the original
+ * reasoning missed: a duplicate that was never edited left two identical
+ * lines the customer had to remove one at a time, AND a second identical
+ * `Configuration` row, which `/moje-konto/projekty` then listed as a second
+ * saved project. Copying the row only paid for itself if the copy was then
+ * edited — and the cart offers no way to edit a line without leaving the
+ * page anyway.
+ *
+ * Bounded by the same `clampCartQuantity` as every other path, so a
+ * duplicate cannot push a line past the per-item maximum.
+ */
 export async function applyDuplicateCartItem(owner: Owner, cartItemId: string): Promise<void> {
   const owned = await findOwnedCartItem(cartItemId, owner);
   if (owned === null) {
     return;
   }
-  const original = await prisma.configuration.findUniqueOrThrow({ where: { id: owned.configurationId } });
-  const copy = await prisma.configuration.create({
-    data: {
-      sessionToken: original.sessionToken,
-      userId: original.userId,
-      productId: original.productId,
-      designId: original.designId,
-      customDesignId: original.customDesignId,
-      materialId: original.materialId,
-      finishId: original.finishId,
-      thicknessMm: original.thicknessMm,
-      widthMm: original.widthMm,
-      heightMm: original.heightMm,
-      installVariant: original.installVariant,
-      personalizationText: original.personalizationText,
-      fontId: original.fontId,
-      moduleCount: original.moduleCount,
-      moduleLayout: toJsonInput(original.moduleLayout),
-      priceBreakdown: toJsonInput(original.priceBreakdown),
-      priceGrossGrosze: original.priceGrossGrosze,
-      warnings: toJsonInput(original.warnings),
-      acknowledgedWarnings: original.acknowledgedWarnings,
-      pricingVersion: original.pricingVersion,
-      isComplete: original.isComplete,
-    },
-  });
-  const cartItem = await prisma.cartItem.findUnique({ where: { id: cartItemId }, select: { cartId: true, quantity: true } });
+  const cartItem = await prisma.cartItem.findUnique({ where: { id: cartItemId }, select: { quantity: true } });
   if (cartItem === null) {
     return;
   }
-  await prisma.cartItem.create({
-    data: {
-      cartId: cartItem.cartId,
-      configurationId: copy.id,
-      // A duplicate is deliberately its OWN line, so it must never collide
-      // with the line it was copied from — the copy's `Configuration` id is
-      // what keeps it distinct, and stays distinct if the original is later
-      // edited into something else.
-      configurationSignature: `copy:${copy.id}`,
-      quantity: cartItem.quantity,
-    },
+  await prisma.cartItem.update({
+    where: { id: cartItemId },
+    data: { quantity: clampCartQuantity(cartItem.quantity + 1) },
   });
 }
 
@@ -395,20 +458,81 @@ export async function applyUpdateCartItemConfiguration(
     },
   });
 
-  // The line's identity moved with it. Editing a line into something a
-  // DIFFERENT line in the same cart already is would violate the unique
-  // index — an honest collision, not a crash: the edit is kept (the
-  // configuration is already updated and correct) and the line keeps its
-  // old signature, so the two simply stay separate rows rather than one
-  // silently swallowing the other's quantity.
+  // The line's identity moved with it — and editing a line into exactly
+  // what a DIFFERENT line in the same cart already is has to MERGE the two,
+  // not leave both.
+  //
+  // This previously caught the unique-index violation and gave up, leaving
+  // the cart holding two identical lines: the one that was edited (still
+  // carrying its old signature) and the one it now matched. That was the
+  // last remaining way to end up with a twin after the owner's 2026-08-30
+  // instruction that identical products must only ever differ in quantity.
+  // The edited line's quantity is folded into the survivor rather than
+  // discarded, so nothing a customer chose is silently lost.
   const signature = cartItemSignature(data.productId, selections);
-  await prisma.cartItem
-    .updateMany({ where: { configurationId }, data: { configurationSignature: signature } })
-    .catch((error: unknown) => {
-      if (!isUniqueConstraintViolation(error)) {
-        throw error;
-      }
+  await prisma.$transaction(async (tx) => {
+    const edited = await tx.cartItem.findFirst({
+      where: { configurationId },
+      select: { id: true, cartId: true, quantity: true },
     });
+    if (edited === null) {
+      // A saved configuration edited from `/moje-konto/projekty` with no
+      // cart line behind it — nothing to re-key or merge.
+      return;
+    }
+    const twin = await tx.cartItem.findUnique({
+      where: { cartId_configurationSignature: { cartId: edited.cartId, configurationSignature: signature } },
+      select: { id: true, quantity: true },
+    });
+    if (twin !== null && twin.id !== edited.id) {
+      await tx.cartItem.delete({ where: { id: edited.id } });
+      await tx.cartItem.update({
+        where: { id: twin.id },
+        data: { quantity: clampCartQuantity(twin.quantity + edited.quantity) },
+      });
+      return;
+    }
+    await tx.cartItem.update({ where: { id: edited.id }, data: { configurationSignature: signature } });
+  });
 
   return { ok: true };
+}
+
+/**
+ * Removes a saved project from `/moje-konto/projekty`.
+ *
+ * 2026-08-30 sweep. A customer could accumulate saved projects but never
+ * remove one, which is part of why duplicates felt permanent: the write-side
+ * fix stops new ones, but without this there is no remedy for the ones
+ * already there.
+ *
+ * Deleting a `Configuration` outright is safe — unlike a `CustomerDesign`,
+ * which `OrderItem` references and which therefore needs a soft delete to
+ * respect §16A.2. Nothing historical points at a `Configuration`:
+ * `OrderItem` carries an immutable snapshot and never joins back to it, so
+ * removing one cannot change what a past order says.
+ *
+ * `CartItem` IS a real reference, and the one case that has to be refused
+ * rather than cascaded: silently emptying a line out of someone's cart
+ * because they tidied their saved projects would be a worse surprise than
+ * being told to remove it from the cart first.
+ *
+ * Returns whether anything was deleted, so the caller can say which
+ * happened. `false` covers all three "no" cases — not owned, doesn't exist,
+ * still in the cart — deliberately without distinguishing them to a
+ * caller who might not own the row (§16.2's "don't reveal existence").
+ */
+export async function applyDeleteConfiguration(owner: Owner, configurationId: string): Promise<boolean> {
+  if (!(await ownsConfiguration(configurationId, owner))) {
+    return false;
+  }
+  const inCart = await prisma.cartItem.findFirst({ where: { configurationId }, select: { id: true } });
+  if (inCart !== null) {
+    return false;
+  }
+  // `deleteMany`, not `delete`: a double-clicked "Usuń" must not throw
+  // "record not found" for an outcome the customer already got — the same
+  // reasoning as `applyRemoveCartItem`.
+  const deleted = await prisma.configuration.deleteMany({ where: { id: configurationId } });
+  return deleted.count > 0;
 }

@@ -734,8 +734,18 @@ model Cart {
 
 /// Two different configurations of the same product are two CartItem rows
 /// pointing at two Configuration rows — the brief's edge case is satisfied
-/// structurally. "Duplicate" deep-copies the Configuration; it does not
-/// increment quantity.
+/// structurally.
+///
+/// Two IDENTICAL configurations are never two rows. Enforced by
+/// `@@unique([cartId, configurationSignature])` below and by every write
+/// path in `server/operations/cart.ts` (add, duplicate, edit) merging into
+/// the existing line instead of creating a twin.
+///
+/// This comment used to say the opposite of that last part — "Duplicate
+/// deep-copies the Configuration; it does not increment quantity" — which
+/// was a deliberate decision the owner reversed on 2026-08-30: "duplicate
+/// the same product in basket like separate product since its the same only
+/// the quantity should change." Left recorded rather than quietly swapped.
 model CartItem {
   id              String        @id @default(cuid())
   cartId          String
@@ -1105,6 +1115,20 @@ model SupportRequest {
   status       SupportRequestStatus @default(NEW)
   /// Staff-only — never shown to the customer.
   adminNotesPl String?              @db.Text
+
+  /// 2026-08-30 duplicate sweep. The support form is zero-JS, so nothing on
+  /// the client disables it while the action runs — a double-click or a
+  /// browser retry filed the same question twice and staff could not tell
+  /// whether the customer had really asked twice.
+  ///
+  /// A hash of (email, subject, message, order, five-minute bucket). The
+  /// bucket is what makes this a duplicate GUARD rather than a permanent
+  /// ban: writing in again next week with the same subject and message is a
+  /// real second request — usually because nobody answered the first — and
+  /// must never be silently swallowed. Nullable for rows written before
+  /// this column existed; Postgres treats NULLs as distinct, so they never
+  /// collide with each other.
+  dedupeKey String? @unique
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

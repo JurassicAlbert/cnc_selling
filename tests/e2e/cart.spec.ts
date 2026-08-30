@@ -46,25 +46,28 @@ async function addToCart(page: Page, presetLabel?: 'Średni' | 'Duży'): Promise
   await expect(page).toHaveURL('/koszyk');
 }
 
-test('duplicating a cart row creates a real second, independent line item', async ({ page }) => {
+/**
+ * This test used to assert the opposite — that "Duplikuj" created a real
+ * second, independent line. The owner reversed that on 2026-08-30:
+ * "duplicate the same product in basket like separate product since its the
+ * same only the quantity should change." Rewritten rather than deleted, so
+ * the reversal stays visible to anyone who remembers the old rule.
+ */
+test('duplicating a cart row raises its quantity instead of creating a second identical line', async ({ page }) => {
   await addToCart(page);
 
-  const rows = page.getByText('70×70 cm', { exact: false });
-  await expect(rows).toHaveCount(1);
+  await expect(page.getByText('70×70 cm', { exact: false })).toHaveCount(1);
 
   await page.getByRole('button', { name: 'Duplikuj' }).click();
   await expect(page).toHaveURL('/koszyk');
 
-  // Real proof it's a second row, not the same one re-rendered: two
-  // independent "Duplikuj"/"Usuń" button pairs now exist.
-  await expect(page.getByRole('button', { name: 'Duplikuj' })).toHaveCount(2);
-  await expect(page.getByRole('button', { name: 'Usuń' })).toHaveCount(2);
-  await expect(page.getByText('70×70 cm', { exact: false })).toHaveCount(2);
-
-  // Each is independently removable — deleting one leaves exactly one behind.
-  await page.getByRole('button', { name: 'Usuń' }).first().click();
-  await expect(page).toHaveURL('/koszyk');
+  // Still ONE line — proven by the single control pair, not just by the
+  // dimensions text, which a second identical row would also render once.
   await expect(page.getByRole('button', { name: 'Duplikuj' })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Usuń' })).toHaveCount(1);
+  await expect(page.getByText('70×70 cm', { exact: false })).toHaveCount(1);
+  // And the quantity carries what the duplicate added.
+  await expect(page.getByText('2 produkty w koszyku')).toBeVisible();
 });
 
 /**

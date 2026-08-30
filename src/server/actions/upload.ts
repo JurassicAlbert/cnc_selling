@@ -29,6 +29,7 @@ import { prisma } from '@/server/db/client';
 import type { Prisma } from '@/generated/prisma/client';
 import { getSession } from '@/server/auth/session';
 import { ensureGuestSessionToken } from '@/server/session/guest-session';
+import { findOwnedDesignByChecksum } from '@/server/repositories/customer-designs';
 import { storage } from '@/server/storage/local-disk';
 import type { InspectFileErrorCode } from '@/server/upload/inspect-file';
 import { inspectUploadedFile } from '@/server/upload/inspect-file';
@@ -82,6 +83,26 @@ export async function uploadCustomDesign(formData: FormData): Promise<UploadCust
   const inspected = await inspectUploadedFile({ bytes, target: null });
   if (!inspected.ok) {
     return { ok: false, code: inspected.code, params: inspected.params };
+  }
+
+  // The same file, uploaded again by the same person, is the same design —
+  // not a second one (owner, 2026-08-30: "client should not be able to save
+  // the same project twice"). `/moje-konto/wzory` lists `CustomerDesign`
+  // rows directly, so without this a customer who re-picked the same file
+  // (or double-submitted the form) ended up with two identical entries in
+  // their own library, each with its own review thread.
+  //
+  // Matched on the file's real SHA-256, which `inspectUploadedFile` already
+  // computes — not on the filename, which a customer can change without
+  // changing the artwork, and which two different customers routinely share
+  // ("logo.png"). Scoped to this owner: two people uploading the same stock
+  // file must still get their own design and their own review.
+  //
+  // Checked BEFORE writing to storage, so a repeat upload also stops
+  // leaving an orphaned copy of the bytes on disk.
+  const existingDesign = await findOwnedDesignByChecksum({ userId, sessionToken }, inspected.checksumSha256);
+  if (existingDesign !== null) {
+    return { ok: true, customerDesignId: existingDesign.id, warnings: inspected.warnings };
   }
 
   const storageKey = randomUUID();

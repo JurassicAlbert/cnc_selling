@@ -153,11 +153,33 @@ export async function applyPostCustomerDesignComment(
   if (!owned) {
     return { ok: false, code: 'NOT_OWNED' };
   }
+  // The reply form is a zero-JS `<form action>`, so a double-click posted
+  // the same message twice into the review thread (2026-08-30 duplicate
+  // sweep). A short window rather than a constraint: repeating yourself in
+  // a conversation a day later is a normal thing to do, and swallowing it
+  // would be worse than showing it.
+  const justPosted = await prisma.designReviewComment.findFirst({
+    where: {
+      designId: customerDesignId,
+      authorType: 'customer',
+      bodyPl: trimmed,
+      createdAt: { gte: new Date(Date.now() - DUPLICATE_COMMENT_WINDOW_MS) },
+    },
+    select: { id: true },
+  });
+  if (justPosted !== null) {
+    // Success from the customer's side — the message is in the thread.
+    return { ok: true };
+  }
+
   await prisma.designReviewComment.create({
     data: { designId: customerDesignId, authorType: 'customer', authorId: owner.userId, bodyPl: trimmed },
   });
   return { ok: true };
 }
+
+/** Long enough to absorb a double-click or a retried request, short enough that a genuine repeat later still posts. */
+const DUPLICATE_COMMENT_WINDOW_MS = 60 * 1000;
 
 export async function postCustomerDesignComment(customerDesignId: string, formData: FormData): Promise<PostCustomerDesignCommentResult> {
   const owner = await currentOwner();

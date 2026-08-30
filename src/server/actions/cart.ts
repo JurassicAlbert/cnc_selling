@@ -26,6 +26,7 @@ import type { Selections } from '@/domain/configuration/steps';
 import {
   applyAddToCart,
   applyAdjustCartItemQuantity,
+  applyDeleteConfiguration,
   applyDuplicateCartItem,
   applyRemoveCartItem,
   applyUpdateCartItemConfiguration,
@@ -125,4 +126,15 @@ export async function updateCartItemConfiguration(
     revalidateCart();
   }
   return result;
+}
+
+/**
+ * Removes a saved project from `/moje-konto/projekty`. Refused server-side
+ * if the project is still in the cart — see the operations half for why
+ * that is a refusal rather than a cascade.
+ */
+export async function deleteSavedConfiguration(configurationId: string): Promise<void> {
+  const owner = await currentOwner();
+  await applyDeleteConfiguration(owner, configurationId);
+  revalidatePath('/moje-konto/projekty');
 }

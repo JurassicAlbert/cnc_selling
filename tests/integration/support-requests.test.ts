@@ -88,6 +88,41 @@ describe('submitSupportRequest (standalone)', () => {
     const result = await applySubmitSupportRequest(null, validFormData({ messagePl: '  ' }));
     expect(result.ok).toBe(false);
   });
+
+  /**
+   * 2026-08-30 duplicate sweep. The form is zero-JS, so nothing on the
+   * client disables it while the action runs — a double-click, or a browser
+   * retry after a dropped connection, filed the same question twice and
+   * staff had no way to tell whether the customer really asked twice.
+   */
+  it('a double-submitted identical message is filed once', async () => {
+    // The SAME email each time — a double-click resubmits one form, so every
+    // field matches. `validFormData()` randomises the address per call.
+    const email = `${uid()}@example.test`;
+    expect((await applySubmitSupportRequest(null, validFormData({ email }))).ok).toBe(true);
+    expect((await applySubmitSupportRequest(null, validFormData({ email }))).ok).toBe(true);
+
+    expect(await prisma.supportRequest.count({ where: { subjectPl: `${PREFIX}temat` } })).toBe(1);
+  });
+
+  it('two genuinely concurrent submissions are filed once', async () => {
+    const email = `${uid()}@example.test`;
+    await Promise.all([
+      applySubmitSupportRequest(null, validFormData({ email })),
+      applySubmitSupportRequest(null, validFormData({ email })),
+    ]);
+
+    expect(await prisma.supportRequest.count({ where: { subjectPl: `${PREFIX}temat` } })).toBe(1);
+  });
+
+  /** A different question from the same person is a real second request, not a duplicate. */
+  it('a different message from the same address is still filed', async () => {
+    const email = `${uid()}@example.test`;
+    await applySubmitSupportRequest(null, validFormData({ email }));
+    await applySubmitSupportRequest(null, validFormData({ email, messagePl: 'Zupełnie inne pytanie o coś innego.' }));
+
+    expect(await prisma.supportRequest.count({ where: { subjectPl: `${PREFIX}temat` } })).toBe(2);
+  });
 });
 
 describe('submitOrderSupportRequest (contextual)', () => {

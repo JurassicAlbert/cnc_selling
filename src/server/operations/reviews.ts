@@ -45,10 +45,30 @@ async function createReviewForOrder(
 ): Promise<SubmitReviewResult> {
   const existing = await prisma.review.findUnique({ where: { orderId }, select: { id: true } });
   if (existing !== null) {
-    return { ok: false, detail: 'Opinia dla tego zamówienia została już przesłana.' };
+    return { ok: false, detail: ALREADY_REVIEWED };
   }
-  await prisma.review.create({ data: { orderId, ...fields } });
+  try {
+    await prisma.review.create({ data: { orderId, ...fields } });
+  } catch (error) {
+    // `Review.orderId` is `@unique`, and the check above is a read followed
+    // by a write — two concurrent submissions (a double-clicked "Wyślij")
+    // both saw no review and both inserted. The loser used to surface as an
+    // unhandled Prisma error, i.e. a 500 on a form the customer had in fact
+    // just submitted successfully. The constraint did its job; this turns
+    // its result into the same honest answer the check above gives.
+    if (!isUniqueConstraintViolation(error)) {
+      throw error;
+    }
+    return { ok: false, detail: ALREADY_REVIEWED };
+  }
   return { ok: true };
+}
+
+const ALREADY_REVIEWED = 'Opinia dla tego zamówienia została już przesłana.';
+
+/** Duck-typed rather than instance-checked, so it never depends on which generated client threw. */
+function isUniqueConstraintViolation(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && (error as { code?: unknown }).code === 'P2002';
 }
 
 /** Guest submission — `orderNumber` + the same `accessToken` the confirmation page itself requires. */

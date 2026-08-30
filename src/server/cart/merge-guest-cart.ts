@@ -23,6 +23,7 @@
  * `Configuration` retroactively stamped with `userId`.
  */
 
+import { clampCartQuantity } from '@/domain/cart/quantity';
 import { prisma } from '@/server/db/client';
 
 export async function mergeGuestCartIntoUser(userId: string, guestSessionToken: string | null): Promise<void> {
@@ -46,10 +47,43 @@ export async function mergeGuestCartIntoUser(userId: string, guestSessionToken: 
       return;
     }
 
-    await tx.cartItem.updateMany({
+    // Line by line, not one `updateMany`, because the two carts can hold
+    // the SAME configuration — a customer who added a product logged-out
+    // and had already added it logged-in.
+    //
+    // That case used to produce two identical lines in the merged cart.
+    // Once `@@unique([cartId, configurationSignature])` existed to stop
+    // identical lines (2026-08-30), the bulk move started violating it
+    // instead — and because this runs inside the login transaction, the
+    // customer who had it could no longer log in at all. Both problems have
+    // the same fix: fold the quantities together.
+    const guestItems = await tx.cartItem.findMany({
       where: { cartId: guestCart.id },
-      data: { cartId: userCart.id },
+      select: { id: true, quantity: true, configurationSignature: true },
     });
+    const userItems = await tx.cartItem.findMany({
+      where: { cartId: userCart.id },
+      select: { id: true, quantity: true, configurationSignature: true },
+    });
+    const userItemBySignature = new Map(userItems.map((item) => [item.configurationSignature, item]));
+
+    for (const guestItem of guestItems) {
+      const existing = userItemBySignature.get(guestItem.configurationSignature);
+      if (existing === undefined) {
+        await tx.cartItem.update({ where: { id: guestItem.id }, data: { cartId: userCart.id } });
+        continue;
+      }
+      // Quantities add rather than one side winning: both were real
+      // choices the customer made, and neither should silently vanish
+      // because they happened to log in. Clamped, so the merge can never
+      // put a line past the limit every other path enforces.
+      await tx.cartItem.update({
+        where: { id: existing.id },
+        data: { quantity: clampCartQuantity(existing.quantity + guestItem.quantity) },
+      });
+      await tx.cartItem.delete({ where: { id: guestItem.id } });
+    }
+
     await tx.cart.delete({ where: { id: guestCart.id } });
   });
 }

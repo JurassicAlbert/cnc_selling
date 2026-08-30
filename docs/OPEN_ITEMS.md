@@ -126,6 +126,29 @@ themselves wanting to change any of these without a developer. `Font` is
 the one most likely to come up, and is also the one that needs the most
 care beyond a CRUD form.
 
+## 9. A customer cannot delete an uploaded design
+
+Found during the 2026-08-30 duplicate sweep, alongside the saved-project
+delete that WAS added. These are not the same problem:
+
+- A saved project (`Configuration`) is safe to delete outright — nothing
+  historical references it, because `OrderItem` carries an immutable
+  snapshot and never joins back. That is now built.
+- An uploaded design (`CustomerDesign`) is referenced by
+  `OrderItem.customerDesignId`. Hard-deleting one would leave a completed
+  order pointing at nothing, which is exactly what §16A.2's soft-delete
+  invariant exists to prevent ("an existing order must not become
+  meaningless because a row it referenced was later deleted").
+
+**What's needed**: a decision on the shape, not just the code. A real
+"remove from my library" needs an `archivedAt`-style column so the design
+disappears from `/moje-konto/wzory` and the configurator's reuse picker
+while every order that used it still resolves. It also needs a call on
+what happens to the stored file — kept (simplest, and what the order
+audit trail arguably requires) or purged on request (a real GDPR
+erasure path, larger). Both are a couple of hours once decided; deciding
+is the part only the owner can do.
+
 ---
 
 *Update this file (don't just let it go stale) whenever one of these

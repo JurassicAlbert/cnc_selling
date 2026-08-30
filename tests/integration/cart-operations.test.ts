@@ -9,8 +9,10 @@ import { findCartForRequest } from '@/server/repositories/cart';
 import {
   applyAddToCart,
   applyAdjustCartItemQuantity,
+  applyDeleteConfiguration,
   applyDuplicateCartItem,
   applyRemoveCartItem,
+  applyUpdateCartItemConfiguration,
 } from '@/server/operations/cart';
 import type { Owner } from '@/server/session/ownership';
 
@@ -151,7 +153,17 @@ describe('addToCart — line identity (audit P1-4)', () => {
     expect(cart.items).toHaveLength(engravedPrices ? 2 : 1);
   });
 
-  it('duplicating a line still produces a second independent row, never a quantity bump', async () => {
+  /**
+   * This assertion used to be the exact opposite — "duplicating a line still
+   * produces a second independent row, never a quantity bump" — and the
+   * `CartItem` schema comment said the same. The owner reversed it on
+   * 2026-08-30: "duplicate the same product in basket like separate product
+   * since its the same only the quantity should change." Recorded here
+   * rather than quietly swapped, because the old behaviour was deliberate
+   * and someone reading the schema comment will otherwise think this is a
+   * regression.
+   */
+  it('duplicating an unchanged line raises its quantity rather than adding a twin', async () => {
     const sessionToken = uid();
     const selections = await priceableSelections();
     await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 1);
@@ -162,9 +174,8 @@ describe('addToCart — line identity (audit P1-4)', () => {
     await applyDuplicateCartItem(guestOwner(sessionToken), cartItemId);
 
     const after = await readCart(sessionToken);
-    expect(after.items).toHaveLength(2);
-    // Two independent drafts: editing one must not touch the other.
-    expect(after.items[0]?.configurationId).not.toBe(after.items[1]?.configurationId);
+    expect(after.items).toHaveLength(1);
+    expect(after.items[0]?.quantity).toBe(2);
   });
 
   it('merging never pushes a line past the real maximum quantity', async () => {
@@ -309,5 +320,175 @@ describe('cart ownership (audit — §16.1 re-derives the actor, never trusts an
     await expect(applyRemoveCartItem(guestOwner(sessionToken), cartItemId)).resolves.toBeUndefined();
 
     expect((await readCart(sessionToken)).items).toHaveLength(0);
+  });
+});
+
+/**
+ * 2026-08-30, owner: "client should not be able to save the same project
+ * twice" and "duplicate the same product in basket like separate product
+ * since its the same only the quantity should change".
+ *
+ * The signature merge added earlier closed the add-to-cart path only. Three
+ * others were still open, and each produces a genuinely identical row a
+ * customer then has to clean up by hand:
+ *
+ *   1. Removing a line and re-adding the same thing created a SECOND
+ *      identical `Configuration`, which `/moje-konto/projekty` lists — the
+ *      "saved the same project twice" case, and the one with no UI to
+ *      resolve it.
+ *   2. "Duplikuj" deliberately created a second identical line.
+ *   3. Editing a line into something another line already is left both.
+ */
+describe('no two identical lines, by any path (owner request, 2026-08-30)', () => {
+  async function seedOneLine(sessionToken: string) {
+    const selections = await priceableSelections();
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 1);
+    const cart = await readCart(sessionToken);
+    const item = cart.items[0];
+    if (item === undefined) throw new Error('setup failed — nothing in the cart');
+    return { selections, item };
+  }
+
+  it('re-adding after removing does not leave a second saved project behind', async () => {
+    const sessionToken = uid();
+    const { selections, item } = await seedOneLine(sessionToken);
+
+    await applyRemoveCartItem(guestOwner(sessionToken), item.cartItemId);
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 1);
+
+    // One line in the cart, and — the actual bug — exactly ONE Configuration
+    // row, not two. `/moje-konto/projekty` lists these directly.
+    expect((await readCart(sessionToken)).items).toHaveLength(1);
+    expect(await prisma.configuration.count({ where: { sessionToken } })).toBe(1);
+  });
+
+  it('adding, removing and re-adding several times still leaves one saved project', async () => {
+    const sessionToken = uid();
+    const selections = await priceableSelections();
+    for (let round = 0; round < 3; round += 1) {
+      await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 1);
+      const cart = await readCart(sessionToken);
+      const cartItemId = cart.items[0]?.cartItemId;
+      if (cartItemId === undefined) throw new Error('setup failed');
+      await applyRemoveCartItem(guestOwner(sessionToken), cartItemId);
+    }
+    expect(await prisma.configuration.count({ where: { sessionToken } })).toBe(1);
+  });
+
+  it('"Duplikuj" on an unchanged line raises its quantity instead of adding a second identical line', async () => {
+    const sessionToken = uid();
+    const { item } = await seedOneLine(sessionToken);
+
+    await applyDuplicateCartItem(guestOwner(sessionToken), item.cartItemId);
+
+    const cart = await readCart(sessionToken);
+    expect(cart.items).toHaveLength(1);
+    expect(cart.items[0]?.quantity).toBe(2);
+    // And no orphan Configuration left behind by the copy that wasn't made.
+    expect(await prisma.configuration.count({ where: { sessionToken } })).toBe(1);
+  });
+
+  it('duplicating never pushes past the maximum quantity', async () => {
+    const sessionToken = uid();
+    const selections = await priceableSelections();
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], MAX_CART_ITEM_QUANTITY);
+    const cartItemId = (await readCart(sessionToken)).items[0]?.cartItemId;
+    if (cartItemId === undefined) throw new Error('setup failed');
+
+    await applyDuplicateCartItem(guestOwner(sessionToken), cartItemId);
+
+    expect((await readCart(sessionToken)).items[0]?.quantity).toBe(MAX_CART_ITEM_QUANTITY);
+  });
+
+  it('editing one line into exactly what another line already is merges them', async () => {
+    const sessionToken = uid();
+    const selections = await priceableSelections();
+    const variant: Selections = { ...selections, personalizationText: 'Anna' };
+    if ((await priceAndValidateSelections(PRODUCT_SLUG, variant)) === null) {
+      // The seeded product does not price with engraved text; nothing to assert.
+      return;
+    }
+
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 1);
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, variant, [], 2);
+    const before = await readCart(sessionToken);
+    expect(before.items).toHaveLength(2);
+    const variantLine = before.items.find((line) => line.personalizationText === 'Anna');
+    if (variantLine === undefined) throw new Error('setup failed — no variant line');
+
+    // Edit the variant back into the plain configuration the other line is.
+    await applyUpdateCartItemConfiguration(
+      guestOwner(sessionToken),
+      variantLine.configurationId,
+      PRODUCT_SLUG,
+      selections,
+      [],
+    );
+
+    const after = await readCart(sessionToken);
+    expect(after.items).toHaveLength(1);
+    // The edited line's quantity is carried over, not discarded.
+    expect(after.items[0]?.quantity).toBe(3);
+  });
+});
+
+/**
+ * 2026-08-30 sweep, adjacent to the duplicate work: a customer could
+ * accumulate saved projects but never remove one. That is why duplicates
+ * felt permanent — there was no remedy for the ones already there, only a
+ * fix for new ones.
+ *
+ * Safe to delete outright, unlike an uploaded design: nothing historical
+ * references a `Configuration`. `OrderItem` holds an immutable snapshot and
+ * never joins back to it (`OrderItem.snapshot`'s own schema comment), so a
+ * past order cannot be changed by removing one. `CartItem` is the only real
+ * reference, and that is exactly what the guard below is about.
+ */
+describe('deleting a saved project', () => {
+  it('removes it, and it stops being listed', async () => {
+    const sessionToken = uid();
+    const selections = await priceableSelections();
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 1);
+    const cart = await readCart(sessionToken);
+    const cartItemId = cart.items[0]?.cartItemId;
+    const configurationId = cart.items[0]?.configurationId;
+    if (cartItemId === undefined || configurationId === undefined) throw new Error('setup failed');
+    // Take it out of the cart first — a project still in the cart is a
+    // different case, covered below.
+    await applyRemoveCartItem(guestOwner(sessionToken), cartItemId);
+
+    const result = await applyDeleteConfiguration(guestOwner(sessionToken), configurationId);
+
+    expect(result).toBe(true);
+    expect(await prisma.configuration.count({ where: { sessionToken } })).toBe(0);
+  });
+
+  it('refuses to delete one that is still in the cart, rather than breaking the cart', async () => {
+    const sessionToken = uid();
+    const selections = await priceableSelections();
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 1);
+    const configurationId = (await readCart(sessionToken)).items[0]?.configurationId;
+    if (configurationId === undefined) throw new Error('setup failed');
+
+    const result = await applyDeleteConfiguration(guestOwner(sessionToken), configurationId);
+
+    expect(result).toBe(false);
+    expect((await readCart(sessionToken)).items).toHaveLength(1);
+    expect(await prisma.configuration.count({ where: { sessionToken } })).toBe(1);
+  });
+
+  it('never deletes another owner’s saved project', async () => {
+    const mine = uid();
+    const theirs = uid();
+    const selections = await priceableSelections();
+    await applyAddToCart(guestOwner(theirs), theirs, PRODUCT_SLUG, selections, [], 1);
+    const victim = await readCart(theirs);
+    const cartItemId = victim.items[0]?.cartItemId;
+    const configurationId = victim.items[0]?.configurationId;
+    if (cartItemId === undefined || configurationId === undefined) throw new Error('setup failed');
+    await applyRemoveCartItem(guestOwner(theirs), cartItemId);
+
+    expect(await applyDeleteConfiguration(guestOwner(mine), configurationId)).toBe(false);
+    expect(await prisma.configuration.count({ where: { sessionToken: theirs } })).toBe(1);
   });
 });
