@@ -354,10 +354,25 @@ export function authIssueMessage(code: AuthFieldIssueCode): string {
   }
 }
 
-export type AuthFormErrorCode = 'INVALID_CREDENTIALS' | 'EMAIL_ALREADY_EXISTS' | 'OTP_INVALID' | 'UNKNOWN';
+export type AuthFormErrorCode =
+  | 'INVALID_CREDENTIALS'
+  | 'EMAIL_ALREADY_EXISTS'
+  | 'OTP_INVALID'
+  /** `docs/REVIEW-DETAILED.md` SEC-01 — `server/rate-limit/auth-throttle.ts` refused this attempt. */
+  | 'RATE_LIMITED'
+  | 'UNKNOWN';
 
-export function authFormErrorMessage(code: AuthFormErrorCode): string {
+/**
+ * `retryAfterSeconds` is only meaningful for `RATE_LIMITED`, and is
+ * optional so existing call sites keep compiling. Naming the actual wait
+ * rather than "try again later" follows §16A.5's "validation that names the
+ * fix, not the rule" — someone told it is four minutes waits; someone told
+ * "later" keeps refreshing, which is the behaviour the limit exists to stop.
+ */
+export function authFormErrorMessage(code: AuthFormErrorCode, retryAfterSeconds?: number | null): string {
   switch (code) {
+    case 'RATE_LIMITED':
+      return authRateLimitMessage(retryAfterSeconds ?? null);
     case 'INVALID_CREDENTIALS':
       return 'Nieprawidłowy adres e-mail lub hasło.';
     case 'EMAIL_ALREADY_EXISTS':
@@ -367,6 +382,19 @@ export function authFormErrorMessage(code: AuthFormErrorCode): string {
     case 'UNKNOWN':
       return 'Coś poszło nie tak. Spróbuj ponownie.';
   }
+}
+
+/**
+ * Deliberately says nothing about whether the account exists, whether the
+ * password was close, or how many attempts remain — each of which would
+ * turn the refusal itself into an oracle for the attacker it exists to stop.
+ */
+function authRateLimitMessage(retryAfterSeconds: number | null): string {
+  if (retryAfterSeconds === null) {
+    return 'Zbyt wiele prób. Odczekaj chwilę i spróbuj ponownie.';
+  }
+  const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
+  return `Zbyt wiele prób. Spróbuj ponownie za ${countPl(minutes, NOUNS.minute)}.`;
 }
 
 export function numericInputMessage(code: ParseErrorCode): string {

@@ -150,7 +150,7 @@ async function firstPriceableSelections(): Promise<{ readonly selections: Select
             personalizationText: null,
             fontId: null,
           };
-          if ((await priceAndValidateSelections(PRICEABLE_PRODUCT_SLUG, selections)) !== null) {
+          if ((await priceAndValidateSelections(PRICEABLE_PRODUCT_SLUG, selections)).ok) {
             return { selections, productId: data.productId };
           }
         }
@@ -164,7 +164,7 @@ async function seedPriceableGuestCart() {
   const sessionToken = uid();
   const { selections, productId } = await firstPriceableSelections();
   const validated = await priceAndValidateSelections(PRICEABLE_PRODUCT_SLUG, selections);
-  if (validated === null) {
+  if (!validated.ok) {
     throw new Error('unreachable — firstPriceableSelections only returns combinations that price');
   }
   const configuration = await prisma.configuration.create({

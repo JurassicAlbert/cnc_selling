@@ -161,18 +161,30 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
     `${formatMmAsCentimetres(product.minWidthMm)}–${formatMmAsCentimetres(product.maxWidthMm)} × ` +
     `${formatMmAsCentimetres(product.minHeightMm)}–${formatMmAsCentimetres(product.maxHeightMm)} cm`;
 
+  // `offers` is omitted entirely when there is no advertised price, rather
+  // than emitting a zero or the net clamp. Google treats a stated price as
+  // a claim about what the item costs, so a wrong one is worse than none
+  // (`docs/REVIEW-DETAILED.md` BUG-02: this used to publish
+  // `minPriceGrosze`, which is net and, for several products, below
+  // anything that could actually be built).
+  //
+  // `MadeToOrder`, not `InStock`: nothing here exists until it is made.
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.namePl,
     description: product.shortDescPl,
     image: product.images.map((image) => image.url),
-    offers: {
-      '@type': 'Offer',
-      priceCurrency: 'PLN',
-      price: (product.minPriceGrosze / 100).toFixed(2),
-      availability: 'https://schema.org/InStock',
-    },
+    ...(product.startingPriceGrossGrosze === null
+      ? {}
+      : {
+          offers: {
+            '@type': 'Offer',
+            priceCurrency: 'PLN',
+            price: (product.startingPriceGrossGrosze / 100).toFixed(2),
+            availability: 'https://schema.org/MadeToOrder',
+          },
+        }),
   };
 
   return (
@@ -239,7 +251,9 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
               <Text muted>{product.shortDescPl}</Text>
             </div>
             <div style={{ marginBlockStart: 16, font: 'var(--mui-font-h4)', color: 'var(--mui-palette-text-primary)' }}>
-              {SITE.catalogueStartingPricePrefixPl} {formatPln(product.minPriceGrosze)}
+              {product.startingPriceGrossGrosze === null
+                ? SITE.catalogueIndividualQuotePl
+                : `${SITE.catalogueStartingPricePrefixPl} ${formatPln(product.startingPriceGrossGrosze)}`}
             </div>
 
             <div style={{ marginBlockStart: 20, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -272,6 +286,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
                 <ThemeRegistry>
                   <Configurator
                     productSlug={product.slug}
+                    productTypeCode={configuratorData.typeCode}
                     options={configuratorData.options}
                     materialNotesPl={product.materialNotesPl}
                     requiresExactSize={product.requiresExactSize}

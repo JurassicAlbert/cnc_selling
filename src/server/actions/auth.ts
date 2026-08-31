@@ -25,7 +25,15 @@ import { auth } from '@/server/auth/auth';
 import { mergeGuestCartIntoUser } from '@/server/cart/merge-guest-cart';
 import { prisma } from '@/server/db/client';
 import { logger } from '@/server/logging/logger';
+import {
+  clearLoginAttempts,
+  consumeLoginAttempt,
+  consumeOtpRequest,
+  consumeRegisterAttempt,
+} from '@/server/rate-limit/auth-throttle';
+import type { ThrottleVerdict } from '@/server/rate-limit/auth-throttle';
 import { readGuestSessionToken } from '@/server/session/read-guest-session';
+import { requestIpAddress } from '@/server/session/request-ip';
 
 function field(formData: FormData, name: string): string {
   const value = formData.get(name);
@@ -82,7 +90,22 @@ async function mergeAndGetRedirectTarget(userId: string): Promise<string> {
   return user?.role === 'STAFF' || user?.role === 'ADMIN' ? '/panel' : '/moje-konto';
 }
 
-export type LoginFormState = {
+/**
+ * Only meaningful alongside `formError: 'RATE_LIMITED'`
+ * (`docs/REVIEW-DETAILED.md` SEC-01) — `authFormErrorMessage` turns it into
+ * a real "spróbuj ponownie za N minut" rather than a vague "later".
+ */
+type RetryAfter = { readonly retryAfterSeconds: number | null };
+
+/** Every throttled form answers a refusal the same way, so the shape is written once. */
+function throttled<T extends { readonly formError: AuthFormErrorCode | null } & RetryAfter>(
+  verdict: Extract<ThrottleVerdict, { allowed: false }>,
+  rest: Omit<T, 'formError' | 'retryAfterSeconds'>,
+): T {
+  return { ...rest, formError: 'RATE_LIMITED', retryAfterSeconds: verdict.retryAfterSeconds } as T;
+}
+
+export type LoginFormState = RetryAfter & {
   readonly fieldErrors: Partial<Record<'email' | 'password', AuthFieldIssueCode>>;
   readonly formError: AuthFormErrorCode | null;
   readonly values: Partial<Record<'email', string>>;
@@ -98,7 +121,17 @@ export async function submitLogin(_prevState: LoginFormState, formData: FormData
   if (password.length === 0) fieldErrors.password = 'PASSWORD_REQUIRED';
 
   if (Object.keys(fieldErrors).length > 0) {
-    return { fieldErrors, formError: null, values: { email } };
+    return { fieldErrors, formError: null, retryAfterSeconds: null, values: { email } };
+  }
+
+  // Counted BEFORE the credentials are checked, and counted whether or not
+  // they turn out to be right — a limiter that only counts failures still
+  // lets an attacker learn "this one was different" from the timing of the
+  // check they skipped. Cleared on success below, so a customer who
+  // mistypes twice and then gets it right carries nothing forward.
+  const throttle = await consumeLoginAttempt({ email, ip: await requestIpAddress() });
+  if (!throttle.allowed) {
+    return throttled<LoginFormState>(throttle, { fieldErrors: {}, values: { email } });
   }
 
   try {
@@ -106,17 +139,18 @@ export async function submitLogin(_prevState: LoginFormState, formData: FormData
       body: { email, password },
       headers: await nextHeaders(),
     });
+    await clearLoginAttempts(email);
     redirect(await mergeAndGetRedirectTarget(result.user.id));
   } catch (error) {
     if (error instanceof APIError) {
       const formError = mapAuthError(error, ['INVALID_EMAIL_OR_PASSWORD'], 'INVALID_CREDENTIALS');
-      return { fieldErrors: {}, formError, values: { email } };
+      return { fieldErrors: {}, formError, retryAfterSeconds: null, values: { email } };
     }
     throw error;
   }
 }
 
-export type RegisterFormState = {
+export type RegisterFormState = RetryAfter & {
   readonly fieldErrors: Partial<Record<'name' | 'email' | 'password', AuthFieldIssueCode>>;
   readonly formError: AuthFormErrorCode | null;
   readonly values: Partial<Record<'name' | 'email', string>>;
@@ -138,7 +172,12 @@ export async function submitRegister(
   else if (password.length < 8) fieldErrors.password = 'PASSWORD_TOO_SHORT';
 
   if (Object.keys(fieldErrors).length > 0) {
-    return { fieldErrors, formError: null, values: { name, email } };
+    return { fieldErrors, formError: null, retryAfterSeconds: null, values: { name, email } };
+  }
+
+  const throttle = await consumeRegisterAttempt({ ip: await requestIpAddress() });
+  if (!throttle.allowed) {
+    return throttled<RegisterFormState>(throttle, { fieldErrors: {}, values: { name, email } });
   }
 
   try {
@@ -150,13 +189,13 @@ export async function submitRegister(
   } catch (error) {
     if (error instanceof APIError) {
       const formError = mapAuthError(error, ['USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL'], 'EMAIL_ALREADY_EXISTS');
-      return { fieldErrors: {}, formError, values: { name, email } };
+      return { fieldErrors: {}, formError, retryAfterSeconds: null, values: { name, email } };
     }
     throw error;
   }
 }
 
-export type OtpRequestFormState = {
+export type OtpRequestFormState = RetryAfter & {
   readonly fieldErrors: Partial<Record<'email', AuthFieldIssueCode>>;
   readonly formError: AuthFormErrorCode | null;
   readonly values: Partial<Record<'email', string>>;
@@ -174,16 +213,24 @@ export async function submitOtpRequest(
   else if (!isPlausibleEmail(email)) fieldErrors.email = 'EMAIL_INVALID';
 
   if (Object.keys(fieldErrors).length > 0) {
-    return { fieldErrors, formError: null, values: { email }, sent: false };
+    return { fieldErrors, formError: null, retryAfterSeconds: null, values: { email }, sent: false };
+  }
+
+  // The tightest limit in the set, because this is the one endpoint that
+  // makes the shop send mail to an address the caller chose: unthrottled it
+  // is an inbox flood for a victim and a real bill for us.
+  const throttle = await consumeOtpRequest({ email, ip: await requestIpAddress() });
+  if (!throttle.allowed) {
+    return throttled<OtpRequestFormState>(throttle, { fieldErrors: {}, values: { email }, sent: false });
   }
 
   try {
     await auth.api.sendVerificationOTP({ body: { email, type: 'sign-in' } });
-    return { fieldErrors: {}, formError: null, values: { email }, sent: true };
+    return { fieldErrors: {}, formError: null, retryAfterSeconds: null, values: { email }, sent: true };
   } catch (error) {
     if (error instanceof APIError) {
       logger.error('auth.unexpected_better_auth_error', { mappedTo: 'UNKNOWN', flow: 'send_verification_otp', detail: error.body ?? error });
-      return { fieldErrors: {}, formError: 'UNKNOWN', values: { email }, sent: false };
+      return { fieldErrors: {}, formError: 'UNKNOWN', retryAfterSeconds: null, values: { email }, sent: false };
     }
     throw error;
   }

@@ -64,6 +64,14 @@ export async function GET(request: Request, context: RouteContext): Promise<Next
       'Content-Type': contentType,
       'Content-Disposition': `${disposition}; filename="${encodeURIComponent(file.originalName)}"`,
       'Cache-Control': 'private, no-store',
+      // Set here as well as site-wide (`next.config.ts` -> `baseSecurityHeaders`)
+      // because this is the one route that streams bytes a customer chose:
+      // `Content-Type` comes from `inspect-file.ts`'s sniffed type, and
+      // `disposition` is `inline` for PDFs and rasters. Without `nosniff` a
+      // browser may content-sniff those bytes as HTML and run them as this
+      // origin's own document. Duplicated deliberately — the site-wide entry
+      // is a config file one matcher edit away from not covering `/api`.
+      'X-Content-Type-Options': 'nosniff',
     },
   });
 }

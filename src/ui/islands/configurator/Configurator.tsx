@@ -97,6 +97,8 @@ import {
   checkConfigurationComplete,
   EMPTY_SELECTIONS,
   isStepSatisfied,
+  stepsForProductType,
+  type ProductTypeCode,
   type Selections,
   type StepCode,
 } from '@/domain/configuration/steps';
@@ -127,9 +129,15 @@ import type {
   ConfiguratorOptionData,
   OptionAvailability,
 } from '@/server/configurator/resolve-options';
+// A pure module (`domain/compatibility` and plain reshaping — no Prisma, no
+// Node built-ins), so it is safe to import as a real value into this client
+// island. That is what lets the default selection be filtered by exactly the
+// same rules the server enforces, rather than by a second copy of them.
+import { resolveOptions } from '@/server/configurator/resolve-options';
 import { getConfiguratorSnapshot } from '@/server/actions/configurator';
 import type { ConfiguratorSnapshot } from '@/server/actions/configurator';
 import { addToCart, updateCartItemConfiguration } from '@/server/actions/cart';
+import type { PricingRejectionCode } from '@/server/configurator/validate-and-price';
 import { uploadCustomDesign } from '@/server/actions/upload';
 import type { OwnedCustomerDesignListItem } from '@/server/repositories/customer-designs';
 import type { UploadCustomDesignResult } from '@/server/actions/upload';
@@ -194,16 +202,40 @@ function cmInputFor(mm: number | null): string {
  * The middle preset is the far more likely to be feasible starting point
  * for a product's own real dimension envelope.
  */
-function computeDefaultSelections(options: ConfiguratorOptionData): Selections {
-  const defaultMaterial = options.materials[0] ?? null;
+export function computeDefaultSelections(
+  options: ConfiguratorOptionData,
+  productTypeCode: ProductTypeCode,
+): Selections {
+  // Never choose on the customer's behalf a field this product type has no
+  // step for. Added 2026-08-31 with BUG-06, which made the write path
+  // refuse exactly that: JEWELRY has no FINISH step (§5), the seeded
+  // bracelet's oak offers oiling, and the default therefore carried a
+  // finishId the product is not allowed to have — a page that priced fine
+  // and then refused to add to the cart. Tested in
+  // `tests/unit/configurator-defaults.test.ts`.
+  const steps = stepsForProductType(productTypeCode);
+  // Filtered through the same §7.2 rules the picker and the server-side
+  // gate use (`docs/REVIEW-DETAILED.md` BUG-03). This used to take
+  // `options.designs[0]` and `options.materials[0]` raw, so a deactivated
+  // material — or a design that was catalogued but never cleared for sale —
+  // could become the default nobody chose. With pattern selection currently
+  // hidden, that default is also the design that ends up in the order
+  // snapshot and on the production sheet, which makes it the one selection
+  // least able to afford being wrong.
+  const selectableOptions = resolveOptions(options, EMPTY_SELECTIONS);
+  const selectableDesigns = new Set(selectableOptions.designIds);
+  const selectableMaterials = new Set(selectableOptions.materialIds);
+
+  const defaultMaterial = options.materials.find((material) => selectableMaterials.has(material.id)) ?? null;
+  const defaultDesign = options.designs.find((design) => selectableDesigns.has(design.id)) ?? null;
   const defaultFinish = defaultMaterial?.finishes.find((finish) => finish.isAvailable) ?? null;
   const defaultPreset =
     options.presetSizes[Math.floor(options.presetSizes.length / 2)] ?? options.presetSizes[0] ?? null;
   return {
     ...EMPTY_SELECTIONS,
-    designId: options.designs[0]?.id ?? null,
+    designId: steps.includes('DESIGN') ? (defaultDesign?.id ?? null) : null,
     materialId: defaultMaterial?.id ?? null,
-    finishId: defaultFinish?.id ?? null,
+    finishId: steps.includes('FINISH') ? (defaultFinish?.id ?? null) : null,
     widthMm: defaultPreset?.widthMm ?? null,
     heightMm: defaultPreset?.heightMm ?? null,
   };
@@ -233,6 +265,8 @@ function mergeWithDefaults(fromUrl: Selections, defaults: Selections): Selection
 
 type ConfiguratorProps = {
   readonly productSlug: string;
+  /** §5's step list is keyed on this, and  needs it to avoid defaulting a field the type has no step for (BUG-06). A plain string, so it crosses the Server->Client boundary safely. */
+  readonly productTypeCode: ProductTypeCode;
   readonly options: ConfiguratorOptionData;
   /** „Produkt obejmuje blat. Nogi nie są w zestawie.” and similar — shown in the summary too (§12). */
   readonly materialNotesPl: string | null;
@@ -252,6 +286,7 @@ type ConfiguratorProps = {
 
 export function Configurator({
   productSlug,
+  productTypeCode,
   options,
   materialNotesPl,
   requiresExactSize,
@@ -269,7 +304,9 @@ export function Configurator({
   // of starting from `EMPTY_SELECTIONS` — the snapshot effect below then
   // fires on mount exactly as it does on any later change, so the very
   // first render already has a real price in flight.
-  const [selections, setSelections] = useState<Selections>(() => computeDefaultSelections(options));
+  const [selections, setSelections] = useState<Selections>(() =>
+    computeDefaultSelections(options, productTypeCode),
+  );
   const [snapshot, setSnapshot] = useState<ConfiguratorSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [acknowledged, setAcknowledged] = useState<ReadonlySet<FeasibilityCode>>(new Set());
@@ -281,7 +318,9 @@ export function Configurator({
   const [heightError, setHeightError] = useState<string | null>(null);
   const [editConfigurationId, setEditConfigurationId] = useState<string | null>(null);
   const [addToCartPending, setAddToCartPending] = useState(false);
-  const [addToCartError, setAddToCartError] = useState(false);
+  // The server's own rejection code, so the message can name what went
+  // wrong (`docs/REVIEW-DETAILED.md` SEC-03) instead of one generic line.
+  const [addToCartError, setAddToCartError] = useState<PricingRejectionCode | null>(null);
   // 2026-08-28, owner feedback: "wybiera się poprzez kliknięcie na band z
   // nazwą" (you select by clicking a band with the name) — each section is
   // a real MUI `Accordion`, one open at a time. `null` means every section
@@ -311,7 +350,7 @@ export function Configurator({
   const applyUrlSelections = useCallback(
     (search: string) => {
       const fromUrl = readSelectionsFromSearch(search);
-      const restored = mergeWithDefaults(fromUrl, computeDefaultSelections(options));
+      const restored = mergeWithDefaults(fromUrl, computeDefaultSelections(options, productTypeCode));
       setSelections(restored);
       setWidthInput(cmInputFor(restored.widthMm));
       setHeightInput(cmInputFor(restored.heightMm));
@@ -319,7 +358,7 @@ export function Configurator({
       setHeightError(null);
       return restored;
     },
-    [options],
+    [options, productTypeCode],
   );
 
   // Hydrate from the URL exactly once, on mount, so a refresh or a shared
@@ -505,7 +544,7 @@ export function Configurator({
   // Actions runs; the UI difference is just the button label.
   const handleAddToCart = useCallback(async () => {
     setAddToCartPending(true);
-    setAddToCartError(false);
+    setAddToCartError(null);
     const result =
       editConfigurationId === null
         ? await addToCart(productSlug, selections, [...acknowledged], QUANTITY)
@@ -515,7 +554,12 @@ export function Configurator({
       return;
     }
     setAddToCartPending(false);
-    setAddToCartError(true);
+    // `OPTION_UNAVAILABLE` gets its own message rather than the generic
+    // one (`docs/REVIEW-DETAILED.md` SEC-03): it means we withdrew
+    // something after this configuration was saved or shared, and "sprawdź
+    // wybory powyżej" sends the customer hunting through six choices for a
+    // problem that is ours.
+    setAddToCartError(result.code);
   }, [editConfigurationId, productSlug, selections, acknowledged, router]);
 
   if (steps.length === 0) {
@@ -1386,7 +1430,7 @@ function SummaryStep({
   readonly isEditMode: boolean;
   readonly onAddToCart: () => void;
   readonly addToCartPending: boolean;
-  readonly addToCartError: boolean;
+  readonly addToCartError: PricingRejectionCode | null;
 }) {
   if (snapshot === null) {
     return <CircularProgress size={24} />;
@@ -1515,7 +1559,13 @@ function SummaryStep({
 
       {!isComplete && <Alert severity="warning">{SITE.configuratorBlockedPl}</Alert>}
 
-      {addToCartError && <Alert severity="error">{SITE.configuratorAddToCartErrorPl}</Alert>}
+      {addToCartError !== null && (
+        <Alert severity={addToCartError === 'OPTION_UNAVAILABLE' ? 'warning' : 'error'}>
+          {addToCartError === 'OPTION_UNAVAILABLE'
+            ? SITE.configuratorOptionUnavailablePl
+            : SITE.configuratorAddToCartErrorPl}
+        </Alert>
+      )}
 
       <Button variant="contained" disabled={!canProceed || addToCartPending} onClick={onAddToCart} sx={{ alignSelf: 'flex-start' }}>
         {isEditMode ? SITE.configuratorSaveChangesPl : SITE.configuratorAddToCartPl}

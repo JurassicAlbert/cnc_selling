@@ -126,7 +126,23 @@ model Product {
   /// Floor price before any component is added.
   basePriceGrosze   Int
   /// The clamp: never sold below this, whatever the components add up to.
+  /// **NET, and an internal figure** — never show it to a customer. It was
+  /// being rendered as the catalogue's "od X zł" until 2026-08-31, which
+  /// understated every price by the VAT rate and, for several products, was
+  /// below anything that could actually be built. Use
+  /// `startingPriceGrossGrosze` for anything customer-facing.
   minPriceGrosze    Int
+  /// The advertised "od X zł" — the GROSS price of the cheapest
+  /// configuration a customer could actually buy, computed by
+  /// `server/pricing/starting-price.ts` and refreshed whenever anything
+  /// that can move a price changes.
+  ///
+  /// Stored rather than computed per request because a category page
+  /// renders many products and each computation needs that product's whole
+  /// option graph. `null` means "genuinely not knowable yet" — a `CUSTOM`
+  /// product cannot be priced before the customer's own artwork exists —
+  /// and every caller must then render no price at all, never zero.
+  startingPriceGrossGrosze Int?
   productionDaysMin Int
   productionDaysMax Int
 
@@ -1493,6 +1509,36 @@ model StoreSettings {
   shippingFlatRateGrosze Int
   updatedAt              DateTime @updatedAt
   updatedByEmail         String?
+}
+
+/// One rolling counter per rate-limited thing — `docs/ARCHITECTURE.md`
+/// §16.1's "rate limits: uploads per session/hour, order creation per IP,
+/// auth attempts", and the storage decision `docs/OPEN_ITEMS.md` §6 left
+/// open (owner chose Postgres over Redis on 2026-08-30: no new
+/// infrastructure, and the counter is already the shape
+/// `OrderNumberCounter` uses).
+///
+/// `key` is the whole identity — `"login:email:ala@example.pl"`,
+/// `"order:ip:1.2.3.4"` — so one table serves every limiter and adding one
+/// needs no migration. It is the primary key precisely so the counter can
+/// be a single atomic `INSERT … ON CONFLICT DO UPDATE … RETURNING`
+/// statement: a read-then-write limiter loses updates under exactly the
+/// concurrent load it exists to stop, which would make it report
+/// protection it does not provide.
+///
+/// `windowStart` is the beginning of the current rolling window, not a
+/// creation timestamp: the same statement resets both count and window
+/// when the old window has elapsed, so an expired row is reused rather
+/// than needing a sweeper. Rows for keys that go quiet are harmless — the
+/// index on `windowStart` is there so a periodic prune can find them
+/// cheaply if the table ever grows enough to care.
+model RateLimit {
+  key         String   @id
+  count       Int
+  windowStart DateTime
+  updatedAt   DateTime @updatedAt
+
+  @@index([windowStart])
 }
 
 /// DB-editable override for `mailer.ts`'s hardcoded subject/body text.

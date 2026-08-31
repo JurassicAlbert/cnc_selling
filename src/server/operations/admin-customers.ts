@@ -2,9 +2,17 @@
  * RODO anonymization — the "deletion" half of module 8's "data export and
  * deletion request handling." Same `applyXxx`/`xxx` split as every other
  * staff mutation this project uses: `applyAnonymizeCustomer` takes the
- * staff actor explicitly (real DB logic, directly testable),
+ * acting admin explicitly (real DB logic, directly testable),
  * `anonymizeCustomer` — the actual Server Action — derives it via
- * `requireStaffSession()`, which only works inside a real request.
+ * `requireAdminSession()`, which only works inside a real request.
+ *
+ * **`ADMIN`, not `STAFF`** — changed 2026-08-31, `docs/REVIEW-DETAILED.md`
+ * SEC-04. This is irreversible (it refuses to run twice) and it deletes the
+ * customer's `Session`/`Account` rows, permanently removing their ability
+ * to sign in. ARCHITECTURE.md §16.3 gives `STAFF` "customers (**read**)" —
+ * reading a customer is still `STAFF`; erasing one is not.
+ * `refuseUnlessAdmin` repeats the gate inside the `apply` so a test can
+ * reach it — see `admin-only.ts`.
  *
  * Scrubs `User` identity fields and revokes the ability to sign back in
  * (deletes `Session`/`Account` rows) — that is the real "deletion." It
@@ -19,17 +27,23 @@
 import { revalidatePath } from 'next/cache';
 
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
+import { refuseUnlessAdmin } from './admin-only';
 
 export type AnonymizeCustomerResult = { readonly ok: true } | { readonly ok: false; readonly detail: string };
 
 export async function applyAnonymizeCustomer(
-  staff: CurrentSession,
+  admin: CurrentSession,
   userId: string,
   notePl: string,
 ): Promise<AnonymizeCustomerResult> {
+  const refusal = refuseUnlessAdmin(admin);
+  if (refusal !== null) {
+    return refusal;
+  }
+
   if (notePl.trim().length === 0) {
     return { ok: false, detail: 'Anonimizacja konta wymaga podania notatki.' };
   }
@@ -58,7 +72,7 @@ export async function applyAnonymizeCustomer(
     prisma.account.deleteMany({ where: { userId } }),
   ]);
   await writeAuditLog({
-    actor: staff,
+    actor: admin,
     entity: 'User',
     entityId: userId,
     action: 'update',
@@ -69,8 +83,8 @@ export async function applyAnonymizeCustomer(
 }
 
 export async function anonymizeCustomer(userId: string, notePl: string): Promise<AnonymizeCustomerResult> {
-  const staff = await requireStaffSession();
-  const result = await applyAnonymizeCustomer(staff, userId, notePl);
+  const admin = await requireAdminSession();
+  const result = await applyAnonymizeCustomer(admin, userId, notePl);
   if (result.ok) {
     revalidatePath(`/panel/klienci/${userId}`);
     revalidatePath('/panel/klienci');

@@ -12,7 +12,7 @@ import { SITE } from '@/content/pl/site';
 import { submitRegister } from '@/server/actions/auth';
 import type { RegisterFormState } from '@/server/actions/auth';
 
-const INITIAL_STATE: RegisterFormState = { fieldErrors: {}, formError: null, values: {} };
+const INITIAL_STATE: RegisterFormState = { fieldErrors: {}, formError: null, retryAfterSeconds: null, values: {} };
 
 export function RegisterForm() {
   const [state, formAction] = useActionState(submitRegister, INITIAL_STATE);
@@ -30,7 +30,7 @@ export function RegisterForm() {
   return (
     <form key={renderKey} action={formAction}>
       <Stack spacing={2} sx={{ maxWidth: 400 }}>
-        {state.formError !== null && <Alert severity="error">{authFormErrorMessage(state.formError)}</Alert>}
+        {state.formError !== null && <Alert severity="error">{authFormErrorMessage(state.formError, state.retryAfterSeconds)}</Alert>}
 
         <TextField
           label={SITE.authNameLabelPl}

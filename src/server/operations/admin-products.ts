@@ -19,6 +19,7 @@ import { requireStaffSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 import { nextAvailableSlug } from '@/server/util/unique-slug';
+import { refreshStartingPricesAfterCatalogueChange } from '@/server/pricing/starting-price';
 import type { ProductTypeCode } from '@/generated/prisma/enums';
 
 export type ProductCoreInput = {
@@ -121,6 +122,9 @@ export async function applyUpdateProduct(
 
   await prisma.product.update({ where: { id }, data: input });
   await writeAuditLog({ actor: staff, entity: 'Product', entityId: id, action: 'update', diff: { before: current, after: input } });
+  // `basePriceGrosze`, the dimension envelope and the preset sizes all feed
+  // the advertised "od X zł" (`docs/REVIEW-DETAILED.md` BUG-02).
+  await refreshStartingPricesAfterCatalogueChange();
 
   return { ok: true, id };
 }
@@ -148,7 +152,7 @@ export async function applySetProductActive(staff: CurrentSession, id: string, i
     action: 'update',
     diff: { isActive: { from: current.isActive, to: isActive } },
   });
-
+  await refreshStartingPricesAfterCatalogueChange();
 }
 
 export async function setProductActive(id: string, isActive: boolean): Promise<void> {

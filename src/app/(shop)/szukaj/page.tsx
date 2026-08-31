@@ -57,7 +57,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                     categoryNamePl={product.categoryNamePl}
                     categorySlug={product.categorySlug}
                     imageUrl={product.primaryImageUrl}
-                    minPriceGrosze={product.minPriceGrosze}
+                    startingPriceGrossGrosze={product.startingPriceGrossGrosze}
                     hasPersonalization={product.hasPersonalization}
                     productionDaysMin={product.productionDaysMin}
                     productionDaysMax={product.productionDaysMax}

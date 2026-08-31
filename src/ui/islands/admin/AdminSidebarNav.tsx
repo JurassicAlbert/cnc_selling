@@ -41,6 +41,18 @@ type NavItem = {
   readonly href: string;
   readonly label: string;
   readonly icon: ReactNode;
+  /**
+   * Hidden from STAFF. Added 2026-08-31 with SEC-04, and it fixes a
+   * pre-existing inconsistency as well as preventing a new one: `/panel/ceny`
+   * and `/panel/ustawienia/personel` were already ADMIN-gated pages that this
+   * nav offered to every STAFF account, so clicking them produced a 404.
+   *
+   * This is presentation only — every one of these routes and their
+   * operations enforce the gate themselves. Hiding a link is not a security
+   * control; it is what stops the panel offering a STAFF something the
+   * system will then refuse.
+   */
+  readonly adminOnly?: true;
 };
 
 type NavGroup = {
@@ -87,10 +99,10 @@ const NAV_GROUPS: readonly NavGroup[] = [
   {
     headerPl: ADMIN.navGroupSystemPl,
     items: [
-      { href: '/panel/ustawienia', label: ADMIN.navSettingsPl, icon: <SettingsOutlinedIcon fontSize="small" /> },
+      { href: '/panel/ustawienia', label: ADMIN.navSettingsPl, icon: <SettingsOutlinedIcon fontSize="small" />, adminOnly: true },
       { href: '/panel/dostawa', label: ADMIN.navDeliveryMethodsPl, icon: <LocalShippingOutlinedIcon fontSize="small" /> },
       { href: '/panel/platnosci', label: ADMIN.navPaymentMethodsPl, icon: <PaymentsOutlinedIcon fontSize="small" /> },
-      { href: '/panel/ceny', label: ADMIN.navPricingPl, icon: <SellOutlinedIcon fontSize="small" /> },
+      { href: '/panel/ceny', label: ADMIN.navPricingPl, icon: <SellOutlinedIcon fontSize="small" />, adminOnly: true },
       { href: '/panel/dziennik-zdarzen', label: ADMIN.navAuditLogPl, icon: <HistoryOutlinedIcon fontSize="small" /> },
     ],
   },
@@ -103,12 +115,16 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AdminSidebarNav() {
+export function AdminSidebarNav({ role }: { readonly role: 'STAFF' | 'ADMIN' }) {
   const pathname = usePathname();
+  const groups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => item.adminOnly !== true || role === 'ADMIN'),
+  })).filter((group) => group.items.length > 0);
 
   return (
     <List dense sx={{ py: 0 }}>
-      {NAV_GROUPS.map((group) => (
+      {groups.map((group) => (
         <li key={group.headerPl ?? 'root'}>
           <ul style={{ padding: 0 }}>
             {group.headerPl !== undefined && <ListSubheader disableSticky>{group.headerPl}</ListSubheader>}

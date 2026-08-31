@@ -75,7 +75,26 @@ for the full technical detail behind each line here).
   deciding whether to keep converting page-by-page as flagged, or do one
   deliberate systematic sweep across the storefront in a dedicated round.
 
-## 6. Rate limits on order creation and login (§16.1)
+## 6. Rate limits on order creation and login (§16.1) — **RESOLVED 2026-08-30/31**
+
+**The owner chose Postgres.** Built and verified on 2026-08-31: a
+`RateLimit` table (migration `20260831000000_add_rate_limit`), one atomic
+`INSERT … ON CONFLICT DO UPDATE … RETURNING` in
+`src/server/rate-limit/rate-limit.ts`, the real limits in `rules.ts`, and
+the per-action throttles in `auth-throttle.ts`. Wired into login,
+registration, OTP requests and order creation. 20 tests, including a
+20-way concurrency test proving no attempt is lost.
+
+The audit also found the reason this mattered more than §16.1 implied:
+every auth form calls `auth.api.*` **directly**, so Better Auth's own
+limiter — which lives in its HTTP router's `onRequest` hook — never ran at
+all. See `docs/REVIEW-DETAILED.md` SEC-01.
+
+The original write-up is kept below for the record.
+
+---
+
+## 6 (original). Rate limits on order creation and login (§16.1)
 
 - `ARCHITECTURE.md` §16.1 requires rate limits on "uploads per session/
   hour, **order creation per IP**, **auth attempts**". Only the upload

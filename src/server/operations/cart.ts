@@ -35,6 +35,8 @@ import { prisma } from '@/server/db/client';
 import type { Prisma } from '@/generated/prisma/client';
 import type { InstallationVariantCode } from '@/generated/prisma/enums';
 import { priceAndValidateSelections } from '@/server/configurator/validate-and-price';
+import { parseAcknowledgedWarnings } from '@/domain/configuration/input-schema';
+import type { PricingRejectionCode } from '@/server/configurator/validate-and-price';
 import { recordAnalyticsEvent } from '@/server/analytics/record-event';
 import { findOwnedDesignId } from '@/server/repositories/design-review';
 import type { Owner } from '@/server/session/ownership';
@@ -71,7 +73,14 @@ async function verifyOwnedCustomDesign(customDesignId: string | null, owner: Own
 
 export type AddToCartResult =
   | { readonly ok: true }
-  | { readonly ok: false; readonly code: 'CONFIGURATION_INVALID' };
+  /**
+   * `OPTION_UNAVAILABLE` is deliberately distinct from
+   * `CONFIGURATION_INVALID` (`docs/REVIEW-DETAILED.md` SEC-03): it is
+   * overwhelmingly a customer holding a saved project or a shared link to
+   * something staff have since retired, and telling that person their
+   * configuration is "invalid" gives them nothing to act on.
+   */
+  | { readonly ok: false; readonly code: PricingRejectionCode };
 
 /**
  * A Prisma `where` matching a `Configuration` that IS this exact set of
@@ -143,15 +152,25 @@ export async function applyAddToCart(
   owner: Owner,
   sessionToken: string,
   productSlug: string,
-  selections: Selections,
-  acknowledgedWarnings: readonly string[],
+  rawSelections: Selections,
+  rawAcknowledgedWarnings: readonly string[],
   quantity: number,
 ): Promise<AddToCartResult> {
-  const validated = await priceAndValidateSelections(productSlug, selections);
-  if (validated === null) {
+  // BUG-07: this is a public HTTP endpoint's payload. Before the schema,
+  // `acknowledgedWarnings` was spread into a `String[]` column with no
+  // allow-list, no element count and no length cap.
+  const acknowledgedWarnings = parseAcknowledgedWarnings(rawAcknowledgedWarnings);
+  if (acknowledgedWarnings === null) {
     return { ok: false, code: 'CONFIGURATION_INVALID' };
   }
-  const { data, pricing } = validated;
+
+  const validated = await priceAndValidateSelections(productSlug, rawSelections);
+  if (!validated.ok) {
+    return validated;
+  }
+  // The PARSED selections from here on, never the caller's — see
+  // `ValidatedPricing.selections`.
+  const { data, pricing, selections } = validated;
 
   if (!(await verifyOwnedCustomDesign(selections.customUploadId, owner))) {
     return { ok: false, code: 'CONFIGURATION_INVALID' };
@@ -419,20 +438,28 @@ export async function applyUpdateCartItemConfiguration(
   owner: Owner,
   configurationId: string,
   productSlug: string,
-  selections: Selections,
-  acknowledgedWarnings: readonly string[],
+  rawSelections: Selections,
+  rawAcknowledgedWarnings: readonly string[],
 ): Promise<AddToCartResult> {
+  const acknowledgedWarnings = parseAcknowledgedWarnings(rawAcknowledgedWarnings);
+  if (acknowledgedWarnings === null) {
+    return { ok: false, code: 'CONFIGURATION_INVALID' };
+  }
   if (!(await ownsConfiguration(configurationId, owner))) {
     return { ok: false, code: 'CONFIGURATION_INVALID' };
   }
+  // Validated BEFORE the ownership check that reads a field off it: with a
+  // malformed payload, `selections.customUploadId` could be any type, and
+  // handing it to Prisma is the 500 BUG-07 is about. Both paths refuse with
+  // the same code, so the reordering changes nothing a caller can observe.
+  const validated = await priceAndValidateSelections(productSlug, rawSelections);
+  if (!validated.ok) {
+    return validated;
+  }
+  const { data, pricing, selections } = validated;
   if (!(await verifyOwnedCustomDesign(selections.customUploadId, owner))) {
     return { ok: false, code: 'CONFIGURATION_INVALID' };
   }
-  const validated = await priceAndValidateSelections(productSlug, selections);
-  if (validated === null) {
-    return { ok: false, code: 'CONFIGURATION_INVALID' };
-  }
-  const { data, pricing } = validated;
 
   await prisma.configuration.update({
     where: { id: configurationId },

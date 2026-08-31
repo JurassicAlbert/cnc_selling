@@ -22,7 +22,34 @@ type RouteContext = {
   readonly params: Promise<{ readonly id: string }>;
 };
 
-export async function GET(_request: Request, context: RouteContext): Promise<NextResponse> {
+/**
+ * A prefetch must never reach the body of this handler. Checked **first**,
+ * before the session read, because nothing at all should happen for a
+ * speculative request — and because `getSession()` reads `next/headers`,
+ * so guarding ahead of it is also what makes this testable
+ * (`tests/unit/customer-export-route.test.ts`).
+ *
+ * Found 2026-08-31: the customer page linked here with `next/link`, Next
+ * prefetched the target, and simply opening a customer's page produced
+ * `GET …/eksport?_rsc=… → 200` plus an `AuditLog` row claiming a RODO export
+ * had been performed. §16A.2 invariant 4 makes that log the record of what
+ * happened; it was recording accesses that never occurred. The link is a
+ * plain `<a>` now, which is the convention `/api/plik/[fileId]` already
+ * followed — this guard is the second layer, for any future link that
+ * forgets.
+ */
+function isPrefetch(request: Request): boolean {
+  return (
+    request.headers.get('next-router-prefetch') !== null ||
+    request.headers.get('purpose') === 'prefetch'
+  );
+}
+
+export async function GET(request: Request, context: RouteContext): Promise<NextResponse> {
+  if (isPrefetch(request)) {
+    return new NextResponse(null, { status: 404 });
+  }
+
   const session = await getSession();
   if (session === null || session.role === 'CUSTOMER') {
     return new NextResponse(null, { status: 404 });

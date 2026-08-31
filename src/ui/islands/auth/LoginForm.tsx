@@ -22,7 +22,7 @@ import { SITE } from '@/content/pl/site';
 import { submitLogin } from '@/server/actions/auth';
 import type { LoginFormState } from '@/server/actions/auth';
 
-const INITIAL_STATE: LoginFormState = { fieldErrors: {}, formError: null, values: {} };
+const INITIAL_STATE: LoginFormState = { fieldErrors: {}, formError: null, retryAfterSeconds: null, values: {} };
 
 export function LoginForm() {
   const [state, formAction] = useActionState(submitLogin, INITIAL_STATE);
@@ -40,7 +40,7 @@ export function LoginForm() {
   return (
     <form key={renderKey} action={formAction}>
       <Stack spacing={2} sx={{ maxWidth: 400 }}>
-        {state.formError !== null && <Alert severity="error">{authFormErrorMessage(state.formError)}</Alert>}
+        {state.formError !== null && <Alert severity="error">{authFormErrorMessage(state.formError, state.retryAfterSeconds)}</Alert>}
 
         <TextField
           label={SITE.authEmailLabelPl}

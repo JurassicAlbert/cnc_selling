@@ -4,14 +4,27 @@
  * clearing a field genuinely un-configures it, not stores an empty
  * string), matching `StoreSettings`'s own nullable-means-not-configured
  * contract.
+ *
+ * **`ADMIN`, not `STAFF`** — changed 2026-08-31, `docs/REVIEW-DETAILED.md`
+ * SEC-04. `bankAccountNumber` is the account number every bank-transfer
+ * customer is told to pay into, on the confirmation page and in the
+ * confirmation email; a `STAFF` account able to write it can redirect all
+ * incoming payments. ARCHITECTURE.md §16.3 already assigned settings to
+ * `ADMIN` — the code simply did not honour it.
+ *
+ * The gate is asserted twice on purpose: `requireAdminSession()` in the
+ * wrapper is what a real request meets, and `refuseUnlessAdmin` in the
+ * `apply` is the same rule somewhere a test can actually reach it (see
+ * `admin-only.ts`).
  */
 
 import { revalidatePath } from 'next/cache';
 
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
+import { refuseUnlessAdmin } from './admin-only';
 
 export type UpdateStoreSettingsInput = {
   readonly bankAccountNumber: string;
@@ -27,9 +40,14 @@ function blankToNull(value: string): string | null {
 }
 
 export async function applyUpdateStoreSettings(
-  staff: CurrentSession,
+  admin: CurrentSession,
   input: UpdateStoreSettingsInput,
 ): Promise<UpdateStoreSettingsResult> {
+  const refusal = refuseUnlessAdmin(admin);
+  if (refusal !== null) {
+    return refusal;
+  }
+
   if (!Number.isInteger(input.shippingFlatRateGrosze) || input.shippingFlatRateGrosze < 0) {
     return { ok: false, detail: 'Stawka wysyłki musi być liczbą całkowitą, nie mniejszą niż 0.' };
   }
@@ -41,11 +59,11 @@ export async function applyUpdateStoreSettings(
       bankAccountNumber: blankToNull(input.bankAccountNumber),
       bankAccountHolderPl: blankToNull(input.bankAccountHolderPl),
       shippingFlatRateGrosze: input.shippingFlatRateGrosze,
-      updatedByEmail: staff.email,
+      updatedByEmail: admin.email,
     },
   });
   await writeAuditLog({
-    actor: staff,
+    actor: admin,
     entity: 'StoreSettings',
     entityId: '1',
     action: 'update',
@@ -59,8 +77,8 @@ export async function applyUpdateStoreSettings(
 }
 
 export async function updateStoreSettings(input: UpdateStoreSettingsInput): Promise<UpdateStoreSettingsResult> {
-  const staff = await requireStaffSession();
-  const result = await applyUpdateStoreSettings(staff, input);
+  const admin = await requireAdminSession();
+  const result = await applyUpdateStoreSettings(admin, input);
   if (result.ok) {
     revalidatePath('/panel/ustawienia');
     revalidatePath('/koszyk/zamowienie');

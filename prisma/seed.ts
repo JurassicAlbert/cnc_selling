@@ -78,6 +78,13 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import opentype from 'opentype.js';
 
 import { PrismaClient } from '../src/generated/prisma/client';
+// Uses the app's own singleton client rather than this file's, which means a
+// second pool is open for the last step of a seed. Deliberate: threading a
+// client through `refreshAllStartingPrices` → `getConfiguratorProductData` →
+// the repositories would be the dependency-injection refactor this codebase
+// explicitly decided against (see `tests/integration/env-setup.ts`), and a
+// one-shot script can afford one extra pool for a few seconds.
+import { refreshAllStartingPrices } from '../src/server/pricing/starting-price';
 import { POLISH_SPECIFIC_LETTERS } from '../src/domain/personalization/validate';
 import { formatMmAsCentimetres } from '../src/domain/text/numeric-input';
 
@@ -121,6 +128,15 @@ async function main(): Promise<void> {
   await seedProductCollections();
   await seedDeliveryMethods();
   await seedPaymentMethodConfigs();
+
+  // Last, deliberately: the advertised "od X zł" is derived from everything
+  // above it — products, materials, finishes, designs, compatibility rows
+  // and the active pricing version — so it can only be computed once the
+  // whole catalogue exists. See `src/server/pricing/starting-price.ts` for
+  // why it is stored rather than computed per request
+  // (`docs/REVIEW-DETAILED.md` BUG-02).
+  await refreshAllStartingPrices();
+  console.log('Product: refreshed advertised starting prices');
 }
 
 // ---------------------------------------------------------------------------
@@ -238,7 +254,12 @@ async function seedEmailTemplates(): Promise<void> {
     },
     {
       key: 'verification-otp',
-      subjectPl: 'Twój kod {{otpPurposePl}}: {{otp}}',
+      // No `{{otp}}` here, deliberately — `docs/REVIEW-DETAILED.md` SEC-02.
+      // A subject reaches lock screens and notification previews; the code
+      // belongs in the body only. Migration
+      // `20260831010000_otp_subject_without_code` fixes rows already seeded
+      // with the old value.
+      subjectPl: 'Kod {{otpPurposePl}} — RYT',
       bodyPl:
         'Kod {{otpPurposePl}}: {{otp}}\n\nKod jest ważny przez 5 minut. Jeśli to nie Ty prosiłeś/aś o ten kod, zignoruj tę wiadomość.',
     },
@@ -580,6 +601,10 @@ type DesignSeedInput = {
   readonly tags: readonly string[];
   readonly imageSlug: string;
   readonly detailLevel: number;
+  /** Distinct and explicit — the configurator's default design is the first offered one, and ties made that non-deterministic. See the block comment below. */
+  readonly sortOrder: number;
+  /** Defaults to true. Only `wzor-podstawowy` is false, and its own entry says why. */
+  readonly isActive?: boolean;
 };
 
 /**
@@ -592,9 +617,25 @@ type DesignSeedInput = {
  * .svg`, transparent background, no fill/blend imported from anywhere),
  * the same "engraved wood art" register `src/ui/primitives/engravings.tsx`
  * already established for site decoration, not a stand-in for a real
- * commissioned catalogue. `wzor-podstawowy` itself is left exactly as it
- * was — still explicitly named "do zastąpienia" (to be replaced) — rather
- * than deleted, so the "still a placeholder" signal isn't lost.
+ * commissioned catalogue.
+ *
+ * **`wzor-podstawowy` is seeded INACTIVE as of 2026-08-31**
+ * (`docs/REVIEW-DETAILED.md` BUG-03, owner: "we should not have pattern
+ * selection for now… rather show product with already existing pattern").
+ * It used to be active and, because pattern selection is hidden, it was
+ * also the design silently attached to every order — so a placeholder
+ * literally named "do zastąpienia" reached the cart, the immutable order
+ * snapshot and the production sheet. Deactivated rather than deleted:
+ * §16A.2's soft-delete invariant, and the "still a placeholder" signal is
+ * kept by the row continuing to exist. It is the only design whose artwork
+ * still lives in `placeholders/` rather than `patterns/`; every other one
+ * is real.
+ *
+ * `sortOrder` is explicit and distinct for the same reason: the
+ * configurator takes the first offered design as its default, and with
+ * every row at 0 the winner was whatever Postgres happened to return —
+ * which, since machining time and surcharge are pricing inputs, could
+ * change the price between two loads of the same page.
  */
 const DESIGN_SEEDS: readonly DesignSeedInput[] = [
   {
@@ -605,6 +646,9 @@ const DESIGN_SEEDS: readonly DesignSeedInput[] = [
     tags: ['placeholder'],
     imageSlug: 'placeholders/wzor-podstawowy',
     detailLevel: 3,
+    sortOrder: 1,
+    // Deactivated 2026-08-31 — see the block comment above.
+    isActive: false,
   },
   {
     slug: 'galazka-oliwna',
@@ -614,6 +658,7 @@ const DESIGN_SEEDS: readonly DesignSeedInput[] = [
     tags: ['roślinny', 'minimalistyczny'],
     imageSlug: 'galazka-oliwna',
     detailLevel: 2,
+    sortOrder: 2,
   },
   {
     slug: 'kompas-nawigacyjny',
@@ -623,6 +668,7 @@ const DESIGN_SEEDS: readonly DesignSeedInput[] = [
     tags: ['geometryczny', 'precyzja'],
     imageSlug: 'kompas-nawigacyjny',
     detailLevel: 2,
+    sortOrder: 3,
   },
   {
     slug: 'fala-drewna',
@@ -632,6 +678,7 @@ const DESIGN_SEEDS: readonly DesignSeedInput[] = [
     tags: ['organiczny', 'usłojenie'],
     imageSlug: 'fala-drewna',
     detailLevel: 1,
+    sortOrder: 4,
   },
   {
     slug: 'mandala-botaniczna',
@@ -641,6 +688,7 @@ const DESIGN_SEEDS: readonly DesignSeedInput[] = [
     tags: ['roślinny', 'mandala'],
     imageSlug: 'mandala-botaniczna',
     detailLevel: 4,
+    sortOrder: 5,
   },
   {
     slug: 'wzor-geometryczny',
@@ -650,6 +698,7 @@ const DESIGN_SEEDS: readonly DesignSeedInput[] = [
     tags: ['geometryczny'],
     imageSlug: 'wzor-geometryczny',
     detailLevel: 2,
+    sortOrder: 6,
   },
   {
     slug: 'drzewo-zycia',
@@ -659,6 +708,7 @@ const DESIGN_SEEDS: readonly DesignSeedInput[] = [
     tags: ['roślinny', 'symboliczny'],
     imageSlug: 'drzewo-zycia',
     detailLevel: 3,
+    sortOrder: 7,
   },
   {
     slug: 'serce-azurowe',
@@ -668,6 +718,7 @@ const DESIGN_SEEDS: readonly DesignSeedInput[] = [
     tags: ['symboliczny', 'minimalistyczny'],
     imageSlug: 'serce-azurowe',
     detailLevel: 1,
+    sortOrder: 8,
   },
   {
     slug: 'faza-ksiezyca',
@@ -677,6 +728,7 @@ const DESIGN_SEEDS: readonly DesignSeedInput[] = [
     tags: ['symboliczny', 'geometryczny'],
     imageSlug: 'faza-ksiezyca',
     detailLevel: 2,
+    sortOrder: 9,
   },
   {
     slug: 'pioro-lesne',
@@ -686,6 +738,7 @@ const DESIGN_SEEDS: readonly DesignSeedInput[] = [
     tags: ['roślinny', 'symboliczny'],
     imageSlug: 'pioro-lesne',
     detailLevel: 2,
+    sortOrder: 10,
   },
   /**
    * 2026-08-29, owner feedback: the first ten patterns read as "too basic"
@@ -706,6 +759,7 @@ const DESIGN_SEEDS: readonly DesignSeedInput[] = [
     tags: ['krajobraz', 'zaawansowany'],
     imageSlug: 'panorama-gorska',
     detailLevel: 4,
+    sortOrder: 11,
   },
   {
     slug: 'gaj-brzozowy',
@@ -715,6 +769,7 @@ const DESIGN_SEEDS: readonly DesignSeedInput[] = [
     tags: ['krajobraz', 'zaawansowany'],
     imageSlug: 'gaj-brzozowy',
     detailLevel: 4,
+    sortOrder: 12,
   },
 ];
 
@@ -734,7 +789,8 @@ async function seedDesigns(): Promise<readonly SeededDesign[]> {
         tags: [...input.tags],
         thumbnailUrl: imageUrl,
         previewUrl: imageUrl,
-        isActive: true,
+        isActive: input.isActive ?? true,
+        sortOrder: input.sortOrder,
         referenceWidthMm: 600,
         minLineWidthUm: 1_200,
         minDetailSpacingUm: 2_000,

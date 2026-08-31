@@ -52,7 +52,7 @@ Practical consequence for TDD: I will write the failing tests and the implementa
 | Styling engine | Emotion (MUI default) + `@mui/material-nextjs` App Router adapter | — | v9 still ships on Emotion; "remove Emotion" is on MUI's roadmap, not in v9. |
 | DB | PostgreSQL | 16+ | JSONB for configuration snapshots, real numeric types, proper constraints. |
 | ORM | Prisma ORM | **v7** | Typed client, migrations, good test ergonomics. |
-| Validation | Zod | 3.x/4.x | One schema reused for client hints and server enforcement. |
+| Validation | Zod | 3.x/4.x | One schema reused for client hints and server enforcement. **True since 2026-08-31 (BUG-07), not before** — this row described an intention nothing implemented, and `grep -rn "from 'zod'" src` returned nothing for the whole build. It now lives in exactly one module, `src/domain/configuration/input-schema.ts`, parsed at the write path's choke point. It is a **shape** check only: which options a product actually offers is `domain/compatibility`'s job (§7.2), which steps a product type has is `domain/configuration/steps`', and whether engraved text fits is `domain/personalization`'s. |
 | Auth | Auth.js (NextAuth v5) + Prisma adapter | — | Email magic-link + credentials; guest checkout supported separately. |
 | Images | `sharp` + `next/image` | — | Upload inspection, preview generation, responsive delivery. |
 | Unit/integration tests | Vitest + Testing Library | — | Fast, ESM-native, same config for domain and component tests. |

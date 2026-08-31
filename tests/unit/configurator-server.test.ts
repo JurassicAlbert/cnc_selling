@@ -365,10 +365,35 @@ describe('priceConfiguration', () => {
     }
   });
 
-  it('flags a blocking feasibility error but still returns a price for the summary', () => {
+  /**
+   * This test used to assert the opposite — that an impossible line width
+   * produced `blockingError: true` and a `LINE_TOO_THIN` finding.
+   *
+   * Reversed deliberately on 2026-08-31, at the owner's instruction: "we
+   * should not measure patterns can be printed on the product - since we
+   * decided we sell product with the pattern already - the client can just
+   * define material, wymiary… there shouldn't be cases where we allow
+   * something but its blocked by system - this is logical issue."
+   *
+   * Pattern selection is off, so the pattern is a property of a product we
+   * already make rather than artwork being scaled to a size the customer
+   * chose — and the metadata these rules read (`referenceWidthMm: 600`,
+   * `minLineWidthUm: 1200`, identical on every seeded design) was seed
+   * scaffolding, never a measurement. The effect was a shop that refused
+   * itself: two products were 100% unbuildable while still being listed and
+   * priced (`docs/AI-CHECKLIST.md` BUG-35).
+   *
+   * The rules themselves are untouched and still fully covered by
+   * `tests/unit/feasibility.test.ts`, which exercises `evaluateFeasibility`
+   * directly. What changed is one flag in `price-configuration.ts`
+   * (`PATTERN_FEASIBILITY_ENABLED`), and this test now pins that decision so
+   * it cannot be reverted by accident. Recorded, not quietly deleted.
+   */
+  it('no longer blocks on a pattern that the material could not hold, now that patterns are not customer-scaled', () => {
     const thinLineData: ConfiguratorPricingData = {
       ...pricingData,
-      // The material demands a much wider line than this design ever produces.
+      // The material demands a far wider line than this design could ever
+      // produce — previously an immediate hard block.
       material: { ...pricingData.material, minLineWidthUm: 50_000 }, // 50 mm
     };
     const result = priceConfiguration(
@@ -378,9 +403,24 @@ describe('priceConfiguration', () => {
     );
     expect(result.status).toBe('priced');
     if (result.status === 'priced') {
-      expect(result.blockingError).toBe(true);
-      expect(result.feasibility.some((f) => f.code === 'LINE_TOO_THIN')).toBe(true);
+      expect(result.blockingError).toBe(false);
+      expect(result.feasibility.some((f) => f.code === 'LINE_TOO_THIN')).toBe(false);
       expect(result.priceBreakdown).toBeDefined();
+    }
+  });
+
+  /**
+   * The other half of the same decision: only the three DESIGN-derived
+   * findings were switched off. Every constraint on something the customer
+   * genuinely chooses still blocks — this is the machine's real Z-axis
+   * limit, and the test below it covers the same for module splitting.
+   */
+  it('still blocks on a real machine limit, which is not a pattern question', () => {
+    const result = priceConfiguration(pricingData, selections({ widthMm: 600, heightMm: 400, thicknessMm: 150 }), 1);
+    expect(result.status).toBe('priced');
+    if (result.status === 'priced') {
+      expect(result.feasibility.some((f) => f.code === 'THICKNESS_EXCEEDS_MACHINE')).toBe(true);
+      expect(result.blockingError).toBe(true);
     }
   });
 

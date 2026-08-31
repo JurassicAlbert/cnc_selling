@@ -25,6 +25,7 @@
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "db:deploy:test": "node scripts/migrate-test-db.mjs",
+    "db:seed:test": "node scripts/seed-test-db.mjs",
     "prisma:generate": "prisma generate",
     "postinstall": "prisma generate"
   },
@@ -43,7 +44,8 @@
     "prisma": "^7.9.1",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "yaml": "^2.9.0"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.7.1",

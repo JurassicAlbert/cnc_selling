@@ -21,7 +21,7 @@ import { SITE } from '@/content/pl/site';
 import { submitOtpLogin, submitOtpRequest } from '@/server/actions/auth';
 import type { OtpLoginFormState, OtpRequestFormState } from '@/server/actions/auth';
 
-const INITIAL_REQUEST_STATE: OtpRequestFormState = { fieldErrors: {}, formError: null, values: {}, sent: false };
+const INITIAL_REQUEST_STATE: OtpRequestFormState = { fieldErrors: {}, formError: null, retryAfterSeconds: null, values: {}, sent: false };
 const INITIAL_LOGIN_STATE: OtpLoginFormState = { fieldErrors: {}, formError: null, values: {} };
 
 export function OtpLoginForm() {
@@ -43,7 +43,9 @@ function OtpRequestStep({
   return (
     <form action={formAction}>
       <Stack spacing={2} sx={{ maxWidth: 400 }}>
-        {state.formError !== null && <Alert severity="error">{authFormErrorMessage(state.formError)}</Alert>}
+        {state.formError !== null && (
+          <Alert severity="error">{authFormErrorMessage(state.formError, state.retryAfterSeconds)}</Alert>
+        )}
         <TextField
           label={SITE.authEmailLabelPl}
           name="email"

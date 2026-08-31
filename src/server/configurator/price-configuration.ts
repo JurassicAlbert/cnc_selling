@@ -51,6 +51,51 @@ import type {
   ProductRow,
 } from '@/server/mapping/to-domain';
 
+/**
+ * Whether a pattern's own production metadata gates what the customer may
+ * order — `evaluateFeasibility`'s three design-derived findings
+ * (`LINE_TOO_THIN`, `DETAIL_SPACING_TOO_TIGHT`, `DESIGN_TOO_DETAILED`).
+ *
+ * **Off, by owner decision on 2026-08-31:** "we should not measure patterns
+ * can be printed on the product — since we decided we sell product with the
+ * pattern already — the client can just define material, wymiary… there
+ * shouldn't be cases where we allow something but its blocked by system -
+ * this is logical issue."
+ *
+ * That is the right call, and the evidence agreed with it. These rules
+ * scale a design's declared minimum line width from its `referenceWidthMm`
+ * down to whatever size the customer picks — a genuinely useful check *when
+ * the customer chooses the pattern*. But pattern selection is switched off
+ * (`Configurator.tsx`'s `PATTERN_SELECTION_ENABLED`): the pattern is a
+ * property of a product we already make, not something being scaled to an
+ * arbitrary size on demand. So the rules were gating a decision the customer
+ * never makes, against seeded placeholder metadata — every design carries an
+ * identical `referenceWidthMm: 600` / `minLineWidthUm: 1200`, which was seed
+ * scaffolding (`prisma/seed.ts`'s own header, D4/D5) and never a measurement
+ * from the real machine.
+ *
+ * The result was a shop that refused itself: **every active product had
+ * blocked combinations, and two were 100% unbuildable** — the bracelet
+ * 132/132, the loft stool 660/792 — while still being listed, priced and
+ * selectable (`docs/AI-CHECKLIST.md` BUG-35). The bracelet even told the
+ * customer to "choose a larger size or a different material" when 22 cm was
+ * its maximum and all four materials shared the same limit.
+ *
+ * Nothing is deleted. `domain/feasibility` keeps all three rules and their
+ * 32 unit tests; `evaluateFeasibility` already accepts `design: null` and is
+ * tested that way (it is the path `CUSTOM` uploads have always used). Every
+ * other finding still applies in full — module count, natural variation,
+ * floor matching, the machine's real Z-axis limit, and every personalization
+ * check, because those are all real constraints on choices the customer
+ * genuinely makes. Flipping this back to `true` is the entire re-enable
+ * path, and it becomes meaningful the day patterns are customer-selectable
+ * again **and** carry real per-design measurements.
+ *
+ * `tests/integration/offered-is-buildable.test.ts` is what holds the line
+ * the owner actually asked for: nothing offered may be refused.
+ */
+const PATTERN_FEASIBILITY_ENABLED = false;
+
 export type ConfiguratorPricingData = {
   readonly product: ProductRow & { readonly isFloorElement: boolean };
   readonly material: MaterialRow & { readonly priceFactorBp: number };
@@ -119,7 +164,7 @@ export function priceConfiguration(
 
   const feasibility = evaluateFeasibility({
     widthMm,
-    design: toDesignConstraints(data.design),
+    design: PATTERN_FEASIBILITY_ENABLED ? toDesignConstraints(data.design) : null,
     material: toMaterialConstraints(data.material),
     moduleCount: layout.totalModules,
     isFloorElement: data.product.isFloorElement,

@@ -5,7 +5,14 @@ export type ProductCardData = {
   readonly slug: string;
   readonly namePl: string;
   readonly shortDescPl: string;
-  readonly minPriceGrosze: number;
+  /**
+   * The advertised "od X zł" — GROSS, and the cheapest configuration a
+   * customer can actually buy (`server/pricing/starting-price.ts`). `null`
+   * means no price may be shown at all: never fall back to
+   * `minPriceGrosze`, which is the net internal clamp this replaced
+   * (`docs/REVIEW-DETAILED.md` BUG-02).
+   */
+  readonly startingPriceGrossGrosze: number | null;
   readonly primaryImageUrl: string | null;
   readonly categoryNamePl: string;
   readonly categorySlug: string;
@@ -39,16 +46,21 @@ export async function listActiveProductsByCategorySlug(
       category: { slug: categorySlug, isActive: true },
       ...(materialSlug ? { materials: { some: { material: { slug: materialSlug } } } } : {}),
     },
+    // Sorted by the price customers are actually shown, not by the
+    // internal net clamp — otherwise "od najtańszych" could order the list
+    // differently from the numbers on the cards. Nulls sort last either
+    // way: a product with no advertised price belongs at the end of a
+    // price-sorted list, not the front.
     orderBy: sort === 'price_asc'
-      ? { minPriceGrosze: 'asc' }
+      ? { startingPriceGrossGrosze: { sort: 'asc', nulls: 'last' } }
       : sort === 'price_desc'
-        ? { minPriceGrosze: 'desc' }
+        ? { startingPriceGrossGrosze: { sort: 'desc', nulls: 'last' } }
         : { sortOrder: 'asc' },
     select: {
       slug: true,
       namePl: true,
       shortDescPl: true,
-      minPriceGrosze: true,
+      startingPriceGrossGrosze: true,
       category: { select: { namePl: true, slug: true } },
       images: {
         where: { isPrimary: true },
@@ -68,7 +80,7 @@ export async function listActiveProductsByCategorySlug(
     slug: product.slug,
     namePl: product.namePl,
     shortDescPl: product.shortDescPl,
-    minPriceGrosze: product.minPriceGrosze,
+    startingPriceGrossGrosze: product.startingPriceGrossGrosze,
     primaryImageUrl: product.images[0]?.url ?? null,
     categoryNamePl: product.category.namePl,
     categorySlug: product.category.slug,
@@ -112,7 +124,7 @@ export async function listAllActiveProducts(): Promise<ProductCardData[]> {
       slug: true,
       namePl: true,
       shortDescPl: true,
-      minPriceGrosze: true,
+      startingPriceGrossGrosze: true,
       category: { select: { namePl: true, slug: true } },
       images: {
         where: { isPrimary: true },
@@ -132,7 +144,7 @@ export async function listAllActiveProducts(): Promise<ProductCardData[]> {
     slug: product.slug,
     namePl: product.namePl,
     shortDescPl: product.shortDescPl,
-    minPriceGrosze: product.minPriceGrosze,
+    startingPriceGrossGrosze: product.startingPriceGrossGrosze,
     primaryImageUrl: product.images[0]?.url ?? null,
     categoryNamePl: product.category.namePl,
     categorySlug: product.category.slug,
@@ -174,7 +186,7 @@ export type ProductDetail = {
   readonly seoTitlePl: string;
   readonly seoDescPl: string;
   readonly basePriceGrosze: number;
-  readonly minPriceGrosze: number;
+  readonly startingPriceGrossGrosze: number | null;
   readonly productionDaysMin: number;
   readonly productionDaysMax: number;
   readonly minWidthMm: number;
@@ -220,7 +232,7 @@ async function findProductBySlug(slug: string, activeOnly: boolean): Promise<Pro
       seoTitlePl: true,
       seoDescPl: true,
       basePriceGrosze: true,
-      minPriceGrosze: true,
+      startingPriceGrossGrosze: true,
       productionDaysMin: true,
       productionDaysMax: true,
       minWidthMm: true,

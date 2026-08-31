@@ -13,7 +13,14 @@ type ProductCardProps = {
   readonly categoryNamePl: string;
   readonly categorySlug: string;
   readonly imageUrl: string | null;
-  readonly minPriceGrosze: number;
+  /**
+   * GROSS, and the cheapest configuration a customer can actually buy
+   * (`server/pricing/starting-price.ts`). `null` renders no price at all —
+   * never zero, and never a fallback to `minPriceGrosze`, which is the net
+   * internal clamp this card used to advertise
+   * (`docs/REVIEW-DETAILED.md` BUG-02).
+   */
+  readonly startingPriceGrossGrosze: number | null;
   /** Real, from `PersonalizationSpec.isEnabled` — not every product offers it. */
   readonly hasPersonalization: boolean;
   readonly productionDaysMin: number;
@@ -43,7 +50,7 @@ export function ProductCard({
   categoryNamePl,
   categorySlug,
   imageUrl,
-  minPriceGrosze,
+  startingPriceGrossGrosze,
   hasPersonalization,
   productionDaysMin,
   productionDaysMax,
@@ -165,7 +172,9 @@ export function ProductCard({
             color: 'var(--mui-palette-text-primary)',
           }}
         >
-          {SITE.catalogueStartingPricePrefixPl} {formatPln(minPriceGrosze)}
+          {startingPriceGrossGrosze === null
+            ? SITE.catalogueIndividualQuotePl
+            : `${SITE.catalogueStartingPricePrefixPl} ${formatPln(startingPriceGrossGrosze)}`}
         </div>
       </div>
     </Link>

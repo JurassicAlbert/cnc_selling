@@ -141,6 +141,10 @@ export function CheckoutForm({
             {state.formError === 'DELIVERY_METHOD_INVALID' && <Alert severity="error">{SITE.checkoutDeliveryMethodInvalidPl}</Alert>}
             {state.formError === 'PAYMENT_METHOD_INVALID' && <Alert severity="error">{SITE.checkoutPaymentMethodInvalidPl}</Alert>}
             {state.formError === 'PICKUP_POINT_INVALID' && <Alert severity="error">{SITE.checkoutPickupPointInvalidPl}</Alert>}
+            {state.formError === 'RATE_LIMITED' && <Alert severity="warning">{SITE.checkoutRateLimitedPl}</Alert>}
+            {state.formError === 'OPTION_UNAVAILABLE' && (
+              <Alert severity="warning">{SITE.checkoutOptionUnavailablePl}</Alert>
+            )}
 
             <SectionCard heading={SITE.checkoutBuyerSectionHeadingPl}>
               <TextField

@@ -24,6 +24,22 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
+  /**
+   * Serial in CI, parallel locally. Added 2026-08-31 with the CI workflow
+   * (ARCH-01). `docs/REVIEW-TEST-COVERAGE.md` records a reproducible
+   * parallel-contention flake — `fillReliably` login timeouts and
+   * "destination stream closed early" — where every affected spec passes in
+   * isolation. Every worker shares one database and one dev server, which is
+   * the obvious cause, and a first CI run that is red for that reason
+   * teaches a team to ignore CI.
+   *
+   * **Provisional.** This is the documented diagnosis applied, not a
+   * measured fix: it has not been observed on a real CI run. If the suite is
+   * stable after a few green runs, try raising it — CI minutes are the only
+   * thing it costs. The real repair is ARCH-03 (point e2e at
+   * `TEST_DATABASE_URL` instead of the development database).
+   */
+  workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
     baseURL: 'http://localhost:3000',

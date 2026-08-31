@@ -21,6 +21,13 @@ export const SITE = {
 
   catalogueHomeLinkPl: 'Strona główna',
   catalogueStartingPricePrefixPl: 'od',
+  /**
+   * Shown instead of a price when `Product.startingPriceGrossGrosze` is
+   * null — a product whose cost genuinely cannot be known before the
+   * customer's own artwork exists. Never a zero, never a fallback to the
+   * internal net clamp (`docs/REVIEW-DETAILED.md` BUG-02).
+   */
+  catalogueIndividualQuotePl: 'Wycena indywidualna',
   catalogueProductionTimeLabelPl: 'Czas realizacji',
   catalogueProductionTimeUnitPl: 'dni roboczych',
   catalogueDimensionsLabelPl: 'Wymiary',
@@ -83,6 +90,14 @@ export const SITE = {
   configuratorSaveChangesPl: 'Zapisz zmiany',
   configuratorAddToCartErrorPl:
     'Nie udało się dodać do koszyka. Sprawdź wybory powyżej i spróbuj ponownie.',
+  /**
+   * `docs/REVIEW-DETAILED.md` SEC-03. Reached when a link, a saved project
+   * or a bookmark still names something we have since withdrawn — our
+   * change, not the customer's error, so the copy neither blames them nor
+   * leaves them guessing which of six choices is the problem.
+   */
+  configuratorOptionUnavailablePl:
+    'Wybrany wzór, materiał lub wykończenie nie jest już dostępny — prawdopodobnie wycofaliśmy go od czasu zapisania tej konfiguracji. Wybierz inny wariant powyżej.',
   configuratorProductionDaysLabelPl: 'Czas realizacji',
   configuratorClearedFinishPl:
     'Wybrane wykończenie zostało wyczyszczone, ponieważ nie jest dostępne dla nowo wybranego materiału.',
@@ -190,6 +205,17 @@ export const SITE = {
   checkoutPickupPointNoneFoundPl: 'Brak punktów dla podanej frazy — spróbuj innego miasta.',
   checkoutPickupPointInvalidPl: 'Wybierz punkt odbioru z listy, aby kontynuować — wybrany punkt jest nieprawidłowy lub nie został jeszcze wybrany.',
   checkoutPickupPointRequiredHintPl: 'Wybierz punkt odbioru powyżej, aby złożyć zamówienie.',
+  /** §16.1's per-IP order-creation limit. Says plainly that nothing was charged, because that is a customer's first worry here. */
+  checkoutRateLimitedPl:
+    'Zbyt wiele prób złożenia zamówienia w krótkim czasie. Nic nie zostało obciążone — odczekaj chwilę i spróbuj ponownie. Jeśli to pomyłka, napisz do nas.',
+  /**
+   * `docs/REVIEW-DETAILED.md` SEC-03. Deliberately not the generic
+   * "nieprawidłowa konfiguracja": the overwhelmingly likely cause is that
+   * we withdrew something after this cart was filled, which is our doing,
+   * not the customer's mistake — so the copy says so and names the fix.
+   */
+  checkoutOptionUnavailablePl:
+    'Jedna z pozycji w koszyku zawiera wzór, materiał lub wykończenie, którego już nie oferujemy. Otwórz koszyk i zmień tę pozycję („Edytuj"), aby dokończyć zamówienie.',
   checkoutPickupPointSampleNoticePl:
     'Lista jest wstępna, nie w pełni aktualna — jeśli nie widzisz Twojego miasta lub konkretnego punktu, napisz do nas po złożeniu zamówienia, a ustalimy to indywidualnie.',
   checkoutDeliveryInfeasibleTagPl: 'Niedostępne dla Twojego koszyka',

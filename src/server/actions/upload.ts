@@ -20,7 +20,6 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { headers } from 'next/headers';
 
 import { UPLOAD } from '@/content/pl/upload';
 import type { UploadWarning } from '@/domain/upload/inspect';
@@ -29,6 +28,7 @@ import { prisma } from '@/server/db/client';
 import type { Prisma } from '@/generated/prisma/client';
 import { getSession } from '@/server/auth/session';
 import { ensureGuestSessionToken } from '@/server/session/guest-session';
+import { requestIpAddress } from '@/server/session/request-ip';
 import { findOwnedDesignByChecksum } from '@/server/repositories/customer-designs';
 import { storage } from '@/server/storage/local-disk';
 import type { InspectFileErrorCode } from '@/server/upload/inspect-file';
@@ -45,19 +45,6 @@ export type UploadCustomDesignErrorCode = 'NO_FILE' | 'CONSENT_REQUIRED' | 'RATE
 export type UploadCustomDesignResult =
   | { readonly ok: true; readonly customerDesignId: string; readonly warnings: UploadWarning[] }
   | { readonly ok: false; readonly code: UploadCustomDesignErrorCode; readonly params?: Record<string, number> };
-
-/**
- * Best-effort client IP for `CustomerDesign.ipConfirmedIp` — read from
- * `X-Forwarded-For` (set by virtually every reverse proxy/CDN in front
- * of a real deployment). `null` in local dev with no proxy in front,
- * which is honest: there is no request IP to record there, not a bug to
- * paper over with a fake value.
- */
-async function requestIpAddress(): Promise<string | null> {
-  const store = await headers();
-  const forwardedFor = store.get('x-forwarded-for');
-  return forwardedFor?.split(',')[0]?.trim() ?? null;
-}
 
 export async function uploadCustomDesign(formData: FormData): Promise<UploadCustomDesignResult> {
   const file = formData.get('file');

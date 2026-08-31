@@ -601,6 +601,9 @@ export const ADMIN = {
   customerAnonymizeConfirmMessagePl: 'Tej operacji nie można cofnąć. Dane osobowe klienta zostaną trwale usunięte.',
   customerAnonymizeConfirmButtonPl: 'Tak, zanonimizuj konto',
   customerAnonymizedNoticePl: 'Konto zanonimizowane',
+  // Shown to STAFF in place of the form (SEC-04). Says who can do it rather
+  // than only that they cannot, so the reader knows what to do next.
+  customerAnonymizeAdminOnlyPl: 'Anonimizację konta może wykonać tylko administrator.',
 
   auditLogHeadingPl: 'Dziennik zdarzeń',
   auditLogFilterEntityPl: 'Encja',

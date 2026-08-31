@@ -78,7 +78,7 @@ AST. Trade-off accepted knowingly: Biome has no direct equivalent of
 - [x] `domain/pricing` — every component isolated, rounding at .5, min-price clamp, quantity, version pinning
 - [x] `domain/personalization` — length, lines, glyph coverage, Polish diacritics, empty, whitespace-only, emoji
 - [x] `domain/feasibility` — thin line at scale, detail level vs size, min text height, boundary equality, notices, machine thickness limit (`THICKNESS_EXCEEDS_MACHINE`, added 2026-08-23 using D7's real 100mm Z-clearance, boundary mutation-tested)
-- [x] `domain/configuration` — step machine, invalid step order, unknown option, incomplete config — `src/domain/configuration/steps.ts`, 30 assertions (`tests/unit/configuration.test.ts`); step lists are §5's table verbatim for all 7 product types, `isStepEnterable`/`checkStepEntry` enforce "every prior step satisfied, not just the immediately preceding one", `checkStepAppliesToProductType` rejects e.g. a THICKNESS selection on WALL_ART. Pure — resolves step order only, not which options are valid (`domain/compatibility` still owns that)
+- [x] `domain/configuration` — step machine, invalid step order, unknown option, incomplete config — `src/domain/configuration/steps.ts`, 30 assertions (`tests/unit/configuration.test.ts`); step lists are §5's table verbatim for all 7 product types, `isStepEnterable`/`checkStepEntry` enforce "every prior step satisfied, not just the immediately preceding one", `checkStepAppliesToProductType` rejects e.g. a THICKNESS selection on WALL_ART. Pure — resolves step order only, not which options are valid (`domain/compatibility` still owns that). **Correction, 2026-08-31 (BUG-06):** that last clause described the function, not the application. Nothing called `checkStepAppliesToProductType` — `grep` outside the defining module returned a single hit, a comment saying `isStepEnterable` no longer restricts anything — so the running shop accepted every one of the selections this line claimed it rejected, and the 30 assertions above passed the whole time. It is true now: `findSelectionOutsideProductType` wraps it, `priceAndValidateSelections` calls it on the write path, and `tests/integration/step-and-input-validation.test.ts` drives it through `applyAddToCart` against real Postgres. `isStepEnterable`/`checkStepEntry`/`furthestEnterableStepIndex` are **still uncalled** — the configurator lets a customer move between steps freely by design, which is a deliberate UX choice, not an oversight; they stay as the domain model of §7.1 rather than being deleted
 - [x] `domain/order-status` — legal and illegal transitions, design-review gate, actor permission — 22 assertions (`src/domain/order-status/transitions.ts`); the transition graph is this project's own design (ARCHITECTURE.md didn't fully specify one), documented in the module's header comment
 - [x] Full unit suite green with no DB and no framework imports — 298 assertions, no Next/Prisma/I/O imports (verified 2026-08-23)
 
@@ -811,3 +811,232 @@ Audited every model for uniqueness first. The junction tables were already safe 
 - [x] **Saved projects could never be deleted** — part of why duplicates felt permanent: the write-side fix stops new ones but offers no remedy for existing ones. Added, with the one case that must be refused rather than cascaded: a project still in the cart, so tidying the library never empties a line out of the cart behind the customer's back.
 - [x] **Uploaded designs still cannot be deleted, deliberately** — `OrderItem` references `CustomerDesign`, so a hard delete would break §16A.2's soft-delete invariant. Recorded in `docs/OPEN_ITEMS.md` §9 with the two decisions it needs (archive column, and whether the stored file is kept or purged) rather than half-built.
 - [x] Verified: typecheck clean, lint clean, 831/831 tests (814 before, +17), Playwright green in isolation for every affected spec including the rewritten duplicate test and the guest-cart-merge flow. New migration `20260830020000_add_support_request_dedupe_key`. Duplicate behaviour confirmed live in the browser: "Duplikuj" took one line from quantity 1 to 2 with no second row.
+
+### Post-P9, round 15 — independent audit remediation (2026-08-31)
+
+The owner commissioned a full independent review first (`docs/REVIEW-OVERVIEW.md`
+and its six companions; `docs/AI-CHECKLIST.md` is the working list). No
+application code was changed during the review itself. This section records
+what was then implemented, in the order it was done.
+
+- [x] **SEC-01 — nothing throttled authentication.** Better Auth's own rate
+      limiter installs itself in the HTTP router's `onRequest` hook
+      (`node_modules/better-auth/dist/api/index.mjs:163-169`), so it only
+      ever ran for `/api/auth/*` — and every login, registration and
+      OTP-request in this app goes through a Server Action calling
+      `auth.api.*` directly, which bypasses it entirely. Read out of the
+      library's source, not assumed. New `RateLimit` table (owner chose
+      Postgres over Redis) driven by a single atomic
+      `INSERT … ON CONFLICT DO UPDATE … RETURNING`, so it is correct under
+      concurrency by construction rather than by luck; proven by a 20-way
+      concurrent test in which exactly 5 of 20 attempts are allowed.
+- [x] **SEC-02 — one-time login codes were in the application log**, in
+      every environment, with no production guard: the OTP was in the email
+      subject and the subject was logged. Confirmed empirically before
+      fixing — the first test run printed the code and the recipient address
+      literally. Subject changed, recipients reduced to a hashed tag, and
+      the dev convenience put behind `MAIL_DEV_LOG_SECRETS=1`, ignored in
+      production. A guarded data migration fixes the seeded `EmailTemplate`
+      row too, because the code fix alone was not enough — the database
+      template overrode it.
+- [x] **SEC-03 — the rules that decide what may be sold were enforced for
+      rendering but not for writing.** `domain/compatibility` was correct and
+      unit-tested, and was called only from `resolve-options.ts`, which
+      decides what the picker *displays*. The cart and checkout paths
+      resolved ids by plain map lookup. A saved project held across a staff
+      change — or a crafted request — could price and order a retired
+      pattern. Fixed by reusing `resolveOptions` at the gate rather than
+      re-implementing §7.2, so the picker and the gate cannot drift, with a
+      distinct `OPTION_UNAVAILABLE` outcome and its own Polish message.
+- [x] **BUG-02 — the advertised "from" price was net and unreachable.** Now
+      a real `startingPriceGrossGrosze`, computed by sweeping every offered
+      combination through the actual pricing engine and refreshed from the
+      catalogue operations that can move it. Products with no priceable
+      configuration say „Wycena indywidualna" instead of a number.
+- [x] **BUG-35 (found during the above, P0) — every active product had
+      combinations it offered and then refused**, and two were entirely
+      unbuildable while still listed and priced. Owner ruled that a product
+      sold with its pattern already fixed must not have that pattern
+      re-measured against the customer's chosen size. Pattern feasibility is
+      off behind one flag with the reasoning recorded; step lists are
+      narrowed to what a product can actually offer (the kitchen tile
+      required a FINISH its only material — gres — cannot take, so it could
+      never be configured at all). `tests/integration/offered-is-buildable.test.ts`
+      sweeps ~1500 offered combinations and holds the line.
+- [x] **SEC-05 — §16.1's "Security headers + strict CSP" did not exist.**
+      The SVG-as-attachment half of that sentence was implemented; the
+      headers half was never built, and — unlike the rate limits — was not
+      recorded in this file or in `OPEN_ITEMS.md`, so nobody was tracking
+      it. Now: `X-Content-Type-Options`, `Referrer-Policy`,
+      `X-Frame-Options`, `Permissions-Policy` and (production only) HSTS
+      from `next.config.ts`, plus `poweredByHeader: false`; and a
+      **nonce-based Content-Security-Policy** issued per request from
+      `src/proxy.ts`, whose matcher was split in two so the `/panel`
+      redirect keeps matching prefetches while the CSP entry skips them.
+      `script-src` is strict — `'nonce-…' 'strict-dynamic'`, no
+      `'unsafe-inline'`. `style-src` keeps `'unsafe-inline'` deliberately:
+      Emotion injects styles from the browser and `ThemeRegistry` is mounted
+      from `error.tsx` boundaries that React renders with no props of ours,
+      so no nonce can reach them — and under CSP3 a nonce in `style-src`
+      makes browsers *ignore* `'unsafe-inline'`, which would break every
+      client-side style rather than tighten anything. `CSP_MODE`
+      (`enforce` default · `report-only` · `off`) documented in
+      `.env.example`; an unrecognised value enforces.
+- [x] **Known consequence, recorded rather than discovered later:** Next
+      reads the nonce from the *request* CSP header at render time, so a
+      nonce-based CSP and static/ISR/PPR are mutually exclusive. Every
+      storefront route is dynamic today so this costs nothing now, but
+      PERF-01's steps 2-3 now need an owner decision — see
+      `docs/REVIEW-PERFORMANCE.md` Finding 1.
+- [x] Verified at that point: typecheck clean, lint clean, **919/919 tests**
+      (831 before, +88), `npm run build` succeeds with the same three
+      pre-existing warnings, and `tests/e2e/security-headers.spec.ts` 10/10.
+      The enforced
+      CSP was carried through home, product, cart, checkout, `/panel` and
+      `/panel/zamowienia` in a real browser with zero console messages —
+      including a MUI Menu popover created after hydration, the
+      `@mui/x-charts` revenue chart, and a Server Action re-pricing a
+      material change from 57,54 zł to 57,32 zł.
+- [x] **ARCH-01 — there was no CI.** No `.github/workflows`, no hooks, and
+      `playwright.config.ts` branching on a `process.env.CI` that nothing
+      ever set: 919 tests, a typecheck and a lint rule that ran only when a
+      human remembered. Now two GitHub Actions jobs — `verify` (types, lint,
+      unit + integration, build) and `e2e` (`needs: verify`, Chromium +
+      WebKit, HTML report uploaded as an artifact) — against a Postgres
+      service container that mirrors `docker-compose.yml` down to the
+      published port and the init script, which the workflow runs rather
+      than repeating its SQL. Both databases are created and **both are
+      seeded**: `offered-is-buildable` and `starting-price` sweep the seeded
+      catalogue, so on an empty database they iterate nothing and pass
+      vacuously — a green run proving nothing, which is worse than a red
+      one. New `npm run db:seed:test` mirrors the existing `db:deploy:test`.
+- [x] **The CI sequence was proven locally against a virgin database**,
+      because a workflow only ever runs somewhere else and cannot be
+      debugged from here. A throwaway database was created from the same
+      init SQL, then `prisma migrate deploy` (**all 27 migrations from
+      zero, clean**), `prisma db seed` (from empty), `npm test` (931/931
+      against it) and `npm run build` (81 static pages) — then dropped. This
+      established for the first time that this round's four new migrations
+      apply from scratch; the local databases had only ever grown
+      incrementally through `migrate dev`.
+- [x] **Honest limit: the workflow has never executed on GitHub.** The
+      runner-specific parts — `actions/setup-node` caching, the
+      service-container port mapping, `psql` on the runner image,
+      `playwright install --with-deps` — are conventional but unproven.
+      `tests/unit/ci-workflow.test.ts` parses the YAML and pins the two
+      failure modes that would otherwise produce a *green* run: a step
+      calling an npm script that no longer exists, and `npm test` running
+      without `TEST_DATABASE_URL` (which `env-setup.ts` deliberately does
+      not throw on, so the whole integration tier would silently run against
+      the development database and still report success).
+- [x] Verified: typecheck clean, lint clean, **931/931 tests**, build clean.
+- [x] **SEC-04 — `STAFF` could redirect payments and erase accounts.** Of 25
+      `operations/admin-*.ts` modules only three required `ADMIN`. A `STAFF`
+      account could rewrite `StoreSettings.bankAccountNumber` (the account
+      every bank-transfer customer is told to pay into), permanently
+      anonymize a customer and delete their sign-in ability, and rewrite
+      customer-facing email bodies including the OTP mail — all against
+      §16.3, which assigns settings to `ADMIN` and gives `STAFF` "customers
+      (**read**)". All three wrappers now gate on `requireAdminSession()`.
+- [x] **The gate is asserted twice, deliberately.** `requireAdminSession`
+      reads `next/headers`, so it throws outside a request scope and **no
+      test in this repository can reach it**. A rule enforced only where no
+      test can look is the exact shape of SEC-03 — a correct, unit-tested
+      function the write path never called. So each `apply*` also calls
+      `refuseUnlessAdmin(actor)` as its **first statement**, which is both
+      defense in depth and the only version a test can drive; a separate
+      test asserts it precedes the first Prisma call, since a check that
+      runs after the write refuses a caller whose bank account has already
+      been changed.
+- [x] **The panel followed the enforcement**, so it never offers a `STAFF`
+      something the system will then refuse (the owner's 2026-08-31 rule).
+      `/panel/ustawienia` and both `szablony` pages are `ADMIN`-only; the
+      customer page stays `STAFF`-visible with the anonymize form replaced
+      by a notice; `AdminSidebarNav` is role-aware — which also fixed a
+      pre-existing bug, since `/panel/ceny` and `/panel/ustawienia/personel`
+      were already `ADMIN` pages the nav offered to every `STAFF` account.
+      Verified live by temporarily demoting the panel account: 23 sidebar
+      entries → 21, `/panel/ustawienia` → 404 (not 403), form → notice.
+- [x] **SEC-10 (new, found while verifying the above) — opening a customer's
+      page silently performed a RODO export.** `/panel/klienci/[id]/eksport`
+      is a GET route handler with a side effect (it builds the full RODO
+      Art. 15 export and writes an audit row) and the page linked to it with
+      `next/link`, which Next prefetches. Confirmed twice: the network log
+      showed `GET …/eksport?_rsc=… → 200`, and the database held a matching
+      `AuditLog` row attributed to a staff member who had only looked at the
+      page. §16A.2 invariant 4 makes that log the record of what happened —
+      it was reporting RODO accesses nobody performed. Fixed in two layers:
+      the link is a plain `<a>` (the convention `/api/plik/[fileId]` already
+      followed) and the route refuses a prefetch before the session read.
+      Re-verified on a production build: no request, no new audit row.
+- [x] **`vitest` `testTimeout` raised 5s → 20s.** It is a deadline, not a
+      budget — a passing test finishes when it finishes — and at 5s
+      `create-order.test.ts` had begun failing under the full suite's
+      contention for one Postgres. With CI now running the suite on every
+      push, an intermittently red pipeline is one people learn to ignore.
+- [x] Verified: typecheck clean, lint clean, **959/959 tests**, build clean.
+- [x] **Two real test flakes found by running the suite six times, and
+      fixed.** Adding CI made "passed once" insufficient. Both were defects
+      in the tests, both from the same blind spot — Vitest runs files in
+      parallel against one shared database. (1) `offered-is-buildable`
+      enumerated *every active product at that moment*, which mid-run
+      includes another file's fixtures; it picked one up and then failed
+      because that file had deleted it. Now excludes `slug` starting
+      `test-`, verified complete against all seven fixture-creating files.
+      (2) `admin-authorization` snapshotted `StoreSettings` and an
+      `EmailTemplate` in `beforeAll` — singletons two other files
+      legitimately write — so the snapshot could be another file's in-flight
+      value; it now reads immediately before each call and compares
+      immediately after, which is the assertion actually meant. Six
+      consecutive full-suite runs clean afterwards.
+- [x] **`refreshAllStartingPrices` used `update` on a list it had read
+      earlier** — P2025 if a row had gone since, which would reject the whole
+      `Promise.all` and abandon every other product's refresh over one
+      deleted row. Now `updateMany`: "affected 0 rows" is the correct,
+      uneventful answer when someone else got there first, which is this
+      project's own stated rule for read-then-write shapes.
+- [x] **BUG-06 — four step-machine guards were written, tested, and never
+      called.** `checkStepAppliesToProductType` and three siblings had 30
+      passing assertions since P3 and **zero production call sites**, while
+      line 81 of this file claimed as done that they "reject e.g. a
+      THICKNESS selection on WALL_ART". They did not: `personalizationText`
+      was accepted, stored, shown in the cart and copied into the immutable
+      order snapshot for products with **no** `PersonalizationSpec` — where
+      `evaluatePersonalization` returns no issues at all, so no length
+      limit, no glyph check and no content validation applied — and a
+      `thicknessMm` reached the snapshot for a wall panel. Now
+      `findSelectionOutsideProductType` wraps the old guard and
+      `priceAndValidateSelections` calls it, so the existing assertions
+      finally protect something. Line 81 has been corrected rather than left
+      contradicting the code, including about the three guards that remain
+      uncalled **on purpose** (the configurator lets a customer move freely
+      between steps; forcing sequential entry would be an unasked-for
+      behaviour change).
+- [x] **BUG-07 — `zod` was a declared dependency nothing imported**, beside
+      an ARCHITECTURE.md §2 that named it the validation layer. Adopted
+      rather than dropped, since §2 already required it: one module,
+      `src/domain/configuration/input-schema.ts`, bounding every selection
+      field and constraining `acknowledgedWarnings` to the real feasibility
+      codes with a count cap. `FeasibilityCode` is now **derived from** a
+      `FEASIBILITY_CODES` array instead of declared as a union, so the
+      allow-list and the type cannot drift. Parsed at the choke point
+      (`priceAndValidateSelections`, plus `getConfiguratorSnapshot` and both
+      cart operations), and that function now **returns** the parsed
+      selections so a caller cannot keep using the raw object. The predicted
+      500 was real: the pre-fix test run produced `TypeError:
+      selections.personalizationText.trim is not a function` out of
+      `cartItemSignature`.
+- [x] **A regression the BUG-06 fix created, caught before it shipped.**
+      `computeDefaultSelections` filled `finishId` from the material's first
+      available finish for *every* product — and JEWELRY has no FINISH step
+      (§5). The seeded bracelet's oak offers oiling, so its default carried
+      a finish the product type forbids: the page would have priced happily
+      and then refused at "Dodaj do koszyka", which is exactly the shape the
+      owner ruled out on 2026-08-31. Defaults are step-aware now, and
+      exported so a test asserts it against the same function the server
+      uses. The bracelet's default price moved 57,54 → **57,39 zł** and now
+      agrees with the advertised „od 55,69 zł", which had always excluded
+      the finish. Verified live on a production build: configures, prices,
+      and adds to the cart as „Dąb · Gałązka oliwna".
+- [x] Verified: typecheck clean, lint clean, **1028/1028 tests** across three
+      consecutive runs, build clean.

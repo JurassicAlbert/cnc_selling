@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { MAX_CART_ITEM_QUANTITY } from '@/domain/cart/quantity';
 import type { Selections } from '@/domain/configuration/steps';
+import { EMPTY_SELECTIONS } from '@/domain/configuration/steps';
 import { prisma } from '@/server/db/client';
 import { priceAndValidateSelections } from '@/server/configurator/validate-and-price';
+import { resolveOptions } from '@/server/configurator/resolve-options';
 import { getConfiguratorProductData } from '@/server/repositories/configurator';
 import { findCartForRequest } from '@/server/repositories/cart';
 import {
@@ -56,9 +58,19 @@ async function priceableSelections(): Promise<Selections> {
     widthMm: Math.round(data.product.minWidthMm + (data.product.maxWidthMm - data.product.minWidthMm) * fraction),
     heightMm: Math.round(data.product.minHeightMm + (data.product.maxHeightMm - data.product.minHeightMm) * fraction),
   }));
-  for (const designId of data.designsById.keys()) {
-    for (const materialId of data.materialsById.keys()) {
-      for (const finishId of [...data.finishesById.keys(), null]) {
+  // Iterate what a customer can actually PICK, not every row that happens
+  // to be joined to the product. `designsById`/`materialsById` are
+  // deliberately unfiltered (they exist to resolve an id, not to offer
+  // one), so they still contain retired rows — since 2026-08-31 that
+  // includes the deactivated `wzor-podstawowy` placeholder. Walking those
+  // meant ~48 pointless round trips, each correctly refused with
+  // `OPTION_UNAVAILABLE`, before reaching a sellable design — enough to
+  // blow this test's timeout under parallel load.
+  const offered = resolveOptions(data.options, EMPTY_SELECTIONS);
+  for (const designId of offered.designIds) {
+    for (const materialId of offered.materialIds) {
+      const finishIds = resolveOptions(data.options, { ...EMPTY_SELECTIONS, materialId }).finishIds;
+      for (const finishId of [...finishIds, null]) {
         for (const size of sizes) {
           const selections: Selections = {
             designId,
@@ -72,7 +84,7 @@ async function priceableSelections(): Promise<Selections> {
             personalizationText: null,
             fontId: null,
           };
-          if ((await priceAndValidateSelections(PRODUCT_SLUG, selections)) !== null) {
+          if ((await priceAndValidateSelections(PRODUCT_SLUG, selections)).ok) {
             cachedSelections = selections;
             return selections;
           }
@@ -130,7 +142,7 @@ describe('addToCart — line identity (audit P1-4)', () => {
     const wider: Selections = { ...selections, widthMm: (selections.widthMm ?? 700) - 10 };
     // Only meaningful if the variant also prices — otherwise this would
     // assert "one row" for the boring reason that the second add failed.
-    const variantPrices = (await priceAndValidateSelections(PRODUCT_SLUG, wider)) !== null;
+    const variantPrices = (await priceAndValidateSelections(PRODUCT_SLUG, wider)).ok;
 
     await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 1);
     const second = await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, wider, [], 1);
@@ -144,7 +156,7 @@ describe('addToCart — line identity (audit P1-4)', () => {
     const sessionToken = uid();
     const selections = await priceableSelections();
     const engraved: Selections = { ...selections, personalizationText: 'Anna' };
-    const engravedPrices = (await priceAndValidateSelections(PRODUCT_SLUG, engraved)) !== null;
+    const engravedPrices = (await priceAndValidateSelections(PRODUCT_SLUG, engraved)).ok;
 
     await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 1);
     await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, engraved, [], 1);
@@ -404,7 +416,7 @@ describe('no two identical lines, by any path (owner request, 2026-08-30)', () =
     const sessionToken = uid();
     const selections = await priceableSelections();
     const variant: Selections = { ...selections, personalizationText: 'Anna' };
-    if ((await priceAndValidateSelections(PRODUCT_SLUG, variant)) === null) {
+    if (!(await priceAndValidateSelections(PRODUCT_SLUG, variant)).ok) {
       // The seeded product does not price with engraved text; nothing to assert.
       return;
     }

@@ -7,6 +7,7 @@ import { requireStaffSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 import { savePublicImage } from '@/server/storage/public-images';
+import { refreshStartingPricesAfterCatalogueChange } from '@/server/pricing/starting-price';
 import type { FinishKind } from '@/generated/prisma/enums';
 
 export type FinishMutationResult =
@@ -122,6 +123,9 @@ export async function applyUpdateFinish(staff: CurrentSession, id: string, formD
 
   await prisma.finish.update({ where: { id }, data: { ...fields, imageUrl } });
   await writeAuditLog({ actor: staff, entity: 'Finish', entityId: id, action: 'update', diff: { before: current, after: fields } });
+  // `pricePerM2Grosze`/`setupFeeGrosze` feed the advertised "od X zł"
+  // (`docs/REVIEW-DETAILED.md` BUG-02).
+  await refreshStartingPricesAfterCatalogueChange();
 
   return { ok: true, id };
 }
@@ -149,6 +153,7 @@ export async function applySetFinishAvailable(staff: CurrentSession, id: string,
     action: 'update',
     diff: { isAvailable: { from: current.isAvailable, to: isAvailable } },
   });
+  await refreshStartingPricesAfterCatalogueChange();
 }
 
 export async function applySetFinishSortOrder(staff: CurrentSession, id: string, sortOrder: number): Promise<void> {

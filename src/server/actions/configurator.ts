@@ -9,10 +9,12 @@
  * selection, all server-side.
  */
 
-import { checkConfigurationComplete, stepsForProductType } from '@/domain/configuration/steps';
+import { checkConfigurationComplete } from '@/domain/configuration/steps';
+import { parseSelections } from '@/domain/configuration/input-schema';
 import type { Selections, StepCode } from '@/domain/configuration/steps';
 import type { ConfiguratorPricingResult } from '@/server/configurator/price-configuration';
 import { priceConfiguration } from '@/server/configurator/price-configuration';
+import { applicableSteps } from '@/server/configurator/validate-and-price';
 import type { ResolvedOptionAvailability, ResolvedOptions } from '@/server/configurator/resolve-options';
 import { resolveOptionAvailability, resolveOptions } from '@/server/configurator/resolve-options';
 import { getConfiguratorProductData } from '@/server/repositories/configurator';
@@ -36,11 +38,20 @@ export type ConfiguratorSnapshot = {
 
 export type ConfiguratorSnapshotResult =
   | { readonly ok: true; readonly snapshot: ConfiguratorSnapshot }
-  | { readonly ok: false; readonly code: 'PRODUCT_NOT_FOUND' };
+  /**
+   * `SELECTIONS_INVALID` added 2026-08-31 with BUG-07. This is a read, so
+   * nothing can be corrupted here — but it is still a public HTTP endpoint,
+   * and an unbounded `personalizationText` would reach glyph-coverage
+   * checking while a wrong-typed field would reach Prisma as a 500. The
+   * Configurator ignores every `ok: false` and keeps its previous snapshot,
+   * so this needs no new customer-facing copy: a payload the UI cannot
+   * produce gets no message the UI would have to explain.
+   */
+  | { readonly ok: false; readonly code: 'PRODUCT_NOT_FOUND' | 'SELECTIONS_INVALID' };
 
 export async function getConfiguratorSnapshot(
   productSlug: string,
-  selections: Selections,
+  rawSelections: Selections,
   quantity: number,
   /**
    * The client only ever sets this from the "Preview as customer" page's
@@ -53,6 +64,11 @@ export async function getConfiguratorSnapshot(
    */
   isPreview = false,
 ): Promise<ConfiguratorSnapshotResult> {
+  const selections = parseSelections(rawSelections);
+  if (selections === null) {
+    return { ok: false, code: 'SELECTIONS_INVALID' };
+  }
+
   const session = isPreview ? await getSession() : null;
   const activeOnly = !(isPreview && (session?.role === 'STAFF' || session?.role === 'ADMIN'));
   const data = await getConfiguratorProductData(productSlug, activeOnly);
@@ -60,7 +76,12 @@ export async function getConfiguratorSnapshot(
     return { ok: false, code: 'PRODUCT_NOT_FOUND' };
   }
 
-  const steps = stepsForProductType(data.typeCode);
+  // The same narrowing the write path applies (`applicableSteps`), so the
+  // UI and the server agree on what "complete" means. Without it the
+  // configurator would render a step with an empty picker and hold the
+  // customer at "not finished" for a choice the shop does not offer — the
+  // mirror of the owner's own rule that nothing offered may be blocked.
+  const steps = applicableSteps(data, selections);
   const options = resolveOptions(data.options, selections);
   const availability = resolveOptionAvailability(data.options, selections);
 

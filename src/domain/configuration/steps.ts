@@ -179,6 +179,66 @@ export function checkStepAppliesToProductType(
   return steps.includes(step) ? { ok: true } : { ok: false, code: 'STEP_NOT_IN_PRODUCT_TYPE' };
 }
 
+/**
+ * Which step owns each selection field. `materialId`, `widthMm` and
+ * `heightMm` are absent on purpose: MATERIAL and SIZE appear in every
+ * product type's list (§5), so a check for them could never fire, and
+ * writing one would imply the opposite.
+ */
+const STEP_OWNING_SELECTION: Readonly<Partial<Record<keyof Selections, StepCode>>> = {
+  designId: 'DESIGN',
+  customUploadId: 'CUSTOM_UPLOAD',
+  thicknessMm: 'THICKNESS',
+  finishId: 'FINISH',
+  installationVariant: 'INSTALLATION_VARIANT',
+  personalizationText: 'PERSONALIZATION',
+  fontId: 'PERSONALIZATION',
+};
+
+export type SelectionOutsideProductType = {
+  readonly selection: keyof Selections;
+  readonly step: StepCode;
+};
+
+/**
+ * The first selection that is set but belongs to a step this product type
+ * does not have — `null` when every set field is in scope.
+ *
+ * Written 2026-08-31 for `docs/REVIEW-DETAILED.md` BUG-06.
+ * `checkStepAppliesToProductType` above had existed, with tests, since P3,
+ * and **nothing had ever called it**: `docs/CHECKLIST.md` claimed it
+ * "rejects e.g. a THICKNESS selection on WALL_ART" while the running
+ * application accepted exactly that. The consequences were real, not
+ * theoretical — `personalizationText` was stored and shown for products
+ * with no `PersonalizationSpec` (so `evaluatePersonalization` returned no
+ * issues and **no length limit of any kind applied**), and a `thicknessMm`
+ * reached the immutable order snapshot for a wall panel, where an order
+ * could read "Grubość: 999 mm".
+ *
+ * Deliberately takes the **product type's** steps, not the narrowed list
+ * `applicableSteps` produces. They answer different questions: this one is
+ * "no such step exists for this kind of product", which is a malformed
+ * request; the narrowed list drives "this product offers nothing to choose
+ * here", which is a real, orderable configuration. Conflating them would
+ * turn `OPTION_UNAVAILABLE` — a message a customer on a stale link can act
+ * on — into a generic invalid-configuration error.
+ */
+export function findSelectionOutsideProductType(
+  steps: readonly StepCode[],
+  selections: Selections,
+): SelectionOutsideProductType | null {
+  for (const [selection, step] of Object.entries(STEP_OWNING_SELECTION)) {
+    const value = selections[selection as keyof Selections];
+    if (value === null || value === undefined) {
+      continue;
+    }
+    if (!checkStepAppliesToProductType(steps, step).ok) {
+      return { selection: selection as keyof Selections, step };
+    }
+  }
+  return null;
+}
+
 /** The gate on reaching SUMMARY / add-to-cart. */
 export function checkConfigurationComplete(
   steps: readonly StepCode[],

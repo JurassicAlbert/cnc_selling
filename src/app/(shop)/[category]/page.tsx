@@ -97,7 +97,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
                     categoryNamePl={product.categoryNamePl}
                     categorySlug={product.categorySlug}
                     imageUrl={product.primaryImageUrl}
-                    minPriceGrosze={product.minPriceGrosze}
+                    startingPriceGrossGrosze={product.startingPriceGrossGrosze}
                     hasPersonalization={product.hasPersonalization}
                     productionDaysMin={product.productionDaysMin}
                     productionDaysMax={product.productionDaysMax}

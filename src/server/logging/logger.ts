@@ -19,12 +19,21 @@
  * One JSON object per line (the industry-standard "structured log line"
  * shape), always — including in dev. Pretty-printing only in dev was
  * considered and rejected: it would mean the shape callers write against
- * is never the shape actually exercised locally, and `mailer.ts`'s own
- * `[mailer] unconfigured — would have sent...` line (which this session's
- * own live-verification passes repeatedly grep out of the dev server log
- * to read an OTP code) still needs to remain findable by a plain
- * substring search — a JSON line with `to`/`subject` fields still
- * contains that substring, so nothing about that workflow breaks.
+ * is never the shape actually exercised locally.
+ *
+ * **Nothing here redacts anything.** Whatever a caller puts in `context`
+ * is what lands in the log, so deciding what is safe to pass is the
+ * caller's job, every time. That is not a theoretical concern: this
+ * module's own header used to describe grepping the dev log for a
+ * one-time login code, because `mailer.ts` logged the resolved subject
+ * and the OTP subject contained the code — in every environment, with no
+ * production guard (`docs/REVIEW-DETAILED.md` SEC-02). `mailer.ts` now
+ * logs a hashed recipient tag and no rendered text, and puts the dev
+ * convenience behind an explicit `MAIL_DEV_LOG_SECRETS=1` that is ignored
+ * in production.
+ *
+ * §16.1: "No PII in logs beyond user id." Before adding a `logger.*`
+ * call, look at what is actually inside the values being passed.
  */
 
 export type LogLevel = 'info' | 'warn' | 'error';

@@ -11,8 +11,16 @@ function uid(): string {
   return `${PREFIX}${crypto.randomUUID()}`;
 }
 
+/**
+ * ADMIN, not STAFF — changed 2026-08-31 for docs/REVIEW-DETAILED.md SEC-04.
+ * This operation now refuses a STAFF actor (ARCHITECTURE.md §16.3), so an
+ * actor built here has to be one that is genuinely allowed to perform it;
+ * the refusal itself is covered by tests/integration/admin-authorization.test.ts.
+ * The name is kept as `staffActor` because every call site below reads as
+ * "the acting member of staff", which an ADMIN still is.
+ */
 function staffActor(): CurrentSession {
-  return { userId: uid(), role: 'STAFF', name: 'Test Staff', email: `${uid()}@example.test` };
+  return { userId: uid(), role: 'ADMIN', name: 'Test Admin', email: `${uid()}@example.test` };
 }
 
 // EmailTemplate rows are the two real seeded singletons the whole app

@@ -86,6 +86,8 @@ export type CreateOrderResult =
   /** Another checkout — a second tab, a second device — consumed this cart while this one was being submitted. Nothing was charged twice; the customer is told to check their orders. */
   | { readonly ok: false; readonly code: 'CART_CHANGED' }
   | { readonly ok: false; readonly code: 'PRICE_CHANGED' }
+  /** A pattern, material or finish in this cart is no longer offered — `docs/REVIEW-DETAILED.md` SEC-03. */
+  | { readonly ok: false; readonly code: 'OPTION_UNAVAILABLE' }
   | { readonly ok: false; readonly code: 'DELIVERY_METHOD_INVALID' }
   | { readonly ok: false; readonly code: 'PAYMENT_METHOD_INVALID' }
   | { readonly ok: false; readonly code: 'PICKUP_POINT_INVALID' };
@@ -202,12 +204,18 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
 
   const revalidated: RevalidatedItem[] = [];
   for (const { item, validated } of priced) {
+    // An option that has since been retired is reported as itself, not as
+    // a price change (`docs/REVIEW-DETAILED.md` SEC-03). A customer whose
+    // cart still holds a withdrawn pattern needs to be told that, not sent
+    // to refresh a page whose price has not moved.
+    if (!validated.ok) {
+      return { ok: false, code: validated.code === 'OPTION_UNAVAILABLE' ? 'OPTION_UNAVAILABLE' : 'PRICE_CHANGED' };
+    }
     // A mismatch here means the catalogue changed since this was added or
     // last edited (a price, a pricing version, or the configuration itself
     // stopped being feasible) — reject before ever touching the database,
     // per §15.3: "compare to the displayed total."
     if (
-      validated === null ||
       validated.pricing.priceBreakdown.unitGrossGrosze !== item.priceGrossGrosze ||
       validated.pricing.priceBreakdown.pricingVersion !== item.pricingVersion
     ) {

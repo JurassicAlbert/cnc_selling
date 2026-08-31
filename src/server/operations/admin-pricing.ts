@@ -32,6 +32,7 @@ import { getConfiguratorProductData } from '@/server/repositories/configurator';
 import type { PricingSettingsRow } from '@/server/mapping/to-domain';
 import { getActivePricingVersion, getPricingVersionByNumber, listPricingVersions } from '@/server/repositories/admin-pricing';
 import type { AdminPricingVersion } from '@/server/repositories/admin-pricing';
+import { refreshStartingPricesAfterCatalogueChange } from '@/server/pricing/starting-price';
 
 export type PackagingTierInput = { readonly maxAreaM2: number | null; readonly maxModules: number | null; readonly priceGrosze: number };
 
@@ -148,6 +149,10 @@ export async function applyPublishPricingVersion(admin: CurrentSession, version:
       },
     },
   });
+
+  // Publishing rates moves every price on the site, so the advertised
+  // "od X zł" on every card is stale the instant this commits.
+  await refreshStartingPricesAfterCatalogueChange();
 
   return { ok: true };
 }

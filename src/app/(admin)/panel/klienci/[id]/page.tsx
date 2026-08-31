@@ -10,6 +10,7 @@ import {
 } from '@/server/repositories/admin-customers';
 import { listOrdersForUser } from '@/server/repositories/orders';
 import { listConfigurationsForUser } from '@/server/repositories/cart';
+import { requireStaffSession } from '@/server/auth/session';
 import { CustomerAnonymizeForm } from '@/ui/islands/admin/CustomerAnonymizeForm';
 import { RecordActivityTimeline } from '@/ui/islands/admin/RecordActivityTimeline';
 
@@ -21,7 +22,22 @@ function formatBytes(bytes: number): string {
   return bytes < 1024 * 1024 ? `${Math.round(bytes / 1024)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/**
+ * ARCHITECTURE.md §16.3 gives STAFF "customers (**read**)" — so this page
+ * stays STAFF-visible, and only the anonymize control is ADMIN-only
+ * (docs/REVIEW-DETAILED.md SEC-04). The session is read here rather than
+ * inherited from the layout because a Server Component cannot receive the
+ * layout's locals; `requireStaffSession()` is the same gate the layout
+ * already applied, so this adds a role read, not a second authorization
+ * decision.
+ *
+ * Hiding the form is not the enforcement — `applyAnonymizeCustomer` and
+ * `anonymizeCustomer` both refuse a non-ADMIN actor. This is here so a
+ * STAFF is never shown a control the system will then refuse, which is the
+ * shape the owner ruled out on 2026-08-31.
+ */
 export default async function AdminCustomerDetailPage({ params }: CustomerDetailPageProps) {
+  const viewer = await requireStaffSession();
   const { id } = await params;
   const customer = await findCustomerForAdmin(id);
   if (customer === null) {
@@ -139,7 +155,16 @@ export default async function AdminCustomerDetailPage({ params }: CustomerDetail
           <Typography variant="h6" sx={{ mb: 1 }}>
             {ADMIN.customerRodoHeadingPl}
           </Typography>
-          <Link href={`/panel/klienci/${customer.id}/eksport`}>{ADMIN.customerExportLinkPl}</Link>
+          {/*
+            A plain <a>, not next/link — the same convention
+            `weryfikacja/[designId]` already uses for `/api/plik/[fileId]`.
+            This target is a route handler that BUILDS the export and writes
+            an audit row, and Next prefetches `<Link>` targets: with a
+            `<Link>` here, opening this page silently performed a RODO export
+            and logged it (SEC-10, 2026-08-31). Nothing that has a side
+            effect may be speculatively fetched.
+          */}
+          <a href={`/panel/klienci/${customer.id}/eksport`}>{ADMIN.customerExportLinkPl}</a>
 
           <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
             {ADMIN.customerAnonymizeHeadingPl}
@@ -148,8 +173,10 @@ export default async function AdminCustomerDetailPage({ params }: CustomerDetail
             <Typography color="text.secondary">
               {ADMIN.customerAnonymizedNoticePl} — {customer.anonymizedAt.toLocaleDateString('pl-PL')}
             </Typography>
-          ) : (
+          ) : viewer.role === 'ADMIN' ? (
             <CustomerAnonymizeForm customerId={customer.id} />
+          ) : (
+            <Typography color="text.secondary">{ADMIN.customerAnonymizeAdminOnlyPl}</Typography>
           )}
         </Grid>
       </Grid>

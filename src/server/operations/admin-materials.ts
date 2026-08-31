@@ -20,6 +20,7 @@ import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 import { savePublicImage } from '@/server/storage/public-images';
 import { nextAvailableSlug } from '@/server/util/unique-slug';
+import { refreshStartingPricesAfterCatalogueChange } from '@/server/pricing/starting-price';
 import type { GrainDirection, MaterialFamily } from '@/generated/prisma/enums';
 
 export type MaterialMutationResult =
@@ -159,6 +160,9 @@ export async function applyUpdateMaterial(
 
   await prisma.material.update({ where: { id }, data: { ...fields, imageUrl } });
   await writeAuditLog({ actor: staff, entity: 'Material', entityId: id, action: 'update', diff: { before: current, after: fields } });
+  // `pricePerM2Grosze` feeds the advertised "od X zł" on every card this
+  // material appears on (`docs/REVIEW-DETAILED.md` BUG-02).
+  await refreshStartingPricesAfterCatalogueChange();
 
   return { ok: true, id };
 }
@@ -186,6 +190,9 @@ export async function applySetMaterialAvailable(staff: CurrentSession, id: strin
     action: 'update',
     diff: { isAvailable: { from: current.isAvailable, to: isAvailable } },
   });
+  // Withdrawing a material can remove the very configuration a product's
+  // advertised price was derived from.
+  await refreshStartingPricesAfterCatalogueChange();
 }
 
 export async function setMaterialAvailable(id: string, isAvailable: boolean): Promise<void> {

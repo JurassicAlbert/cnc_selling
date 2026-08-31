@@ -19,7 +19,9 @@ import { validateNip, validatePhone, validatePostalCode } from '@/domain/checkou
 import { isPlausibleEmail } from '@/domain/text/email';
 import type { CheckoutFieldIssueCode } from '@/content/pl/messages';
 import { getSession } from '@/server/auth/session';
+import { consumeOrderAttempt } from '@/server/rate-limit/auth-throttle';
 import { readGuestSessionToken } from '@/server/session/read-guest-session';
+import { requestIpAddress } from '@/server/session/request-ip';
 import { createOrder } from '@/server/orders/create-order';
 
 export type CheckoutFormState = {
@@ -31,6 +33,10 @@ export type CheckoutFormState = {
     | 'DELIVERY_METHOD_INVALID'
     | 'PAYMENT_METHOD_INVALID'
     | 'PICKUP_POINT_INVALID'
+    /** §16.1's per-IP order-creation limit refused this submission (`docs/AUDIT-2026-08-30.md` P1-8). */
+    | 'RATE_LIMITED'
+    /** A pattern, material or finish in the cart is no longer offered (`docs/REVIEW-DETAILED.md` SEC-03). */
+    | 'OPTION_UNAVAILABLE'
     | null;
   /**
    * Echoed back so a validation error on one field doesn't erase everything
@@ -119,7 +125,23 @@ export async function submitCheckout(
     return { fieldErrors, formError: null, values };
   }
 
-  const [sessionToken, session] = await Promise.all([readGuestSessionToken(), getSession()]);
+  // §16.1's "order creation per IP" (`docs/AUDIT-2026-08-30.md` P1-8, open
+  // until `docs/OPEN_ITEMS.md` §6's storage question was answered). Checked
+  // AFTER field validation, so a customer correcting a typo never burns an
+  // attempt, and deliberately generous — this guards against a script, not
+  // against someone ordering twice in an evening. Duplicate SUBMISSIONS are
+  // a different problem, already solved by `Order.idempotencyKey` and cart
+  // claiming; this is about volume.
+  const [sessionToken, session, ip] = await Promise.all([
+    readGuestSessionToken(),
+    getSession(),
+    requestIpAddress(),
+  ]);
+  const throttle = await consumeOrderAttempt({ ip });
+  if (!throttle.allowed) {
+    return { fieldErrors: {}, formError: 'RATE_LIMITED', values };
+  }
+
   const result = await createOrder({
     // A form submitted without one (only reachable by bypassing the real
     // page) still gets a real, unguessable key — it simply gets no

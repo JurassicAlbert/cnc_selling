@@ -20,6 +20,8 @@
  * POST, not worth a package for.
  */
 
+import { createHash } from 'node:crypto';
+
 import { prisma } from '@/server/db/client';
 import { logger } from '@/server/logging/logger';
 
@@ -66,10 +68,44 @@ export type MailDataFor<T extends MailTemplate> = T extends 'order-confirmation'
       ? OrderStatusUpdateMailData
       : never;
 
-export type MailSendResult = { readonly sent: boolean };
+export type MailSendResult = {
+  readonly sent: boolean;
+  /**
+   * The fully resolved subject, after any DB template override.
+   *
+   * Returned rather than logged (`docs/REVIEW-DETAILED.md` SEC-02): the
+   * tests need to assert what the real template renders, and reading that
+   * off a log line is what put a login code into the application log in the
+   * first place. A subject is safe to hand back — the body is not, and is
+   * deliberately not returned.
+   */
+  readonly subject: string;
+};
 
 export interface Mailer {
   send<T extends MailTemplate>(template: T, to: string, data: MailDataFor<T>): Promise<MailSendResult>;
+}
+
+/**
+ * A stable, non-reversible tag for a recipient, so two log lines can be
+ * correlated as "the same person" during an incident without the log ever
+ * holding an address. §16.1: "No PII in logs beyond user id."
+ */
+function recipientTag(to: string): string {
+  return createHash('sha256').update(to.trim().toLowerCase()).digest('hex').slice(0, 12);
+}
+
+/**
+ * The one deliberate escape hatch for local development, where reading the
+ * OTP out of the dev server's own log is a genuinely useful workflow (and
+ * one `logging/logger.ts`'s header still describes).
+ *
+ * Two locks, not one: the variable must be set explicitly **and** the build
+ * must not be production. A single forgotten environment variable can then
+ * never turn logging back on where it matters.
+ */
+function devSecretLoggingEnabled(): boolean {
+  return process.env.MAIL_DEV_LOG_SECRETS === '1' && process.env.NODE_ENV !== 'production';
 }
 
 function formatGrossZloty(grosze: number): string {
@@ -112,8 +148,13 @@ function renderSubjectAndText<T extends MailTemplate>(template: T, data: MailDat
     };
   }
   const d = data as VerificationOtpMailData;
+  // The code is deliberately NOT in the subject (`docs/REVIEW-DETAILED.md`
+  // SEC-02). A subject is what a phone shows on a locked screen, what a
+  // mail client puts in a notification, and what every "preview" surface
+  // renders — none of which should carry a credential. The body is the
+  // only place it belongs.
   return {
-    subject: `Twój kod ${otpPurposePl(d.purpose)}: ${d.otp}`,
+    subject: `Kod ${otpPurposePl(d.purpose)} — RYT`,
     text: `Kod ${otpPurposePl(d.purpose)}: ${d.otp}\n\nKod jest ważny przez 5 minut. Jeśli to nie Ty prosiłeś/aś o ten kod, zignoruj tę wiadomość.`,
   };
 }
@@ -173,9 +214,37 @@ async function resolveSubjectAndText<T extends MailTemplate>(template: T, data: 
  */
 class UnconfiguredMailer implements Mailer {
   async send<T extends MailTemplate>(template: T, to: string, data: MailDataFor<T>): Promise<MailSendResult> {
-    const { subject } = await resolveSubjectAndText(template, data);
-    logger.info('mailer.unconfigured_send', { template, subject, to });
-    return { sent: false };
+    const { subject, text } = await resolveSubjectAndText(template, data);
+
+    // Never the subject, never the body, never the address
+    // (`docs/REVIEW-DETAILED.md` SEC-02). This used to log
+    // `{ template, subject, to }`, and the OTP subject contained the code,
+    // so every login code reached the application log in plaintext — with
+    // no production guard, since this implementation is selected purely by
+    // RESEND_API_KEY being unset. An admin can also put `{{otp}}` into a
+    // DB-stored template, so the guarantee has to come from not logging
+    // rendered text at all rather than from trusting the default copy.
+    if (process.env.NODE_ENV === 'production') {
+      // Loud, and once per send: a production shop silently not sending
+      // order confirmations is its own incident, and the operator needs to
+      // find out from the log rather than from a customer. Still does not
+      // throw — §14/§15.3 are explicit that the order must succeed even
+      // when the notification cannot be delivered.
+      logger.error('mailer.not_configured', { template, recipient: recipientTag(to) });
+      return { sent: false, subject };
+    }
+
+    if (devSecretLoggingEnabled()) {
+      // Opt-in, development only, and clearly labelled. This is the
+      // workflow `logging/logger.ts`'s header describes — reading an OTP
+      // out of the dev server's own output — kept deliberately rather than
+      // by accident.
+      logger.warn('mailer.unconfigured_send_with_secrets', { template, to, subject, text });
+      return { sent: false, subject };
+    }
+
+    logger.info('mailer.unconfigured_send', { template, recipient: recipientTag(to) });
+    return { sent: false, subject };
   }
 }
 
@@ -204,13 +273,13 @@ class ResendMailer implements Mailer {
         body: JSON.stringify({ from: this.from, to, subject, text }),
       });
       if (!response.ok) {
-        logger.error('mailer.resend_send_failed', { template, to, status: response.status });
-        return { sent: false };
+        logger.error('mailer.resend_send_failed', { template, recipient: recipientTag(to), status: response.status });
+        return { sent: false, subject };
       }
-      return { sent: true };
+      return { sent: true, subject };
     } catch (error) {
-      logger.error('mailer.resend_send_threw', { template, to, error });
-      return { sent: false };
+      logger.error('mailer.resend_send_threw', { template, recipient: recipientTag(to), error });
+      return { sent: false, subject };
     }
   }
 }

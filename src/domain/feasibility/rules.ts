@@ -14,21 +14,33 @@
 
 export type Severity = 'error' | 'warning' | 'notice';
 
-export type FeasibilityCode =
-  | 'LINE_TOO_THIN'
-  | 'DESIGN_TOO_DETAILED'
-  | 'DETAIL_SPACING_TOO_TIGHT'
-  | 'MODULAR_BUILD'
-  | 'NATURAL_VARIATION'
-  | 'FLOOR_MATCH_NOT_GUARANTEED'
-  | 'THICKNESS_EXCEEDS_MACHINE'
+/**
+ * The closed set, as a runtime value rather than only a type — 2026-08-31,
+ * for `docs/REVIEW-DETAILED.md` BUG-07. `Configuration.acknowledgedWarnings`
+ * is a `String[]` column that a Server Action wrote straight through with no
+ * allow-list at all, so a crafted request could store arbitrary strings in
+ * it. Validating against a union type is impossible; validating against this
+ * array is trivial, and deriving `FeasibilityCode` from it keeps the two
+ * from ever disagreeing.
+ */
+export const FEASIBILITY_CODES = [
+  'LINE_TOO_THIN',
+  'DESIGN_TOO_DETAILED',
+  'DETAIL_SPACING_TOO_TIGHT',
+  'MODULAR_BUILD',
+  'NATURAL_VARIATION',
+  'FLOOR_MATCH_NOT_GUARANTEED',
+  'THICKNESS_EXCEEDS_MACHINE',
   /**
    * Constructed by `domain/joinery`'s `buildJoineryFinding`, not by
    * `evaluateFeasibility` below — that function never produces this code,
    * so it stays inert until something calls `buildJoineryFinding`
    * directly, which nothing does yet (prepared but disabled).
    */
-  | 'JOINED_PANEL_YATO_YANE';
+  'JOINED_PANEL_YATO_YANE',
+] as const;
+
+export type FeasibilityCode = (typeof FEASIBILITY_CODES)[number];
 
 export type FeasibilityFinding = {
   readonly code: FeasibilityCode;

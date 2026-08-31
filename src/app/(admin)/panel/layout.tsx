@@ -50,7 +50,13 @@ export default async function PanelLayout({ children }: { readonly children: Rea
               RYT
             </Typography>
           </Toolbar>
-          <AdminSidebarNav />
+          {/*
+            A plain string, not the session object: `AdminSidebarNav` is a
+            Client Component, and `CurrentSession` carries nothing else it
+            needs. `requireStaffSession()` above guarantees the role is one
+            of these two.
+          */}
+          <AdminSidebarNav role={staff.role === 'ADMIN' ? 'ADMIN' : 'STAFF'} />
         </Box>
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <AppBar position="sticky" sx={{ '@media print': { display: 'none' } }}>

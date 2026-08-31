@@ -104,6 +104,15 @@ export async function getConfiguratorProductData(
           },
         },
         materials: {
+          // `docs/REVIEW-DETAILED.md` BUG-03. Without an ORDER BY, Postgres
+          // makes no promise about row order, and the configurator takes
+          // `[0]` as its default material — so the default (and therefore
+          // the price, via `priceFactorBp`) could differ between two loads
+          // of the same page, surfacing later as an unexplained
+          // PRICE_CHANGED at checkout. `sortOrder` is what staff actually
+          // control; `slug` breaks ties so the result is total, not merely
+          // partial.
+          orderBy: [{ material: { sortOrder: 'asc' } }, { material: { slug: 'asc' } }],
           select: {
             priceFactorBp: true,
             material: {
@@ -138,6 +147,12 @@ export async function getConfiguratorProductData(
           },
         },
         designs: {
+          // Same reasoning as `materials` above, and it matters more here:
+          // `machiningMilliMinutesPerM2` and `surchargeGrosze` are both
+          // pricing inputs, so an unordered default design meant the same
+          // visible configuration could genuinely cost two different
+          // amounts on two page loads.
+          orderBy: [{ design: { sortOrder: 'asc' } }, { design: { code: 'asc' } }],
           select: {
             surchargeGrosze: true,
             design: {

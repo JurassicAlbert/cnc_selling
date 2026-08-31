@@ -1043,7 +1043,9 @@ npm install
 npm run db:up
 npm run db:deploy      # applies the initial migration
 
-npm test               # 500 assertions across thirty-one files, unit + integration
+npm run db:seed        # the catalogue: materials, designs, products, prices
+
+npm test               # 931 tests across seventy-nine files, unit + integration
 npm run typecheck      # TypeScript strict, noUncheckedIndexedAccess, no emit
 npm run lint             # Biome + the Polish-literal check
 npm run build           # Next.js production build
@@ -1053,12 +1055,28 @@ npm run dev             # http://localhost:3000
 `npm test` and `npm run typecheck` need no database — every test in `tests/unit`
 is pure. `.env` is only needed once you talk to Postgres; copy `.env.example`.
 
+The integration tier runs against a **second** database (`cnc_selling_test`),
+created by `docker/postgres-init/01-databases.sql` on the container's first
+boot, so a test that truncates can never touch the catalogue you were just
+looking at in the browser. It needs the same two steps as the development one:
+
+```powershell
+npm run db:deploy:test # migrations, against TEST_DATABASE_URL
+npm run db:seed:test   # several integration tests sweep the seeded catalogue
+```
+
 ```powershell
 npm run test:watch     # re-run on save
 npm run e2e             # Playwright, desktop + mobile (installs browsers on first run)
 npm run db:logs        # follow the Postgres container
 npm run db:down        # stop it, keeping the data
 ```
+
+**CI** (`.github/workflows/ci.yml`) runs all of the above on every push to
+`main` and every pull request, against a Postgres service container that
+mirrors `docker-compose.yml` — including both databases and both seeds.
+End-to-end tests run in a second job so a browser flake cannot hide a real
+failure in the first.
 
 ---
 
