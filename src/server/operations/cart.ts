@@ -406,13 +406,27 @@ export async function applyDuplicateCartItem(owner: Owner, cartItemId: string): 
   if (owned === null) {
     return;
   }
-  const cartItem = await prisma.cartItem.findUnique({ where: { id: cartItemId }, select: { quantity: true } });
-  if (cartItem === null) {
-    return;
-  }
-  await prisma.cartItem.update({
-    where: { id: cartItemId },
-    data: { quantity: clampCartQuantity(cartItem.quantity + 1) },
+  // Byte-for-byte `applyAdjustCartItemQuantity`'s `+` branch, and for the
+  // same reason. `docs/REVIEW-DETAILED.md` BUG-05: when "Duplikuj" became a
+  // quantity bump (2026-08-30) it was written as read-then-write — the exact
+  // lost-update shape P0-3 had found and fixed in the sibling two functions
+  // above, in that same commit. The control is a zero-JS `<form action>`
+  // with nothing disabling it, so two rapid clicks both read 1 and both
+  // wrote 2.
+  //
+  // The bound belongs in the WHERE clause, not in a clamp applied after a
+  // read: that is what makes this one atomic statement
+  // (`UPDATE … SET quantity = quantity + 1 WHERE id = … AND quantity < 25`),
+  // so concurrent duplicates compose instead of overwriting each other and
+  // none can push past the limit. Matching no row means the line is already
+  // at the maximum — a no-op, not an error.
+  //
+  // The `findUnique` this replaced was redundant as well as racy:
+  // `findOwnedCartItem` above has already proved the row exists and is
+  // owned.
+  await prisma.cartItem.updateMany({
+    where: { id: cartItemId, quantity: { lt: MAX_CART_ITEM_QUANTITY } },
+    data: { quantity: { increment: 1 } },
   });
 }
 

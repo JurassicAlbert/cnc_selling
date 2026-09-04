@@ -1040,3 +1040,26 @@ what was then implemented, in the order it was done.
       and adds to the cart as „Dąb · Gałązka oliwna".
 - [x] Verified: typecheck clean, lint clean, **1028/1028 tests** across three
       consecutive runs, build clean.
+- [x] **BUG-05 — "Duplikuj" reintroduced the lost-update race P0-3 had just
+      fixed.** When the duplicate action became a quantity bump (round 14,
+      same commit), it was written as read-then-write: two rapid clicks on a
+      zero-JS `<form action>` both read 1 and both wrote 2. Now
+      `applyAdjustCartItemQuantity`'s statement verbatim — `updateMany` with
+      the bound in the `where` and `{ increment: 1 }` — so concurrent
+      duplicates compose and none can pass the maximum. The `findUnique` it
+      replaced was redundant as well as racy: `findOwnedCartItem` above had
+      already proved the row exists and is owned.
+- [x] **The existing test could not have caught it**, which is the part
+      worth keeping. The sequential duplicate test passed identically before
+      and after. T-07 adds three concurrency cases: two concurrent
+      duplicates land as 3, eight land as 9 (**before the fix: 2**), and four
+      at the boundary stop exactly at the maximum.
+- [x] **Swept for the same shape.** No computed read-then-write
+      (`current.x + 1`) remains anywhere in `src/server`, and all three
+      counter mutations use atomic `increment`/`decrement`. The ~20 admin
+      `findUnique`-then-`update` pairs are a **different** shape and are not
+      bugs — they read the previous value to record it in the audit diff and
+      then write an absolute value, so concurrent calls converge. Checked,
+      not assumed.
+- [x] Verified: typecheck clean, lint clean, **1031/1031 tests** across two
+      consecutive runs.

@@ -400,6 +400,67 @@ describe('no two identical lines, by any path (owner request, 2026-08-30)', () =
     expect(await prisma.configuration.count({ where: { sessionToken } })).toBe(1);
   });
 
+  /**
+   * T-07 — `docs/REVIEW-DETAILED.md` BUG-05. The test above is sequential
+   * and passed both before and after the fix, which is exactly why this one
+   * exists: `applyDuplicateCartItem` read the quantity and wrote it back,
+   * the same lost-update shape `docs/AUDIT-2026-08-30.md` P0-3 had already
+   * found and fixed in `applyAdjustCartItemQuantity` **in the same commit**.
+   * "Duplikuj" is a zero-JS `<form action>` with nothing disabling it, so two
+   * rapid clicks both read 1 and both wrote 2 — the customer clicked twice
+   * and got one increment.
+   */
+  it('two concurrent duplicates both land — neither is silently lost', async () => {
+    const sessionToken = uid();
+    const { item } = await seedOneLine(sessionToken);
+
+    await Promise.all([
+      applyDuplicateCartItem(guestOwner(sessionToken), item.cartItemId),
+      applyDuplicateCartItem(guestOwner(sessionToken), item.cartItemId),
+    ]);
+
+    const cart = await readCart(sessionToken);
+    expect(cart.items).toHaveLength(1);
+    expect(cart.items[0]?.quantity).toBe(3);
+    // Still one Configuration: neither call may leave an orphan behind.
+    expect(await prisma.configuration.count({ where: { sessionToken } })).toBe(1);
+  });
+
+  it('many concurrent duplicates all land', async () => {
+    const sessionToken = uid();
+    const { item } = await seedOneLine(sessionToken);
+
+    await Promise.all(
+      Array.from({ length: 8 }, () => applyDuplicateCartItem(guestOwner(sessionToken), item.cartItemId)),
+    );
+
+    expect((await readCart(sessionToken)).items[0]?.quantity).toBe(9);
+  });
+
+  it('concurrent duplicates at the boundary stop at the maximum, not past it', async () => {
+    // The clamp has to live in the WHERE clause for this to hold: applied
+    // after a read, two racing calls could each read 24 and each write 25 —
+    // right answer by luck — or, one short of the cap, both write 26.
+    const sessionToken = uid();
+    const selections = await priceableSelections();
+    await applyAddToCart(
+      guestOwner(sessionToken),
+      sessionToken,
+      PRODUCT_SLUG,
+      selections,
+      [],
+      MAX_CART_ITEM_QUANTITY - 1,
+    );
+    const cartItemId = (await readCart(sessionToken)).items[0]?.cartItemId;
+    if (cartItemId === undefined) throw new Error('setup failed');
+
+    await Promise.all(
+      Array.from({ length: 4 }, () => applyDuplicateCartItem(guestOwner(sessionToken), cartItemId)),
+    );
+
+    expect((await readCart(sessionToken)).items[0]?.quantity).toBe(MAX_CART_ITEM_QUANTITY);
+  });
+
   it('duplicating never pushes past the maximum quantity', async () => {
     const sessionToken = uid();
     const selections = await priceableSelections();

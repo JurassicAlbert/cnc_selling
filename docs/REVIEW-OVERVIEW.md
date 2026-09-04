@@ -45,7 +45,7 @@ the authoritative list.
 
 | Check | Result |
 |---|---|
-| `npm test` | **1028 passed / 1028**, 85 files, 83s (was 831 / 71) |
+| `npm test` | **1031 passed / 1031**, 85 files, 80s (was 831 / 71) |
 | `npm run typecheck` | clean |
 | `npm run lint` | clean, 561 files |
 | `npm run build` | succeeds, same 3 pre-existing warnings |
@@ -53,15 +53,17 @@ the authoritative list.
 | The whole CI sequence, against a virgin database | 27 migrations from zero · seed from empty · **931 passed** · build clean |
 
 **Closed:** SEC-01 · SEC-02 · SEC-03 · SEC-04 · SEC-05 · SEC-10 · ARCH-01 ·
-BUG-02 · BUG-03 · BUG-06 · BUG-07 · BUG-24 · BUG-35 · the carried-forward
-P1-8. **0 P0 remain.**
+BUG-02 · BUG-03 · BUG-05 · BUG-06 · BUG-07 · BUG-24 · BUG-35 · the
+carried-forward P1-8. **0 P0 remain.**
 
 **One thing in this round could not be verified from here, and is called out
 rather than glossed:** the GitHub Actions workflow (ARCH-01) has never
 executed on GitHub. Everything it runs was reproduced locally against a
 throwaway database created, migrated and seeded exactly the way CI creates
 one — 27 migrations from zero, 931/931 tests, a clean build — but the
-runner-specific parts are unproven. Push and watch the first run.
+runner-specific parts are unproven. The branch is pushed; opening the PR is
+what starts the first run (the workflow triggers on `pull_request` and on
+pushes to `main`).
 
 **Found during remediation, not in the original audit:**
 

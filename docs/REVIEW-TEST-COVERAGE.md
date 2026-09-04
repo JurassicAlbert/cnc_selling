@@ -32,8 +32,8 @@ still worth acting on.
 
 ```
 Test Files  85 passed (85)     (was 71)
-     Tests  1028 passed (1028) (was 831)
-  Duration  83s
+     Tests  1031 passed (1031) (was 831)
+  Duration  80s
 ```
 
 | Layer | Files | Change |
@@ -51,6 +51,12 @@ the cart and the checkout path) · T-04 (`starting-price.test.ts`).
 
 **T-09 is now built too** (`admin-authorization.test.ts`, 10 — all three SEC-04 operations against STAFF, CUSTOMER and ADMIN actors, each refusal asserting that *nothing changed*).
 
+**T-07 is built** (`cart-operations.test.ts`, 3 — two concurrent duplicates
+land as 3, eight land as 9, and four at the boundary stop at the maximum).
+Worth reading as a case study: the *sequential* duplicate test beside it
+passed identically before and after the fix, while eight concurrent
+duplicates produced **2**.
+
 **T-10 and T-11 are built** (`step-and-input-validation.test.ts`, 18 — every
 step-applicability and input-shape rule driven through `applyAddToCart`, each
 rejection also asserting no `Configuration` row was written).
@@ -58,7 +64,7 @@ rejection also asserting no `Configuration` row was written).
 **Still missing, unchanged and still the highest value per line: T-12** —
 guest order lookup with a wrong, shorter, longer and empty token. Also still
 missing: **T-05** (default-selection determinism), **T-06** (order-total
-reconciliation), **T-07** (concurrent `applyDuplicateCartItem`), **T-08**
+reconciliation), **T-08**
 (admin pagination) and **T-13/14/15** (§16.2's remaining matrix rows).
 
 **Added beyond the original list:**
@@ -316,7 +322,7 @@ registration is exercised), and logout.
 
 | Test | Concern |
 |---|---|
-| `cart-operations.test.ts:378` "Duplikuj … raises its quantity" | Sequential; passes with the racy implementation. Should be concurrent (T-07). |
+| ~~`cart-operations.test.ts:378` "Duplikuj … raises its quantity"~~ | ~~Sequential; passes with the racy implementation. Should be concurrent (T-07).~~ **Fixed 2026-08-31** — the sequential test is kept (it still pins the "quantity, not a second line" behaviour) and three concurrency cases were added beside it. It really did pass either way: eight concurrent duplicates produced 2 before the fix. |
 | `cart-operations.test.ts:391` "duplicating never pushes past the maximum" | Also sequential; the clamp is exercised, the race is not. |
 | Every e2e spec | Known parallel-contention flake (`fillReliably` timeouts). `fullyParallel: true` with a shared database and shared seeded accounts. Consider `workers: 1` for the specs that log in, or per-worker account fixtures. |
 | E2E against the **dev** database | `playwright.config.ts` runs `npm run build && npm run start`, which uses `DATABASE_URL`. That is why the dev database now holds 166 orders and a leftover `test-e2e-wzor` design. Point e2e at `TEST_DATABASE_URL` (ARCH-03). |

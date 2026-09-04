@@ -19,17 +19,17 @@
 | **Last reviewed** | 2026-08-30 (audit) · **2026-08-31 (P0 fixes + SEC-05 implemented)** |
 | **Commit reviewed** | `e774e40` "Eliminate every duplicate a customer can create" (`main`) |
 | **Review status** | Independent full-repository audit complete. **All four P0s fixed and verified** — the three from the audit, plus BUG-35 found and closed during remediation. **SEC-05 (security headers + CSP) closed 2026-08-31.** |
-| **Overall implementation status** | Feature-complete against `ARCHITECTURE.md` P0–P9. All P0s closed, **every listed product can actually be configured and ordered** (T-16 holds the line), §16.1's header half exists, and there is CI. Remaining: 0 P0, 3 P1, 34 P2, 14 P3. |
-| **Current highest-priority issue** | **BUG-05** — `applyDuplicateCartItem` is a read-then-write, the lost-update shape P0-3 already fixed once. |
-| **Recommended next task** | **BUG-05**, then **PERF-01 step 1 + PERF-02**. **First, though: push and watch the CI workflow run** — it has never executed on GitHub and may need a small correction. |
+| **Overall implementation status** | Feature-complete against `ARCHITECTURE.md` P0–P9. All P0s closed, **every listed product can actually be configured and ordered** (T-16 holds the line), §16.1's header half exists, and there is CI. Remaining: 0 P0, 2 P1, 34 P2, 14 P3. |
+| **Current highest-priority issue** | **PERF-01 (step 1) + PERF-02** — caching the two catalogue queries and `React.cache` on the duplicated `generateMetadata` reads. |
+| **Recommended next task** | **PERF-01 step 1 + PERF-02**, then **ADMIN-01**. **First, though: open the PR and watch the CI workflow run** — the branch is pushed but the workflow has never executed on GitHub. |
 | **Blocking issue** | None. `OPEN_ITEMS.md` §6 (rate-limit storage) is **resolved** — the owner chose Postgres on 2026-08-30 and it is built. |
-| **Last completed area** | **BUG-06 and BUG-07** (2026-08-31). Before them: SEC-04, SEC-10, ARCH-01, SEC-05, SEC-01, SEC-02, SEC-03, BUG-02, BUG-03, BUG-24, BUG-35 and the carried-forward P1-8. |
-| **Ready for the next implementation step?** | **Yes.** 1028/1028 tests (three consecutive clean runs), typecheck clean, lint clean, production build succeeds. |
+| **Last completed area** | **BUG-05** (2026-08-31). Before it: BUG-06, BUG-07, SEC-04, SEC-10, ARCH-01, SEC-05, SEC-01, SEC-02, SEC-03, BUG-02, BUG-03, BUG-24, BUG-35 and the carried-forward P1-8. |
+| **Ready for the next implementation step?** | **Yes.** 1031/1031 tests (two consecutive clean runs), typecheck clean, lint clean, production build succeeds. |
 
 **Verified baseline after the P0 fixes, SEC-05 and ARCH-01** (all actually run):
 
 ```
-npm test          →  1028 passed / 1028,  85 files,  83s   (was 888/888, and 831/831 before the round)
+npm test          →  1031 passed / 1031,  85 files,  80s   (was 888/888, and 831/831 before the round)
 npm run typecheck →  clean (exit 0)
 npm run lint      →  clean, 561 files
 npm run build     →  succeeds; the same 3 pre-existing Turbopack warnings (PERF-04)
@@ -363,20 +363,22 @@ and are **not** superseded by this review.
 Exact execution order. Rationale and prerequisites given because the order
 is not arbitrary.
 
-~~SEC-01 (+ P1-8)~~ · ~~SEC-02~~ · ~~SEC-03 + BUG-03~~ · ~~BUG-02 (+ BUG-24)~~ · ~~SEC-05~~ · ~~ARCH-01~~ · ~~SEC-04~~ (+ ~~SEC-10~~, found during it) · ~~BUG-06 + BUG-07~~ — **all done 2026-08-31.**
+~~SEC-01 (+ P1-8)~~ · ~~SEC-02~~ · ~~SEC-03 + BUG-03~~ · ~~BUG-02 (+ BUG-24)~~ · ~~SEC-05~~ · ~~ARCH-01~~ · ~~SEC-04~~ (+ ~~SEC-10~~, found during it) · ~~BUG-06 + BUG-07~~ · ~~BUG-05~~ — **all done 2026-08-31.**
 
-**Do this first, before any new item:** push and watch the CI workflow's
-first run. It is the one thing in this round that could not be verified from
-the development machine, and every item below is easier once it is green.
+**Do this first, before any new item:** open the PR for
+`audit-remediation-2026-08-31` and watch the CI workflow's first run. The
+branch is pushed, but the workflow triggers on `pull_request` and on pushes
+to `main`, so nothing has run yet. It is the one thing in this round that
+could not be verified from the development machine, and every item below is
+easier once it is green.
 
 | # | ID | Pri | Why now | Prerequisite |
 |---|---|---|---|---|
-| 1 | **BUG-05** | P1 | Small, and it closes the lost-update regression that slipped back in after P0-3 fixed it. | none |
-| 2 | **PERF-01 (step 1) + PERF-02** | P1 | Step 1 alone still removes two Postgres round trips per render. **Steps 2-3 are blocked** on the nonce-vs-static decision SEC-05 created — take that to the owner rather than deciding it in code. Measure Lighthouse before and after. | read the cache-components migration guide first; read SEC-05's note under PERF-01 |
-| 3 | **ADMIN-01** | P1 | 66 real orders are unreachable in the panel today. | none |
-| 4 | **BUG-04 + BUG-19** | P1/P2 | Both touch the order snapshot and the order views; one pass, no migration. | none |
-| 5 | **UX-21** | P2 | The configurator still prices an option it will then refuse — the last visible edge of SEC-03. Small, client-side only. | none |
-| 6 | **ARCH-03** | P2 | Point e2e at `TEST_DATABASE_URL`. Now worth more than it was: it is the real repair for the flake the new CI works around with `workers: 1`, and it would stop e2e runs polluting the development database. | none |
+| 1 | **PERF-01 (step 1) + PERF-02** | P1 | Step 1 alone still removes two Postgres round trips per render. **Steps 2-3 are blocked** on the nonce-vs-static decision SEC-05 created — take that to the owner rather than deciding it in code. Measure Lighthouse before and after. | read the cache-components migration guide first; read SEC-05's note under PERF-01 |
+| 2 | **ADMIN-01** | P1 | 66 real orders are unreachable in the panel today. | none |
+| 3 | **BUG-04 + BUG-19** | P1/P2 | Both touch the order snapshot and the order views; one pass, no migration. | none |
+| 4 | **UX-21** | P2 | The configurator still prices an option it will then refuse — the last visible edge of SEC-03. Small, client-side only. | none |
+| 5 | **ARCH-03** | P2 | Point e2e at `TEST_DATABASE_URL`. Now worth more than it was: it is the real repair for the flake the new CI works around with `workers: 1`, and it would stop e2e runs polluting the development database. | none |
 
 After those, work P2 in the order listed; the UX items cluster naturally
 (UX-04 fixes UX-10 and most of UX-14 with it).
@@ -514,6 +516,7 @@ deliberately not checklist items:
 | **2026-08-31** | Continuous integration | ARCH-01 | Two GitHub Actions jobs — `verify` (types, lint, unit + integration, build) and `e2e` (`needs: verify`, report uploaded as an artifact) — against a Postgres service container that mirrors `docker-compose.yml` down to the port and the init script. Both databases seeded, because the catalogue-sweeping tests **pass vacuously** on an empty one. New `npm run db:seed:test`. `workers: 1` in CI as the documented-but-unmeasured mitigation for the recorded e2e flake. **Proved the whole sequence locally against a virgin database** — 27 migrations from zero, seed from empty, 931/931, build clean — which also established for the first time that this round's four new migrations apply from scratch | **1 P2 closed**; **T-20 added**. Tests 919 → **931**. **The workflow itself has never run on GitHub** — the one unverified thing in this round |
 | **2026-08-31** | Admin-only authorization | SEC-04, **SEC-10 (new)** | Three operations moved to ADMIN — and the gate asserted twice, because `requireAdminSession` reads `next/headers` and is unreachable from any test, which is how SEC-03 happened. The UI followed the enforcement (two pages gated, the anonymize form hidden from STAFF, the sidebar made role-aware — which fixed two pre-existing dead links as well), so the panel never offers a STAFF something the system will refuse. **Found SEC-10 while verifying in the browser:** `next/link` prefetch was firing a GET route handler that builds a RODO export and writes an audit row, so opening a customer's page logged an export nobody performed. Also raised `vitest` `testTimeout` 5s → 20s: it is a deadline, not a budget, and the old value had begun failing `create-order.test.ts` under parallel DB contention — an intermittently red CI is a CI people ignore | **2 P1 closed** (one of them new); **1 P3 added** (UX-22); **T-09/T-21/T-22 added**; three existing tests re-pointed at an ADMIN actor with the reversal recorded. Tests 931 → **959**. Also ran the suite six times because CI now will: found and fixed **two real flakes**, both tests wrong about parallel files sharing one database — `offered-is-buildable` sweeping another file's fixture products, and `admin-authorization` snapshotting shared singletons in `beforeAll`. Six consecutive clean runs after |
 | **2026-08-31** | Inputs the write path never looked at | BUG-06, BUG-07 | Two sides of one hole: `priceAndValidateSelections` checked neither the *shape* of what it was given nor whether the fields belonged to this product type. `zod` adopted rather than dropped (§2 already required it) in one module, with `FeasibilityCode` now **derived from** a `FEASIBILITY_CODES` array so the allow-list and the type cannot drift. `checkStepAppliesToProductType` — 30 assertions, zero call sites since P3 — is finally reached, via `findSelectionOutsideProductType`. The predicted 500 was real: the pre-fix run produced `TypeError: selections.personalizationText.trim is not a function`. **Caught a regression the fix created before it shipped** — the configurator defaulted a `finishId` on JEWELRY, which has no FINISH step, so the bracelet would have priced fine and then refused at add-to-cart; defaults are step-aware now and its price moved 57,54 → 57,39 zł, agreeing with the advertised „od" figure for the first time | **2 P1 closed**; **T-10/T-11 built**, plus `configurator-defaults`. Tests 959 → **1028**, three consecutive clean runs. `docs/CHECKLIST.md:81` corrected rather than left contradicting the code |
+| **2026-08-31** | The lost-update habit | BUG-05 | "Duplikuj" was written as read-then-write when it became a quantity bump — the exact shape P0-3 had found and fixed in `applyAdjustCartItemQuantity` **in the same commit**. Now the sibling's statement verbatim, with the bound in the `where`. The sequential test beside it passed before and after, which is why T-07 is a concurrency test: eight concurrent duplicates produced **2** before the fix and 9 after. Swept for the same shape elsewhere — no computed read-then-write remains in `src/server`, and the ~20 admin `findUnique`-then-`update` pairs are a different, idempotent shape (they read the previous value for the audit diff and write an absolute one), checked rather than assumed | **1 P1 closed**; **T-07 built**. Tests 1028 → **1031**, two consecutive clean runs |
 
 ---
 

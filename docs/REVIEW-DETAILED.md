@@ -509,7 +509,7 @@ item lines + shipping equal `totalGrossGrosze`. See T-06.
 
 ## BUG-05 — "Duplikuj" reintroduces the lost-update race that P0-3 fixed
 
-- **Status:** CONFIRMED BUG
+- **Status:** **RESOLVED 2026-08-31** (was CONFIRMED BUG)
 - **Severity:** P1
 - **Area:** ecommerce / concurrency
 - **Files:** [src/server/operations/cart.ts](src/server/operations/cart.ts) (`applyDuplicateCartItem`, lines 385-398)
@@ -557,8 +557,35 @@ calls → quantity 3, not 2. The existing test at
 either way. See T-07.
 
 **Acceptance criteria.**
-- [ ] A concurrency test proves both duplicates land.
-- [ ] The clamp is expressed in the `where`, not applied after a read.
+- [x] A concurrency test proves both duplicates land.
+- [x] The clamp is expressed in the `where`, not applied after a read.
+
+### What was built (2026-08-31)
+
+The sibling's shape, verbatim — `updateMany` with `quantity: { lt:
+MAX_CART_ITEM_QUANTITY }` in the `where` and `{ increment: 1 }` in the
+data. The `findUnique` it replaced was redundant as well as racy:
+`findOwnedCartItem` above had already proved the row exists and is owned.
+
+**The existing test could not have caught this**, which is the point worth
+recording. `cart-operations.test.ts`'s sequential duplicate test passed
+identically before and after. T-07 adds three:
+
+- two concurrent duplicates → quantity **3**. Failed before the fix.
+- eight concurrent duplicates → quantity **9**. Before the fix this produced
+  **2** — seven of eight increments lost.
+- four concurrent duplicates one short of the cap → exactly
+  `MAX_CART_ITEM_QUANTITY`. This one passed before the fix too, by luck:
+  clamping 24 + 1 gives the right answer either way. It is kept because it
+  pins the *reason* the bound lives in the `where`.
+
+**Swept for the same shape elsewhere.** `grep` for a computed read-then-write
+(`current.x + 1` and similar) across `src/server` now returns nothing, and
+all three counter mutations in the codebase use atomic `increment`/
+`decrement`. The ~20 admin `findUnique`-then-`update` pairs are a **different
+shape** and are not bugs: they read the previous value to record it in the
+audit-log diff and then write an *absolute* value, so two concurrent calls
+converge on the same result. Checked rather than assumed.
 
 ---
 
