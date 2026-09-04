@@ -1,5 +1,5 @@
 /**
- * Staff-user management — the highest-privilege action in the panel
+ * Staff-user management - the highest-privilege action in the panel
  * (minting accounts with panel access), so both mutations here derive
  * `requireAdminSession()`, not `requireStaffSession()`: a `STAFF` session
  * cannot invite or reassign anyone, only an `ADMIN` can.
@@ -9,7 +9,7 @@
  * `signInEmailOTP` wiring), and Better Auth's `signInEmailOTP` works for
  * any existing `User` row regardless of whether it has an `Account`/
  * password at all. So `applyInviteStaffUser` only ever needs to create the
- * bare `User` row — the new staffer signs in at `/logowanie` with a code,
+ * bare `User` row - the new staffer signs in at `/logowanie` with a code,
  * exactly like a real customer already can.
  */
 
@@ -92,7 +92,7 @@ export async function applyChangeStaffRole(
 }
 
 /**
- * Returns `Promise<void>`, not `ChangeStaffRoleResult` — this is the actual
+ * Returns `Promise<void>`, not `ChangeStaffRoleResult` - this is the actual
  * Server Action a plain server-rendered `<form action={...}>` binds
  * directly (no client `useActionState` wrapper, matching `setFaqActive`/
  * `setReviewStatus`'s own precedent for one-click row actions). The page

@@ -44,7 +44,7 @@ afterEach(async () => {
 });
 
 describe('applyCreatePricingDraft', () => {
-  it('creates a new, inactive version — never mutates the currently active one', async () => {
+  it('creates a new, inactive version - never mutates the currently active one', async () => {
     const before = await getActivePricingVersion();
     const admin = adminActor();
 
@@ -72,7 +72,7 @@ describe('applyCreatePricingDraft', () => {
     expect(result.ok).toBe(false);
   });
 
-  it('rejects a packaging-tier table whose last row is not a real catch-all — packagingGroszeFor throws on an unmatched size otherwise', async () => {
+  it('rejects a packaging-tier table whose last row is not a real catch-all - packagingGroszeFor throws on an unmatched size otherwise', async () => {
     const result = await applyCreatePricingDraft(
       adminActor(),
       draftInput({ packagingTiers: [{ maxAreaM2: 1, maxModules: 1, priceGrosze: 1_500 }] }),
@@ -113,7 +113,7 @@ describe('applyPublishPricingVersion', () => {
 
   it('rejects publishing an already-active version', async () => {
     const active = await getActivePricingVersion();
-    if (active === null) throw new Error('no active PricingSettings row in this DB — seed first');
+    if (active === null) throw new Error('no active PricingSettings row in this DB - seed first');
 
     const result = await applyPublishPricingVersion(adminActor(), active.version);
     expect(result.ok).toBe(false);
@@ -124,10 +124,10 @@ describe('applyPublishPricingVersion', () => {
     expect(result.ok).toBe(false);
   });
 
-  it('an order created under the old version keeps its exact stored price after a new version is published with very different rates — the load-bearing invariant', async () => {
+  it('an order created under the old version keeps its exact stored price after a new version is published with very different rates - the load-bearing invariant', async () => {
     const admin = adminActor();
     const activeBefore = await getActivePricingVersion();
-    if (activeBefore === null) throw new Error('no active PricingSettings row in this DB — seed first');
+    if (activeBefore === null) throw new Error('no active PricingSettings row in this DB - seed first');
 
     const order = await prisma.order.create({
       data: {

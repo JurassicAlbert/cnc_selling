@@ -34,7 +34,7 @@ function buildSnapshot(overrides: Partial<OrderItemSnapshot> = {}): OrderItemSna
         { code: 'A2', row: 0, col: 1, xMm: 500, yMm: 0, widthMm: 500, heightMm: 500, productionOrder: 2 },
       ],
     },
-    // biome-ignore lint/suspicious/noExplicitAny: a minimal stub — this test never reads priceBreakdown, only widthMm/heightMm/moduleLayout/machiningMilliMinutesPerM2
+    // biome-ignore lint/suspicious/noExplicitAny: a minimal stub - this test never reads priceBreakdown, only widthMm/heightMm/moduleLayout/machiningMilliMinutesPerM2
     priceBreakdown: {} as any,
     machiningMilliMinutesPerM2: 2000,
     ...overrides,
@@ -89,7 +89,7 @@ afterEach(async () => {
 describe('listProductionQueue', () => {
   it('includes only production-stage orders, with correctly summed modules and area', async () => {
     // Asserts against its own seeded order specifically, not the queue's
-    // total length — `listProductionQueue()` genuinely queries every
+    // total length - `listProductionQueue()` genuinely queries every
     // production-stage order in the database, not just this test's own
     // prefixed rows (there's no test-marker column on a real business
     // status), so other tests' orders sharing a status is expected, not a
@@ -127,7 +127,7 @@ describe('getProductionCapacity', () => {
     // Delta-based, not absolute: `getProductionCapacity()` genuinely sums
     // every production-stage order in the database, and other tests
     // running against the same shared database may have their own
-    // production-stage orders in flight — a before/after comparison is
+    // production-stage orders in flight - a before/after comparison is
     // robust to that, an absolute-total assertion would not be.
     const before = await getProductionCapacity();
 

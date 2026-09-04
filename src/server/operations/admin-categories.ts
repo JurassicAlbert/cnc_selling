@@ -5,7 +5,7 @@
  * derives it via `requireStaffSession()` (reads `next/headers`, only works
  * inside a real request).
  *
- * No delete action exists here on purpose — `Category` is a real FK target
+ * No delete action exists here on purpose - `Category` is a real FK target
  * (`Product.categoryId`); §16A.2's soft-delete invariant means
  * `setCategoryActive` is the only way to retire one.
  */
@@ -169,8 +169,8 @@ export async function setCategoryActive(id: string, isActive: boolean): Promise<
 
 /**
  * Bulk activate/deactivate from the grid's selection toolbar (P7c). Reuses
- * `applySetCategoryActive` per row — same validation, same audit trail, one
- * entry per row rather than a single "bulk" entry — so a bulk action is
+ * `applySetCategoryActive` per row - same validation, same audit trail, one
+ * entry per row rather than a single "bulk" entry - so a bulk action is
  * indistinguishable in the audit log from doing the same rows one at a time.
  */
 export async function applyBulkSetCategoryActive(staff: CurrentSession, ids: readonly string[], isActive: boolean): Promise<void> {
@@ -221,9 +221,9 @@ export async function setCategorySortOrder(id: string, sortOrder: number): Promi
 // --- CSV import ------------------------------------------------------------
 //
 // Expected header row: slug,namePl,descPl,seoTitlePl,seoDescPl,imageUrl,sortOrder
-// (imageUrl and sortOrder are optional — a blank cell means null/0). Every
+// (imageUrl and sortOrder are optional - a blank cell means null/0). Every
 // row goes through the exact same `applyCreateCategory` a manual create
-// does — same validation, same duplicate-slug check, same audit log — so
+// does - same validation, same duplicate-slug check, same audit log - so
 // an imported row is indistinguishable from a hand-typed one afterward. A
 // bad row does not abort the batch: this reports per-row success/failure
 // instead of an all-or-nothing transaction, since a staff member fixing a
@@ -254,7 +254,7 @@ export async function applyImportCategoriesFromCsv(staff: CurrentSession, csvTex
   const rows: CategoryCsvRowResult[] = [];
   let createdCount = 0;
   for (const [index, record] of parsed.data.entries()) {
-    const rowNumber = index + 2; // header is row 1, so the first data row is row 2 — matches what a staff member sees in a spreadsheet
+    const rowNumber = index + 2; // header is row 1, so the first data row is row 2 - matches what a staff member sees in a spreadsheet
     const slug = csvCell(record, 'slug');
     const sortOrderRaw = csvCell(record, 'sortOrder');
     const imageUrl = csvCell(record, 'imageUrl');

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default async function AccountOrdersPage() {
   // Session existence is already guaranteed by `moje-konto/layout.tsx`'s
-  // gate — `userId` here is only `null` if that gate somehow let a
+  // gate - `userId` here is only `null` if that gate somehow let a
   // sessionless request through, in which case there is nothing to list.
   const session = await getSession();
   const orders = session === null ? [] : await listOrdersForUser(session.userId);

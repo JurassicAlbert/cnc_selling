@@ -2,11 +2,11 @@ import type { ReactNode } from 'react';
 
 type TextProps = {
   readonly children: ReactNode;
-  /** Matches MUI's `text.secondary` — meta, helper text. */
+  /** Matches MUI's `text.secondary` - meta, helper text. */
   readonly muted?: boolean;
   /**
    * Opts out of the reading-measure cap, for the cases where a paragraph is
-   * genuinely a full-width row rather than prose — a table-like meta line,
+   * genuinely a full-width row rather than prose - a table-like meta line,
    * or a single value that shares its row with something aligned to the far
    * edge. Rare on purpose: prose is the default, and prose wants a measure.
    */
@@ -14,11 +14,11 @@ type TextProps = {
 };
 
 /**
- * The body-text equivalent of `Heading` — see its comment for why this
+ * The body-text equivalent of `Heading` - see its comment for why this
  * exists and why the `font` shorthand is used.
  *
  * 2026-08-30, typography pass: capped at a reading measure. Body copy used
- * to run the full width of `Container` — 1200px, roughly 150 characters per
+ * to run the full width of `Container` - 1200px, roughly 150 characters per
  * line, against a comfortable target of 60–75. Past about 80 the eye starts
  * losing its place on the return sweep to the next line, which is why long
  * lines feel tiring to read without looking obviously wrong.

@@ -23,7 +23,7 @@ function formatBytes(bytes: number): string {
 }
 
 /**
- * ARCHITECTURE.md §16.3 gives STAFF "customers (**read**)" — so this page
+ * ARCHITECTURE.md §16.3 gives STAFF "customers (**read**)" - so this page
  * stays STAFF-visible, and only the anonymize control is ADMIN-only
  * (docs/REVIEW-DETAILED.md SEC-04). The session is read here rather than
  * inherited from the layout because a Server Component cannot receive the
@@ -31,7 +31,7 @@ function formatBytes(bytes: number): string {
  * already applied, so this adds a role read, not a second authorization
  * decision.
  *
- * Hiding the form is not the enforcement — `applyAnonymizeCustomer` and
+ * Hiding the form is not the enforcement - `applyAnonymizeCustomer` and
  * `anonymizeCustomer` both refuse a non-ADMIN actor. This is here so a
  * STAFF is never shown a control the system will then refuse, which is the
  * shape the owner ruled out on 2026-08-31.
@@ -156,7 +156,7 @@ export default async function AdminCustomerDetailPage({ params }: CustomerDetail
             {ADMIN.customerRodoHeadingPl}
           </Typography>
           {/*
-            A plain <a>, not next/link — the same convention
+            A plain <a>, not next/link - the same convention
             `weryfikacja/[designId]` already uses for `/api/plik/[fileId]`.
             This target is a route handler that BUILDS the export and writes
             an audit row, and Next prefetches `<Link>` targets: with a
@@ -171,7 +171,7 @@ export default async function AdminCustomerDetailPage({ params }: CustomerDetail
           </Typography>
           {customer.anonymizedAt !== null ? (
             <Typography color="text.secondary">
-              {ADMIN.customerAnonymizedNoticePl} — {customer.anonymizedAt.toLocaleDateString('pl-PL')}
+              {ADMIN.customerAnonymizedNoticePl} - {customer.anonymizedAt.toLocaleDateString('pl-PL')}
             </Typography>
           ) : viewer.role === 'ADMIN' ? (
             <CustomerAnonymizeForm customerId={customer.id} />

@@ -1,6 +1,6 @@
 'use client';
 
-/** Registration — same shape as `LoginForm.tsx`. P9 phase 9: converted to real MUI, same reasoning. */
+/** Registration - same shape as `LoginForm.tsx`. P9 phase 9: converted to real MUI, same reasoning. */
 
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';

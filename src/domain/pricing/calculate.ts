@@ -35,10 +35,10 @@ export function calculatePrice(input: PricingInput): PriceBreakdown {
     [input.material.priceFactorBp, input.thicknessFactorBp],
   );
 
-  // `null` only for CUSTOM (no catalog design) — see PricingInput's
+  // `null` only for CUSTOM (no catalog design) - see PricingInput's
   // comment. Zero, not an estimate: machining time depends on the
   // actual uploaded artwork's complexity, which nothing here can know
-  // yet — that is design review's job (§13.3), not a number to guess.
+  // yet - that is design review's job (§13.3), not a number to guess.
   const machiningGrosze =
     input.design === null
       ? 0
@@ -122,7 +122,7 @@ export function calculatePrice(input: PricingInput): PriceBreakdown {
  *
  * This is a deliberate simplification, not an oversight: neither has a
  * measured rate yet. When real production data exists, give them their own
- * entries in `MachineRates` — the change is local to this function.
+ * entries in `MachineRates` - the change is local to this function.
  */
 export function rateFor(
   method: ProductionMethod,

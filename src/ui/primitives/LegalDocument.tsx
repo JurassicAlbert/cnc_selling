@@ -2,7 +2,7 @@ import type { LegalSection } from '@/content/pl/legal';
 import { Heading } from '@/ui/primitives/Heading';
 import { Text } from '@/ui/primitives/Text';
 
-/** Shared renderer for `REGULAMIN_SECTIONS`/`PRIVACY_SECTIONS` — one heading, one or more paragraphs, per section. */
+/** Shared renderer for `REGULAMIN_SECTIONS`/`PRIVACY_SECTIONS` - one heading, one or more paragraphs, per section. */
 export function LegalDocument({ sections }: { readonly sections: readonly LegalSection[] }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 720 }}>

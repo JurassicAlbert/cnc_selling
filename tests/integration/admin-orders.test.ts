@@ -5,12 +5,12 @@ import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';
 
 /**
- * `applyOrderStatusTransition`/`applyMarkOrderPaid` — the pure halves of
+ * `applyOrderStatusTransition`/`applyMarkOrderPaid` - the pure halves of
  * `admin-orders.ts`'s Server Actions (staff actor passed explicitly, same
  * split `auth.test.ts` uses for `mergeGuestCartIntoUser`). The wrapping
  * Server Actions themselves (`transitionOrderStatus`/`markOrderPaid`) call
  * `requireStaffSession()`, which reads `next/headers` and can only run
- * inside a real request — proven end-to-end instead by
+ * inside a real request - proven end-to-end instead by
  * `tests/e2e/admin-authz.spec.ts`, including the `CUSTOMER` → 404 case.
  */
 
@@ -169,7 +169,7 @@ describe('applyMarkOrderPaid', () => {
     expect(await prisma.auditLog.count({ where: { entityId: order.id, action: 'update' } })).toBe(1);
   });
 
-  it('rejects a CONTACT_ARRANGED order — nothing to mark paid', async () => {
+  it('rejects a CONTACT_ARRANGED order - nothing to mark paid', async () => {
     const order = await seedOrder({ paymentMethod: 'CONTACT_ARRANGED' });
     expect((await applyMarkOrderPaid(staffActor(), order.orderNumber)).ok).toBe(false);
   });
@@ -182,7 +182,7 @@ describe('applyMarkOrderPaid', () => {
   /**
    * `docs/AUDIT-2026-08-30.md` P1-6: the "is it already paid?" check and
    * the write used to be two separate statements, so a double-clicked
-   * button had both calls pass the check and both write — one real state
+   * button had both calls pass the check and both write - one real state
    * change, two audit-log entries claiming it happened twice. An audit
    * trail that says a thing happened twice when it happened once is worse
    * than no audit trail.
@@ -202,7 +202,7 @@ describe('applyMarkOrderPaid', () => {
   });
 });
 
-describe('applyOrderStatusTransition — concurrency (audit P1-6)', () => {
+describe('applyOrderStatusTransition - concurrency (audit P1-6)', () => {
   /**
    * The same read-then-write gap on the status machine, where it is worse:
    * a duplicate here also files a second `OrderEvent` and sends the

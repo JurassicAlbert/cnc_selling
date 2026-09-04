@@ -16,7 +16,7 @@ function uid(): string {
 }
 
 /**
- * ADMIN, not STAFF — changed 2026-08-31 for docs/REVIEW-DETAILED.md SEC-04.
+ * ADMIN, not STAFF - changed 2026-08-31 for docs/REVIEW-DETAILED.md SEC-04.
  * This operation now refuses a STAFF actor (ARCHITECTURE.md §16.3), so an
  * actor built here has to be one that is genuinely allowed to perform it;
  * the refusal itself is covered by tests/integration/admin-authorization.test.ts.

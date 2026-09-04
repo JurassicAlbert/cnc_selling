@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * The checkout form's Server Action — parses and validates real Polish
+ * The checkout form's Server Action - parses and validates real Polish
  * field rules (`domain/checkout/validate.ts`'s NIP checksum, postal code,
  * phone) before ever calling `createOrder`, which re-validates everything
  * about the CART side (prices, feasibility) independently. Two different
@@ -40,11 +40,11 @@ export type CheckoutFormState = {
     | null;
   /**
    * Echoed back so a validation error on one field doesn't erase everything
-   * else the customer already typed — `useActionState` re-renders the same
+   * else the customer already typed - `useActionState` re-renders the same
    * form instance rather than remounting it, so uncontrolled inputs
    * otherwise keep whatever the browser happened to have, which after a
    * server round trip is nothing. Consent checkboxes are deliberately NOT
-   * echoed — re-confirming those on a corrected resubmission is the right
+   * echoed - re-confirming those on a corrected resubmission is the right
    * default, not an oversight.
    */
   readonly values: Partial<Record<string, string>>;
@@ -61,7 +61,7 @@ export async function submitCheckout(
 ): Promise<CheckoutFormState> {
   // Minted server-side when the checkout page rendered and carried in a
   // hidden field, so every resubmission of THIS form arrives with the same
-  // value — see `create-order.ts`'s header (`docs/AUDIT-2026-08-30.md`
+  // value - see `create-order.ts`'s header (`docs/AUDIT-2026-08-30.md`
   // P0-2). Never generated here: a fresh one per invocation would make
   // every duplicate submission look like a brand-new purchase, which is
   // precisely the bug.
@@ -91,7 +91,7 @@ export async function submitCheckout(
   else if (!isPlausibleEmail(email)) fieldErrors.email = 'EMAIL_INVALID';
   if (firstName.length === 0) fieldErrors.firstName = 'FIRST_NAME_REQUIRED';
   if (lastName.length === 0) fieldErrors.lastName = 'LAST_NAME_REQUIRED';
-  // 2026-08-29, owner request: required, not optional — a status/shipment
+  // 2026-08-29, owner request: required, not optional - a status/shipment
   // update needs a real contact channel beyond email.
   if (phone.length === 0) fieldErrors.phone = 'PHONE_REQUIRED';
   else if (!validatePhone(phone)) fieldErrors.phone = 'PHONE_INVALID';
@@ -128,7 +128,7 @@ export async function submitCheckout(
   // §16.1's "order creation per IP" (`docs/AUDIT-2026-08-30.md` P1-8, open
   // until `docs/OPEN_ITEMS.md` §6's storage question was answered). Checked
   // AFTER field validation, so a customer correcting a typo never burns an
-  // attempt, and deliberately generous — this guards against a script, not
+  // attempt, and deliberately generous - this guards against a script, not
   // against someone ordering twice in an evening. Duplicate SUBMISSIONS are
   // a different problem, already solved by `Order.idempotencyKey` and cart
   // claiming; this is about volume.
@@ -144,7 +144,7 @@ export async function submitCheckout(
 
   const result = await createOrder({
     // A form submitted without one (only reachable by bypassing the real
-    // page) still gets a real, unguessable key — it simply gets no
+    // page) still gets a real, unguessable key - it simply gets no
     // deduplication across requests, which is strictly no worse than the
     // behaviour before this existed, and never blocks a genuine order.
     idempotencyKey: idempotencyKey.length > 0 ? idempotencyKey : randomUUID(),
@@ -171,19 +171,19 @@ export async function submitCheckout(
   }
 
   // 2026-08-29, owner feedback: "koszyk nie restuje się od razu po
-  // skończeniu zamówienia" — a real bug, not a display choice. The cart
+  // skończeniu zamówienia" - a real bug, not a display choice. The cart
   // rows are gone by now, but Next.js's client Router Cache can keep
   // serving the PREVIOUS cached render of the layout that draws
   // `SiteHeader`'s cart badge for up to 30s after a soft navigation, since
   // nothing has told it that layout's data changed. Invalidating at layout
-  // scope makes the very next request — including the redirect below —
+  // scope makes the very next request - including the redirect below -
   // pick up the now-empty cart immediately, not eventually.
   //
   // Lives here rather than in `createOrder` because only this layer is
   // guaranteed to run inside a request scope (2026-08-30).
   revalidatePath('/', 'layout');
 
-  // `orderNumber` ("2026/08/0042") contains real slashes — encoded here so
+  // `orderNumber` ("2026/08/0042") contains real slashes - encoded here so
   // it lands as ONE path segment; Next.js decodes `params.orderNumber`
   // back to the real value automatically on the receiving page.
   redirect(
@@ -192,7 +192,7 @@ export async function submitCheckout(
 }
 
 /**
- * The guest lookup form's action — a zero-client-JS `<form action>` that
+ * The guest lookup form's action - a zero-client-JS `<form action>` that
  * just redirects to the real confirmation URL. That page does the actual
  * lookup and constant-time token check; a wrong pair simply renders its
  * honest "not found" state, same as this being submitted with nonsense.

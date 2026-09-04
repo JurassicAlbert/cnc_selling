@@ -4,7 +4,7 @@
  * in `rate-limit.ts`.
  *
  * These are starting values, chosen to be comfortably above real human
- * behaviour and far below what an attack needs — not measured from
+ * behaviour and far below what an attack needs - not measured from
  * production traffic, because none exists yet. They are deliberately not
  * configurable from the admin panel: a rate limit an operator can raise
  * under pressure ("customers are complaining") is a rate limit that gets
@@ -17,7 +17,7 @@
  *   - **per IP** catches someone spraying many accounts from one place.
  *
  * Neither alone is enough, and the IP dimension is skipped entirely when
- * there is no IP to attribute — see `auth-throttle.ts` for why.
+ * there is no IP to attribute - see `auth-throttle.ts` for why.
  */
 
 import type { RateLimitRule } from './rate-limit';
@@ -52,7 +52,7 @@ export const AUTH_RATE_LIMITS = {
   /**
    * §16.1's "order creation per IP" (`docs/AUDIT-2026-08-30.md` P1-8, open
    * until the storage question was answered). Ten in an hour is far above
-   * any real customer — the guard is against a script, not against someone
+   * any real customer - the guard is against a script, not against someone
    * ordering twice. Order *duplication* is a different problem, already
    * solved by `Order.idempotencyKey` and cart claiming.
    */

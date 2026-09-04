@@ -3,7 +3,7 @@
 /**
  * MUI has no native file-input component. This is MUI's own documented
  * pattern for one: a real `<Button>` acting as a `<label>`, with the native
- * `<input type="file">` visually hidden inside it (never `display: none` —
+ * `<input type="file">` visually hidden inside it (never `display: none` -
  * that would drop it from the tab order and break screen readers).
  *
  * Two call shapes, because the app genuinely has two:
@@ -18,7 +18,7 @@
  * 2026-08-30: moved out of `islands/admin/` and given the second shape.
  * `CustomerDesignUploadForm`, `ReuploadCustomDesignForm` and the
  * configurator's own upload step were each rendering a bare
- * `<input type="file">` — a browser-default control sitting inside forms
+ * `<input type="file">` - a browser-default control sitting inside forms
  * that were otherwise entirely MUI, and the single most obviously unstyled
  * thing a customer met while uploading their own artwork. They now share
  * this one component rather than growing a second implementation of it.

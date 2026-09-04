@@ -4,10 +4,10 @@ import { listActiveDesignsForBrowsing } from '@/server/repositories/designs';
 import { prisma } from '@/server/db/client';
 
 /**
- * P9 phase 3's real consumer of `Design.featured` (added phase 2) — the
+ * P9 phase 3's real consumer of `Design.featured` (added phase 2) - the
  * public `/wzory` pattern-browsing page. Seeds real `Design` rows directly
  * (this repository, like `listOwnedCustomerDesigns`, reads via the app's
- * own `prisma` singleton, not a tx — same PREFIX/`afterEach` pattern as
+ * own `prisma` singleton, not a tx - same PREFIX/`afterEach` pattern as
  * `customer-designs.test.ts`).
  */
 
@@ -66,7 +66,7 @@ describe('listActiveDesignsForBrowsing', () => {
     expect((await listActiveDesignsForBrowsing()).some((d) => d.id === design.id)).toBe(false);
   });
 
-  it('excludes a design still awaiting rights permission — never shown as if it were usable', async () => {
+  it('excludes a design still awaiting rights permission - never shown as if it were usable', async () => {
     const design = await seedDesign({ rightsStatus: 'REQUIRES_PERMISSION' });
 
     expect((await listActiveDesignsForBrowsing()).some((d) => d.id === design.id)).toBe(false);

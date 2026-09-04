@@ -1,11 +1,11 @@
 /**
  * Re-fetches a product's real catalogue data and re-prices a set of
- * selections server-side — the one thing both `addToCart`/
+ * selections server-side - the one thing both `addToCart`/
  * `updateCartItemConfiguration` (`src/server/operations/cart.ts`) and
  * checkout (`src/server/orders/create-order.ts`) need identically: never
  * trust a price, or even that a configuration is still valid, from
  * anything other than a fresh server-side recomputation (§10.2). Extracted
- * to its own plain module — not a `'use server'` file — so both can import
+ * to its own plain module - not a `'use server'` file - so both can import
  * it as an ordinary function without crossing any server-action boundary.
  *
  * **This is also where §7.2's option rules are enforced**, added
@@ -18,8 +18,8 @@
  * `getConfiguratorProductData` builds with no `where` clause. So
  * `Material.isAvailable`, `Design.isActive`, `Design.rightsStatus`,
  * `DesignMaterial` narrowing and the offered-thickness list were all
- * display-only. A crafted request — or an ordinary customer holding a
- * saved project after staff retired a pattern — could price and order a
+ * display-only. A crafted request - or an ordinary customer holding a
+ * saved project after staff retired a pattern - could price and order a
  * design the shop has no right to sell, which brief §12 and the
  * `rightsStatus` schema comment ("enforced by a query filter, not by
  * discipline") exist to prevent.
@@ -27,7 +27,7 @@
  * The fix deliberately **reuses `resolveOptions`** rather than
  * re-implementing the rules here. One definition of "selectable", used by
  * both the picker and the gate, is the only version of this that cannot
- * drift — and §7.2 describes exactly one such set.
+ * drift - and §7.2 describes exactly one such set.
  */
 
 import {
@@ -47,14 +47,14 @@ export type ValidatedPricing = {
   readonly data: NonNullable<Awaited<ReturnType<typeof getConfiguratorProductData>>>;
   readonly pricing: Extract<ConfiguratorPricingResult, { status: 'priced' }>;
   /**
-   * The caller's selections **after** `parseSelections` — the value every
+   * The caller's selections **after** `parseSelections` - the value every
    * caller should use from here on, not the one it passed in.
    *
    * Added 2026-08-31 with BUG-07. A Server Action's arguments arrive as
    * whatever the caller sent, TypeScript notwithstanding, and
    * `applyAddToCart` fed them straight into `cartItemSignature` and a Prisma
    * `create`. A `personalizationText` that was an object crashed with
-   * "selections.personalizationText.trim is not a function" — a 500 where a
+   * "selections.personalizationText.trim is not a function" - a 500 where a
    * clean rejection belonged. Returning the parsed object means there is one
    * canonical, checked value and no way to keep using the raw one by
    * accident.
@@ -63,8 +63,8 @@ export type ValidatedPricing = {
 };
 
 /**
- * `CONFIGURATION_INVALID` — incomplete, unpriceable, or blocked by a real
- * feasibility error. `OPTION_UNAVAILABLE` — every field is present, but one
+ * `CONFIGURATION_INVALID` - incomplete, unpriceable, or blocked by a real
+ * feasibility error. `OPTION_UNAVAILABLE` - every field is present, but one
  * of them names something this product does not (or no longer) offers.
  *
  * They are separate because they deserve separate copy: the second is
@@ -84,7 +84,7 @@ export type PricingRejectionCode = 'CONFIGURATION_INVALID' | 'OPTION_UNAVAILABLE
  * carry a value the shop never offers, so it can never be completed at all.
  *
  * That was not hypothetical. The kitchen-tile product (`fartuch-kuchenny-z-
- * grawerem`) has `FINISH` in §5's step list, and its only material is gres —
+ * grawerem`) has `FINISH` in §5's step list, and its only material is gres -
  * porcelain stoneware, which has no `MaterialFinish` rows because it is not
  * a thing you oil or varnish. The product was therefore impossible to
  * configure, and had been since it was seeded. Found by
@@ -95,7 +95,7 @@ export type PricingRejectionCode = 'CONFIGURATION_INVALID' | 'OPTION_UNAVAILABLE
  * varies is which options a particular product's materials actually
  * support. `calculatePrice` and `priceConfiguration` already accept `finish:
  * null` / `design: null` / `thickness: null`, so a genuinely absent option
- * costs nothing and adds nothing — which is the correct answer for
+ * costs nothing and adds nothing - which is the correct answer for
  * unfinished gres.
  *
  * MATERIAL and SIZE are never narrowed away: a product with no material
@@ -129,7 +129,7 @@ const OPTION_UNAVAILABLE = { ok: false, code: 'OPTION_UNAVAILABLE' } as const;
 
 /**
  * Every selected id must appear in the resolved option set for the
- * selection as a whole — not merely exist in the database.
+ * selection as a whole - not merely exist in the database.
  *
  * Order matters in one direction only: `resolveOptions` narrows designs by
  * the chosen material and materials by the chosen design simultaneously, so
@@ -160,7 +160,7 @@ export async function priceAndValidateSelections(
   productSlug: string,
   rawSelections: Selections,
 ): Promise<PriceAndValidateOutcome> {
-  // Shape first, before anything reads a field or builds a query — BUG-07.
+  // Shape first, before anything reads a field or builds a query - BUG-07.
   // Nothing downstream can act on *why* the shape was wrong (the UI cannot
   // produce a malformed payload, so a caller that sends one is either a bug
   // or a crafted request), so both cases get the same generic rejection
@@ -178,7 +178,7 @@ export async function priceAndValidateSelections(
 
   // BUG-06: a selection belonging to a step this product *type* does not
   // have. Checked against `stepsForProductType`, not the narrowed
-  // `applicableSteps` — see `findSelectionOutsideProductType`'s own comment
+  // `applicableSteps` - see `findSelectionOutsideProductType`'s own comment
   // on why those are different questions with different answers.
   if (findSelectionOutsideProductType(stepsForProductType(data.typeCode), selections) !== null) {
     return CONFIGURATION_INVALID;
@@ -210,7 +210,7 @@ export async function priceAndValidateSelections(
 
   // See `server/actions/configurator.ts`'s identical check: `design ===
   // null` only means "incomplete" for a product type that actually has
-  // a DESIGN step. CUSTOM has none (CUSTOM_UPLOAD replaces it) — for it,
+  // a DESIGN step. CUSTOM has none (CUSTOM_UPLOAD replaces it) - for it,
   // a null design is the correct, permanent state, not a missing one.
   const designIncomplete = steps.includes('DESIGN') && design === null;
   if (material === null || designIncomplete) {

@@ -1,12 +1,12 @@
 /**
  * Staff material mutations. `Material.imageUrl` is required (`String`, not
- * `String?`, unlike `Category.imageUrl`) — so unlike `admin-categories.ts`,
+ * `String?`, unlike `Category.imageUrl`) - so unlike `admin-categories.ts`,
  * create/update take a `FormData` (multipart, carries the photo) rather
  * than a plain typed object, and a create can't succeed without a real
  * uploaded image. Same `applyXxx(staff, ...)` / `xxx(...)` split as every
- * other admin action file — `revalidatePath` stays in the wrapper only.
+ * other admin action file - `revalidatePath` stays in the wrapper only.
  *
- * No delete action — `Material` is a real FK target, and unlike
+ * No delete action - `Material` is a real FK target, and unlike
  * `Order`/`OrderItem`'s snapshot-only pattern, `Configuration.materialId`
  * is a LIVE FK from in-progress carts. §16A.2: `isAvailable` toggle only.
  */
@@ -36,7 +36,7 @@ type MaterialFields = {
   readonly shortDescPl: string;
   readonly characteristicsPl: string;
   readonly pricePerM2Grosze: number;
-  /** Real, used to compute a configuration's real shipping weight (`domain/shipping/weight.ts`) — never a fabricated per-product weight. */
+  /** Real, used to compute a configuration's real shipping weight (`domain/shipping/weight.ts`) - never a fabricated per-product weight. */
   readonly densityKgPerM3: number;
   readonly maxSheetWidthMm: number;
   readonly maxSheetHeightMm: number;
@@ -80,10 +80,10 @@ function validateMaterialFields(fields: MaterialFields): string | null {
     return 'Nazwa jest wymagana.';
   }
   if (fields.pricePerM2Grosze <= 0) {
-    return `Cena za m² musi być dodatnia — podano ${(fields.pricePerM2Grosze / 100).toFixed(2)} zł.`;
+    return `Cena za m² musi być dodatnia - podano ${(fields.pricePerM2Grosze / 100).toFixed(2)} zł.`;
   }
   if (!Number.isFinite(fields.densityKgPerM3) || fields.densityKgPerM3 <= 0) {
-    return 'Gęstość (kg/m³) musi być dodatnia — potrzebna do wyliczenia realnej wagi przesyłki.';
+    return 'Gęstość (kg/m³) musi być dodatnia - potrzebna do wyliczenia realnej wagi przesyłki.';
   }
   return null;
 }
@@ -202,7 +202,7 @@ export async function setMaterialAvailable(id: string, isAvailable: boolean): Pr
   revalidatePath(`/panel/materialy/${id}`);
 }
 
-/** Bulk activate/deactivate from the grid's selection toolbar (P7c) — see `admin-categories.ts`'s `bulkSetCategoryActive` for the pattern. */
+/** Bulk activate/deactivate from the grid's selection toolbar (P7c) - see `admin-categories.ts`'s `bulkSetCategoryActive` for the pattern. */
 export async function applyBulkSetMaterialAvailable(staff: CurrentSession, ids: readonly string[], isAvailable: boolean): Promise<void> {
   for (const id of ids) {
     await applySetMaterialAvailable(staff, id, isAvailable);
@@ -242,7 +242,7 @@ export async function setMaterialSortOrder(id: string, sortOrder: number): Promi
 
 /**
  * Copies the core scalar record plus the existing `imageUrl` (the file
- * is reused, not re-uploaded — same "starts pointing at the same image
+ * is reused, not re-uploaded - same "starts pointing at the same image
  * until replaced" rule as `applyDuplicateDesign`), but not compatible-
  * finish rows, which are frequently material-specific. Starts
  * unavailable, same "review before it goes live" rule as every other
@@ -300,7 +300,7 @@ export async function duplicateMaterial(id: string): Promise<MaterialMutationRes
   return result;
 }
 
-/** See `duplicateProductAndGo`'s own comment — same zero-JS-button shape. */
+/** See `duplicateProductAndGo`'s own comment - same zero-JS-button shape. */
 export async function duplicateMaterialAndGo(id: string): Promise<void> {
   const result = await duplicateMaterial(id);
   if (result.ok) {

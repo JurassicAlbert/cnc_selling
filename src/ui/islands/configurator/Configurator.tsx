@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * The configurator — ARCHITECTURE.md §7.1's step machine, wired to real
+ * The configurator - ARCHITECTURE.md §7.1's step machine, wired to real
  * data. The first real MUI client island in this codebase (see
  * `docs/HANDOVER.md` §9e for why `ThemeRegistry` was pulled out of the root
  * layout specifically so this could exist without taxing every other page).
@@ -9,60 +9,60 @@
  * **2026-08-28 redesign, direct owner feedback**: "wzory powinny być w
  * produkcie do wyboru tak jak kolor koszulki, tak samo typ drewna i sposób
  * zachowania" (patterns/wood type/finish should be choosable in the product
- * like a t-shirt color) — this used to be a `Stepper`-gated wizard showing
+ * like a t-shirt color) - this used to be a `Stepper`-gated wizard showing
  * exactly one step at a time behind "Wstecz"/"Dalej". Every applicable
  * section rendered simultaneously on one page instead, no step index, no
  * `Stepper`/`StepButton` at all.
  *
  * **2026-08-29 follow-up, direct owner feedback**: DESIGN/MATERIAL/FINISH/
- * SIZE moved again — out of the accordion entirely into a compact MUI
+ * SIZE moved again - out of the accordion entirely into a compact MUI
  * `Breadcrumbs` trail at the top ("Wzór: … › Materiał: … › Wymiary: …"),
- * each crumb opening a `Menu` (DESIGN/MATERIAL/FINISH — a real dropdown
- * list) or a `Popover` (SIZE — two plain fields). Only DESIGN's dropdown
+ * each crumb opening a `Menu` (DESIGN/MATERIAL/FINISH - a real dropdown
+ * list) or a `Popover` (SIZE - two plain fields). Only DESIGN's dropdown
  * shows an image (the pattern's own transparent-PNG-style artwork, shown
- * bare with no card/circle behind it — "pattern should be more like png
+ * bare with no card/circle behind it - "pattern should be more like png
  * without background not some div block"); MATERIAL/FINISH are text-only
- * lists — "you don't need to visualize the wood size or look". THICKNESS/
+ * lists - "you don't need to visualize the wood size or look". THICKNESS/
  * INSTALLATION_VARIANT/PERSONALIZATION/CUSTOM_UPLOAD stay as accordion
- * bands below (`ConfigSection`) — none of them are a simple "pick one from
+ * bands below (`ConfigSection`) - none of them are a simple "pick one from
  * a photographed list" the way the four breadcrumb steps are.
  *
  * The domain-level narrowing this used to lean on step-locking for turns
  * out to already handle "no forced order" correctly on its own:
  * `resolve-options.ts`'s `ResolvedOptionAvailability` is recomputed fresh
- * from whatever `selections` currently holds on every change — before a
+ * from whatever `selections` currently holds on every change - before a
  * material is picked, `finishes` is genuinely empty (nothing to enumerate,
  * a material's own join table is the only source of which finishes apply),
  * which the existing `OptionStep`/`TextMenuItem` already renders as an
  * honest "not available yet" notice with zero new code. DESIGN/MATERIAL
  * entries were already individually gated (`isAvailable`/`reason` per
- * entry, not per step) — that mechanism is exactly what a real dropdown
+ * entry, not per step) - that mechanism is exactly what a real dropdown
  * needs, unchanged.
  *
  * **2026-08-29 second follow-up, direct owner feedback**: "The price for
- * the product should be clear, no waiting for configure... we have price" —
+ * the product should be clear, no waiting for configure... we have price" -
  * `selections` no longer starts at `EMPTY_SELECTIONS`. `computeDefaultSelections`
  * fills DESIGN/MATERIAL/FINISH/SIZE with the product's own real first
  * catalogue entries on mount (see its own doc comment), so a price is
  * already in flight on first render; changing material or finish afterwards
- * re-fetches and updates it the same way any other change always has —
+ * re-fetches and updates it the same way any other change always has -
  * "no waiting for configure" turned out to be a defaults problem, not a
  * new mechanism. SIZE itself is now picked from a real `ProductPresetSize`
  * dropdown (owner: "realne dostępne rozmiary predefiniowane, a nie
  * wpisywane przez klienta") instead of typed centimetres, except for
- * `requiresExactSize` products, which keep the typed `Popover` — an exact,
+ * `requiresExactSize` products, which keep the typed `Popover` - an exact,
  * per-installation measurement is the entire point of that flag, not a UI
  * preference to design around. `ConfiguratorPreview` (the material+design
- * photo composite) is gone entirely — owner: "nie pokazujemy żadnych
- * symulacji materiałów, rozmiarów" (no material/size simulations) — the
+ * photo composite) is gone entirely - owner: "nie pokazujemy żadnych
+ * symulacji materiałów, rozmiarów" (no material/size simulations) - the
  * product's own real photography already shows what the customer gets.
  *
  * State ownership, deliberately split three ways (unchanged by the
- * redesign above — this is presentation-only, no state/domain logic moved):
- *   - `selections`  — what the customer has picked. Local React state, and
+ * redesign above - this is presentation-only, no state/domain logic moved):
+ *   - `selections`  - what the customer has picked. Local React state, and
  *     the URL query string, so refresh and back/forward both work (brief
  *     §36).
- *   - `snapshot`    — steps, resolved options, price, feasibility. NEVER
+ *   - `snapshot`    - steps, resolved options, price, feasibility. NEVER
  *     computed here. Every change re-requests it from the
  *     `getConfiguratorSnapshot` Server Action (§10.2: prices are
  *     server-authoritative, full stop).
@@ -129,7 +129,7 @@ import type {
   ConfiguratorOptionData,
   OptionAvailability,
 } from '@/server/configurator/resolve-options';
-// A pure module (`domain/compatibility` and plain reshaping — no Prisma, no
+// A pure module (`domain/compatibility` and plain reshaping - no Prisma, no
 // Node built-ins), so it is safe to import as a real value into this client
 // island. That is what lets the default selection be filtered by exactly the
 // same rules the server enforces, rather than by a second copy of them.
@@ -156,13 +156,13 @@ const STEP_LABEL: Record<StepCode, string> = {
   SUMMARY: SITE.configuratorStepSummaryPl,
 };
 
-/** Fixed at 1 — quantity belongs to the cart (P5), not the configurator. */
+/** Fixed at 1 - quantity belongs to the cart (P5), not the configurator. */
 const QUANTITY = 1;
 
 /**
  * Steps rendered as breadcrumb crumbs (dropdown Menu/Popover), not
  * accordion bands. Excluded from `expandedStep`'s "open the first
- * unsatisfied step" search — an accordion band auto-opening for a step that
+ * unsatisfied step" search - an accordion band auto-opening for a step that
  * has no band any more would open nothing and silently do nothing.
  */
 const BREADCRUMB_STEPS: readonly StepCode[] = ['DESIGN', 'MATERIAL', 'FINISH', 'SIZE'];
@@ -171,12 +171,12 @@ const BREADCRUMB_STEPS: readonly StepCode[] = ['DESIGN', 'MATERIAL', 'FINISH', '
  * 2026-08-29, owner feedback, verbatim: "sekcja wzorów jest do dupy... nie
  * usuwajmy tej funkcji zostawmy na przyszłość - tylko wyłącz totalnie z
  * wizualizacji i ui opcje wybierania wzorów w produktach" (the patterns
- * section isn't working out — don't remove the feature, leave it for the
+ * section isn't working out - don't remove the feature, leave it for the
  * future, just turn pattern selection off entirely from the UI). Every
  * DESIGN-related mechanism stays real and working underneath (the crumb
  * component, `computeDefaultSelections` still picks a real default design
  * so WALL_ART-style pricing keeps working, the domain step machine is
- * untouched) — flipping this one flag back to `true` is the entire
+ * untouched) - flipping this one flag back to `true` is the entire
  * re-enable path, no further code changes needed.
  */
 const PATTERN_SELECTION_ENABLED = false;
@@ -186,7 +186,7 @@ function cmInputFor(mm: number | null): string {
 }
 
 /**
- * A real, immediately-priceable starting configuration — the product's own
+ * A real, immediately-priceable starting configuration - the product's own
  * first catalogue design, first material, that material's first available
  * finish, and a preset size (empty when the product has none, e.g.
  * `requiresExactSize` floor elements, which genuinely need the customer's
@@ -195,7 +195,7 @@ function cmInputFor(mm: number | null): string {
  * starting state, never removes the choice itself.
  *
  * The size default prefers the MIDDLE preset ("Średni"), not the smallest
- * — found live, not assumed: the smallest preset on a real product
+ * - found live, not assumed: the smallest preset on a real product
  * (`obraz-drewniany-z-grawerem`, 20×20 cm) is genuinely too small for that
  * design's minimum line width, so defaulting to it landed a first-time
  * visitor on an immediate, correct-but-unwelcoming feasibility warning.
@@ -210,14 +210,14 @@ export function computeDefaultSelections(
   // step for. Added 2026-08-31 with BUG-06, which made the write path
   // refuse exactly that: JEWELRY has no FINISH step (§5), the seeded
   // bracelet's oak offers oiling, and the default therefore carried a
-  // finishId the product is not allowed to have — a page that priced fine
+  // finishId the product is not allowed to have - a page that priced fine
   // and then refused to add to the cart. Tested in
   // `tests/unit/configurator-defaults.test.ts`.
   const steps = stepsForProductType(productTypeCode);
   // Filtered through the same §7.2 rules the picker and the server-side
   // gate use (`docs/REVIEW-DETAILED.md` BUG-03). This used to take
   // `options.designs[0]` and `options.materials[0]` raw, so a deactivated
-  // material — or a design that was catalogued but never cleared for sale —
+  // material - or a design that was catalogued but never cleared for sale -
   // could become the default nobody chose. With pattern selection currently
   // hidden, that default is also the design that ends up in the order
   // snapshot and on the production sheet, which makes it the one selection
@@ -243,7 +243,7 @@ export function computeDefaultSelections(
 
 /**
  * The URL is still the source of truth wherever it says something (a
- * shared link, a cart "Edytuj" link, a `/wzory` deep link) — `defaults`
+ * shared link, a cart "Edytuj" link, a `/wzory` deep link) - `defaults`
  * only fills in whatever the URL left unset, so an explicit link (which
  * always carries every field a saved `Configuration` needs) is a no-op
  * here, and a bare product-page landing gets a fully real starting price.
@@ -268,7 +268,7 @@ type ConfiguratorProps = {
   /** §5's step list is keyed on this, and  needs it to avoid defaulting a field the type has no step for (BUG-06). A plain string, so it crosses the Server->Client boundary safely. */
   readonly productTypeCode: ProductTypeCode;
   readonly options: ConfiguratorOptionData;
-  /** „Produkt obejmuje blat. Nogi nie są w zestawie.” and similar — shown in the summary too (§12). */
+  /** „Produkt obejmuje blat. Nogi nie są w zestawie.” and similar - shown in the summary too (§12). */
   readonly materialNotesPl: string | null;
   /** Floor/panel products: no preset sizes, and a mandatory acknowledgement in the summary (§11). */
   readonly requiresExactSize: boolean;
@@ -278,9 +278,9 @@ type ConfiguratorProps = {
     readonly minHeightMm: number;
     readonly maxHeightMm: number;
   };
-  /** The "Preview as customer" admin feature's `?podglad=1` flag, passed down so every `getConfiguratorSnapshot` call (not just the page's own initial SSR fetch) can keep bypassing the `isActive` gate. Re-verified server-side on every call — see `getConfiguratorSnapshot`'s own doc comment. */
+  /** The "Preview as customer" admin feature's `?podglad=1` flag, passed down so every `getConfiguratorSnapshot` call (not just the page's own initial SSR fetch) can keep bypassing the `isActive` gate. Re-verified server-side on every call - see `getConfiguratorSnapshot`'s own doc comment. */
   readonly isPreview?: boolean;
-  /** P9 phase 2: the customer's own previously-uploaded designs, offered as a "reuse" alternative to uploading fresh on `CUSTOM_UPLOAD`. Server-fetched once on the product page — always passed, even for products with no such step, since it's cheap and simpler than a per-product-type check at the call site. */
+  /** P9 phase 2: the customer's own previously-uploaded designs, offered as a "reuse" alternative to uploading fresh on `CUSTOM_UPLOAD`. Server-fetched once on the product page - always passed, even for products with no such step, since it's cheap and simpler than a per-product-type check at the call site. */
   readonly savedDesigns?: readonly OwnedCustomerDesignListItem[];
 };
 
@@ -296,12 +296,12 @@ export function Configurator({
 }: ConfiguratorProps) {
   const router = useRouter();
   // 2026-08-29, owner feedback, verbatim: "The price for the product should
-  // be clear, no waiting for configure... we have price" — the page must
+  // be clear, no waiting for configure... we have price" - the page must
   // show a real price the moment it loads, not an empty "Podaj wymiary"
   // placeholder. `computeDefaultSelections` fills every dimension with the
   // product's own real first catalogue entry (first design, first material,
   // that material's first available finish, its first preset size) instead
-  // of starting from `EMPTY_SELECTIONS` — the snapshot effect below then
+  // of starting from `EMPTY_SELECTIONS` - the snapshot effect below then
   // fires on mount exactly as it does on any later change, so the very
   // first render already has a real price in flight.
   const [selections, setSelections] = useState<Selections>(() =>
@@ -322,7 +322,7 @@ export function Configurator({
   // wrong (`docs/REVIEW-DETAILED.md` SEC-03) instead of one generic line.
   const [addToCartError, setAddToCartError] = useState<PricingRejectionCode | null>(null);
   // 2026-08-28, owner feedback: "wybiera się poprzez kliknięcie na band z
-  // nazwą" (you select by clicking a band with the name) — each section is
+  // nazwą" (you select by clicking a band with the name) - each section is
   // a real MUI `Accordion`, one open at a time. `null` means every section
   // is collapsed (nothing needs the customer's attention right now, or
   // everything is already filled in).
@@ -332,8 +332,8 @@ export function Configurator({
   // 2026-08-29, owner feedback: DESIGN/MATERIAL/FINISH/SIZE moved out of the
   // accordion entirely into a compact MUI `Breadcrumbs` trail ("Wzór: ... ›
   // Materiał: ... › Wymiary: ..."), each crumb opening a `Menu` (DESIGN/
-  // MATERIAL/FINISH — a real dropdown list, not an image-swatch grid) or a
-  // `Popover` (SIZE — two plain fields, no slider: "you don't need to
+  // MATERIAL/FINISH - a real dropdown list, not an image-swatch grid) or a
+  // `Popover` (SIZE - two plain fields, no slider: "you don't need to
   // visualize the wood size or look"). One shared anchor/open-step pair
   // covers all four, since only one can be open at a time.
   const [crumbAnchor, setCrumbAnchor] = useState<HTMLElement | null>(null);
@@ -367,21 +367,21 @@ export function Configurator({
     if (hydrated.current) return;
     hydrated.current = true;
     applyUrlSelections(window.location.search);
-    // A cart item's own "Edytuj" link sets this — see src/app/(shop)/koszyk.
+    // A cart item's own "Edytuj" link sets this - see src/app/(shop)/koszyk.
     // Read once, at mount: switching cart items to edit is always a fresh
     // page load, never something that changes mid-session.
     setEditConfigurationId(new URLSearchParams(window.location.search).get('edit'));
   }, [applyUrlSelections]);
 
   // The browser's own Back/Forward buttons change the URL without any of
-  // our own effects running — `router.replace` never pushes a history
+  // our own effects running - `router.replace` never pushes a history
   // entry, so this fires only when navigation actually happened elsewhere
   // (leaving and returning to this URL, or Next reusing a cached instance
   // of this route). Without this listener the address bar changes but the
   // rendered configurator does not, which is exactly the bug brief §36
   // flags as "browser back button during configuration". Every section is
   // always visible now, so there is no step index to restore alongside the
-  // selections — just the selections themselves.
+  // selections - just the selections themselves.
   useEffect(() => {
     function onPopState() {
       applyUrlSelections(window.location.search);
@@ -391,7 +391,7 @@ export function Configurator({
   }, [applyUrlSelections]);
 
   // Every change re-fetches steps/options/price from the server. Never
-  // computed locally — this is the entire point of §10.2.
+  // computed locally - this is the entire point of §10.2.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -403,7 +403,7 @@ export function Configurator({
       }
     });
     // This is the only owner of the selection-encoding keys, but it isn't
-    // the only owner of the URL — the "Preview as customer" admin feature
+    // the only owner of the URL - the "Preview as customer" admin feature
     // (`?podglad=1`) needs to survive every one of this effect's own
     // `router.replace` calls, not just the very first render, or a staff
     // preview would 404 the moment this effect first runs (an inactive
@@ -423,7 +423,7 @@ export function Configurator({
 
   const steps = snapshot?.steps ?? [];
 
-  // Open the first section once the real step list is known — nothing to
+  // Open the first section once the real step list is known - nothing to
   // open before that (would flash the wrong band on a slow connection).
   // biome-ignore lint/correctness/useExhaustiveDependencies: deliberately only re-runs once real steps arrive, not on every selections change
   useEffect(() => {
@@ -437,13 +437,13 @@ export function Configurator({
 
   // After a swatch/click-based selection (DESIGN/MATERIAL/FINISH/THICKNESS/
   // INSTALLATION_VARIANT/SIZE-once-both-dimensions-are-set), automatically
-  // open the next still-empty band — "wybiera się poprzez kliknięcie na
+  // open the next still-empty band - "wybiera się poprzez kliknięcie na
   // band z nazwą": one click (or one completed field pair) both selects the
   // option and hands the customer straight to what's next, without forcing
   // a fixed order (every band can still be opened by hand at any time; this
-  // is a convenience, not a gate — `isStepEnterable` no longer restricts
+  // is a convenience, not a gate - `isStepEnterable` no longer restricts
   // anything, same as the previous pass already established).
-  // PERSONALIZATION (optional free text) deliberately never auto-advances —
+  // PERSONALIZATION (optional free text) deliberately never auto-advances -
   // it's the last real step before SUMMARY and there is nothing useful to
   // jump to next.
   const advanceExpandedStep = useCallback(
@@ -462,7 +462,7 @@ export function Configurator({
   // blurred width while height was still empty, which force-set a spurious
   // "Podaj wymiar" error on a field the customer had not even reached yet.
   // Auto-advance only fires once BOTH dimensions are committed and valid
-  // (`isStepSatisfied('SIZE', ...)`) — whichever field happens to complete
+  // (`isStepSatisfied('SIZE', ...)`) - whichever field happens to complete
   // the pair, not tied to a fixed width-then-height order (the customer may
   // fill either first).
   const commitWidth = useCallback(() => {
@@ -488,7 +488,7 @@ export function Configurator({
   }, [heightInput, selections, advanceExpandedStep, closeCrumb]);
 
   // Clearing a dependent selection is only correct when it is ACTUALLY no
-  // longer compatible — never a blanket clear on every change — and the
+  // longer compatible - never a blanket clear on every change - and the
   // customer is told why (§7.1: "never silently keep an incompatible
   // state... the customer is told, in Polish, that it was cleared and
   // why"). Checked against the real catalogue data already on the page
@@ -538,7 +538,7 @@ export function Configurator({
     [options, selections, advanceExpandedStep],
   );
 
-  // Re-validates and re-prices server-side either way — §10.2 applies to
+  // Re-validates and re-prices server-side either way - §10.2 applies to
   // the cart exactly as it applies to every price shown during
   // configuration. `editConfigurationId` decides which of the two real Server
   // Actions runs; the UI difference is just the button label.
@@ -578,11 +578,11 @@ export function Configurator({
     selections.materialId === null ? null : (options.materials.find((m) => m.id === selections.materialId) ?? null);
 
   // DESIGN is the one breadcrumb dropdown that shows real artwork (owner:
-  // "pattern should be more like png without background") — the transparent
+  // "pattern should be more like png without background") - the transparent
   // pattern SVGs, shown bare with no card/circle behind them (see the
   // `<img>` inside `DesignMenuItem` below). MATERIAL/FINISH deliberately
-  // stay text-only lists — owner: "you don't need to visualize the wood
-  // size or look" — so they use the plain `OptionAvailability` arrays
+  // stay text-only lists - owner: "you don't need to visualize the wood
+  // size or look" - so they use the plain `OptionAvailability` arrays
   // directly, the same shape `OptionStep`/THICKNESS already uses, no
   // image lookup needed.
   const designSwatches: readonly SwatchEntry[] = (snapshot?.availability.designs ?? []).map((entry) =>
@@ -632,12 +632,12 @@ export function Configurator({
           <>
             {/* 2026-08-29 second follow-up, owner feedback: not MUI
                 `Breadcrumbs` (a navigation-trail widget, chevron separators
-                implying "you are here in a hierarchy") — each selector is
+                implying "you are here in a hierarchy") - each selector is
                 its own separate, elevated, rounded-rectangle `Paper` chip
-                with real margin between them, not one unified block — the
+                with real margin between them, not one unified block - the
                 same low-profile surface a `Snackbar` uses, per item, rather
                 than one transient auto-hiding message ("the snackbar should
-                work like list"). `flexWrap: 'wrap'` still applies — on a
+                work like list"). `flexWrap: 'wrap'` still applies - on a
                 narrow viewport the row spills onto a second line instead of
                 clipping the last chip off-screen. */}
             <Box
@@ -705,10 +705,10 @@ export function Configurator({
             </Menu>
 
             {/* 2026-08-29, owner feedback: real available sizes, predefined,
-                rather than typed by the customer — a real dropdown of the
+                rather than typed by the customer - a real dropdown of the
                 product's own `ProductPresetSize` rows, same interaction as
                 DESIGN/MATERIAL/FINISH. Falls back to the typed `Popover`
-                only when the product genuinely has no preset list —
+                only when the product genuinely has no preset list -
                 `requiresExactSize` floor elements never get presets seeded
                 (an exact, per-installation measurement is the whole point
                 of that flag), and any other product that simply has none
@@ -806,7 +806,7 @@ export function Configurator({
               {selectedInstallVariant !== null && (
                 <div>
                   <Text muted>{selectedInstallVariant.descPl}</Text>
-                  {/* biome-ignore lint/performance/noImgElement: placeholder SVGs get nothing from next/image's raster pipeline — same as Card.tsx */}
+                  {/* biome-ignore lint/performance/noImgElement: placeholder SVGs get nothing from next/image's raster pipeline - same as Card.tsx */}
                   <img
                     src={selectedInstallVariant.diagramUrl}
                     alt={selectedInstallVariant.namePl}
@@ -819,7 +819,7 @@ export function Configurator({
         )}
 
         {/* 2026-08-29 second follow-up, owner feedback: hidden entirely
-            when the product has no real personalization configured — the
+            when the product has no real personalization configured - the
             step being nominally present on this product TYPE
             (`stepsForProductType`) doesn't mean this specific product's own
             `PersonalizationSpec` actually exists/`isEnabled`. Showing a
@@ -899,10 +899,10 @@ function selectedLabelOf(entries: readonly SwatchEntry[], selectedId: string | n
 }
 
 /**
- * One crumb of the top breadcrumb trail — "Wzór" when nothing is picked
+ * One crumb of the top breadcrumb trail - "Wzór" when nothing is picked
  * yet, "Wzór: Wzór podstawowy" once it is, the same "Colour: Blue" pattern
  * the accordion bands already used. A real MUI `Link` styled as a button
- * (not a navigation link — nothing here changes the URL), so it is a real
+ * (not a navigation link - nothing here changes the URL), so it is a real
  * `<button>` under the hood: keyboard-focusable, and exactly what
  * `getByRole('button', ...)` finds in the e2e suite.
  */
@@ -936,9 +936,9 @@ function CrumbLink({
 }
 
 /**
- * One row of the DESIGN dropdown — the one crumb that shows real artwork.
+ * One row of the DESIGN dropdown - the one crumb that shows real artwork.
  * 2026-08-29, owner feedback, verbatim: "pattern should be more like png
- * without background not some div block" — a bare `<img>` (not `next/image`;
+ * without background not some div block" - a bare `<img>` (not `next/image`;
  * these patterns are transparent SVGs, and `next/image` cannot optimize SVG
  * without `dangerouslyAllowSVG`, same reason the installation diagram above
  * uses a plain `<img>`), no circle/card behind it, `objectFit: contain` so
@@ -956,7 +956,7 @@ function DesignMenuItem({
 }) {
   const item = (
     <MenuItem disabled={!entry.isAvailable} selected={selected} onClick={() => onSelect(entry.id)} sx={{ gap: 1.5 }}>
-      {/* biome-ignore lint/performance/noImgElement: transparent SVG pattern art — next/image can't optimize SVG without dangerouslyAllowSVG, same precedent as the installation diagram below */}
+      {/* biome-ignore lint/performance/noImgElement: transparent SVG pattern art - next/image can't optimize SVG without dangerouslyAllowSVG, same precedent as the installation diagram below */}
       <img src={entry.imageUrl} alt="" width={32} height={32} style={{ objectFit: 'contain', flexShrink: 0 }} />
       <span style={{ flex: 1 }}>{entry.namePl}</span>
       {selected && <CheckIcon fontSize="small" color="secondary" />}
@@ -965,7 +965,7 @@ function DesignMenuItem({
   return <DisabledExplanation title={entry.reasonPl ?? undefined}>{item}</DisabledExplanation>;
 }
 
-/** One row of the MATERIAL/FINISH dropdowns — text only, no image (owner: "you don't need to visualize the wood size or look"). */
+/** One row of the MATERIAL/FINISH dropdowns - text only, no image (owner: "you don't need to visualize the wood size or look"). */
 function TextMenuItem({
   entry,
   selected,
@@ -989,9 +989,9 @@ function TextMenuItem({
 }
 
 /**
- * One collapsible "band" of the configurator — a real MUI `Accordion`,
+ * One collapsible "band" of the configurator - a real MUI `Accordion`,
  * closed by default except the first unsatisfied step (owner feedback,
- * 2026-08-28: "wybiera się poprzez kliknięcie na band z nazwą" — you pick
+ * 2026-08-28: "wybiera się poprzez kliknięcie na band z nazwą" - you pick
  * by clicking a named band, like a t-shirt colour/size selector). The
  * band's own header always shows the current selection next to its name,
  * so a collapsed band still communicates its state at a glance.
@@ -1030,7 +1030,7 @@ function ConfigSection({
           {heading}
           {selectedLabel !== null && (
             <Typography component="span" color="text.secondary" sx={{ ml: 1, font: 'var(--mui-font-body1)' }}>
-              — {selectedLabel}
+              - {selectedLabel}
             </Typography>
           )}
         </Typography>
@@ -1043,12 +1043,12 @@ function ConfigSection({
 /**
  * 2026-08-29, owner feedback, verbatim: "tekst do wygrawerowania - this
  * should be very small section - disabled for now, and number of
- * characters should match with the product" — a real disabled `TextField`,
+ * characters should match with the product" - a real disabled `TextField`,
  * not a full form: the placeholder states it's not enabled yet and shows
  * this exact product's own real `PersonalizationSpec.maxCharacters`
- * (`null` — no spec at all, or one not enabled — falls back to a generic
+ * (`null` - no spec at all, or one not enabled - falls back to a generic
  * "not offered" placeholder, same honesty `PersonalizationStep` used to
- * apply). No accordion band, no breadcrumb — just this one small field.
+ * apply). No accordion band, no breadcrumb - just this one small field.
  */
 function PersonalizationStub({ maxCharacters }: { readonly maxCharacters: number | null }) {
   return (
@@ -1067,12 +1067,12 @@ function PersonalizationStub({ maxCharacters }: { readonly maxCharacters: number
 }
 
 /**
- * The SIZE crumb's popover content — two plain, precise `TextField`s.
+ * The SIZE crumb's popover content - two plain, precise `TextField`s.
  * 2026-08-29, owner feedback, verbatim: "you don't need to visualize the
- * wood size or look" — the previous pass's `Slider` (a visual, drag-driven
+ * wood size or look" - the previous pass's `Slider` (a visual, drag-driven
  * control) is gone; a compact popover triggered from a breadcrumb crumb has
  * no room for one anyway. Each field still commits on blur, so live
- * pricing (§10.2) is unchanged — the server round-trip fires the moment a
+ * pricing (§10.2) is unchanged - the server round-trip fires the moment a
  * real value is typed and the field loses focus, exactly as before.
  */
 function SizeFields({
@@ -1141,13 +1141,13 @@ function SizeFields({
 }
 
 /**
- * Pinned to the viewport bottom throughout — the running price is always
+ * Pinned to the viewport bottom throughout - the running price is always
  * visible while configuring, the same pattern Bazaar/NextMerce use for
  * their PDP add-to-cart bar (this session's redesign reference,
  * `docs/HANDOVER.md` §9g). `position: fixed` rather than `sticky`: the
  * page's content height varies a lot depending on the product's own step
  * list, and `sticky` only pins once the element would otherwise scroll past
- * its normal flow position — `fixed` is unconditional on both mobile and
+ * its normal flow position - `fixed` is unconditional on both mobile and
  * desktop. The outer `<div>`'s `paddingBottom: 72` above keeps this from
  * covering the page's last section.
  */
@@ -1208,10 +1208,10 @@ function StickyPriceBar({
 // ---------------------------------------------------------------------------
 
 /**
- * Renders EVERY option, never just the selectable ones — ARCHITECTURE.md
+ * Renders EVERY option, never just the selectable ones - ARCHITECTURE.md
  * §7.2: an unavailable option is shown disabled with a Polish reason, not
  * hidden, so the customer learns the rule instead of wondering where an
- * option went. Text-only (`ToggleButtonGroup`) — used for THICKNESS,
+ * option went. Text-only (`ToggleButtonGroup`) - used for THICKNESS,
  * INSTALLATION_VARIANT, and font choice, the remaining accordion-band
  * steps; DESIGN/MATERIAL/FINISH live in the breadcrumb dropdowns instead
  * (`DesignMenuItem`/`TextMenuItem`, above).
@@ -1253,10 +1253,10 @@ function OptionStep({
 
 /**
  * P4's real upload flow (`ARCHITECTURE.md` §13). Only the first-upload
- * path is wired here — `uploadCustomDesign`. `reuploadCustomDesign`
+ * path is wired here - `uploadCustomDesign`. `reuploadCustomDesign`
  * (customer re-upload after staff requests `NEEDS_CHANGES`) is real,
  * tested, and callable (`server/actions/design-review.ts`), and now has
- * its own real UI on `/moje-konto/wzory/[id]` (2026-08-28) — that event
+ * its own real UI on `/moje-konto/wzory/[id]` (2026-08-28) - that event
  * happens on an existing order past checkout, not inside this pre-purchase
  * configurator.
  */
@@ -1293,11 +1293,11 @@ function CustomUploadStep({
     }
 
     // A file large enough to exceed next.config's own `serverActions.
-    // bodySizeLimit` (26mb — deliberately just above the app's real 25MB
+    // bodySizeLimit` (26mb - deliberately just above the app's real 25MB
     // cap, see next.config's own comment) never reaches `uploadCustomDesign`
     // at all: Next.js rejects the request at the framework boundary and the
     // call throws instead of resolving `{ok: false}`. Found live while
-    // verifying this exact upload flow — without this catch, `pending`
+    // verifying this exact upload flow - without this catch, `pending`
     // never clears and the customer is stuck on "Przesyłanie..." forever,
     // the failure visible only in the browser console. `file.size`/`file.
     // type` are already known client-side, so the same real-numbers
@@ -1325,7 +1325,7 @@ function CustomUploadStep({
 
   if (customerDesignId !== null) {
     // Reusing a design from `savedDesigns` is a real, previously-existing
-    // row — it may already be APPROVED, not "just uploaded and pending."
+    // row - it may already be APPROVED, not "just uploaded and pending."
     // Showing the hardcoded pending/needs-review copy for an already
     // -approved reused design would be actively wrong, not just imprecise.
     const reused = savedDesigns.find((design) => design.id === customerDesignId);
@@ -1359,7 +1359,7 @@ function CustomUploadStep({
           >
             {savedDesigns.map((design) => (
               <MenuItem key={design.id} value={design.id}>
-                {design.titlePl ?? design.originalName} — {customerDesignStatusMessage(design.status)}
+                {design.titlePl ?? design.originalName} - {customerDesignStatusMessage(design.status)}
               </MenuItem>
             ))}
           </TextField>
@@ -1502,8 +1502,8 @@ function SummaryStep({
           bubbles) shouldn't carry information that isn't actually a
           reactive per-selection warning. NATURAL_VARIATION is true for
           every selection of a natural-variable material regardless of size
-          — real product specification, not something the customer needs
-          to acknowledge or react to — so it renders as a plain caption
+          - real product specification, not something the customer needs
+          to acknowledge or react to - so it renders as a plain caption
           below instead of a boxed `Alert`. Everything else here (line
           width, detail spacing, and anything requiring acknowledgement)
           stays a real `Alert`: those genuinely depend on the current

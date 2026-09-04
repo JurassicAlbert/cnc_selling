@@ -1,17 +1,17 @@
 /**
- * The configurator step machine — ARCHITECTURE.md §7.1.
+ * The configurator step machine - ARCHITECTURE.md §7.1.
  *
  * "The configurator is a finite state machine driven by the product type's
  * step list (§5), not a form." This module owns exactly that machine: which
  * steps exist for a product type, whether a given step can be entered yet,
  * and whether the whole configuration is complete. It does NOT resolve
- * *which options* are valid for a step (which material, which finish) — that
+ * *which options* are valid for a step (which material, which finish) - that
  * is `domain/compatibility`, already built, and combining the two is a
  * server-layer concern once real product/compatibility rows exist.
  *
  * "A step is enterable only if all prior required selections are valid" is
  * read literally: step N is enterable iff every step before it in the list
- * is satisfied, not just the immediately preceding one — skipping around is
+ * is satisfied, not just the immediately preceding one - skipping around is
  * not possible even if a middle step happens to already hold a value.
  */
 
@@ -42,7 +42,7 @@ const STEPS_BY_PRODUCT_TYPE: Readonly<Record<ProductTypeCode, readonly StepCode[
   KITCHEN_TILE: ['INSTALLATION_VARIANT', 'DESIGN', 'MATERIAL', 'SIZE', 'FINISH', 'SUMMARY'],
   FLOOR_ELEMENT: ['MATERIAL', 'SIZE', 'THICKNESS', 'DESIGN', 'FINISH', 'SUMMARY'],
   CUSTOM: ['CUSTOM_UPLOAD', 'MATERIAL', 'SIZE', 'FINISH', 'PERSONALIZATION', 'SUMMARY'],
-  // Identical to TABLE_TOP — the frame/base is product copy, not a step. See
+  // Identical to TABLE_TOP - the frame/base is product copy, not a step. See
   // docs/HANDOVER.md §9d.
   LOFT_FURNITURE: ['DESIGN', 'MATERIAL', 'SIZE', 'THICKNESS', 'FINISH', 'PERSONALIZATION', 'SUMMARY'],
   // No THICKNESS (a small blank has one fixed thickness) and no FINISH
@@ -63,7 +63,7 @@ export type Selections = {
   readonly thicknessMm: number | null;
   readonly finishId: string | null;
   readonly installationVariant: string | null;
-  /** Optional — a customer may buy a piece with no engraved text at all. */
+  /** Optional - a customer may buy a piece with no engraved text at all. */
   readonly personalizationText: string | null;
   readonly fontId: string | null;
 };
@@ -82,7 +82,7 @@ export const EMPTY_SELECTIONS: Selections = {
 };
 
 /**
- * PERSONALIZATION and SUMMARY are always satisfied by construction —
+ * PERSONALIZATION and SUMMARY are always satisfied by construction -
  * personalization is optional (brief never requires engraved text), and
  * SUMMARY has no selection of its own, it only requires everything before it.
  */
@@ -202,14 +202,14 @@ export type SelectionOutsideProductType = {
 
 /**
  * The first selection that is set but belongs to a step this product type
- * does not have — `null` when every set field is in scope.
+ * does not have - `null` when every set field is in scope.
  *
  * Written 2026-08-31 for `docs/REVIEW-DETAILED.md` BUG-06.
  * `checkStepAppliesToProductType` above had existed, with tests, since P3,
  * and **nothing had ever called it**: `docs/CHECKLIST.md` claimed it
  * "rejects e.g. a THICKNESS selection on WALL_ART" while the running
  * application accepted exactly that. The consequences were real, not
- * theoretical — `personalizationText` was stored and shown for products
+ * theoretical - `personalizationText` was stored and shown for products
  * with no `PersonalizationSpec` (so `evaluatePersonalization` returned no
  * issues and **no length limit of any kind applied**), and a `thicknessMm`
  * reached the immutable order snapshot for a wall panel, where an order
@@ -220,8 +220,8 @@ export type SelectionOutsideProductType = {
  * "no such step exists for this kind of product", which is a malformed
  * request; the narrowed list drives "this product offers nothing to choose
  * here", which is a real, orderable configuration. Conflating them would
- * turn `OPTION_UNAVAILABLE` — a message a customer on a stale link can act
- * on — into a generic invalid-configuration error.
+ * turn `OPTION_UNAVAILABLE` - a message a customer on a stale link can act
+ * on - into a generic invalid-configuration error.
  */
 export function findSelectionOutsideProductType(
   steps: readonly StepCode[],

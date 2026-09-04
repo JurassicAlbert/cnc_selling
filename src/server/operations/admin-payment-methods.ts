@@ -1,11 +1,11 @@
 /**
  * Staff `PaymentMethodConfig` mutations. Same `applyXxx(staff, ...)` /
  * `xxx(...)` split as every other admin action file. Deliberately does
- * NOT expose `isConnected` as an editable field anywhere in this file —
+ * NOT expose `isConnected` as an editable field anywhere in this file -
  * see the model's own schema comment: whether a provider is really wired
  * up is a code fact, not admin-togglable data, or an admin could silently
  * "enable" a payment method with no real integration behind it (§15's "no
- * fake payment" rule). No delete — real FK target of `Order`; `isActive`
+ * fake payment" rule). No delete - real FK target of `Order`; `isActive`
  * toggle only, same as every other panel entity.
  */
 
@@ -46,7 +46,7 @@ export async function applyCreatePaymentMethodConfig(staff: CurrentSession, inpu
   if (issue !== null) {
     return { ok: false, detail: issue };
   }
-  // isConnected always starts false — a real integration is a code change
+  // isConnected always starts false - a real integration is a code change
   // (a real PaymentProvider implementation), never a value this form sets.
   const config = await prisma.paymentMethodConfig.create({ data: { ...input, isConnected: false } });
   await writeAuditLog({ actor: staff, entity: 'PaymentMethodConfig', entityId: config.id, action: 'create', diff: input });

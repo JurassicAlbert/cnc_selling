@@ -1,20 +1,20 @@
 /**
- * Pure delivery-pricing logic — deliberately NOT in `src/server/repositories`
+ * Pure delivery-pricing logic - deliberately NOT in `src/server/repositories`
  * (which imports the real `pg`/Prisma client, unsafe to pull into a
  * `'use client'` component: doing that once broke the production build with
  * `Module not found: Can't resolve 'net'/'tls'/'util'`, the Postgres driver's
  * Node-only dependencies leaking into the browser bundle).
  *
  * 2026-08-29 rewrite, owner request: shipping price is no longer a single
- * flat rate — it's picked from the chosen method's own real weight-tier
+ * flat rate - it's picked from the chosen method's own real weight-tier
  * table (`DeliveryWeightTier`, sourced from each carrier's own published
- * price list — see `prisma/seed.ts`). A method's price is now fully
- * determined by the CART (its total real weight — `domain/shipping/weight.ts`
- * — and, for a locker-based method, whether every item physically fits),
- * not something the customer's own selection changes — so unlike the old
+ * price list - see `prisma/seed.ts`). A method's price is now fully
+ * determined by the CART (its total real weight - `domain/shipping/weight.ts`
+ * - and, for a locker-based method, whether every item physically fits),
+ * not something the customer's own selection changes - so unlike the old
  * version, this is now computed ONCE, server-side, in
  * `server/repositories/delivery-methods.ts`'s `resolveDeliveryMethodsForCart`
- * — `CheckoutForm.tsx` just displays the result, it no longer imports or
+ * - `CheckoutForm.tsx` just displays the result, it no longer imports or
  * calls anything from this file directly.
  */
 
@@ -47,9 +47,9 @@ export type DeliveryEvaluation =
  * this method is even usable for this cart and, if so, what it costs.
  *
  * Order of checks, deliberately: free-shipping threshold first (a merchant
- * policy override that should win regardless of weight), then — for a
+ * policy override that should win regardless of weight), then - for a
  * method with no real tier table at all (`Odbiór osobisty`, or a carrier
- * row prepared but not yet priced) — the flat `priceGrosze` fallback, then
+ * row prepared but not yet priced) - the flat `priceGrosze` fallback, then
  * real per-item locker-fit (only meaningful for a tier that actually
  * carries dimension limits), then the cheapest tier whose weight ceiling
  * the cart's real total weight clears.
@@ -68,8 +68,8 @@ export function evaluateDeliveryMethod(
   const cartWeightGrams = computeCartWeightGrams(cart.items);
 
   // Real InPost Paczkomat sizes aren't just weight brackets with a shared
-  // shape — XS is a genuinely SMALLER opening than A/B/C, not just
-  // shallower — so each tier's own weight ceiling AND its own dimensions
+  // shape - XS is a genuinely SMALLER opening than A/B/C, not just
+  // shallower - so each tier's own weight ceiling AND its own dimensions
   // (when it has any) are checked TOGETHER, per tier, cheapest first. A
   // tier with no dimension data (a courier with no published size limit)
   // only ever gates on weight.
@@ -86,7 +86,7 @@ export function evaluateDeliveryMethod(
     const opening = { openingWidthMm: tier.maxWidthMm, openingHeightMm: tier.maxHeightMm, maxDepthMm: tier.maxDepthMm };
     const everyItemFits = cart.items.every((item) => {
       if (item.widthMm === null || item.heightMm === null) {
-        return true; // nothing real to check against — never block on missing data
+        return true; // nothing real to check against - never block on missing data
       }
       const thicknessMm = item.thicknessMm ?? 18;
       return fitsLockerOpening({ widthMm: item.widthMm, heightMm: item.heightMm, thicknessMm }, opening);

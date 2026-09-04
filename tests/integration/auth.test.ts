@@ -9,7 +9,7 @@ import { prisma } from '@/server/db/client';
 /**
  * P6 Part B (guest-cart-merge-on-login) and Part C (order history / saved
  * configurations, `userId`-scoped). Same "real database, explicit cleanup"
- * discipline as `authz.test.ts` — every row's `email`/`sessionToken`
+ * discipline as `authz.test.ts` - every row's `email`/`sessionToken`
  * prefixed `test-p6-`, `afterEach` deletes everything under that prefix.
  * Not `withTestTransaction`: `mergeGuestCartIntoUser` opens its own
  * `$transaction` on the app's singleton, so a write made inside an outer,
@@ -165,7 +165,7 @@ describe('order history / saved configurations ownership (P6 Part C)', () => {
     expect(strangerOrders).toHaveLength(0);
   });
 
-  it('findOrderForUser returns null for another user\'s order — the 404-not-403 case', async () => {
+  it('findOrderForUser returns null for another user\'s order - the 404-not-403 case', async () => {
     const owner = await seedUser();
     const stranger = await seedUser();
     const orderNumber = uid();
@@ -220,15 +220,15 @@ describe('order history / saved configurations ownership (P6 Part C)', () => {
  * same product in their logged-out cart and in their account cart hit a
  * unique-constraint error inside the login transaction.
  *
- * So this is two bugs in one place — the duplicate the owner asked about,
+ * So this is two bugs in one place - the duplicate the owner asked about,
  * and a login that fails outright for the exact customer who has it.
  */
-describe('mergeGuestCartIntoUser — the same product in both carts', () => {
+describe('mergeGuestCartIntoUser - the same product in both carts', () => {
   it('merges the two lines into one and adds their quantities, instead of failing the login', async () => {
     const user = await seedUser();
     const product = await seedProduct();
     const guestToken = uid();
-    // The same configuration identity on both sides — what a customer who
+    // The same configuration identity on both sides - what a customer who
     // added the same thing logged-out and logged-in actually has.
     const sharedSignature = uid();
 

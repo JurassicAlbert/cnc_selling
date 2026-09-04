@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { isPlausibleEmail } from '@/domain/text/email';
 
-describe('isPlausibleEmail — a loose shape check, not full RFC 5322', () => {
+describe('isPlausibleEmail - a loose shape check, not full RFC 5322', () => {
   it('accepts real-looking addresses', () => {
     expect(isPlausibleEmail('staff@example.com')).toBe(true);
     expect(isPlausibleEmail('first.last+tag@sub.example.co.uk')).toBe(true);

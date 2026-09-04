@@ -1,4 +1,4 @@
-/** Staff analytics-retention action — ADMIN-only, same gate as pricing (a real, irreversible bulk delete, not a toggle). */
+/** Staff analytics-retention action - ADMIN-only, same gate as pricing (a real, irreversible bulk delete, not a toggle). */
 
 import { revalidatePath } from 'next/cache';
 

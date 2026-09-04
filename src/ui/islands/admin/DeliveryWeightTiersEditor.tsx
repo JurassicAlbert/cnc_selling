@@ -1,18 +1,18 @@
 'use client';
 
 /**
- * The carrier rate-card editor — `docs/AUDIT-2026-08-30.md` §20.
+ * The carrier rate-card editor - `docs/AUDIT-2026-08-30.md` §20.
  *
  * `DeliveryWeightTier` rows are what actually decide what a customer pays
  * for a tiered method, and until now the panel could not show them at all.
  * That made the delivery detail page worse than incomplete: it offered an
  * editable "Cena" that, for the InPost and DPD methods, is only a fallback
- * and is never charged — so an admin could change it, save, and see nothing
+ * and is never charged - so an admin could change it, save, and see nothing
  * happen to the real price.
  *
  * Deliberately built on the same shape as `ThicknessesEditor` /
  * `PresetSizesEditor` (list rows with a remove form, one inline add form,
- * `useActionState` for the error) rather than as a new kind of editor —
+ * `useActionState` for the error) rather than as a new kind of editor -
  * §20's own "avoid several different CRUD implementations for the same type
  * of task".
  *
@@ -33,7 +33,7 @@ import type { DeliveryMethodMutationResult } from '@/server/actions/admin-delive
 
 const INITIAL_STATE: DeliveryMethodMutationResult = { ok: true, id: '' };
 
-/** `''` (an untouched optional dimension field) must mean "no limit", not 0 — 0 would be a limit nothing can satisfy. */
+/** `''` (an untouched optional dimension field) must mean "no limit", not 0 - 0 would be a limit nothing can satisfy. */
 function optionalNumber(value: FormDataEntryValue | null): number | null {
   const raw = String(value ?? '').trim();
   return raw.length === 0 ? null : Number(raw);
@@ -44,7 +44,7 @@ function dimensionSummary(tier: AdminDeliveryWeightTier): string {
   if (parts.every((part) => part === null)) {
     return ADMIN.deliveryTierNoDimensionLimitPl;
   }
-  return `${parts.map((part) => (part === null ? '—' : `${part}`)).join(' × ')} mm`;
+  return `${parts.map((part) => (part === null ? '-' : `${part}`)).join(' × ')} mm`;
 }
 
 export function DeliveryWeightTiersEditor({

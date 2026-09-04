@@ -29,12 +29,12 @@ export const metadata: Metadata = {
 };
 
 /**
- * `params.orderNumber` arrives already URL-decoded by Next.js — the real
+ * `params.orderNumber` arrives already URL-decoded by Next.js - the real
  * slashes in "2026/08/0042" survive the round trip through the redirect
  * that encoded them as one path segment.
  *
  * A wrong or missing `?token=` renders the exact same "not found" state as
- * a genuinely nonexistent order number — §16.1's "404, not 403" rule,
+ * a genuinely nonexistent order number - §16.1's "404, not 403" rule,
  * applied here so an order's existence is never probeable by guessing
  * tokens against a real order number.
  */
@@ -54,8 +54,8 @@ export default async function OrderConfirmationPage({ params, searchParams }: Or
     notFound();
   }
 
-  // `getStoreSettings()` could technically start before the order lookup —
-  // it depends on nothing — but deliberately doesn't. `notFound()` above
+  // `getStoreSettings()` could technically start before the order lookup -
+  // it depends on nothing - but deliberately doesn't. `notFound()` above
   // throws, so a promise started earlier and never awaited becomes an
   // unhandled rejection that can take the process down. Two indexed row
   // reads are not worth that: this is the "don't optimise blindly" case,
@@ -79,7 +79,7 @@ export default async function OrderConfirmationPage({ params, searchParams }: Or
         {/*
          * 2026-08-29, owner feedback: the status banner/order summary/
          * shipment info were still raw HTML ("Dymki z informacjami to
-         * dalej typowy vanilla/raw html/css") — all real MUI now, so they
+         * dalej typowy vanilla/raw html/css") - all real MUI now, so they
          * move inside the same `ThemeRegistry` the review/support forms
          * already needed, instead of sitting outside it as plain HTML.
          */}

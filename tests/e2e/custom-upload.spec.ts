@@ -7,36 +7,36 @@ import { expect, test } from '@playwright/test';
  * upload → IP checkbox → warnings → order → status DESIGN_REVIEW". Same
  * click-through-by-visible-Polish-label style as `checkout.spec.ts`,
  * against the real seeded `wlasny-projekt-z-grawerem` product (`CUSTOM`
- * type — the one product with `CUSTOM_UPLOAD` as its first step, before
+ * type - the one product with `CUSTOM_UPLOAD` as its first step, before
  * `MATERIAL`/`SIZE`, matching `domain/configuration/steps.ts`'s real
  * step order).
  *
  * Unlike `checkout.spec.ts`'s design (a pre-existing catalogue Design),
- * this product prices with `design: null` — base price + material +
+ * this product prices with `design: null` - base price + material +
  * finish only, no machining/design-surcharge component (P4's pricing
  * fix, `domain/pricing/calculate.ts`). This test's real value is proving
  * that whole chain end to end: a real uploaded file survives magic-byte
  * sniffing and storage, the resulting `CustomerDesign` id correctly
  * flows through cart and checkout (a real bug this session found and
- * fixed — `cart.ts`'s repository was hardcoding `customUploadId: null`
+ * fixed - `cart.ts`'s repository was hardcoding `customUploadId: null`
  * when reconstructing `Selections` from a stored `Configuration`), and
- * the order automatically lands in `DESIGN_REVIEW` — a gate that
+ * the order automatically lands in `DESIGN_REVIEW` - a gate that
  * existed since P5 but had never been exercised by a real
  * `CustomerDesign` until this pass.
  *
  * 2026-08-28: the configurator no longer gates one step at a time behind
- * "Dalej" (owner feedback — every section is a real, always-visible
+ * "Dalej" (owner feedback - every section is a real, always-visible
  * swatch/field picker). Every field is filled/clicked directly now, no
  * "Dalej" clicks between them.
  *
  * 2026-08-29, owner feedback: "The price for the product should be clear,
- * no waiting for configure — we have price". MATERIAL/WYKOŃCZENIE/WYMIARY
+ * no waiting for configure - we have price". MATERIAL/WYKOŃCZENIE/WYMIARY
  * now default to a real, already-feasible selection (the product's own
  * first material/finish and its middle `ProductPresetSize`) the instant the
- * page loads — no crumb click needed for any of them, even on this product.
+ * page loads - no crumb click needed for any of them, even on this product.
  * The one real prerequisite left is CUSTOM_UPLOAD itself: this `CUSTOM`
  * -type product has no catalogue DESIGN, so pricing only becomes available
- * once a real file is uploaded (`selections.customUploadId` set) — it stays
+ * once a real file is uploaded (`selections.customUploadId` set) - it stays
  * a plain accordion band, unaffected by the breadcrumb redesign.
  */
 test('uploads a custom design, completes checkout, and lands in DESIGN_REVIEW', async ({ page }) => {
@@ -51,9 +51,9 @@ test('uploads a custom design, completes checkout, and lands in DESIGN_REVIEW', 
   await main.getByRole('button', { name: 'Prześlij projekt' }).click();
   await expect(main.getByText('Projekt został przesłany.')).toBeVisible();
 
-  // Materiał/Wykończenie/Wymiary — already defaulted on load.
+  // Materiał/Wykończenie/Wymiary - already defaulted on load.
 
-  // Podsumowanie — the honest "this is an estimate" notice (P4).
+  // Podsumowanie - the honest "this is an estimate" notice (P4).
   await expect(
     main.getByText('Podana cena to wstępny szacunek', { exact: false }),
   ).toBeVisible();

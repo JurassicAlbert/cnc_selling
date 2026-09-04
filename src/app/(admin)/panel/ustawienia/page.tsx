@@ -14,7 +14,7 @@ import { StoreSettingsForm } from '@/ui/islands/admin/StoreSettingsForm';
  * pay into, and analytics pruning (already ADMIN at the operation level).
  * ARCHITECTURE.md §16.3 assigns settings to ADMIN, and a page that renders
  * a form its own action will refuse is the shape the owner ruled out on
- * 2026-08-31 — "there shouldn't be cases where we allow something but its
+ * 2026-08-31 - "there shouldn't be cases where we allow something but its
  * blocked by system". `AdminSidebarNav` hides the link for STAFF for the
  * same reason; this is the gate that actually enforces it.
  */

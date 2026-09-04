@@ -1,10 +1,10 @@
 /**
- * Real customer review submission. Two entry points — guest (order
+ * Real customer review submission. Two entry points - guest (order
  * `accessToken`, same constant-time comparison `repositories/orders.ts`'s
  * `findOrderForConfirmation` already uses) and logged-in (`getSession()`)
- * — both re-verify ownership AND `status === 'COMPLETED'` AND that no
+ * - both re-verify ownership AND `status === 'COMPLETED'` AND that no
  * review exists yet server-side, never trusting the page that rendered
- * the form. No update-content action exists anywhere in this codebase —
+ * the form. No update-content action exists anywhere in this codebase -
  * once submitted, a review's text/author/rating can never be changed by
  * anyone, staff included (§16A.1 module 9: "no facility to author a
  * testimonial in a customer's name"). Moderation (`admin-reviews.ts`)
@@ -31,7 +31,7 @@ function validateReviewFields(fields: { readonly authorNamePl: string; readonly 
     return 'Imię jest wymagane.';
   }
   if (!Number.isInteger(fields.rating) || fields.rating < 1 || fields.rating > 5) {
-    return `Ocena musi być liczbą całkowitą od 1 do 5 — podano ${Number.isFinite(fields.rating) ? fields.rating : 'nieprawidłową wartość'}.`;
+    return `Ocena musi być liczbą całkowitą od 1 do 5 - podano ${Number.isFinite(fields.rating) ? fields.rating : 'nieprawidłową wartość'}.`;
   }
   if (fields.bodyPl.length === 0) {
     return 'Treść opinii jest wymagana.';
@@ -51,7 +51,7 @@ async function createReviewForOrder(
     await prisma.review.create({ data: { orderId, ...fields } });
   } catch (error) {
     // `Review.orderId` is `@unique`, and the check above is a read followed
-    // by a write — two concurrent submissions (a double-clicked "Wyślij")
+    // by a write - two concurrent submissions (a double-clicked "Wyślij")
     // both saw no review and both inserted. The loser used to surface as an
     // unhandled Prisma error, i.e. a 500 on a form the customer had in fact
     // just submitted successfully. The constraint did its job; this turns
@@ -71,7 +71,7 @@ function isUniqueConstraintViolation(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && (error as { code?: unknown }).code === 'P2002';
 }
 
-/** Guest submission — `orderNumber` + the same `accessToken` the confirmation page itself requires. */
+/** Guest submission - `orderNumber` + the same `accessToken` the confirmation page itself requires. */
 export async function submitGuestReview(orderNumber: string, token: string, formData: FormData): Promise<SubmitReviewResult> {
   const fields = readReviewFields(formData);
   const issue = validateReviewFields(fields);
@@ -100,12 +100,12 @@ export async function submitGuestReview(orderNumber: string, token: string, form
 }
 
 /**
- * Logged-in submission — ownership via the real session, not a
+ * Logged-in submission - ownership via the real session, not a
  * client-supplied id. Split like every other `require*`-style helper in
  * this codebase (`design-review.ts`'s own header explains why):
  * `applySubmitAccountReview` takes `userId` explicitly (real DB logic,
- * directly callable from an integration test), `submitAccountReview` — the
- * actual Server Action — derives it via `getSession()`, which reads
+ * directly callable from an integration test), `submitAccountReview` - the
+ * actual Server Action - derives it via `getSession()`, which reads
  * `next/headers` and only works inside a real request.
  */
 export async function applySubmitAccountReview(userId: string, orderNumber: string, formData: FormData): Promise<SubmitReviewResult> {

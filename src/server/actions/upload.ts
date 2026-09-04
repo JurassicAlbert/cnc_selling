@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * The customer-upload Server Action — `ARCHITECTURE.md` §13's full
+ * The customer-upload Server Action - `ARCHITECTURE.md` §13's full
  * pipeline (validation, IP consent, `CustomerDesign` creation) wired to
  * real storage and the DB, following the same "re-derive ownership from
  * the session, re-validate everything server-side" discipline as
@@ -10,7 +10,7 @@
  * **No DPI/aspect-mismatch target size is passed here, on purpose:**
  * `domain/configuration/steps.ts`'s own `STEPS_BY_PRODUCT_TYPE.CUSTOM`
  * is `['CUSTOM_UPLOAD', 'MATERIAL', 'SIZE', 'FINISH', 'PERSONALIZATION',
- * 'SUMMARY']` — `CUSTOM_UPLOAD` always comes *before* `SIZE` in the only
+ * 'SUMMARY']` - `CUSTOM_UPLOAD` always comes *before* `SIZE` in the only
  * product type that has this step at all, so there is no target size to
  * compare the upload against yet at the moment of upload. `target: null`
  * is passed to `inspectUploadedFile`, which is honest to the real step
@@ -35,7 +35,7 @@ import type { InspectFileErrorCode } from '@/server/upload/inspect-file';
 import { inspectUploadedFile } from '@/server/upload/inspect-file';
 import { isUploadRateLimited } from '@/server/upload/rate-limit';
 
-/** Same intentional double-cast as `cart.ts`/`create-order.ts`'s `toJsonInput` — a single, named, auditable spot rather than an unchecked cast scattered through the file. */
+/** Same intentional double-cast as `cart.ts`/`create-order.ts`'s `toJsonInput` - a single, named, auditable spot rather than an unchecked cast scattered through the file. */
 function toJsonInput<T>(value: T): Prisma.InputJsonValue {
   return value as unknown as Prisma.InputJsonValue;
 }
@@ -52,7 +52,7 @@ export async function uploadCustomDesign(formData: FormData): Promise<UploadCust
     return { ok: false, code: 'NO_FILE' };
   }
 
-  // §13.2: rejected server-side if missing — the client checkbox being
+  // §13.2: rejected server-side if missing - the client checkbox being
   // unchecked-by-default is a UI nicety, this is the actual enforcement.
   if (formData.get('ipConsent') !== 'on') {
     return { ok: false, code: 'CONSENT_REQUIRED' };
@@ -72,7 +72,7 @@ export async function uploadCustomDesign(formData: FormData): Promise<UploadCust
     return { ok: false, code: inspected.code, params: inspected.params };
   }
 
-  // The same file, uploaded again by the same person, is the same design —
+  // The same file, uploaded again by the same person, is the same design -
   // not a second one (owner, 2026-08-30: "client should not be able to save
   // the same project twice"). `/moje-konto/wzory` lists `CustomerDesign`
   // rows directly, so without this a customer who re-picked the same file
@@ -80,7 +80,7 @@ export async function uploadCustomDesign(formData: FormData): Promise<UploadCust
   // their own library, each with its own review thread.
   //
   // Matched on the file's real SHA-256, which `inspectUploadedFile` already
-  // computes — not on the filename, which a customer can change without
+  // computes - not on the filename, which a customer can change without
   // changing the artwork, and which two different customers routinely share
   // ("logo.png"). Scoped to this owner: two people uploading the same stock
   // file must still get their own design and their own review.
@@ -103,7 +103,7 @@ export async function uploadCustomDesign(formData: FormData): Promise<UploadCust
 
   const originalName = sanitizeFilenameForDisplay(file.name);
   const ipConfirmedIp = await requestIpAddress();
-  // Optional — an upload triggered inline from a product's configurator
+  // Optional - an upload triggered inline from a product's configurator
   // (no title field on that form) still works exactly as before; only the
   // standalone "moje wzory" library page's form actually sends one.
   const titlePlRaw = formData.get('titlePl');

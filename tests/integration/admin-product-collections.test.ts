@@ -109,7 +109,7 @@ describe('applyUpdateProductCollection', () => {
 });
 
 describe('applySetProductCollectionActive', () => {
-  /** `queryActiveCollections`, not the cached `listActiveCollections` — see the same note in `admin-categories.test.ts`. */
+  /** `queryActiveCollections`, not the cached `listActiveCollections` - see the same note in `admin-categories.test.ts`. */
   it('deactivating removes it from the real public listing without deleting the row', async () => {
     const staff = staffActor();
     const created = await applyCreateProductCollection(staff, validInput());

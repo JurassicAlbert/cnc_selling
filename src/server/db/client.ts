@@ -2,8 +2,8 @@
  * The one Prisma client instance the app shares.
  *
  * Next.js hot-reloads server modules in dev without restarting the process,
- * so a naive `new PrismaClient()` at module scope creates a fresh client —
- * and a fresh connection pool — on every save. Caching it on `globalThis`
+ * so a naive `new PrismaClient()` at module scope creates a fresh client -
+ * and a fresh connection pool - on every save. Caching it on `globalThis`
  * survives the reload; production gets a plain module-scoped singleton
  * because the module only loads once there anyway. This is the standard
  * Next.js + Prisma pattern, not something specific to this project.
@@ -12,11 +12,11 @@
  * never a plain config object. Passed a config object, its `connect()`
  * stores nothing as `externalPool` and creates a brand-new `pg.Pool` (plus
  * up to `max` fresh physical connections) on every single call, tearing
- * the whole thing down again via `pool.end()` on dispose — see
+ * the whole thing down again via `pool.end()` on dispose - see
  * `node_modules/@prisma/adapter-pg/dist/index.js`'s `PrismaPgAdapterFactory`.
  * Prisma calls `connect()` far more often than once per process, so this
  * silently multiplied real TCP connections and was the actual cause of the
- * `EADDRINUSE` build failures — the pool-size/idle-timeout tuning below
+ * `EADDRINUSE` build failures - the pool-size/idle-timeout tuning below
  * (`pool-config.ts`) was real but addressed the wrong layer. Passing an
  * instance makes the factory reuse `externalPool` for every `connect()`
  * and skip tearing it down. See `docs/HANDOVER.md` §9u.
@@ -49,7 +49,7 @@ if (process.env.NODE_ENV !== 'production') {
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (value === undefined || value.length === 0) {
-    throw new Error(`${name} is not set — check your .env`);
+    throw new Error(`${name} is not set - check your .env`);
   }
   return value;
 }

@@ -1,16 +1,16 @@
 /**
  * The storefront theme. ARCHITECTURE.md §2.1 is explicit that the stock
- * Material look "reads as admin dashboard" — the exact failure mode the
- * brief forbids — so every override below exists to destroy that look, not
+ * Material look "reads as admin dashboard" - the exact failure mode the
+ * brief forbids - so every override below exists to destroy that look, not
  * to decorate it. This file is the one place that risk is fought.
  *
  * `cssVariables: true` so Server Components in `(marketing)`/`(shop)` can
  * consume brand tokens (`var(--mui-palette-primary-main)`, etc.) without
- * shipping Emotion just to render a heading — see `src/ui/primitives`.
+ * shipping Emotion just to render a heading - see `src/ui/primitives`.
  *
  * Dark mode is explicitly out of scope for MVP (§2.1); no `colorSchemes`
  * here. Adding it later is cheap precisely because this is CSS-variables
- * already — that is deferred work, not a limitation of this file.
+ * already - that is deferred work, not a limitation of this file.
  */
 
 import { createTheme } from '@mui/material/styles';
@@ -22,7 +22,7 @@ const brandTheme = createTheme({
   cssVariables: true,
   palette: {
     background: {
-      default: '#FAF8F5', // warm off-white — page ground
+      default: '#FAF8F5', // warm off-white - page ground
       paper: '#FFFFFF', // cards, configurator surfaces
     },
     text: {
@@ -30,18 +30,18 @@ const brandTheme = createTheme({
       secondary: '#6B655E', // meta, helper text
     },
     primary: {
-      main: '#2E2A26', // near-black — CTAs, deliberately not a colour
+      main: '#2E2A26', // near-black - CTAs, deliberately not a colour
     },
     secondary: {
-      main: '#A97B4F', // warm oak — accents, active configurator step
+      main: '#A97B4F', // warm oak - accents, active configurator step
     },
     divider: '#E6E0D8', // hairlines
     error: {
-      main: '#8C3A2E', // muted brick — no bright red
+      main: '#8C3A2E', // muted brick - no bright red
     },
   },
   /**
-   * A real type scale — 2026-08-30.
+   * A real type scale - 2026-08-30.
    *
    * Until now every variant below only overrode `fontFamily`, so the site
    * was running MUI's STOCK Material scale with a serif swapped in. That
@@ -57,7 +57,7 @@ const brandTheme = createTheme({
    *   jump from any level to the next reads as deliberate.
    * - **Weight rises as size falls** (400 → 500 → 600). Large type needs
    *   less weight to hold its own; small type needs more to stay legible.
-   *   The old 300 on `h1`/`h2` was never a brand decision — it is simply
+   *   The old 300 on `h1`/`h2` was never a brand decision - it is simply
    *   what MUI's default is, inherited because only `fontFamily` was set.
    * - **Line-height falls as size rises.** 1.167 on a 96px heading is a
    *   paragraph line-height applied to display type.
@@ -73,7 +73,7 @@ const brandTheme = createTheme({
    *   its desktop value exactly at 1200px, the `Container` max-width.
    *
    * Every value here is mirrored in `src/app/theme-vars.css`, which is what
-   * the RSC primitives actually read. If you change one, change both — that
+   * the RSC primitives actually read. If you change one, change both - that
    * file's own header says the same thing, and now it matters more.
    */
   typography: {
@@ -132,7 +132,7 @@ const brandTheme = createTheme({
     // MUI renders this uppercase; uppercase without tracking is the classic
     // unreadable-label mistake, and 2.66 line-height made it float.
     overline: { fontSize: '0.6875rem', fontWeight: 600, lineHeight: 1.6, letterSpacing: '0.1em' },
-    // No uppercase buttons — a stock MUI button shouting "SUBMIT" is the
+    // No uppercase buttons - a stock MUI button shouting "SUBMIT" is the
     // single fastest tell that a site is running the default theme.
     button: { textTransform: 'none', fontWeight: 600, letterSpacing: '0.01em' },
   },
@@ -144,7 +144,7 @@ const brandTheme = createTheme({
   // not an accident of not having configured it.
   shadows: buildFlattenedShadows(),
   /**
-   * 2026-08-30 — make MUI's own controls look like this site rather than
+   * 2026-08-30 - make MUI's own controls look like this site rather than
    * like Material.
    *
    * `shape.borderRadius` stayed 2 while the visible design moved to a real
@@ -153,7 +153,7 @@ const brandTheme = createTheme({
    * unit, which is a real part of why cards and the header read as flat".
    * Cards, the hero CTA and the styled native controls all followed; the
    * MUI components never did, so every `Button` and `TextField` on the
-   * storefront was still rendering at the abandoned value — visibly
+   * storefront was still rendering at the abandoned value - visibly
    * squarer than the card it sat inside.
    *
    * Overriding the three interactive controls rather than raising
@@ -190,7 +190,7 @@ export const theme = createTheme(brandTheme, plPL, dataGridPlPL);
 /**
  * MUI's default shadow scale is 25 entries of increasingly heavy box-shadow,
  * built for elevation-heavy dashboards. §2.1 asks for them "flattened to
- * near-none" — not literally `none` throughout (index 0 already means that,
+ * near-none" - not literally `none` throughout (index 0 already means that,
  * and always has), but a single, barely-there shadow reused at every other
  * elevation so nothing on the storefront reads as a floating card.
  */

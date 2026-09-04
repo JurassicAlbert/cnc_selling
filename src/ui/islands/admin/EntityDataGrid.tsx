@@ -2,31 +2,31 @@
 
 /**
  * Shared `DataGrid` wrapper for the panel's simple catalogue list pages
- * (Kategorie, Produkty, Materiały, Wykończenia, Wzory, Kolekcje) — P7c
+ * (Kategorie, Produkty, Materiały, Wykończenia, Wzory, Kolekcje) - P7c
  * slice 3. `OrdersDataGrid.tsx` (slice 2) hand-rolled its own wrapper
  * since Orders was the first usage and uniquely complex; these six pages
  * are simple and near-identical, so the boilerplate (row click →
  * navigate, row id, pagination defaults) is extracted once here. Column
- * definitions stay per-entity (`renderCell` differs by page) — that's the
+ * definitions stay per-entity (`renderCell` differs by page) - that's the
  * one genuinely page-specific piece, passed in as a prop.
  *
  * No `encodeURIComponent` on the navigated id, unlike `OrdersDataGrid`'s
- * human-facing `orderNumber` — every entity this wraps uses a plain cuid
+ * human-facing `orderNumber` - every entity this wraps uses a plain cuid
  * `id` with no slashes.
  *
  * `onCellClick` below guards against a real interaction bug (P7c slice 9):
  * `onRowClick` fires on ANY click in a row, including the first click of a
- * double-click-to-edit on an `editable` cell — without the guard, clicking
+ * double-click-to-edit on an `editable` cell - without the guard, clicking
  * to edit e.g. `sortOrder` would navigate away before the edit could start.
  * `event.stopPropagation()` on an editable cell's click stops that row
- * handler from firing — the documented MUI X Data Grid pattern for this,
+ * handler from firing - the documented MUI X Data Grid pattern for this,
  * same principle as the existing Link-cell columns' own
  * `onClick={(e) => e.stopPropagation()}`, just at the grid level since an
  * editable cell has no child element of its own to attach that to.
  *
  * `bulkActions` (P7c, bulk-actions slice) turns on checkbox selection and
  * renders a small selection toolbar above the grid once at least one row is
- * checked — "Zaznaczono N" plus one button per action. Each action's `run`
+ * checked - "Zaznaczono N" plus one button per action. Each action's `run`
  * receives the selected ids and is expected to be a real Server Action
  * (bulk toggle functions live next to their single-row equivalents, e.g.
  * `bulkSetCategoryActive` beside `setCategoryActive`). Selection is cleared
@@ -59,7 +59,7 @@ export function EntityDataGrid<T extends { readonly id: string }>({
   readonly rows: readonly T[];
   readonly columns: GridColDef<T>[];
   readonly basePath: string;
-  /** Enables inline cell editing (P7c slice 9) — pass alongside `editable: true` columns. */
+  /** Enables inline cell editing (P7c slice 9) - pass alongside `editable: true` columns. */
   readonly processRowUpdate?: (newRow: T, oldRow: T) => Promise<T>;
   readonly onProcessRowUpdateError?: (error: unknown) => void;
   /** Enables checkbox selection + the selection toolbar (P7c bulk-actions slice). */

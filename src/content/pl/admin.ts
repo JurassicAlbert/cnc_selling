@@ -1,5 +1,5 @@
 /**
- * Staff-facing copy for `/panel/*` — kept separate from `site.ts`/
+ * Staff-facing copy for `/panel/*` - kept separate from `site.ts`/
  * `messages.ts` (customer-facing) per `docs/ARCHITECTURE.md` §16A's framing
  * of the panel as "a separate visual world from the storefront." Still
  * subject to `scripts/check-polish-literals.mjs`.
@@ -96,7 +96,7 @@ export const ADMIN = {
   duplicatePl: 'Duplikuj',
   bulkClearSelectionPl: 'Wyczyść zaznaczenie',
   previewAsCustomerPl: 'Zobacz jako klient',
-  productPreviewBannerPl: 'Podgląd administratora — ta odsłona strony nie jest liczona jako wizyta klienta.',
+  productPreviewBannerPl: 'Podgląd administratora - ta odsłona strony nie jest liczona jako wizyta klienta.',
 
   csvImportHeadingPl: 'Import z pliku CSV',
   csvImportColumnsHintPl: 'Oczekiwane kolumny w pierwszym wierszu',
@@ -228,10 +228,10 @@ export const ADMIN = {
   orderMarkPaidDonePl: 'Opłacone',
   orderCancelNoteLabelPl: 'Notatka (wymagana przy anulowaniu)',
   orderCancelConfirmTitlePl: 'Anulować zamówienie?',
-  orderCancelConfirmMessagePl: 'Tej operacji nie można cofnąć — status „Anulowane” jest ostateczny.',
+  orderCancelConfirmMessagePl: 'Tej operacji nie można cofnąć - status „Anulowane” jest ostateczny.',
   orderCancelConfirmButtonPl: 'Tak, anuluj zamówienie',
   orderTransitionNotePl: 'Notatka (opcjonalna)',
-  orderDesignBlockedPl: 'Projekt klienta oczekuje na weryfikację — nie można przejść dalej, dopóki nie zostanie zatwierdzony.',
+  orderDesignBlockedPl: 'Projekt klienta oczekuje na weryfikację - nie można przejść dalej, dopóki nie zostanie zatwierdzony.',
 
   designReviewHeadingPl: 'Weryfikacja projektów',
   designReviewEmptyPl: 'Brak projektów oczekujących na weryfikację.',
@@ -327,7 +327,7 @@ export const ADMIN = {
   designFieldNamePl: 'Nazwa',
   designFieldDescPl: 'Opis',
   designFieldCollectionPl: 'Kolekcja',
-  designFieldCollectionNonePl: '— brak —',
+  designFieldCollectionNonePl: '- brak -',
   designFieldTagsPl: 'Tagi (oddzielone przecinkami)',
   designFieldThumbnailPl: 'Miniatura',
   designFieldThumbnailReplacePl: 'Nowa miniatura (opcjonalnie, zastąpi obecną)',
@@ -352,7 +352,7 @@ export const ADMIN = {
   designFieldSortOrderPl: 'Kolejność wyświetlania',
   designFieldFeaturedPl: 'Wzór wyróżniony',
   designMaterialsHeadingPl: 'Zgodne materiały',
-  designMaterialsEmptyPl: 'Żaden materiał nie jest jeszcze przypisany — brak wpisów oznacza, że dostępny jest każdy materiał dopuszczony przez produkt.',
+  designMaterialsEmptyPl: 'Żaden materiał nie jest jeszcze przypisany - brak wpisów oznacza, że dostępny jest każdy materiał dopuszczony przez produkt.',
   designMaterialFieldPl: 'Materiał',
 
   productionHeadingPl: 'Produkcja',
@@ -375,7 +375,7 @@ export const ADMIN = {
   orderPackingListLinkPl: 'Lista pakowania (do druku)',
 
   productionBriefHeadingPl: 'Karta produkcyjna',
-  productionBriefNotAFilePl: 'Karta produkcyjna — nie jest to plik produkcyjny CNC/laserowy.',
+  productionBriefNotAFilePl: 'Karta produkcyjna - nie jest to plik produkcyjny CNC/laserowy.',
   productionBriefPrintPl: 'Drukuj',
   productionBriefOrderLabelPl: 'Zamówienie',
   productionBriefProductLabelPl: 'Produkt',
@@ -388,7 +388,7 @@ export const ADMIN = {
   productionBriefModulesHeadingPl: 'Moduły',
 
   packingListHeadingPl: 'Lista pakowania',
-  packingListNotAShippingLabelPl: 'Lista pakowania — nie jest to etykieta wysyłkowa ani list przewozowy.',
+  packingListNotAShippingLabelPl: 'Lista pakowania - nie jest to etykieta wysyłkowa ani list przewozowy.',
   packingListRecipientHeadingPl: 'Adres dostawy',
   packingListItemsHeadingPl: 'Elementy do spakowania',
   packingListColumnItemPl: 'Element',
@@ -455,15 +455,15 @@ export const ADMIN = {
   /**
    * 2026-08-30 (`docs/AUDIT-2026-08-30.md` §20). The panel showed an
    * editable "Cena" and nothing else, while for a tiered carrier that field
-   * is never what a customer is charged — the brackets below are. The copy
+   * is never what a customer is charged - the brackets below are. The copy
    * has to say so plainly, or the screen stays misleading even with the
    * editor added.
    */
   deliveryTiersHeadingPl: 'Progi wagowe (cennik przewoźnika)',
   deliveryTiersIntroPl:
-    'Jeśli metoda ma progi wagowe, to one decydują o cenie dostawy — naliczany jest najtańszy próg, w którym mieszczą się waga i wymiary zamówienia. Pole „Cena” powyżej działa wtedy wyłącznie jako wartość zapasowa i nie jest naliczane klientowi.',
+    'Jeśli metoda ma progi wagowe, to one decydują o cenie dostawy - naliczany jest najtańszy próg, w którym mieszczą się waga i wymiary zamówienia. Pole „Cena” powyżej działa wtedy wyłącznie jako wartość zapasowa i nie jest naliczane klientowi.',
   deliveryTiersEmptyPl:
-    'Brak progów wagowych — ta metoda nalicza stałą cenę z pola „Cena” powyżej. Dodaj progi, aby wyceniać dostawę według rzeczywistego cennika przewoźnika.',
+    'Brak progów wagowych - ta metoda nalicza stałą cenę z pola „Cena” powyżej. Dodaj progi, aby wyceniać dostawę według rzeczywistego cennika przewoźnika.',
   deliveryTierFieldLabelPl: 'Nazwa progu',
   deliveryTierFieldMaxWeightKgPl: 'Waga do (kg)',
   deliveryTierFieldPricePlnPl: 'Cena (zł)',
@@ -485,10 +485,10 @@ export const ADMIN = {
   paymentMethodFieldDescPl: 'Opis',
   paymentMethodFieldProviderPl: 'Dostawca',
   paymentMethodFieldSortOrderPl: 'Kolejność wyświetlania',
-  paymentMethodConnectedYesPl: 'Połączona — dostępna w kasie',
-  paymentMethodConnectedNoPl: 'Niepołączona — nie jest jeszcze dostępna w kasie',
+  paymentMethodConnectedYesPl: 'Połączona - dostępna w kasie',
+  paymentMethodConnectedNoPl: 'Niepołączona - nie jest jeszcze dostępna w kasie',
   paymentMethodConnectedHelperPl:
-    'To pole jest ustawiane wyłącznie przez rzeczywistą integrację techniczną, nie z tego formularza — dzięki temu żadna metoda płatności nie może zostać omyłkowo „włączona” bez faktycznego podłączenia.',
+    'To pole jest ustawiane wyłącznie przez rzeczywistą integrację techniczną, nie z tego formularza - dzięki temu żadna metoda płatności nie może zostać omyłkowo „włączona” bez faktycznego podłączenia.',
 
   shipmentHeadingPl: 'Wysyłka',
   shipmentSavePl: 'Zapisz wysyłkę',
@@ -502,7 +502,7 @@ export const ADMIN = {
   shipmentFieldIssueDescriptionPl: 'Opis problemu (wewnętrzny i widoczny dla klienta)',
   shipmentFieldIssueResolutionPl: 'Rozwiązanie problemu (wewnętrzne)',
   shipmentFieldInternalNotesPl: 'Notatki wewnętrzne',
-  shipmentManualNoticePl: 'Status jest ustawiany ręcznie — brak integracji z API przewoźnika w tym projekcie.',
+  shipmentManualNoticePl: 'Status jest ustawiany ręcznie - brak integracji z API przewoźnika w tym projekcie.',
 
   supportRequestsHeadingPl: 'Zgłoszenia kontaktowe',
   supportRequestsEmptyPl: 'Brak zgłoszeń kontaktowych.',
@@ -615,7 +615,7 @@ export const ADMIN = {
   auditLogColumnEntityPl: 'Encja',
   auditLogColumnActionPl: 'Akcja',
   auditLogColumnDiffPl: 'Szczegóły',
-  auditLogNoDiffPl: '—',
+  auditLogNoDiffPl: '-',
 
   activityTimelineHeadingPl: 'Historia zmian',
   activityTimelineEmptyPl: 'Brak zarejestrowanych zmian dla tego rekordu.',
@@ -624,17 +624,17 @@ export const ADMIN = {
   settingsStoreSectionHeadingPl: 'Sklep',
   settingsFieldBankAccountNumberPl: 'Numer konta bankowego',
   settingsFieldBankAccountHolderPl: 'Odbiorca przelewu',
-  settingsFieldShippingRatePl: 'Stawka wysyłki (zł) — nieużywana',
-  settingsFieldShippingRateHelperPl: 'Zastąpione przez „Metody dostawy” (P9 faza 5) — ta wartość nie jest już używana przy składaniu zamówienia i pozostaje tylko dla zgodności wstecznej.',
+  settingsFieldShippingRatePl: 'Stawka wysyłki (zł) - nieużywana',
+  settingsFieldShippingRateHelperPl: 'Zastąpione przez „Metody dostawy” (P9 faza 5) - ta wartość nie jest już używana przy składaniu zamówienia i pozostaje tylko dla zgodności wstecznej.',
   settingsSavedNoticePl: 'Zapisano.',
 
   settingsAnalyticsSectionHeadingPl: 'Dane analityczne',
-  settingsAnalyticsRetentionNoticePl: 'Zdarzenia analityczne (AnalyticsEvent) są przechowywane przez 12 miesięcy. Nie istnieje jeszcze automatyczne, zaplanowane czyszczenie — to działanie trzeba uruchomić ręcznie.',
+  settingsAnalyticsRetentionNoticePl: 'Zdarzenia analityczne (AnalyticsEvent) są przechowywane przez 12 miesięcy. Nie istnieje jeszcze automatyczne, zaplanowane czyszczenie - to działanie trzeba uruchomić ręcznie.',
   settingsAnalyticsPrunableCountPl: (count: number) =>
     `Zdarzenia starsze niż 12 miesięcy do usunięcia: ${countPl(count, { one: 'zdarzenie', few: 'zdarzenia', many: 'zdarzeń' })}.`,
   settingsAnalyticsPruneButtonPl: 'Wyczyść stare dane analityczne',
   settingsAnalyticsPruneConfirmTitlePl: 'Usunąć stare dane analityczne?',
-  settingsAnalyticsPruneConfirmMessagePl: 'Ta operacja jest nieodwracalna — usunięte zdarzenia analityczne nie mogą zostać przywrócone.',
+  settingsAnalyticsPruneConfirmMessagePl: 'Ta operacja jest nieodwracalna - usunięte zdarzenia analityczne nie mogą zostać przywrócone.',
   settingsAnalyticsPruneConfirmButtonPl: 'Usuń',
   settingsAnalyticsPrunedNoticePl: (count: number) => `Usunięto ${countPl(count, { one: 'zdarzenie', few: 'zdarzenia', many: 'zdarzeń' })}.`,
   settingsPersonnelLinkPl: 'Personel',
@@ -650,7 +650,7 @@ export const ADMIN = {
   staffInviteFieldEmailPl: 'E-mail',
   staffInviteFieldRolePl: 'Rola',
   staffInviteSubmitPl: 'Zaproś',
-  staffInviteHintPl: 'Nowy pracownik zaloguje się kodem e-mail na stronie logowania — nie ustawia się dla niego hasła.',
+  staffInviteHintPl: 'Nowy pracownik zaloguje się kodem e-mail na stronie logowania - nie ustawia się dla niego hasła.',
   staffRevokeButtonPl: 'Cofnij dostęp',
   staffRoleAdminPl: 'Administrator',
   staffRoleStaffPl: 'Pracownik',
@@ -666,7 +666,7 @@ export const ADMIN = {
 
   pricingHeadingPl: 'Cennik',
   pricingIntroPl:
-    'Stawki poniżej wpływają na wycenę każdej konfiguracji na całej stronie. Każdy zapis tworzy nową wersję — nic nie jest edytowane w miejscu, a istniejące zamówienia pozostają przy swojej wersji cennika na zawsze.',
+    'Stawki poniżej wpływają na wycenę każdej konfiguracji na całej stronie. Każdy zapis tworzy nową wersję - nic nie jest edytowane w miejscu, a istniejące zamówienia pozostają przy swojej wersji cennika na zawsze.',
   pricingActiveVersionLabelPl: 'Aktywna wersja',
   pricingColumnVersionPl: 'Wersja',
   pricingColumnStatusPl: 'Status',
@@ -683,19 +683,19 @@ export const ADMIN = {
   pricingFieldNotePl: 'Notatka (widoczna tylko w panelu)',
   pricingPackagingTiersHeadingPl: 'Progi pakowania',
   pricingPackagingTiersHintPl:
-    'Każda konfiguracja jest dopasowywana do pierwszego pasującego progu (kolejność ma znaczenie). Ostatni próg musi być „bez limitu” (puste pola maks. powierzchni i maks. modułów) — inaczej duża konfiguracja nie znajdzie pasującego progu i wycena się nie powiedzie.',
+    'Każda konfiguracja jest dopasowywana do pierwszego pasującego progu (kolejność ma znaczenie). Ostatni próg musi być „bez limitu” (puste pola maks. powierzchni i maks. modułów) - inaczej duża konfiguracja nie znajdzie pasującego progu i wycena się nie powiedzie.',
   pricingFieldTierMaxAreaPl: 'Maks. powierzchnia (m²)',
   pricingFieldTierMaxModulesPl: 'Maks. liczba modułów',
   pricingFieldTierPricePl: 'Cena (zł)',
   pricingTierNoLimitPl: 'bez limitu',
   pricingAddTierPl: 'Dodaj próg',
   pricingRemoveTierPl: 'Usuń próg',
-  pricingRemoveTierBlockedPl: 'Musi zostać co najmniej jeden próg — ostatni pełni rolę „bez limitu”.',
+  pricingRemoveTierBlockedPl: 'Musi zostać co najmniej jeden próg - ostatni pełni rolę „bez limitu”.',
   pricingSaveDraftPl: 'Zapisz jako wersję roboczą',
   pricingDraftCreatedNoticePl: 'Utworzono wersję roboczą. Przejrzyj symulację przed publikacją.',
   pricingSimulatorHeadingPl: 'Symulacja cen',
   pricingSimulatorIntroPl:
-    'Rzeczywiste ceny 3 referencyjnych produktów, przeliczone tą samą logiką co sklep — przed i po zmianie stawek.',
+    'Rzeczywiste ceny 3 referencyjnych produktów, przeliczone tą samą logiką co sklep - przed i po zmianie stawek.',
   pricingSimulatorLoadingPl: 'Obliczanie…',
   pricingSimulatorErrorPl: 'Nie udało się przeliczyć symulacji.',
   pricingSimulatorColumnProductPl: 'Produkt',
@@ -706,7 +706,7 @@ export const ADMIN = {
   pricingPublishPl: 'Publikuj tę wersję',
   pricingPublishBlockedHintPl: 'Poczekaj na wynik symulacji przed publikacją.',
   pricingPublishConfirmTitlePl: 'Opublikować tę wersję cennika?',
-  pricingPublishConfirmPl: 'Ta zmiana natychmiast wpłynie na ceny w całym sklepie. Tej operacji nie można cofnąć — poprzednio aktywna wersja przestanie obowiązywać.',
+  pricingPublishConfirmPl: 'Ta zmiana natychmiast wpłynie na ceny w całym sklepie. Tej operacji nie można cofnąć - poprzednio aktywna wersja przestanie obowiązywać.',
   pricingPublishConfirmButtonPl: 'Tak, opublikuj',
   pricingAlreadyActivePl: 'Ta wersja jest już aktywna.',
   pricingBackToListPl: 'Wróć do listy wersji',
@@ -872,12 +872,12 @@ const EMAIL_TEMPLATE_KEY_LABELS_PL: Record<string, string> = {
   'order-status-update': ADMIN.emailTemplateKeyOrderStatusUpdatePl,
 };
 
-/** Falls back to the raw key for any future `MailTemplate` this map hasn't been updated for yet — never throws. */
+/** Falls back to the raw key for any future `MailTemplate` this map hasn't been updated for yet - never throws. */
 export function adminEmailTemplateKeyLabel(key: string): string {
   return EMAIL_TEMPLATE_KEY_LABELS_PL[key] ?? key;
 }
 
-/** Mirrors `mailer.ts`'s own `buildPlaceholders` key set — kept in sync by hand, shown as a read-only hint on the template edit screen. */
+/** Mirrors `mailer.ts`'s own `buildPlaceholders` key set - kept in sync by hand, shown as a read-only hint on the template edit screen. */
 export const EMAIL_TEMPLATE_PLACEHOLDERS_PL: Record<string, readonly string[]> = {
   'order-confirmation': ['orderNumber', 'totalGrossZloty', 'paymentMethodPl'],
   'verification-otp': ['otp', 'otpPurposePl'],
@@ -892,29 +892,29 @@ const AUDIT_ACTION_LABELS_PL: Record<string, string> = {
   export: 'Eksport',
 };
 
-/** Falls back to the raw value for any future `AuditAction` this map hasn't been updated for yet — `AuditLog.action` is a plain string column, not an enum, so this can't be exhaustive at the type level. */
+/** Falls back to the raw value for any future `AuditAction` this map hasn't been updated for yet - `AuditLog.action` is a plain string column, not an enum, so this can't be exhaustive at the type level. */
 export function adminAuditActionLabel(action: string): string {
   return AUDIT_ACTION_LABELS_PL[action] ?? action;
 }
 
-/** Only `STAFF`/`ADMIN` ever reach this — `listStaffUsers()` never returns a `CUSTOMER` row — but takes a plain string (matching `UserRole`'s real type) so a client-island column definition can call it without importing the enum type just for this. */
+/** Only `STAFF`/`ADMIN` ever reach this - `listStaffUsers()` never returns a `CUSTOMER` row - but takes a plain string (matching `UserRole`'s real type) so a client-island column definition can call it without importing the enum type just for this. */
 export function adminStaffRoleLabel(role: string): string {
   return role === 'ADMIN' ? ADMIN.staffRoleAdminPl : ADMIN.staffRoleStaffPl;
 }
 
 /**
  * Real Polish plural grammar for "wiersz" (row), not a naive singular/plural
- * toggle — `docs/CHECKLIST.md`'s own open item ("Polish plurals correct at
+ * toggle - `docs/CHECKLIST.md`'s own open item ("Polish plurals correct at
  * 1 / 2 / 4 / 5 / 12 / 22 / 25 / 112") for this one word: `wiersz` at 1,
  * `wiersze` for a trailing 2–4 EXCEPT when the last two digits are 12–14
- * (which take the "many" form instead — Polish, unlike English, doesn't
+ * (which take the "many" form instead - Polish, unlike English, doesn't
  * just split singular/plural on 1), `wierszy` otherwise (0, 5+, 11–14, ...).
  */
 export function csvImportSuccessMessage(created: number): string {
   return `Zaimportowano ${countPl(created, { one: 'wiersz', few: 'wiersze', many: 'wierszy' })}.`;
 }
 
-/** "Zaznaczono 1 wiersz / 3 wiersze / 12 wierszy" — the bulk-actions selection toolbar's count. */
+/** "Zaznaczono 1 wiersz / 3 wiersze / 12 wierszy" - the bulk-actions selection toolbar's count. */
 export function bulkSelectionCountMessage(count: number): string {
   return `Zaznaczono ${countPl(count, { one: 'wiersz', few: 'wiersze', many: 'wierszy' })}`;
 }

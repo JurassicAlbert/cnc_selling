@@ -1,12 +1,12 @@
 /**
- * Public catalogue-photo storage — deliberately separate from
+ * Public catalogue-photo storage - deliberately separate from
  * `local-disk.ts`'s `LocalDiskStorage`. That one backs customer uploads,
  * gated behind the authorizing `/api/plik/[fileId]` route, "no public
  * bucket" (§16.1). Product/category photos are the opposite: they must be
  * plain, publicly reachable URLs a browser loads directly. Writing into
  * `public/images/...` at runtime works because this project's actual
  * deployment target is a long-running Node server (Docker + Postgres, not
- * a serverless/immutable-build platform) — `next dev`/`next start` both
+ * a serverless/immutable-build platform) - `next dev`/`next start` both
  * serve `public/` straight off disk on every request. Same "dev/MVP, real
  * disk writes, not production-grade (no CDN/redundancy)" honesty
  * `LocalDiskStorage`'s own header already applies to the private path.
@@ -32,7 +32,7 @@ export type SavePublicImageResult =
   | { readonly ok: true; readonly url: string }
   | { readonly ok: false; readonly detail: string };
 
-/** Sniffs real magic bytes (never the client's declared type) — same discipline as customer uploads, `inspect-file.ts`'s own header. */
+/** Sniffs real magic bytes (never the client's declared type) - same discipline as customer uploads, `inspect-file.ts`'s own header. */
 export async function savePublicImage(
   kind: PublicImageKind,
   ownerId: string,
@@ -41,7 +41,7 @@ export async function savePublicImage(
   const sniffed = await fileTypeFromBuffer(bytes);
   const extension = sniffed !== undefined ? ALLOWED_MIME_EXTENSIONS[sniffed.mime] : undefined;
   if (extension === undefined) {
-    return { ok: false, detail: 'Nieobsługiwany format pliku — dozwolone są JPEG, PNG i WebP.' };
+    return { ok: false, detail: 'Nieobsługiwany format pliku - dozwolone są JPEG, PNG i WebP.' };
   }
 
   const dir = path.join(PUBLIC_IMAGES_ROOT, kind, ownerId);
@@ -52,7 +52,7 @@ export async function savePublicImage(
   return { ok: true, url: `/images/${kind}/${ownerId}/${fileName}` };
 }
 
-/** `url` must be one this module produced (`/images/{kind}/{ownerId}/...`) — refuses anything else, same defense-in-depth `local-disk.ts`'s `resolveKeyPath` applies. */
+/** `url` must be one this module produced (`/images/{kind}/{ownerId}/...`) - refuses anything else, same defense-in-depth `local-disk.ts`'s `resolveKeyPath` applies. */
 const DELETABLE_PREFIXES: readonly PublicImageKind[] = ['products', 'categories', 'materials', 'finishes', 'designs'];
 
 export async function deletePublicImage(url: string): Promise<void> {

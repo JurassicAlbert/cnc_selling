@@ -1,9 +1,9 @@
 /**
- * Admin pricing queries — read-only. Every caller here MUST go through
+ * Admin pricing queries - read-only. Every caller here MUST go through
  * `requireAdminSession()` first (highest-risk screen in the app,
- * `docs/ARCHITECTURE.md` §16A.1 module 7 — ADMIN only, not STAFF).
+ * `docs/ARCHITECTURE.md` §16A.1 module 7 - ADMIN only, not STAFF).
  *
- * `PricingSettings.version` is the real `@id` — there is no separate
+ * `PricingSettings.version` is the real `@id` - there is no separate
  * surrogate key, and rows are never edited in place (see
  * `src/server/actions/admin-pricing.ts`'s header for the versioning
  * design). "Active" means `isActive: true`; exactly one row should hold

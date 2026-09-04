@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * The in-page error panel for a route-group `error.tsx` — as opposed to
+ * The in-page error panel for a route-group `error.tsx` - as opposed to
  * `ErrorPanel`, which the ROOT boundary renders when there is no chrome
  * left to sit inside.
  *
@@ -37,7 +37,7 @@ export function SegmentErrorPanel({
         <Typography variant="body2">{SITE.errorPageBodyPl}</Typography>
         {digest !== undefined && (
           <Typography variant="caption" color="text.secondary">
-            {SITE.errorPageCorrelationIdLabelPl}: <code>{digest}</code> — {SITE.errorPageCorrelationIdHelpPl}
+            {SITE.errorPageCorrelationIdLabelPl}: <code>{digest}</code> - {SITE.errorPageCorrelationIdHelpPl}
           </Typography>
         )}
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>

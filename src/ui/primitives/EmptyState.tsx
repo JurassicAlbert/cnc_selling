@@ -2,11 +2,11 @@ import Link from 'next/link';
 import { Button, Stack, Typography } from '@mui/material';
 
 /**
- * A real empty state, not a blank table — `docs/CHECKLIST.md`/
+ * A real empty state, not a blank table - `docs/CHECKLIST.md`/
  * `ARCHITECTURE.md` §16A.5: "Real empty states that tell you what to do
  * next." Used on the panel's top-level catalogue/content list pages,
  * where "what to do next" is always the same real action already sitting
- * in the page's own heading button — this repeats it inline, next to the
+ * in the page's own heading button - this repeats it inline, next to the
  * empty message itself, so the next step is visible without having to
  * notice a button elsewhere on the page.
  */

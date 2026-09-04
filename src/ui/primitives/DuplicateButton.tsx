@@ -5,7 +5,7 @@ import { ADMIN } from '@/content/pl/admin';
 /**
  * Shared "Duplikuj" button for Product/Design/Material detail pages.
  * Same zero-client-JS form-bound-to-a-Server-Action shape as
- * `ActiveToggleButton` — the action itself redirects to the new
+ * `ActiveToggleButton` - the action itself redirects to the new
  * record's page on success (see `duplicateProductAndGo` and its
  * siblings), so no client-side state is needed here either.
  */

@@ -20,11 +20,11 @@ export type CsvImportResult =
 const INITIAL_STATE: CsvImportResult = { ok: true, createdCount: 0, rows: [] };
 
 /**
- * A real, generic CSV bulk-import form — `docs/CHECKLIST.md`'s "CSV
+ * A real, generic CSV bulk-import form - `docs/CHECKLIST.md`'s "CSV
  * import/export on catalogue tables" (export already existed via `DataGrid`'s
  * own toolbar; this is the missing import half). Every row goes through the
  * exact same `applyCreateX` a manual create does, so imported rows are
- * indistinguishable from hand-typed ones — see e.g. `applyImportCategoriesFromCsv`
+ * indistinguishable from hand-typed ones - see e.g. `applyImportCategoriesFromCsv`
  * in `admin-categories.ts`. A bad row never aborts the whole batch: this
  * reports per-row success/failure, since a staff member fixing a large CSV
  * needs to know exactly which rows to fix, not just "something failed."
@@ -79,7 +79,7 @@ export function CsvImportForm({
                 {skipped.map((row) => (
                   <TableRow key={row.row}>
                     <TableCell>{row.row}</TableCell>
-                    <TableCell>{row.slug.length > 0 ? row.slug : '—'}</TableCell>
+                    <TableCell>{row.slug.length > 0 ? row.slug : '-'}</TableCell>
                     <TableCell>{row.detail}</TableCell>
                   </TableRow>
                 ))}

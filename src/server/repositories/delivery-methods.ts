@@ -5,18 +5,18 @@ import type { CartWeightItem } from '@/domain/shipping/weight';
 import type { CartItemView } from '@/server/repositories/cart';
 
 /**
- * Public `DeliveryMethod` reads — P9 phase 5. Replaces the single
+ * Public `DeliveryMethod` reads - P9 phase 5. Replaces the single
  * hardcoded `StoreSettings.shippingFlatRateGrosze` at checkout: every
  * active method is real, admin-managed, and its price is always
  * recomputed server-side from this table, never trusted from the client.
  *
  * 2026-08-29 rewrite: a method's price is no longer a flat rate the
- * client can compute from the subtotal alone — it depends on the real
+ * client can compute from the subtotal alone - it depends on the real
  * cart's real weight (and, for a locker method, whether every item
  * physically fits), so `ActiveDeliveryMethod` now carries the ALREADY
  * evaluated `priceGrosze`/`feasible`/`infeasibleReasonPl` for one specific
  * cart, not a static row. `resolveDeliveryMethodsForCart` is the one
- * place that does this — `type` here is still fine to import into a
+ * place that does this - `type` here is still fine to import into a
  * client component (type-only, fully erased); the resolver function
  * itself imports `prisma` and must never cross that boundary.
  */
@@ -30,7 +30,7 @@ export type ActiveDeliveryMethod = {
   readonly estimatedDaysMax: number;
   readonly trackingAvailable: boolean;
   readonly requiresPickupPoint: boolean;
-  /** The real carrier this method's pickup points belong to (`server/delivery/pickup-points.ts` is carrier-scoped) — `null` for a method with no pickup-point step. */
+  /** The real carrier this method's pickup points belong to (`server/delivery/pickup-points.ts` is carrier-scoped) - `null` for a method with no pickup-point step. */
   readonly carrier: string | null;
   readonly feasible: boolean;
   readonly infeasibleReasonPl: string | null;
@@ -50,14 +50,14 @@ function toCartWeightItems(items: readonly CartItemView[]): readonly CartWeightI
 function infeasibleReasonMessage(reason: 'TOO_HEAVY' | 'ITEM_TOO_LARGE'): string {
   switch (reason) {
     case 'TOO_HEAVY':
-      return 'Niedostępne — zamówienie przekracza maksymalną wagę obsługiwaną przez tę metodę.';
+      return 'Niedostępne - zamówienie przekracza maksymalną wagę obsługiwaną przez tę metodę.';
     case 'ITEM_TOO_LARGE':
-      return 'Niedostępne — jeden z produktów w koszyku jest za duży dla tej metody dostawy.';
+      return 'Niedostępne - jeden z produktów w koszyku jest za duży dla tej metody dostawy.';
   }
 }
 
 /**
- * Real per-cart evaluation of every active `DeliveryMethod` — the one
+ * Real per-cart evaluation of every active `DeliveryMethod` - the one
  * function both `koszyk/zamowienie` (to render the picker) and
  * `createOrder` (to re-validate the chosen one, never trusting the
  * client) call, so the two can never silently disagree.

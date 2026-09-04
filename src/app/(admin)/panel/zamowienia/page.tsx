@@ -33,7 +33,7 @@ export default async function AdminOrdersPage({ searchParams }: OrdersPageProps)
   const paymentStatus = isPaymentStatus(params.paymentStatus) ? params.paymentStatus : undefined;
   const search = params.search !== undefined && params.search.length > 0 ? params.search : undefined;
   const dateFrom = parseDateParam(params.dateFrom);
-  // End-of-day, so "dateTo" is inclusive of the whole selected day — same
+  // End-of-day, so "dateTo" is inclusive of the whole selected day - same
   // reasoning as the Dashboard's own range form.
   const dateToRaw = parseDateParam(params.dateTo);
   const dateTo = dateToRaw === undefined ? undefined : new Date(dateToRaw.getTime() + 24 * 60 * 60 * 1000 - 1);

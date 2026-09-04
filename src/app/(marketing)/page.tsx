@@ -20,17 +20,17 @@ import { TrustBadgeStrip } from '@/ui/primitives/TrustBadgeStrip';
 import { SITE } from '@/content/pl/site';
 
 /**
- * A Server Component. No `@mui/material` import — `biome.json`'s `overrides`
+ * A Server Component. No `@mui/material` import - `biome.json`'s `overrides`
  * enforces that for every file under `(marketing)` and `(shop)`.
  *
  * Redesigned 2026-08-24 to match the density of the owner's chosen reference
- * (Bazaar `fashion-2`) — hero, trust badges, category tiles, one honest
- * product grid — while keeping every rule the previous pass established:
+ * (Bazaar `fashion-2`) - hero, trust badges, category tiles, one honest
+ * product grid - while keeping every rule the previous pass established:
  * no fabricated reviews/ratings, no fake multi-curated product sections (one
  * real "Nasze produkty" grid, not four labelled the way a much larger
  * catalogue would be), no invented trust claims (the badges state only
  * things actually true of this business). Hero/craftsmanship narrative
- * copy still isn't here — this is real functional chrome, not the
+ * copy still isn't here - this is real functional chrome, not the
  * owner's-own-words content ARCHITECTURE.md §22 describes, which remains
  * unbuilt.
  */
@@ -62,7 +62,7 @@ export default async function MarketingHomePage() {
             <style>{`
               .hero-grid { grid-template-columns: 1fr; }
               @media (min-width: 900px) {
-                /* Wider than 1fr 1fr on purpose — the hex mosaic needs real
+                /* Wider than 1fr 1fr on purpose - the hex mosaic needs real
                    room to read as a proper hero visual, not a small accent
                    next to the heading (2026-08-26). */
                 .hero-grid { grid-template-columns: 1fr 1.3fr; }

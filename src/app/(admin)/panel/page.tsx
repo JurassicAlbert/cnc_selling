@@ -40,7 +40,7 @@ function toDateInputValue(date: Date): string {
  * Builds the "every dashboard number clicks through to the records behind
  * it" hrefs (`docs/CHECKLIST.md`). Date windows here mirror
  * `getDashboardKpis`'s own (today/7d/30d lookback from `now`) closely
- * enough for a click-through — not byte-exact, since the KPI's "today" uses
+ * enough for a click-through - not byte-exact, since the KPI's "today" uses
  * local server time while the Orders list's `dateFrom`/`dateTo` filter
  * parses UTC dates (same convention as this page's own date-range form
  * above); a user landing from the tile still sees the right list with the

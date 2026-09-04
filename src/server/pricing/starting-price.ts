@@ -3,7 +3,7 @@
  *
  * `docs/REVIEW-DETAILED.md` BUG-02: every listing page used to advertise
  * `Product.minPriceGrosze`, which is the **net** clamp inside
- * `calculatePrice` — while every other price on the site is gross — and
+ * `calculatePrice` - while every other price on the site is gross - and
  * which for several products was also below anything that could actually be
  * built. The wall art advertised 150,00 zł against a real cheapest of
  * ≈190,40 zł gross, and the same figure went into the Schema.org
@@ -11,7 +11,7 @@
  *
  * Owner, 2026-08-31: "we should show the brutto - gross price and the price
  * should depend on what user pick." So this computes the **cheapest
- * configuration a customer could actually buy**, gross — the real floor of
+ * configuration a customer could actually buy**, gross - the real floor of
  * what the configurator will then quote as they pick.
  *
  * **Stored, not computed per request.** A category page renders many
@@ -21,7 +21,7 @@
  * and `refreshAllStartingPrices()` recomputes it after anything that can
  * move a price. A stale stored value would be the original bug wearing a
  * different hat, so `tests/integration/starting-price.test.ts` asserts that
- * every active product's stored value still equals a freshly computed one —
+ * every active product's stored value still equals a freshly computed one -
  * a missed refresh hook fails the suite rather than quietly mispricing the
  * catalogue.
  *
@@ -44,12 +44,12 @@ import type { ConfiguratorProductData } from '@/server/repositories/configurator
 /**
  * Every size the product actually offers, smallest first.
  *
- * The cheapest size is always the smallest — every component that varies
+ * The cheapest size is always the smallest - every component that varies
  * with size (material, machining, finish, packaging tier, module surcharge)
  * grows with area. But cheapest is not the same as **buildable**: a small
  * panel can fail feasibility outright, because a design's minimum line
  * width is declared at its reference width and scales down with the piece.
- * The seeded wall art is exactly that case — its 20×20 cm preset cannot
+ * The seeded wall art is exactly that case - its 20×20 cm preset cannot
  * carry its own patterns, which is also why `computeDefaultSelections`
  * opens the configurator on the middle preset rather than the first.
  *
@@ -94,7 +94,7 @@ export async function computeStartingPriceGrossGrosze(productSlug: string): Prom
 
   for (const materialId of base.materialIds) {
     // Finishes, designs and thicknesses all narrow against the chosen
-    // material, so they are re-resolved per material rather than once —
+    // material, so they are re-resolved per material rather than once -
     // `domain/compatibility` is the authority on that and this must not
     // second-guess it.
     const withMaterial = resolveOptions(data.options, { ...EMPTY_SELECTIONS, materialId });
@@ -135,7 +135,7 @@ export async function computeStartingPriceGrossGrosze(productSlug: string): Prom
  * One combination's gross unit price, or `null` if it is not actually
  * buildable (infeasible dimensions, a blocking feasibility error, a
  * material the resolver offered but that this product type still cannot
- * complete). Pure — every row is already in `data`, so this loop does no
+ * complete). Pure - every row is already in `data`, so this loop does no
  * further database work however many combinations it walks.
  */
 function priceOf(data: ConfiguratorProductData, selections: Selections): number | null {
@@ -199,7 +199,7 @@ function priceOf(data: ConfiguratorProductData, selections: Selections): number 
  * the compatibility editors (product↔material, product↔design,
  * material↔finish, finish exclusions). Those change the option set a
  * starting price is derived from, so a stale "od X zł" can survive one
- * until the next hooked write. Tracked rather than silently accepted —
+ * until the next hooked write. Tracked rather than silently accepted -
  * `docs/AI-CHECKLIST.md` BUG-02's follow-up. The consequence is bounded:
  * this is only the *advertised* figure, and the configurator, cart and
  * checkout all re-price live and remain authoritative.
@@ -229,7 +229,7 @@ export async function refreshAllStartingPrices(): Promise<void> {
       }
       // `updateMany`, not `update`: this is a read-then-write over a list
       // that another request may have changed in between, and `update`
-      // throws P2025 if the row has since gone — which would reject the
+      // throws P2025 if the row has since gone - which would reject the
       // whole `Promise.all` and abandon every other product's refresh over
       // one deleted row. "Affected 0 rows" is the correct, uneventful answer
       // when someone else got there first (ARCHITECTURE.md's own rule for

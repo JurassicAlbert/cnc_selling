@@ -4,7 +4,7 @@ import { prisma } from '@/server/db/client';
 import type { ProductCardData } from '@/server/repositories/products';
 
 /**
- * Public `ProductCollection` reads — P9 phase 4. Curated groupings of
+ * Public `ProductCollection` reads - P9 phase 4. Curated groupings of
  * ready-made, independently-created products, explicitly distinct from a
  * `Category` (a product still belongs to exactly one category regardless
  * of collection membership) and from `DesignCollection` (patterns, not
@@ -43,7 +43,7 @@ export async function queryActiveCollections(): Promise<readonly CollectionListI
  * it lives and dies with the request, so an admin edit is visible on the
  * very next one.
  *
- * PERF-01 step 1 proposed going further — `unstable_cache` with a tag,
+ * PERF-01 step 1 proposed going further - `unstable_cache` with a tag,
  * invalidated from the admin operations. That was built and then backed out,
  * and the reason is worth recording rather than re-attempting blind: the
  * caching half demonstrably works (a category added straight to the database
@@ -51,7 +51,7 @@ export async function queryActiveCollections(): Promise<readonly CollectionListI
  * never verified end to end**. Next 16 documents cache tagging for `fetch`
  * and `use cache` and does not mention `unstable_cache` at all. Shipping a
  * cross-request cache whose invalidation is unproven means an admin edit
- * that silently takes minutes to appear — the wrong thing to guess about, so
+ * that silently takes minutes to appear - the wrong thing to guess about, so
  * it waits for the `cacheComponents` decision that unblocks `use cache`
  * (`docs/REVIEW-PERFORMANCE.md` Finding 1).
  */
@@ -74,19 +74,19 @@ async function queryActiveCollectionBySlug(slug: string): Promise<CollectionDeta
   if (collection === null) {
     return null;
   }
-  return { ...collection, seoTitlePl: `${collection.namePl} — RYT`, seoDescPl: collection.descPl };
+  return { ...collection, seoTitlePl: `${collection.namePl} - RYT`, seoDescPl: collection.descPl };
 }
 
 /**
- * Request-scoped memoization — `docs/REVIEW-DETAILED.md` PERF-02. This page's
+ * Request-scoped memoization - `docs/REVIEW-DETAILED.md` PERF-02. This page's
  * `generateMetadata` and its body both call `getActiveCollectionBySlug`, and Next
  * deduplicates `fetch`, not Prisma, so the identical query ran twice per
  * render. `cache()` lasts exactly one request, so there is no staleness to
- * reason about — an admin edit shows on the next request either way.
+ * reason about - an admin edit shows on the next request either way.
  */
 export const getActiveCollectionBySlug = cache(queryActiveCollectionBySlug);
 
-/** Only active products, in the collection's own curated order — same card shape `ProductCard` already renders for a category. Same `category.isActive` cascade as `products.ts`. */
+/** Only active products, in the collection's own curated order - same card shape `ProductCard` already renders for a category. Same `category.isActive` cascade as `products.ts`. */
 export async function listActiveProductsByCollectionSlug(collectionSlug: string): Promise<ProductCardData[]> {
   const items = await prisma.productCollectionItem.findMany({
     where: {

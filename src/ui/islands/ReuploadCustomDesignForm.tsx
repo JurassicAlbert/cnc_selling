@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * P9 continuation, 2026-08-28 — the other half of the NEEDS_CHANGES flow
+ * P9 continuation, 2026-08-28 - the other half of the NEEDS_CHANGES flow
  * `docs/CHECKLIST.md` flagged as still missing after the discussion thread
  * shipped (`DesignReviewDiscussion.tsx`): `reuploadCustomDesign`
  * (`server/actions/design-review.ts`) has been real and tested since P7,
  * but had no UI. Only rendered by the parent page when
- * `status === 'NEEDS_CHANGES'` — `reuploadCustomDesign` itself already
+ * `status === 'NEEDS_CHANGES'` - `reuploadCustomDesign` itself already
  * refuses any other status via `checkDesignReviewTransition`, so this is
  * belt-and-suspenders, not the only guard. No consent checkbox: the
  * original upload already captured the IP declaration

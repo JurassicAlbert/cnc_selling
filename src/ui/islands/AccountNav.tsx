@@ -2,12 +2,12 @@
 
 /**
  * 2026-08-28, owner feedback: the whole `/moje-konto/*` section "still has
- * too poor UI/UX" — this nav was a raw flex row of plain-text `<Link>`s and
+ * too poor UI/UX" - this nav was a raw flex row of plain-text `<Link>`s and
  * a bare `<button>` for logout, the same "vanilla html/css" register the
  * rest of the account section was flagged for. Real MUI `Tabs` with icons,
  * self-contained with its own `ThemeRegistry` (rather than moving the
  * mount up into the Server Component layout and risking a double
- * `AppRouterCacheProvider` on pages that already mount their own) — same
+ * `AppRouterCacheProvider` on pages that already mount their own) - same
  * "each interactive piece owns its mount" precedent every other MUI
  * island in this codebase already follows.
  */
@@ -42,7 +42,7 @@ export function AccountNav() {
 
 function AccountNavInner() {
   const pathname = usePathname();
-  // `/moje-konto` itself (the dashboard) isn't one of the tabs — falls
+  // `/moje-konto` itself (the dashboard) isn't one of the tabs - falls
   // back to no tab selected rather than forcing a false match.
   const activeIndex = NAV_ITEMS.findIndex((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
 
@@ -62,7 +62,7 @@ function AccountNavInner() {
           <Tab key={href} component={Link} href={href} icon={<Icon fontSize="small" />} iconPosition="start" label={label} />
         ))}
       </Tabs>
-      {/* A real `<form action={logout}>`, not an onClick handler — same
+      {/* A real `<form action={logout}>`, not an onClick handler - same
           zero-extra-JS-path Server Action invocation every other logout
           button in this codebase already uses. */}
       <form action={logout}>

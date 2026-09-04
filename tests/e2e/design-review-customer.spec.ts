@@ -1,7 +1,7 @@
 import path from 'node:path';
 
 // Unlike `webServer`'s own `next build && next start` (Next.js loads `.env`
-// itself), the Playwright test-runner process does not — needed here only
+// itself), the Playwright test-runner process does not - needed here only
 // because this file talks to Postgres directly (same reason
 // `admin-authz.spec.ts` has this same line).
 import 'dotenv/config';
@@ -12,23 +12,23 @@ import { expect, test } from '@playwright/test';
 import { prisma } from '../../src/server/db/client';
 
 /**
- * P9 continuation, 2026-08-28 — the full, real NEEDS_CHANGES round trip:
+ * P9 continuation, 2026-08-28 - the full, real NEEDS_CHANGES round trip:
  * a customer uploads a design via `/moje-konto/wzory` (the standalone
  * library, P9 phase 2), a real staff account requests changes on it via
  * the existing admin review panel (`/panel/weryfikacja`, unchanged), and
  * the customer sees the notice, the staff's comment, and a real working
- * reupload form on the new `/moje-konto/wzory/[id]` detail page — closing
+ * reupload form on the new `/moje-konto/wzory/[id]` detail page - closing
  * the gap `docs/CHECKLIST.md` flagged: `reuploadCustomDesign` was real and
  * domain-tested since P7 but had no UI to reach it.
  *
  * `reuploadCustomDesign`/`postCustomerDesignComment` both call
  * `requireOwnedDesignId`/`currentOwner()` internally, which read real
- * `next/headers` — not callable directly from a Vitest integration test
+ * `next/headers` - not callable directly from a Vitest integration test
  * (the documented "cookies outside request scope" gotcha), so this is the
  * right level for it, same as `custom-upload.spec.ts`.
  *
  * Talks to Postgres directly (`prisma.user.update` to promote the staff
- * account) — same real, established pattern `admin-authz.spec.ts` set,
+ * account) - same real, established pattern `admin-authz.spec.ts` set,
  * against the same shared dev database every other e2e spec and this
  * session's own manual verification already writes to.
  */
@@ -52,8 +52,8 @@ async function register(page: Page, params: { readonly name: string; readonly em
 }
 
 /**
- * `submitLogin` redirects role-dependently (`mergeAndGetRedirectTarget`) —
- * `/moje-konto` for `CUSTOMER`, `/panel` for `STAFF`/`ADMIN` — so this
+ * `submitLogin` redirects role-dependently (`mergeAndGetRedirectTarget`) -
+ * `/moje-konto` for `CUSTOMER`, `/panel` for `STAFF`/`ADMIN` - so this
  * just waits for navigation away from `/logowanie` rather than asserting
  * one fixed destination.
  */
@@ -85,7 +85,7 @@ test('customer uploads, staff requests changes, customer sees the notice and reu
   await main.getByRole('button', { name: 'Prześlij projekt' }).click();
   await expect(main.getByText('Projekt został przesłany.')).toBeVisible();
 
-  // The just-uploaded row's own detail link carries the real id — reused
+  // The just-uploaded row's own detail link carries the real id - reused
   // directly rather than querying Prisma for it, so this test exercises
   // the real rendered link too.
   await page.reload();
@@ -124,11 +124,11 @@ test('customer uploads, staff requests changes, customer sees the notice and reu
   await accountMain.getByRole('button', { name: 'Prześlij projekt' }).click();
   // Not asserting the transient "Projekt został przesłany." success alert:
   // a successful reupload changes `design.status`, which `router.refresh()`
-  // picks up — the parent Server Component re-renders with
+  // picks up - the parent Server Component re-renders with
   // `status !== 'NEEDS_CHANGES'`, unmounting this whole form (local success
   // state included), sometimes before an assertion on it ever observes it.
   // `reuploadCustomDesign` is a real async Server Action call, not a page
-  // navigation — `waitForLoadState('networkidle')` is what actually waits
+  // navigation - `waitForLoadState('networkidle')` is what actually waits
   // for that request (and the refresh's own RSC fetch) to finish, rather
   // than racing `page.reload()` against a still-in-flight mutation.
   await page.waitForLoadState('networkidle');

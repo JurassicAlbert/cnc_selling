@@ -1,16 +1,16 @@
 /**
- * Store settings mutation — same `applyXxx`/`xxx` split as every other
+ * Store settings mutation - same `applyXxx`/`xxx` split as every other
  * staff mutation. Bank fields are trimmed to `null` when left blank (so
  * clearing a field genuinely un-configures it, not stores an empty
  * string), matching `StoreSettings`'s own nullable-means-not-configured
  * contract.
  *
- * **`ADMIN`, not `STAFF`** — changed 2026-08-31, `docs/REVIEW-DETAILED.md`
+ * **`ADMIN`, not `STAFF`** - changed 2026-08-31, `docs/REVIEW-DETAILED.md`
  * SEC-04. `bankAccountNumber` is the account number every bank-transfer
  * customer is told to pay into, on the confirmation page and in the
  * confirmation email; a `STAFF` account able to write it can redirect all
  * incoming payments. ARCHITECTURE.md §16.3 already assigned settings to
- * `ADMIN` — the code simply did not honour it.
+ * `ADMIN` - the code simply did not honour it.
  *
  * The gate is asserted twice on purpose: `requireAdminSession()` in the
  * wrapper is what a real request meets, and `refuseUnlessAdmin` in the

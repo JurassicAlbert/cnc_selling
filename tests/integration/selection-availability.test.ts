@@ -12,7 +12,7 @@ import type { Owner } from '@/server/session/ownership';
  *
  * `domain/compatibility/resolve.ts` implements §7.2's rules correctly and
  * has 17 unit tests. It was called only from `resolve-options.ts`, whose
- * output decides what the UI *renders* — the write path
+ * output decides what the UI *renders* - the write path
  * (`priceAndValidateSelections`, shared by add-to-cart, cart edit and
  * checkout re-pricing) resolved material/design/finish by plain map lookup
  * against maps built with no `where` clause at all.
@@ -23,8 +23,8 @@ import type { Owner } from '@/server/session/ownership';
  * tests specify the rule, these prove something enforces it.
  *
  * `Design.rightsStatus` in particular is not a preference. The schema
- * comment calls it enforcement of brief §12 — that nothing is assumed free
- * to reproduce — "by a query filter, not by discipline". A RESTRICTED
+ * comment calls it enforcement of brief §12 - that nothing is assumed free
+ * to reproduce - "by a query filter, not by discipline". A RESTRICTED
  * design reaching an order is a copyright exposure, not a UX slip.
  */
 
@@ -157,7 +157,7 @@ async function buildCatalogue() {
         designId: d.id,
       })),
     }),
-    // This design is offered only on `narrowingMaterial` — §7.2's
+    // This design is offered only on `narrowingMaterial` - §7.2's
     // "DesignMaterial if narrowed". No rows would mean "every material the
     // product allows", which is a genuinely different thing.
     prisma.designMaterial.create({ data: { designId: narrowedDesign.id, materialId: narrowingMaterial.id } }),
@@ -219,7 +219,7 @@ afterAll(async () => {
   await prisma.category.deleteMany({ where: { slug: { startsWith: PREFIX } } });
 });
 
-describe('the control — a genuinely sellable configuration still works', () => {
+describe('the control - a genuinely sellable configuration still works', () => {
   it('prices, and adds to the cart', async () => {
     const outcome = await priceAndValidateSelections(fixture.productSlug, selections());
     expect(outcome.ok).toBe(true);
@@ -261,7 +261,7 @@ describe('server-side rejection of unsellable selections (SEC-03)', () => {
 
       expect(result.ok).toBe(false);
       expect((await findCartForRequest({ userId: null, sessionToken })).items).toHaveLength(0);
-      // Nothing may be persisted on the way to the refusal, either — a
+      // Nothing may be persisted on the way to the refusal, either - a
       // rejected configuration that still leaves a `Configuration` row
       // would show up as a saved project the customer never made.
       expect(await prisma.configuration.count({ where: { sessionToken } })).toBe(0);
@@ -296,8 +296,8 @@ describe('server-side rejection of unsellable selections (SEC-03)', () => {
 describe('a configuration that was valid when saved, and is not any more', () => {
   /**
    * The realistic path, and the reason this is not only a "crafted request"
-   * problem. Staff retire a pattern — the panel's whole delete story is
-   * deactivate-not-destroy — and a customer is still holding a saved
+   * problem. Staff retire a pattern - the panel's whole delete story is
+   * deactivate-not-destroy - and a customer is still holding a saved
    * project, a shared link or a bookmark from before.
    */
   it('stops being addable once staff deactivate its design', async () => {

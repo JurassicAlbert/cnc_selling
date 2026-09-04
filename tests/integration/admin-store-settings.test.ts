@@ -12,7 +12,7 @@ function uid(): string {
 }
 
 /**
- * ADMIN, not STAFF — changed 2026-08-31 for docs/REVIEW-DETAILED.md SEC-04.
+ * ADMIN, not STAFF - changed 2026-08-31 for docs/REVIEW-DETAILED.md SEC-04.
  * This operation now refuses a STAFF actor (ARCHITECTURE.md §16.3), so an
  * actor built here has to be one that is genuinely allowed to perform it;
  * the refusal itself is covered by tests/integration/admin-authorization.test.ts.
@@ -24,7 +24,7 @@ function staffActor(): CurrentSession {
 }
 
 // StoreSettings is a real singleton shared with the rest of the app (and
-// every other test in this run) — snapshot it before mutating and restore
+// every other test in this run) - snapshot it before mutating and restore
 // it afterward, rather than deleting a row the whole app expects to exist.
 let snapshot: Awaited<ReturnType<typeof prisma.storeSettings.findUniqueOrThrow>> | null = null;
 

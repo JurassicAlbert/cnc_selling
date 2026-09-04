@@ -14,7 +14,7 @@ function lastLoggedLine(spy: ReturnType<typeof vi.spyOn>): Record<string, unknow
   return JSON.parse(String(call[0]));
 }
 
-describe('logger — one JSON object per line, real fields a log query can filter on', () => {
+describe('logger - one JSON object per line, real fields a log query can filter on', () => {
   it('info() writes to console.log with level/event/timestamp plus the context fields, flat', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     logger.info('mailer.unconfigured_send', { template: 'order-confirmation', to: 'test@example.test' });

@@ -33,7 +33,7 @@ export function MaterialCompatEditor({
       {materials.map((material) => (
         <Stack key={material.materialId} direction="row" spacing={2} sx={{ alignItems: 'center' }}>
           <Typography sx={{ flex: 1 }}>
-            {material.namePl} — ×{(material.priceFactorBp / 100).toFixed(0)}%
+            {material.namePl} - ×{(material.priceFactorBp / 100).toFixed(0)}%
           </Typography>
           <form action={removeProductMaterial.bind(null, productId, material.materialId)}>
             <IconButton type="submit" size="small" aria-label={ADMIN.removePl}>

@@ -2,13 +2,13 @@
 
 /**
  * Shared review-submission form for both entry points (guest confirmation
- * page, logged-in order-history page) — the page binds the right Server
+ * page, logged-in order-history page) - the page binds the right Server
  * Action (`submitGuestReview`/`submitAccountReview`, both
  * `src/server/actions/reviews.ts`) and passes it in, so this component
  * itself never knows or cares which context it's in.
  *
  * P9 phase 9 (sitewide MUI form audit): converted from raw
- * `<input>`/`<select>`/`<button>` to real MUI — both order pages that
+ * `<input>`/`<select>`/`<button>` to real MUI - both order pages that
  * render this now also render `SupportRequestForm` (P9 phase 8) right
  * below it inside the same `ThemeRegistry`, and leaving this one raw
  * would have made the page visibly half-polished.
@@ -24,7 +24,7 @@ import type { SubmitReviewResult } from '@/server/actions/reviews';
 const INITIAL_STATE: SubmitReviewResult = { ok: true };
 
 export function ReviewForm({ action }: { readonly action: (formData: FormData) => Promise<SubmitReviewResult> }) {
-  // `useActionState`'s initial state is also `{ ok: true }` — a plain
+  // `useActionState`'s initial state is also `{ ok: true }` - a plain
   // `submitted` flag is what actually distinguishes "hasn't been
   // submitted yet" from "just submitted successfully."
   const [submitted, setSubmitted] = useState(false);

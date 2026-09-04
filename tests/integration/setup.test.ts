@@ -5,7 +5,7 @@ import { testPrisma, withTestTransaction } from './setup';
 /**
  * Guards the integration-test infrastructure itself: if
  * `withTestTransaction` stopped actually rolling back, every other
- * integration test's isolation guarantee would silently break — this is
+ * integration test's isolation guarantee would silently break - this is
  * the one test in this tier that verifies the tier's own foundation.
  */
 describe('withTestTransaction', () => {
@@ -14,7 +14,7 @@ describe('withTestTransaction', () => {
     expect(result).toBe(42);
   });
 
-  it('really rolls back — a row written inside it does not persist after', async () => {
+  it('really rolls back - a row written inside it does not persist after', async () => {
     const email = `rollback-check-${Date.now()}@example.test`;
 
     await withTestTransaction(async (tx) => {

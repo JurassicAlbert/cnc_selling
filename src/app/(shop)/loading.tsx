@@ -1,6 +1,6 @@
 /**
  * Group-level loading fallback for every `(shop)` route that doesn't
- * define its own — `docs/AUDIT-2026-08-30.md` §7 found 22 routes with no
+ * define its own - `docs/AUDIT-2026-08-30.md` §7 found 22 routes with no
  * loading UI at all, including checkout, order history, order detail and
  * the collection pages, every one of which does a real database read
  * before it can render anything.

@@ -13,7 +13,7 @@ type SearchPageProps = {
 };
 
 /**
- * A real search results page — diacritic-insensitive matching
+ * A real search results page - diacritic-insensitive matching
  * (`matchesPl`/`searchActiveProducts`) against the real catalogue, not a
  * search icon that goes nowhere. Always dynamically rendered (reads
  * `searchParams`); the catalogue is small enough that this costs nothing

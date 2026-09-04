@@ -6,7 +6,7 @@ import type { ReactElement } from 'react';
 /**
  * `docs/CHECKLIST.md` / `ARCHITECTURE.md` §16A.5: "Every disabled control
  * explains why on hover." A plain `title` attribute on a disabled MUI
- * `Button` never actually shows — confirmed directly, not assumed: a real
+ * `Button` never actually shows - confirmed directly, not assumed: a real
  * disabled button on this project's own order-status screen already had a
  * `title` prop that could never fire, `getComputedStyle(button).
  * pointerEvents === 'none'` on every disabled MUI control. A native title
@@ -15,7 +15,7 @@ import type { ReactElement } from 'react';
  * to trigger on, and `pointer-events: none` blocks them outright.
  *
  * MUI's own documented fix: wrap the disabled control in a plain `<span>`
- * (normal pointer events) and put the `Tooltip` there instead — the span
+ * (normal pointer events) and put the `Tooltip` there instead - the span
  * receives the hover, the button just sits inside it. No-op when there is
  * nothing to explain, so a caller can pass this unconditionally.
  */

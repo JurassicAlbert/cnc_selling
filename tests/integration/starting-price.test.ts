@@ -14,7 +14,7 @@ import type { Selections } from '@/domain/configuration/steps';
  *
  * Every listing page advertised `Product.minPriceGrosze` as the price. That
  * value is the **net** clamp inside `calculatePrice`, while every other
- * price on the site is gross — and it was also far below anything that
+ * price on the site is gross - and it was also far below anything that
  * could actually be built. The same number went into the Schema.org
  * `Offer.price`.
  *
@@ -31,11 +31,11 @@ import type { Selections } from '@/domain/configuration/steps';
  * that were broken:
  *
  *   1. the advertised price is **gross**, and
- *   2. it is **reachable** — some real configuration costs exactly that,
+ *   2. it is **reachable** - some real configuration costs exactly that,
  *      and none costs less.
  *
- * Both are checked against `priceAndValidateSelections` — the same path
- * add-to-cart and checkout use — rather than against the computation under
+ * Both are checked against `priceAndValidateSelections` - the same path
+ * add-to-cart and checkout use - rather than against the computation under
  * test, so agreeing with itself is not enough to pass.
  */
 
@@ -45,11 +45,11 @@ const WALL_ART_SLUG = 'obraz-drewniany-z-grawerem';
 async function sampleConfigurations(slug: string, limit: number): Promise<readonly Selections[]> {
   const data = await getConfiguratorProductData(slug);
   if (data === null) {
-    throw new Error(`No "${slug}" in this database — seed it first`);
+    throw new Error(`No "${slug}" in this database - seed it first`);
   }
   const steps = stepsForProductType(data.typeCode);
   // Every offered size, not just the smallest. The smallest is always the
-  // cheapest, but it is not always BUILDABLE — a design's minimum line
+  // cheapest, but it is not always BUILDABLE - a design's minimum line
   // width scales down with the piece, so the wall art's 20×20 cm preset is
   // blocked for every pattern it offers. Sampling only that size would
   // find nothing priceable and the assertion would pass vacuously.
@@ -127,18 +127,18 @@ describe('the advertised starting price', () => {
 
   /**
    * Deliberately exhaustive, and therefore slow: it prices every offered
-   * combination through the real `priceAndValidateSelections` — one
-   * catalogue read each — rather than reusing the implementation under
+   * combination through the real `priceAndValidateSelections` - one
+   * catalogue read each - rather than reusing the implementation under
    * test. Sampling a clever subset would need the same "which is cheapest"
    * reasoning the code makes, and would stop being independent evidence.
    * The default 5s timeout is not enough for ~130 round trips once the rest
    * of the suite is competing for the connection pool.
    */
-  it('is reachable — no real configuration of this product costs less', { timeout: 60_000 }, async () => {
+  it('is reachable - no real configuration of this product costs less', { timeout: 60_000 }, async () => {
     const starting = await computeStartingPriceGrossGrosze(WALL_ART_SLUG);
     expect(starting).not.toBeNull();
 
-    // High enough to cover the whole option set for this product — the
+    // High enough to cover the whole option set for this product - the
     // "equals the cheapest" assertion below is only meaningful if the sample
     // actually contains the cheapest combination.
     const configurations = await sampleConfigurations(WALL_ART_SLUG, 500);
@@ -164,7 +164,7 @@ describe('the advertised starting price', () => {
   it('is null for a product whose price genuinely cannot be known up front', async () => {
     // CUSTOM products need the customer's own uploaded artwork before
     // anything can be priced (`CUSTOM_UPLOAD` precedes SIZE). Advertising a
-    // number there would be inventing one — null means "show no price",
+    // number there would be inventing one - null means "show no price",
     // never "show zero".
     const custom = await prisma.product.findFirst({
       where: { typeCode: 'CUSTOM', isActive: true },
@@ -182,7 +182,7 @@ describe('the advertised starting price', () => {
 
     // The cheapest material, made unavailable. If the computation reached
     // past the §7.2 filters it would keep quoting the old, now-unbuyable
-    // price — which is exactly how the advertised figure became unreachable
+    // price - which is exactly how the advertised figure became unreachable
     // in the first place.
     const data = await getConfiguratorProductData(WALL_ART_SLUG);
     const cheapestMaterialId = [...(data?.materialsById.entries() ?? [])].sort(
@@ -207,7 +207,7 @@ describe('the stored starting price stays in step with the catalogue', () => {
   /**
    * The failure mode worth guarding is a **missed refresh hook**: a rate
    * changes, nobody recomputes, and the shop quietly advertises yesterday's
-   * price — the same class of bug as the original.
+   * price - the same class of bug as the original.
    *
    * So this drives a real admin operation rather than calling
    * `refreshAllStartingPrices()` itself. A test that refreshes first and
@@ -238,7 +238,7 @@ describe('the stored starting price stays in step with the catalogue', () => {
       family: 'SOLID_WOOD',
       shortDescPl: '.',
       characteristicsPl: '.',
-      // The form takes złoty, not grosze — `readMaterialFields` multiplies.
+      // The form takes złoty, not grosze - `readMaterialFields` multiplies.
       pricePerM2Pln: String((material.pricePerM2Grosze * 3) / 100),
       densityKgPerM3: '700',
       maxSheetWidthMm: '2000',

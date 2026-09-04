@@ -17,7 +17,7 @@ import { findCartForRequest } from '@/server/repositories/cart';
  *
  * Every option this shop offers must be buildable. An option that is
  * presented, priced and selectable but then refused at add-to-cart is not a
- * safety feature — it is a dead end that only a customer discovers, and it
+ * safety feature - it is a dead end that only a customer discovers, and it
  * cost this project two entirely unsellable products (`docs/AI-CHECKLIST.md`
  * BUG-35: the bracelet was 0-of-132 buildable, the loft stool 0-of-792,
  * both live on the storefront).
@@ -26,8 +26,8 @@ import { findCartForRequest } from '@/server/repositories/cart';
  * matrix has rows for pricing, dimensions and feasibility in isolation, and
  * none for "can this product actually be ordered". This is that row.
  *
- * The sweep uses `priceConfiguration` — the same function
- * `priceAndValidateSelections` calls — rather than going through the
+ * The sweep uses `priceConfiguration` - the same function
+ * `priceAndValidateSelections` calls - rather than going through the
  * database once per combination, because exhaustive means ~1500
  * combinations. One representative configuration per product is then driven
  * all the way through `applyAddToCart`, so the cheap sweep is anchored to
@@ -61,7 +61,7 @@ function offeredCombinations(data: ConfiguratorProductData): readonly Combinatio
   for (const materialId of base.materialIds) {
     const withMaterial = resolveOptions(data.options, { ...EMPTY_SELECTIONS, materialId });
     // `[null]` both when the step does not apply to this product type AND
-    // when it applies but the product offers nothing for it — the second
+    // when it applies but the product offers nothing for it - the second
     // case is a real configuration (unfinished gres has no finish to pick),
     // and `applicableSteps` in `validate-and-price.ts` treats it the same
     // way. Iterating an empty list instead would silently produce zero
@@ -139,13 +139,13 @@ function blockedReason(data: ConfiguratorProductData, selections: Selections): s
 /**
  * The catalogue this invariant is about: what the shop actually offers.
  *
- * `slug: { not: { startsWith: 'test-' } }` is not tidiness — it is
+ * `slug: { not: { startsWith: 'test-' } }` is not tidiness - it is
  * correctness under parallel test files. Vitest runs files concurrently, and
  * several of them (`selection-availability.test.ts` above all) create their
  * own active products and tear them down again. This test enumerates
  * *whatever is active at this moment*, so without the filter it picks up
  * another file's fixture, and by the time it asks for that product's
- * configurator data the other file has deleted it — a failure reading
+ * configurator data the other file has deleted it - a failure reading
  * `test-availability-<uuid>: no configurator data`, which says nothing about
  * the shop's catalogue and appears only sometimes. (Observed on 2026-08-31,
  * once in four full-suite runs.)
@@ -183,7 +183,7 @@ describe('every option the shop offers is buildable', () => {
         continue;
       }
       // A CUSTOM product genuinely has nothing to offer until the customer
-      // uploads artwork — it is not "offering something blocked", it is
+      // uploads artwork - it is not "offering something blocked", it is
       // waiting for an input. Its own step list says so.
       if (stepsForProductType(data.typeCode).includes('CUSTOM_UPLOAD')) {
         continue;
@@ -201,7 +201,7 @@ describe('every option the shop offers is buildable', () => {
 
       if (blocked.length > 0) {
         failures.push(
-          `${slug}: ${blocked.length}/${combinations.length} offered combinations are blocked — e.g. ${blocked[0]?.label} (${blocked[0]?.reason})`,
+          `${slug}: ${blocked.length}/${combinations.length} offered combinations are blocked - e.g. ${blocked[0]?.label} (${blocked[0]?.reason})`,
         );
       }
     }

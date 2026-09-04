@@ -1,10 +1,10 @@
 /**
- * Pricing admin mutations — `docs/ARCHITECTURE.md` §16A.1 module 7, the
+ * Pricing admin mutations - `docs/ARCHITECTURE.md` §16A.1 module 7, the
  * "highest-risk screen in the application... a mistyped rate changes every
  * price on the site." Everything here is ADMIN only (`requireAdminSession`,
  * not `requireStaffSession`), same gate as `admin-staff.ts`.
  *
- * `PricingSettings.version` is genuinely never edited in place — there is
+ * `PricingSettings.version` is genuinely never edited in place - there is
  * no `applyUpdatePricingVersion` anywhere in this file, on purpose:
  * `applyCreatePricingDraft` always inserts a brand new row (`isActive:
  * false`, `publishedAt: null`), and `applyPublishPricingVersion` is the
@@ -12,7 +12,7 @@
  * version is live in one `$transaction`. A draft that's never published is
  * just an inert row, same as an abandoned form.
  *
- * `simulatePricingDraft` is deliberately a read — no DB write — but still
+ * `simulatePricingDraft` is deliberately a read - no DB write - but still
  * requires a real staff session, since it's invoked from a client island
  * via `fetch`, not rendered inside an already-gated Server Component page
  * (same reasoning as `admin-global-search.ts`).
@@ -55,28 +55,28 @@ function validateDraftInput(input: PricingDraftInput): string | null {
   ];
   const badRate = rates.find(([, r]) => !Number.isInteger(r) || r < 0);
   if (badRate !== undefined) {
-    return `${badRate[0]} musi być liczbą całkowitą, nie mniejszą niż 0 — podano ${badRate[1]}.`;
+    return `${badRate[0]} musi być liczbą całkowitą, nie mniejszą niż 0 - podano ${badRate[1]}.`;
   }
   if (!Number.isInteger(input.vatRateBp) || input.vatRateBp < 0 || input.vatRateBp > 10_000) {
-    return `Stawka VAT musi być liczbą całkowitą od 0 do 10000 (punkty bazowe, 2300 = 23%) — podano ${input.vatRateBp}.`;
+    return `Stawka VAT musi być liczbą całkowitą od 0 do 10000 (punkty bazowe, 2300 = 23%) - podano ${input.vatRateBp}.`;
   }
   if (input.packagingTiers.length === 0) {
     return 'Musi istnieć co najmniej jeden próg pakowania.';
   }
   for (const [index, tier] of input.packagingTiers.entries()) {
     if (!Number.isInteger(tier.priceGrosze) || tier.priceGrosze < 0) {
-      return `Próg pakowania #${index + 1}: cena musi być liczbą całkowitą, nie mniejszą niż 0 — podano ${tier.priceGrosze}.`;
+      return `Próg pakowania #${index + 1}: cena musi być liczbą całkowitą, nie mniejszą niż 0 - podano ${tier.priceGrosze}.`;
     }
   }
   // packagingGroszeFor (src/server/mapping/to-domain.ts) evaluates tiers in
-  // order and THROWS if none matches — "no matching tier is an error rather
+  // order and THROWS if none matches - "no matching tier is an error rather
   // than a zero," deliberately, per that function's own comment. A draft
   // whose last row isn't a real catch-all could crash real checkout pricing
   // the moment a customer configures something outside every bounded tier.
   // Real safety validation, not decoration.
   const lastTier = input.packagingTiers[input.packagingTiers.length - 1];
   if (lastTier === undefined || lastTier.maxAreaM2 !== null || lastTier.maxModules !== null) {
-    return 'Ostatni próg pakowania musi być progiem "bez limitu" (puste pola maks. powierzchni i maks. modułów) — inaczej duża konfiguracja nie znajdzie pasującego progu i wycena się nie powiedzie.';
+    return 'Ostatni próg pakowania musi być progiem "bez limitu" (puste pola maks. powierzchni i maks. modułów) - inaczej duża konfiguracja nie znajdzie pasującego progu i wycena się nie powiedzie.';
   }
   return null;
 }
@@ -179,12 +179,12 @@ function ratesOf(v: AdminPricingVersion) {
 // --- Simulator --------------------------------------------------------------
 
 /**
- * Three real seeded products, looked up by slug (not id — ids don't survive
+ * Three real seeded products, looked up by slug (not id - ids don't survive
  * a reseed). Chosen for rate sensitivity: the loft table uses CNC
  * machining and a thickness factor, the wall art and floor panel are
  * simpler single-module cases. Each priced at the product's own
  * `minWidthMm`/`minHeightMm` with its first available material/finish
- * (and design, if it has one) — deterministic and always a valid
+ * (and design, if it has one) - deterministic and always a valid
  * configuration, no new selection logic needed.
  */
 const REFERENCE_PRODUCT_SLUGS = ['obraz-drewniany-z-grawerem', 'stolek-loftowy-z-grawerem', 'panel-podlogowy-z-grawerem'] as const;
@@ -242,7 +242,7 @@ function grossGrosze(result: ConfiguratorPricingResult): number | null {
 }
 
 export async function simulatePricingDraft(version: number): Promise<SimulatePricingResult> {
-  await requireStaffSession(); // read-only, but still a real session check — see this file's header
+  await requireStaffSession(); // read-only, but still a real session check - see this file's header
 
   const draft = await getPricingVersionByNumber(version);
   if (draft === null) {
@@ -258,7 +258,7 @@ export async function simulatePricingDraft(version: number): Promise<SimulatePri
       }
 
       // `referenceSelectionsFor` only returns non-null when it found a real
-      // materialId in `data.materialsById`, so this lookup cannot miss —
+      // materialId in `data.materialsById`, so this lookup cannot miss -
       // still handled explicitly (`unpriceable`, not a non-null assertion)
       // rather than assumed.
       const material = selections.materialId === null ? null : (data.materialsById.get(selections.materialId) ?? null);

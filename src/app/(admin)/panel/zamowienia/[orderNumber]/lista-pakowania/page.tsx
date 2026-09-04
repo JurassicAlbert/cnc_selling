@@ -10,7 +10,7 @@ type PackingListPageProps = {
 };
 
 /**
- * A real, physical-pieces-to-box checklist for whoever packs a shipment —
+ * A real, physical-pieces-to-box checklist for whoever packs a shipment -
  * `docs/CHECKLIST.md`'s other, still-open "print view" alongside the
  * production brief (`karta-produkcyjna`, which this page deliberately
  * mirrors the shape of: same `findOrderForAdmin` data source, same
@@ -34,7 +34,7 @@ export default async function AdminPackingListPage({ params }: PackingListPagePr
     heightMm: item.snapshot.heightMm,
     personalizationText: item.snapshot.personalizationText,
     quantity: item.quantity,
-    // Each physical piece the packer must find and box — a multi-module
+    // Each physical piece the packer must find and box - a multi-module
     // product (e.g. a 2x2 panel) is several separate boards per unit.
     pieceCount: item.quantity * item.snapshot.moduleLayout.totalModules,
   }));

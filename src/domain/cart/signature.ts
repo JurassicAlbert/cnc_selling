@@ -1,10 +1,10 @@
 /**
- * A cart line's *identity* — what makes two additions "the same thing"
+ * A cart line's *identity* - what makes two additions "the same thing"
  * rather than two things (`docs/AUDIT-2026-08-30.md` P1-4).
  *
  * The rule the schema comment on `CartItem` already stated, made
  * enforceable: two DIFFERENT configurations of one product are two rows and
- * must stay two rows — a different pattern, a different material, a
+ * must stay two rows - a different pattern, a different material, a
  * different size, different engraved text are all genuinely different
  * products to make and to price. What did NOT follow from that, and was the
  * actual bug, is that two BYTE-IDENTICAL configurations were also two rows,
@@ -13,7 +13,7 @@
  *
  * Every field here is one a customer can actually choose and that changes
  * what gets manufactured. Nothing derived is included: not the price, not
- * the module layout, not the feasibility warnings — those are recomputed
+ * the module layout, not the feasibility warnings - those are recomputed
  * from these inputs, so including them could only ever split a line that
  * should have merged (for instance right after a price change).
  *
@@ -22,7 +22,7 @@
  *
  * The output is stored on `CartItem` and carries a `@@unique([cartId,
  * configurationSignature])` index, so identical lines cannot be created
- * even by two genuinely concurrent requests — the check alone would race.
+ * even by two genuinely concurrent requests - the check alone would race.
  */
 
 import type { Selections } from '@/domain/configuration/steps';
@@ -32,7 +32,7 @@ import type { Selections } from '@/domain/configuration/steps';
  * the naive one was wrong in two different ways at once: a `null` marker
  * that can never appear in real data is hard to pick (the first attempt
  * used a NUL byte, which Postgres flatly refuses to store in a `text`
- * column — caught by `tests/integration/cart-operations.test.ts` on its
+ * column - caught by `tests/integration/cart-operations.test.ts` on its
  * first run), and any chosen separator can appear inside a real value.
  *
  * `JSON.stringify` of a fixed-length array has neither problem: `null` and
@@ -53,7 +53,7 @@ export function cartItemSignature(productId: string, selections: Selections): st
     selections.heightMm,
     selections.installationVariant,
     // Trimmed, because the checkout and the engraver both treat trailing
-    // whitespace as nothing — but NOT case-folded: "Anna" and "ANNA" are
+    // whitespace as nothing - but NOT case-folded: "Anna" and "ANNA" are
     // two genuinely different engravings.
     selections.personalizationText === null ? null : selections.personalizationText.trim(),
     selections.fontId,

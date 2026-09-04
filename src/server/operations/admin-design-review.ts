@@ -1,6 +1,6 @@
 /**
  * Staff design-review decisions. Deliberately does NOT touch `Order.status`
- * — `checkOrderStatusTransition`'s own DESIGN_REVIEW gate (`domain/order-
+ * - `checkOrderStatusTransition`'s own DESIGN_REVIEW gate (`domain/order-
  * status/transitions.ts`) already blocks `DESIGN_REVIEW -> CONFIRMED` while
  * any linked `CustomerDesign` isn't `APPROVED`; staff transitions the order
  * separately, via `admin-orders.ts`'s `transitionOrderStatus`, once every
@@ -8,7 +8,7 @@
  *
  * Split into `applyDesignReviewDecision` (explicit staff actor, testable)
  * and `decideDesignReview` (the real Server Action, derives the actor via
- * `requireStaffSession()`) — same reason as `admin-orders.ts`.
+ * `requireStaffSession()`) - same reason as `admin-orders.ts`.
  */
 
 import { revalidatePath } from 'next/cache';

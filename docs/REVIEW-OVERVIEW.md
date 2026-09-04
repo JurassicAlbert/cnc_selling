@@ -1,9 +1,9 @@
-# Review overview — independent audit, 2026-08-30
+# Review overview - independent audit, 2026-08-30
 
 **Reviewer:** independent audit pass (a different agent from the one that
 built the project and from the one that wrote `docs/AUDIT-2026-08-30.md`).
 **Commit reviewed:** `e774e40` "Eliminate every duplicate a customer can create", branch `main`.
-**Scope:** whole repository — schema, migrations, domain, server, actions,
+**Scope:** whole repository - schema, migrations, domain, server, actions,
 operations, repositories, routes, UI, admin panel, tests, config, docs.
 **Method:** read the implementation first; verify claims against running
 code, a live database, a real browser and a real production build. Nothing
@@ -30,14 +30,14 @@ Everything in this table was actually run during the review, not inferred.
 | Live storefront | dev server + browser | home, product, cart, checkout render correctly |
 | Database | direct SQL against `DATABASE_URL` | 8 products, 13 designs, 166 orders, 466 configurations |
 
-E2E (`npm run e2e`) was **not** re-run in this pass — the previous session
+E2E (`npm run e2e`) was **not** re-run in this pass - the previous session
 recorded a known parallel-contention flake pattern, and re-litigating it
 would not have changed any finding here. Treated as "previously verified,
 not re-verified" rather than as evidence.
 
 ---
 
-## Remediation progress — 2026-08-31
+## Remediation progress - 2026-08-31
 
 Everything below this section is the audit as written on 2026-08-30 and is
 left unchanged. This is what has been fixed since. `AI-CHECKLIST.md` remains
@@ -60,20 +60,20 @@ carried-forward P1-8. **0 P0 remain.**
 rather than glossed:** the GitHub Actions workflow (ARCH-01) has never
 executed on GitHub. Everything it runs was reproduced locally against a
 throwaway database created, migrated and seeded exactly the way CI creates
-one — 27 migrations from zero, 931/931 tests, a clean build — but the
+one - 27 migrations from zero, 931/931 tests, a clean build - but the
 runner-specific parts are unproven. The branch is pushed; opening the PR is
 what starts the first run (the workflow triggers on `pull_request` and on
 pushes to `main`).
 
 **Found during remediation, not in the original audit:**
 
-- **BUG-35 (P0)** — every active product had blocked combinations and two
+- **BUG-35 (P0)** - every active product had blocked combinations and two
   were entirely unbuildable while still listed and priced. Invisible before
   because the advertised price was a static column and no test asserted that
   a listed product could actually be ordered. Closed on the owner's ruling
   that a product sold with its pattern already fixed must not have that
   pattern re-measured against the customer's chosen size.
-- **A conflict between SEC-05 and PERF-01** — a nonce-based CSP and
+- **A conflict between SEC-05 and PERF-01** - a nonce-based CSP and
   static/ISR/PPR are mutually exclusive. PERF-01 step 1 is unaffected; steps
   2 and 3 now need an owner decision. Detail in `REVIEW-PERFORMANCE.md`
   Finding 1.
@@ -83,7 +83,7 @@ audit estimated the wall-art product's real cheapest configuration at
 ~190,40 zł gross. Measured with pattern feasibility still gating, it was
 648,89 zł; once that gating was removed on the owner's instruction it is
 190,40 zł again. The original estimate was right and the intermediate figure
-was an artifact of a bug — recorded here rather than quietly dropped.
+was an artifact of a bug - recorded here rather than quietly dropped.
 
 ---
 
@@ -124,7 +124,7 @@ than trusting the docs:
   EXIF-stripped previews, opaque storage keys, an authorizing file route
   that 404s rather than 403s.
 - **Documentation.** `ARCHITECTURE.md`, `HANDOVER.md`, `CHECKLIST.md` and
-  the in-file header comments are unusually good — most decisions have a
+  the in-file header comments are unusually good - most decisions have a
   recorded reason, including the reversals.
 
 ---
@@ -132,7 +132,7 @@ than trusting the docs:
 ## The biggest risks
 
 Three things would hurt a real shop on day one. All three are **new
-findings** — none appears in `docs/AUDIT-2026-08-30.md`, `CHECKLIST.md` or
+findings** - none appears in `docs/AUDIT-2026-08-30.md`, `CHECKLIST.md` or
 `OPEN_ITEMS.md`.
 
 ### 1. Authentication is completely unthrottled (SEC-01, P0)
@@ -147,8 +147,8 @@ Resend cost.
 
 ### 2. One-time login codes are written to the logs (SEC-02, P0)
 
-When `RESEND_API_KEY` is unset — the default, and the state the project
-documents as normal — `UnconfiguredMailer` logs the message subject, and
+When `RESEND_API_KEY` is unset - the default, and the state the project
+documents as normal - `UnconfiguredMailer` logs the message subject, and
 the OTP subject line *contains the code*. There is no production guard.
 Anyone who can read application logs can sign in as any user. This also
 breaches §16.1's "No PII in logs beyond user id" (recipient addresses are
@@ -156,7 +156,7 @@ logged too).
 
 ### 3. Availability and compatibility are never enforced server-side (SEC-03, P0)
 
-`domain/compatibility` is correct and well tested — and it is only ever
+`domain/compatibility` is correct and well tested - and it is only ever
 called to decide what the UI *displays*. The write path
 (`priceAndValidateSelections`, used by both add-to-cart and checkout)
 resolves material, design and finish from **unfiltered** maps. Nothing
@@ -165,8 +165,8 @@ checks `Material.isAvailable`, `Design.isActive`, `Design.rightsStatus`,
 
 The schema comment on `Design.rightsStatus` says sellability is "enforced
 by a query filter, not by discipline". On the write path there is no
-filter. A crafted request — or an ordinary customer on a stale URL after
-staff retire a pattern — can order a design the shop has no right to sell.
+filter. A crafted request - or an ordinary customer on a stale URL after
+staff retire a pattern - can order a design the shop has no right to sell.
 
 ### And the one a customer sees first
 
@@ -189,7 +189,7 @@ The same number is emitted as `Offer.price` in the Schema.org JSON-LD.
 Listed so a future agent does not re-audit them:
 
 1. `domain/money`, `domain/pricing`, `domain/modules`, `domain/dimensions`,
-   `domain/feasibility` — pure, correct, well tested.
+   `domain/feasibility` - pure, correct, well tested.
 2. `OrderItem.snapshot` immutability (has a real mutate-and-check test).
 3. `createOrder`'s re-pricing, cart claiming and dual idempotency guards.
 4. `server/actions/` ↔ `server/operations/` split + its guard test.
@@ -199,9 +199,9 @@ Listed so a future agent does not re-audit them:
    forced to `attachment`.
 8. SVG sanitization (DOMPurify + a real `href` hook), PDF active-content
    rejection.
-9. Audit logging: **every** admin operations module writes one — verified
+9. Audit logging: **every** admin operations module writes one - verified
    by scanning all 25 files, none missing.
-10. Payment/tracking honesty — no simulated states anywhere.
+10. Payment/tracking honesty - no simulated states anywhere.
 
 ---
 
@@ -210,7 +210,7 @@ Listed so a future agent does not re-audit them:
 **A. The performance architecture is half-built, and the enforced half is
 the smaller one.** MUI is lint-banned from storefront Server Components to
 protect LCP. Meanwhile a production build shows **91 dynamic routes and 2
-static ones** — not a single page is prerendered, there is no
+static ones** - not a single page is prerendered, there is no
 `React.cache`, no `unstable_cache`, no `'use cache'`, no `revalidate`, and
 `cacheComponents` is off. `StorefrontChrome` calls `getSession()` and
 `cookies()` on every storefront page, which is what forces every route
@@ -222,7 +222,7 @@ everything the lint rule protects.
 **B. Domain functions are written, tested, and then not called.** Three
 separate cases: the compatibility filters (SEC-03), the step-entry guards
 `checkStepAppliesToProductType` / `checkStepEntry` / `isStepEnterable`
-(BUG-06), and `zod` — a declared dependency imported nowhere (BUG-07). All
+(BUG-06), and `zod` - a declared dependency imported nowhere (BUG-07). All
 three are documented as enforced; `docs/CHECKLIST.md:81` states the step
 guards "reject e.g. a THICKNESS selection on WALL_ART", which the running
 application does not do. **The recurring defect is a missing call site, not
@@ -233,8 +233,8 @@ review: when a rule matters, assert it through the *write path*.
 **C. Hiding a feature in the UI did not stop it reaching the order.**
 Pattern selection is switched off (`PATTERN_SELECTION_ENABLED = false`) but
 `computeDefaultSelections` still auto-picks `options.designs[0]`. The live
-cart reads **"Dąb · Wzór podstawowy — do zastąpienia · Olejowanie"** — an
-internal placeholder whose name literally means "basic pattern — to be
+cart reads **"Dąb · Wzór podstawowy - do zastąpienia · Olejowanie"** - an
+internal placeholder whose name literally means "basic pattern - to be
 replaced", shown to the customer and headed for the immutable order
 snapshot and the production sheet. The pick is also non-deterministic: the
 query has no `orderBy` and all 13 `Design.sortOrder` values are `0`.
@@ -242,13 +242,13 @@ query has no `orderBy` and all 13 `Design.sortOrder` values are `0`.
 **D. The admin panel is complete in breadth and capped in depth.** Every
 model has real CRUD, real audit logging and real role gates. But
 `listOrdersForAdmin` takes 100 rows with client-side pagination and no
-"showing 100 of N" — the development database already holds **166 orders**,
+"showing 100 of N" - the development database already holds **166 orders**,
 so 66 are unreachable in the panel *today*. Customers cap at 100 and the
-audit log — the compliance record — at 200.
+audit log - the compliance record - at 200.
 
 **E. There is no CI.** No `.github/workflows`, no hooks. A project this
 disciplined about TDD runs its 831 tests only when a human remembers to.
-**Fixed 2026-08-31 (ARCH-01)** — two GitHub Actions jobs against a Postgres
+**Fixed 2026-08-31 (ARCH-01)** - two GitHub Actions jobs against a Postgres
 service container; see the progress section above for what was and was not
 verified.
 
@@ -256,16 +256,16 @@ verified.
 
 ## Highest-priority fixes, in order
 
-1. ~~**SEC-01** — throttle login / register / OTP-request.~~ **Done 2026-08-31.**
-2. ~~**SEC-02** — never log OTPs; fail loudly when the mailer is unconfigured in production.~~ **Done 2026-08-31.**
-3. ~~**SEC-03** — enforce `domain/compatibility` on the write path.~~ **Done 2026-08-31.**
-4. ~~**BUG-02** — show a gross, achievable "from" price (and fix the JSON-LD).~~ **Done 2026-08-31.**
-5. ~~**BUG-03** — stop silently attaching a placeholder design; make defaults deterministic and filtered.~~ **Done 2026-08-31.**
-6. ~~**SEC-05** — add security headers and a CSP (§16.1, never implemented, never recorded).~~ **Done 2026-08-31.**
-7. **PERF-01** — make catalogue pages cacheable again. **All three steps now need an owner decision** — steps 2-3 conflict with SEC-05's nonce, and step 1 was attempted and backed out because its invalidation could not be demonstrated (`REVIEW-PERFORMANCE.md` Finding 1). The request-scoped half shipped as PERF-02/PERF-05: 36 → 26 queries on a product page.
-8. **ADMIN-01** — real pagination for orders / customers / audit log.
-9. **BUG-04** — show shipping and VAT on the order confirmation.
-10. ~~**BUG-06 / BUG-07** — call the step guards; either use `zod` or drop it.~~ **Done 2026-08-31** — zod adopted (§2 already required it), and the step guards now run on the write path.
+1. ~~**SEC-01** - throttle login / register / OTP-request.~~ **Done 2026-08-31.**
+2. ~~**SEC-02** - never log OTPs; fail loudly when the mailer is unconfigured in production.~~ **Done 2026-08-31.**
+3. ~~**SEC-03** - enforce `domain/compatibility` on the write path.~~ **Done 2026-08-31.**
+4. ~~**BUG-02** - show a gross, achievable "from" price (and fix the JSON-LD).~~ **Done 2026-08-31.**
+5. ~~**BUG-03** - stop silently attaching a placeholder design; make defaults deterministic and filtered.~~ **Done 2026-08-31.**
+6. ~~**SEC-05** - add security headers and a CSP (§16.1, never implemented, never recorded).~~ **Done 2026-08-31.**
+7. **PERF-01** - make catalogue pages cacheable again. **All three steps now need an owner decision** - steps 2-3 conflict with SEC-05's nonce, and step 1 was attempted and backed out because its invalidation could not be demonstrated (`REVIEW-PERFORMANCE.md` Finding 1). The request-scoped half shipped as PERF-02/PERF-05: 36 → 26 queries on a product page.
+8. **ADMIN-01** - real pagination for orders / customers / audit log.
+9. **BUG-04** - show shipping and VAT on the order confirmation.
+10. ~~**BUG-06 / BUG-07** - call the step guards; either use `zod` or drop it.~~ **Done 2026-08-31** - zod adopted (§2 already required it), and the step guards now run on the write path.
 
 **And, above all of the remaining items: ARCH-01 (CI).** 88 tests were added
 across this remediation round, one of them the only guard on a policy that
@@ -280,10 +280,10 @@ Counted from `AI-CHECKLIST.md`, which is the authoritative list.
 | | P0 | P1 | P2 | P3 | Total |
 |---|---|---|---|---|---|
 | New issues, this review | 3 | 11 | 34 | 14 | **62** |
-| Carried forward (P1-8, P2-9, P2-11) | — | 1 | 2 | — | **3** |
+| Carried forward (P1-8, P2-9, P2-11) | - | 1 | 2 | - | **3** |
 | **Tracked total** | **3** | **12** | **36** | **14** | **65** |
 
-By category — these overlap (one issue can be both a security and a
+By category - these overlap (one issue can be both a security and a
 correctness problem), so they sum to slightly more than 62:
 
 | Category | Count |
@@ -297,7 +297,7 @@ correctness problem), so they sum to slightly more than 62:
 | Admin | 3 |
 
 Plus **15 named missing tests** (T-01…T-15) and three unbuilt E2E journeys
-from §21.4 — see `REVIEW-TEST-COVERAGE.md`.
+from §21.4 - see `REVIEW-TEST-COVERAGE.md`.
 
 Full detail, evidence and acceptance criteria for every ID: `REVIEW-DETAILED.md`.
 Where to start implementing: `AI-CHECKLIST.md`.

@@ -1,5 +1,5 @@
 /**
- * `docs/REVIEW-DETAILED.md` BUG-06 and BUG-07 — the two halves of "an input
+ * `docs/REVIEW-DETAILED.md` BUG-06 and BUG-07 - the two halves of "an input
  * the write path never looked at".
  *
  * BUG-06: `checkStepAppliesToProductType` had existed with 30 passing unit
@@ -13,7 +13,7 @@
  * §2 that named it as the validation layer.
  *
  * The tests here are pure. That they pass proves the rule is *correct*, not
- * that anything enforces it — which is exactly the trap both bugs came from,
+ * that anything enforces it - which is exactly the trap both bugs came from,
  * so `tests/integration/step-and-input-validation.test.ts` drives the same
  * rules through `applyAddToCart` against a real database.
  */
@@ -85,7 +85,7 @@ describe('findSelectionOutsideProductType', () => {
     expect(findSelectionOutsideProductType(stepsForProductType('JEWELRY'), EMPTY_SELECTIONS)).toBeNull();
   });
 
-  it('treats an empty string as set — it still reaches the database', () => {
+  it('treats an empty string as set - it still reaches the database', () => {
     // `null` means "not chosen"; "" is a value someone sent.
     const violation = findSelectionOutsideProductType(
       stepsForProductType('FLOOR_ELEMENT'),
@@ -117,7 +117,7 @@ describe('parseSelections', () => {
   it('rejects engraved text longer than the hard ceiling', () => {
     // The real limit is `PersonalizationSpec.maxCharacters`, but
     // `evaluatePersonalization` returns no issues at all when a product has
-    // no spec row — which is how unbounded text reached the order snapshot.
+    // no spec row - which is how unbounded text reached the order snapshot.
     expect(parseSelections(selections({ personalizationText: 'x'.repeat(MAX_PERSONALIZATION_TEXT_LENGTH) }))).not.toBeNull();
     expect(parseSelections(selections({ personalizationText: 'x'.repeat(MAX_PERSONALIZATION_TEXT_LENGTH + 1) }))).toBeNull();
   });

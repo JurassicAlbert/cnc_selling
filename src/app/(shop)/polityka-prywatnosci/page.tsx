@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   title: SITE.legalPrivacyHeadingPl,
 };
 
-/** See `regulamin/page.tsx`'s comment — same reasoning. */
+/** See `regulamin/page.tsx`'s comment - same reasoning. */
 export default function PolitykaPrywatnosciPage() {
   return (
     <Section>

@@ -181,7 +181,7 @@ describe('applyCreateDesign', () => {
     expect(await prisma.auditLog.count({ where: { entity: 'Design', action: 'create', actorEmail: staff.email } })).toBe(1);
   });
 
-  it('rights status defaults to REQUIRES_PERMISSION when not explicitly overridden — §12, never silently sellable', async () => {
+  it('rights status defaults to REQUIRES_PERMISSION when not explicitly overridden - §12, never silently sellable', async () => {
     const staff = staffActor();
     const formData = designFormData();
     const slug = String(formData.get('slug'));
@@ -211,7 +211,7 @@ describe('applyCreateDesign', () => {
     expect(result.ok).toBe(false);
   });
 
-  it('defaults `featured` to false, and honours an explicit true — P9 phase 2 curated-highlight flag', async () => {
+  it('defaults `featured` to false, and honours an explicit true - P9 phase 2 curated-highlight flag', async () => {
     const staff = staffActor();
 
     const plain = await applyCreateDesign(staff, designFormData());
@@ -328,7 +328,7 @@ describe('applyDuplicateDesign', () => {
     expect(result.ok).toBe(false);
   });
 
-  it('never carries `featured` over to the copy — a curated highlight needs deliberate re-review, not free inheritance', async () => {
+  it('never carries `featured` over to the copy - a curated highlight needs deliberate re-review, not free inheritance', async () => {
     const staff = staffActor();
     const created = await applyCreateDesign(staff, designFormData({ featured: 'on' }));
     if (!created.ok) throw new Error('setup failed');

@@ -1,4 +1,4 @@
-/** Admin `SupportRequest` queries — every caller here MUST go through `requireStaffSession()` first. */
+/** Admin `SupportRequest` queries - every caller here MUST go through `requireStaffSession()` first. */
 
 import { prisma } from '@/server/db/client';
 import type { SupportRequestStatus } from '@/generated/prisma/enums';

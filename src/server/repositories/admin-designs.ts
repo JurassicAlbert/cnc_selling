@@ -1,5 +1,5 @@
 /**
- * Admin design/collection queries — unscoped by `isActive`, unlike
+ * Admin design/collection queries - unscoped by `isActive`, unlike
  * `admin-products.ts`'s `listDesignOptionsForAdmin` (active-only, exists
  * only to power the product↔design picker). Every caller here MUST go
  * through `requireStaffSession()` first.
@@ -68,7 +68,7 @@ export type AdminDesignListItem = {
 
 export type AdminDesignListFilters = { readonly search?: string };
 
-/** `search` (new, optional) matches `code` or `namePl`, case-insensitive — added for global search; every existing caller passes no filters and is unaffected. */
+/** `search` (new, optional) matches `code` or `namePl`, case-insensitive - added for global search; every existing caller passes no filters and is unaffected. */
 export async function listDesignsForAdmin(filters: AdminDesignListFilters = {}): Promise<readonly AdminDesignListItem[]> {
   return prisma.design.findMany({
     where:

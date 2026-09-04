@@ -1,9 +1,9 @@
 /**
- * Staff `DeliveryMethod` mutations — same `applyXxx(staff, ...)` /
+ * Staff `DeliveryMethod` mutations - same `applyXxx(staff, ...)` /
  * `xxx(...)` split, same `FormData`-reading shape as `admin-finishes.ts`
- * (name/desc/price/two numeric bounds/boolean/sortOrder). No `slug` — a
+ * (name/desc/price/two numeric bounds/boolean/sortOrder). No `slug` - a
  * delivery method has no public URL, only ever referenced by id from
- * checkout and from `Order.deliveryMethodId`. No delete — a real FK
+ * checkout and from `Order.deliveryMethodId`. No delete - a real FK
  * target of `Order`; `isActive` toggle only.
  */
 
@@ -135,7 +135,7 @@ export async function setDeliveryMethodActive(id: string, isActive: boolean): Pr
 // --- Weight tiers -------------------------------------------------------
 
 /**
- * A carrier's real published price brackets — `docs/AUDIT-2026-08-30.md`
+ * A carrier's real published price brackets - `docs/AUDIT-2026-08-30.md`
  * §20. These decide what a customer is actually charged for any method that
  * has them (`domain/checkout/delivery.ts`'s `evaluateDeliveryMethod`); the
  * method's own `priceGrosze` is only the fallback for a method with none.
@@ -149,7 +149,7 @@ export async function setDeliveryMethodActive(id: string, isActive: boolean): Pr
  * checkout, so changing or removing a tier can never alter what a past order
  * says it was charged.
  *
- * Audited against entity `'DeliveryMethod'`, not a separate entity — these
+ * Audited against entity `'DeliveryMethod'`, not a separate entity - these
  * are edits to one method's pricing, and staff reading the method's activity
  * timeline should see them there.
  */
@@ -157,7 +157,7 @@ export type DeliveryWeightTierInput = {
   readonly labelPl: string;
   readonly maxWeightGrams: number;
   readonly priceGrosze: number;
-  /** Only set for a genuine physical limit (a parcel locker's real door size) — `null` for a courier with no such constraint in its published data. */
+  /** Only set for a genuine physical limit (a parcel locker's real door size) - `null` for a courier with no such constraint in its published data. */
   readonly maxWidthMm: number | null;
   readonly maxHeightMm: number | null;
   readonly maxDepthMm: number | null;
@@ -168,7 +168,7 @@ function validateWeightTier(input: DeliveryWeightTierInput): string | null {
     return 'Nazwa progu jest wymagana.';
   }
   // A 0 g (or negative) bracket would match every cart including an empty
-  // one, and being the lightest it would win on price — silently becoming
+  // one, and being the lightest it would win on price - silently becoming
   // the price of everything.
   if (!Number.isFinite(input.maxWeightGrams) || input.maxWeightGrams <= 0) {
     return 'Maksymalna waga musi być większa od zera.';

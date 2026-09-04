@@ -2,17 +2,17 @@
 
 /**
  * The first `<form action={...}>` + `useActionState` pattern in this
- * codebase — chosen deliberately over a fully client-controlled form.
+ * codebase - chosen deliberately over a fully client-controlled form.
  * Checkout has no need for the configurator's live-reactive pricing (the
  * price shown here is already the cart's cached value); it just needs real
  * server-validated submission with inline field errors, which
  * `useActionState` gives for the cost of one small client island instead
- * of a page's worth of controlled-input state — the same minimal-client-JS
+ * of a page's worth of controlled-input state - the same minimal-client-JS
  * discipline as `CategoryFilterForm` and the cart page's own per-row forms.
  *
  * One real bug found and fixed browser-testing this: `useActionState`
  * re-renders the SAME form instance on every submission, and every input
- * here is uncontrolled (`defaultValue`, never `value`) — so a validation
+ * here is uncontrolled (`defaultValue`, never `value`) - so a validation
  * error on one field silently erased everything else the customer had
  * typed, since `defaultValue` only ever applies on a component's initial
  * mount, never on a later re-render. `renderKey` forces every field to
@@ -20,19 +20,19 @@
  * `state.values` actually shows up.
  *
  * 2026-08-29 rewrite, owner feedback: "Formularz zamówienia również ma
- * bardzo biedne UI/UX" — a real two-column layout (form left, sticky
+ * bardzo biedne UI/UX" - a real two-column layout (form left, sticky
  * order-summary card right on desktop), section icons, and every method's
- * price now REAL and pre-computed server-side (`ActiveDeliveryMethod` —
+ * price now REAL and pre-computed server-side (`ActiveDeliveryMethod` -
  * see `server/repositories/delivery-methods.ts`'s `resolveDeliveryMethodsForCart`)
- * rather than derived client-side from a flat rate — this component no
+ * rather than derived client-side from a flat rate - this component no
  * longer imports or calls anything from `domain/checkout/delivery.ts`. An
  * infeasible method (too heavy, or a real item too large for a locker) is
  * shown disabled with its real reason, never silently hidden. Phone is now
  * required, and delivery gained two real, separate note fields (FOR the
- * courier vs FOR us) — the owner's own "shipping form" restructure
+ * courier vs FOR us) - the owner's own "shipping form" restructure
  * request. The pickup-point picker is carrier-scoped to whichever method
  * is selected (`searchPickupPoints(carrier, query)`) and says outright
- * that its list is a preliminary sample, not a live directory — see that
+ * that its list is a preliminary sample, not a live directory - see that
  * file's own header comment for why (a real InPost/DPD account is needed
  * for a live one).
  */
@@ -72,7 +72,7 @@ import type { CheckoutFormState } from '@/server/actions/checkout';
 import type { CartView } from '@/server/repositories/cart';
 import type { ActiveDeliveryMethod } from '@/server/repositories/delivery-methods';
 import type { ActivePaymentMethod } from '@/server/repositories/payment-methods';
-// A plain-data module (no `prisma`/Node-only imports) — safe to import as a
+// A plain-data module (no `prisma`/Node-only imports) - safe to import as a
 // real value here, unlike `delivery-methods.ts`'s own type-only import
 // above (see that file's comment on why THAT one can't cross this boundary).
 import { findPickupPointById, searchPickupPoints } from '@/server/delivery/pickup-points';
@@ -90,7 +90,7 @@ export function CheckoutForm({
   readonly cart: CartView;
   readonly deliveryMethods: readonly ActiveDeliveryMethod[];
   readonly paymentMethods: readonly ActivePaymentMethod[];
-  /** This form's own submission id, minted once per page render — see the page's own comment and `docs/AUDIT-2026-08-30.md` P0-2. */
+  /** This form's own submission id, minted once per page render - see the page's own comment and `docs/AUDIT-2026-08-30.md` P0-2. */
   readonly idempotencyKey: string;
 }) {
   const [state, formAction] = useActionState(submitCheckout, INITIAL_CHECKOUT_STATE);
@@ -130,7 +130,7 @@ export function CheckoutForm({
     <form key={renderKey} action={formAction}>
       {/* Deliberately OUTSIDE the `renderKey` remount concern: its value comes
           from a prop, so it survives every re-render of this form and every
-          failed submission — which is exactly what makes a retry dedupe. */}
+          failed submission - which is exactly what makes a retry dedupe. */}
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
       <Grid container spacing={4}>
         <Grid size={{ xs: 12, md: 7 }}>
@@ -269,7 +269,7 @@ export function CheckoutForm({
                                   {method.namePl}
                                 </Typography>
                                 <Typography variant="subtitle2" sx={{ whiteSpace: 'nowrap' }}>
-                                  {method.feasible ? formatPln(method.priceGrosze) : '—'}
+                                  {method.feasible ? formatPln(method.priceGrosze) : '-'}
                                 </Typography>
                               </Stack>
                               <Typography variant="caption" color="text.secondary">
@@ -435,7 +435,7 @@ export function CheckoutForm({
                       </Typography>
                     </Stack>
                     <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
-                      {item.priceGrossGrosze !== null ? formatPln(item.priceGrossGrosze * item.quantity) : '—'}
+                      {item.priceGrossGrosze !== null ? formatPln(item.priceGrossGrosze * item.quantity) : '-'}
                     </Typography>
                   </Stack>
                 ))}
@@ -454,13 +454,13 @@ export function CheckoutForm({
                   <Typography variant="body2" color="text.secondary">
                     {SITE.checkoutShippingLabelPl}
                   </Typography>
-                  <Typography variant="body2">{shippingGrosze !== null ? formatPln(shippingGrosze) : '—'}</Typography>
+                  <Typography variant="body2">{shippingGrosze !== null ? formatPln(shippingGrosze) : '-'}</Typography>
                 </Stack>
                 <Divider sx={{ my: 0.5 }} />
                 <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
                   <Typography variant="subtitle1">{SITE.orderTotalLabelPl}</Typography>
                   <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                    {totalGrossGrosze !== null ? formatPln(totalGrossGrosze) : '—'}
+                    {totalGrossGrosze !== null ? formatPln(totalGrossGrosze) : '-'}
                   </Typography>
                 </Stack>
               </Stack>
@@ -492,7 +492,7 @@ function SectionCard({ heading, children }: { readonly heading: string; readonly
          * `h6`, matching the order-summary panel's own heading beside it.
          * These are peer-level section headings on the same screen, and
          * they were rendering as two different things: `subtitle1` with an
-         * inline `fontWeight: 600` on the left, `h6` on the right — so the
+         * inline `fontWeight: 600` on the left, `h6` on the right - so the
          * left column's headings were body-face while the right column's
          * were display-face, at a different size and weight. The inline
          * weight override goes with it; `h6` already carries 600 from the

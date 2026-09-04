@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * P7c slice 5 — Opinie has no detail page to navigate to, only per-row
+ * P7c slice 5 - Opinie has no detail page to navigate to, only per-row
  * approve/reject actions, so this is a standalone `DataGrid` (not
  * `EntityDataGrid`, which is built around row-click navigation) with no
  * `onRowClick` at all. The action cells render the exact same real
  * `<form action={setReviewStatus.bind(...)}>` the plain `<Table>` version
- * already used — zero-extra-JS-required mutation, unchanged; only the
+ * already used - zero-extra-JS-required mutation, unchanged; only the
  * surrounding table became a grid.
  */
 

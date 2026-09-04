@@ -11,7 +11,7 @@ import type { ProductCollectionItemResult } from '@/server/actions/admin-product
 
 const INITIAL_STATE: ProductCollectionItemResult = { ok: true };
 
-/** Nested editor for assigning products to a `ProductCollection` — same shape as `DesignAssignEditor` (design→product), reversed here (product→collection), no surcharge field since collection membership carries no price. */
+/** Nested editor for assigning products to a `ProductCollection` - same shape as `DesignAssignEditor` (design→product), reversed here (product→collection), no surcharge field since collection membership carries no price. */
 export function ProductCollectionItemsEditor({
   collectionId,
   items,

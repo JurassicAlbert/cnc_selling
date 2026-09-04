@@ -1,15 +1,15 @@
 /**
- * RODO Art. 15 access-request export — a genuine downloadable JSON file,
+ * RODO Art. 15 access-request export - a genuine downloadable JSON file,
  * not a preview. Real route handler rather than a Server Action since this
  * is a plain GET producing a file, mirroring `/api/plik/[fileId]`'s own
  * shape (`NextResponse` with a real `Content-Disposition`).
  *
- * Uses `getSession()` directly, not `requireStaffSession()` — the latter's
+ * Uses `getSession()` directly, not `requireStaffSession()` - the latter's
  * `notFound()`/`redirect()` calls are for Server Components/Actions, and
  * throw a special "fallback" error Route Handlers don't have a boundary
  * for; Next.js only turns it into a generic HTML 404 page instead of this
  * route's own response. `/api/plik/[fileId]/route.ts` avoids exactly this
- * for the same reason — mirrored here, not rediscovered independently.
+ * for the same reason - mirrored here, not rediscovered independently.
  */
 
 import { NextResponse } from 'next/server';
@@ -25,7 +25,7 @@ type RouteContext = {
 /**
  * A prefetch must never reach the body of this handler. Checked **first**,
  * before the session read, because nothing at all should happen for a
- * speculative request — and because `getSession()` reads `next/headers`,
+ * speculative request - and because `getSession()` reads `next/headers`,
  * so guarding ahead of it is also what makes this testable
  * (`tests/unit/customer-export-route.test.ts`).
  *
@@ -35,7 +35,7 @@ type RouteContext = {
  * had been performed. §16A.2 invariant 4 makes that log the record of what
  * happened; it was recording accesses that never occurred. The link is a
  * plain `<a>` now, which is the convention `/api/plik/[fileId]` already
- * followed — this guard is the second layer, for any future link that
+ * followed - this guard is the second layer, for any future link that
  * forgets.
  */
 function isPrefetch(request: Request): boolean {

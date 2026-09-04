@@ -1,11 +1,11 @@
 /**
- * Admin customer queries — scoped to `role: 'CUSTOMER'` throughout. Staff
+ * Admin customer queries - scoped to `role: 'CUSTOMER'` throughout. Staff
  * and admin accounts are out of reach of this tool on purpose: they're
  * "Settings: staff users" (`docs/CHECKLIST.md`), a still-unbuilt slice, and
  * this module's own anonymize action would be actively dangerous if it
  * could ever be pointed at a staff account by mistake.
  *
- * Order history and saved configurations are NOT rebuilt here — reused
+ * Order history and saved configurations are NOT rebuilt here - reused
  * directly from the customer-facing repositories that already return
  * exactly this shape: `listOrdersForUser` (`repositories/orders.ts`) and
  * `listConfigurationsForUser` (`repositories/cart.ts`).
@@ -88,7 +88,7 @@ export type UploadedFileSummary = {
 };
 
 /**
- * Metadata only — no `storageKey`, no preview link. There is no admin
+ * Metadata only - no `storageKey`, no preview link. There is no admin
  * route that authorizes viewing an arbitrary customer's raw file outside
  * the design-review queue's own owned-file check, and building one is out
  * of scope here.
@@ -115,7 +115,7 @@ export type CustomerExport = {
   readonly files: readonly UploadedFileSummary[];
 };
 
-/** RODO Art. 15 access-request export — real data only, assembled from the same reads the admin detail page renders. */
+/** RODO Art. 15 access-request export - real data only, assembled from the same reads the admin detail page renders. */
 export async function buildCustomerExport(userId: string): Promise<CustomerExport | null> {
   const customer = await findCustomerForAdmin(userId);
   if (customer === null) {

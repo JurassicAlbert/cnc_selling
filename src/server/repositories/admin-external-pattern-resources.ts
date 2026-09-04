@@ -1,4 +1,4 @@
-/** Admin external-pattern-resource queries — unscoped by `isActive`, unlike the real public read. Every caller here MUST go through `requireStaffSession()` first. */
+/** Admin external-pattern-resource queries - unscoped by `isActive`, unlike the real public read. Every caller here MUST go through `requireStaffSession()` first. */
 
 import { prisma } from '@/server/db/client';
 

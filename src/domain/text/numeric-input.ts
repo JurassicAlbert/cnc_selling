@@ -3,7 +3,7 @@
  *
  * `parseFloat("1,2")` returns 1. Silently. A customer entering a 1,2 mm line
  * width or a 62,5 cm panel would get 1 mm and 62 cm, and nothing anywhere
- * would report an error — the product would simply be made the wrong size.
+ * would report an error - the product would simply be made the wrong size.
  * This module is the single place where that conversion happens.
  */
 

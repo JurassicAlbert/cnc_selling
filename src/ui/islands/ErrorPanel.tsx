@@ -1,14 +1,14 @@
 'use client';
 
 /**
- * The real UI behind `src/app/error.tsx` — MUI, not the hand-styled
+ * The real UI behind `src/app/error.tsx` - MUI, not the hand-styled
  * `<h1>/<p>/<button>` this used to be (`docs/AUDIT-2026-08-30.md` P2-10;
  * the global error boundary was one of the last raw-HTML surfaces left, and
  * arguably the worst place for one: it is what a customer sees on the day
  * something is already going wrong).
  *
  * `'use client'` because the retry handler is a real callback and because
- * `component={Link}` needs `Link` in client scope — the same rule
+ * `component={Link}` needs `Link` in client scope - the same rule
  * `CartContents.tsx`'s header documents.
  *
  * The correlation id is `error.digest`, Next.js's own hash of the thrown

@@ -1,5 +1,5 @@
 /**
- * Admin queries over `EmailTemplate` — the fixed, small set of DB-editable
+ * Admin queries over `EmailTemplate` - the fixed, small set of DB-editable
  * overrides for `mailer.ts`'s hardcoded default copy. Edit-only from the
  * panel (no create/delete UI), matching the closed `MailTemplate` union.
  */

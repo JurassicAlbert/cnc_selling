@@ -1,4 +1,4 @@
-/** Admin `Shipment` reads — every caller here MUST go through `requireStaffSession()` first. */
+/** Admin `Shipment` reads - every caller here MUST go through `requireStaffSession()` first. */
 
 import { prisma } from '@/server/db/client';
 import type { ShipmentStatus } from '@/generated/prisma/enums';

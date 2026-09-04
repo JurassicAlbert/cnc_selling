@@ -1,5 +1,5 @@
 /**
- * Admin order queries — unscoped by owner, unlike `repositories/orders.ts`'s
+ * Admin order queries - unscoped by owner, unlike `repositories/orders.ts`'s
  * customer-facing `listOrdersForUser`/`findOrderForUser`. Every caller here
  * MUST go through `requireStaffSession()` first; these functions don't check
  * who's asking.
@@ -101,15 +101,15 @@ export type AdminOrderView = {
   readonly postalCode: string;
   readonly city: string;
   readonly productionNotes: string | null;
-  /** Customer-submitted at checkout — FOR the courier (gate code, floor, "leave with neighbour"). Print on the shipping label, never shown to the customer as an internal note. */
+  /** Customer-submitted at checkout - FOR the courier (gate code, floor, "leave with neighbour"). Print on the shipping label, never shown to the customer as an internal note. */
   readonly courierNotePl: string | null;
-  /** Customer-submitted at checkout — FOR staff, nothing to do with production. */
+  /** Customer-submitted at checkout - FOR staff, nothing to do with production. */
   readonly internalShipmentNotePl: string | null;
   readonly deliveryMethodNamePl: string;
   readonly pickupPointLabel: string | null;
   readonly items: readonly OrderConfirmationItemView[];
   readonly events: readonly AdminOrderEventView[];
-  /** True while any linked `CustomerDesign` isn't `APPROVED` — mirrors the check `createOrder`/`checkOrderStatusTransition` use for the DESIGN_REVIEW gate. */
+  /** True while any linked `CustomerDesign` isn't `APPROVED` - mirrors the check `createOrder`/`checkOrderStatusTransition` use for the DESIGN_REVIEW gate. */
   readonly hasUnapprovedCustomDesign: boolean;
 };
 

@@ -17,9 +17,9 @@ export const metadata: Metadata = {
 };
 
 /**
- * P9 phase 8 — the standalone contact form. A real, internal DB-driven
+ * P9 phase 8 - the standalone contact form. A real, internal DB-driven
  * `SupportRequest` row a staff member reads and answers through
- * `/panel/kontakt` — no fake external communication integration (§9/§15).
+ * `/panel/kontakt` - no fake external communication integration (§9/§15).
  */
 export default async function ContactPage() {
   const session = await getSession();

@@ -20,7 +20,7 @@ export default async function CollectionDetailPage({ params }: CollectionDetailP
   // Both take the same `slug` and neither needs the other's result, so
   // running them in series was a round trip of pure waiting
   // (`docs/AUDIT-2026-08-30.md` P1-7's pattern, found again here). The
-  // product query for a slug that turns out not to exist is wasted work —
+  // product query for a slug that turns out not to exist is wasted work -
   // but it is wasted work that costs nothing extra in wall time, and this
   // page's 404 path is the rare case, not the common one.
   const [collection, products] = await Promise.all([
@@ -39,7 +39,7 @@ export default async function CollectionDetailPage({ params }: CollectionDetailP
         {/*
          * 2026-08-29, owner feedback (paraphrased): the collection photo
          * showed up on the /kolekcje card but never on the collection's own
-         * page — a real bug: `getActiveCollectionBySlug` already returned
+         * page - a real bug: `getActiveCollectionBySlug` already returned
          * `imageUrl`, it was only ever used in `generateMetadata`'s
          * OpenGraph tags below, never actually rendered on the page a
          * visitor sees. Real hero image now, same width as the page.

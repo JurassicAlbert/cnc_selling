@@ -1,26 +1,26 @@
 /**
- * RODO anonymization — the "deletion" half of module 8's "data export and
+ * RODO anonymization - the "deletion" half of module 8's "data export and
  * deletion request handling." Same `applyXxx`/`xxx` split as every other
  * staff mutation this project uses: `applyAnonymizeCustomer` takes the
  * acting admin explicitly (real DB logic, directly testable),
- * `anonymizeCustomer` — the actual Server Action — derives it via
+ * `anonymizeCustomer` - the actual Server Action - derives it via
  * `requireAdminSession()`, which only works inside a real request.
  *
- * **`ADMIN`, not `STAFF`** — changed 2026-08-31, `docs/REVIEW-DETAILED.md`
+ * **`ADMIN`, not `STAFF`** - changed 2026-08-31, `docs/REVIEW-DETAILED.md`
  * SEC-04. This is irreversible (it refuses to run twice) and it deletes the
  * customer's `Session`/`Account` rows, permanently removing their ability
- * to sign in. ARCHITECTURE.md §16.3 gives `STAFF` "customers (**read**)" —
+ * to sign in. ARCHITECTURE.md §16.3 gives `STAFF` "customers (**read**)" -
  * reading a customer is still `STAFF`; erasing one is not.
  * `refuseUnlessAdmin` repeats the gate inside the `apply` so a test can
- * reach it — see `admin-only.ts`.
+ * reach it - see `admin-only.ts`.
  *
  * Scrubs `User` identity fields and revokes the ability to sign back in
- * (deletes `Session`/`Account` rows) — that is the real "deletion." It
+ * (deletes `Session`/`Account` rows) - that is the real "deletion." It
  * deliberately does NOT touch `Order`, `Configuration`, `UploadedFile`, or
  * `CustomerDesign` rows: `src/content/pl/legal.ts`'s own RODO clause and
  * `docs/CHECKLIST.md`'s checklist bullet both specify order records are
  * retained (Polish accounting law), and neither `Configuration` nor
- * `UploadedFile` carries the customer's name/email/phone directly — only a
+ * `UploadedFile` carries the customer's name/email/phone directly - only a
  * `userId` foreign key, which is exactly what gets orphaned by design.
  */
 

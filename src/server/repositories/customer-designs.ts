@@ -1,12 +1,12 @@
 /**
- * P9 phase 2: the "moje wzory" library — a customer's own uploaded
+ * P9 phase 2: the "moje wzory" library - a customer's own uploaded
  * `CustomerDesign` rows, browsable outside any one product's configurator
  * flow so they can genuinely be reused across products/orders (the DB
- * relation already allowed this — `CustomerDesign.configurations` is
- * plural — this file is what finally lets a customer see and pick from
+ * relation already allowed this - `CustomerDesign.configurations` is
+ * plural - this file is what finally lets a customer see and pick from
  * their own history instead of only ever uploading fresh).
  *
- * Same `find*(owner)` / `require*()` split as `design-review.ts` — a pure,
+ * Same `find*(owner)` / `require*()` split as `design-review.ts` - a pure,
  * directly-testable query plus a thin wrapper that derives the owner from
  * the real request. `next/headers` cannot be exercised outside a request,
  * so the split is what keeps the query itself unit/integration-testable.
@@ -60,7 +60,7 @@ export async function listMyCustomerDesigns(): Promise<readonly OwnedCustomerDes
   return listOwnedCustomerDesigns(await currentOwner());
 }
 
-/** Single-item variant of `listOwnedCustomerDesigns`, for `/moje-konto/wzory/[id]`'s detail page. `null` on any failure (no owner, wrong owner, no such design) — same 404-not-403 discipline as `design-review.ts`'s `findOwnedDesignStatus`. */
+/** Single-item variant of `listOwnedCustomerDesigns`, for `/moje-konto/wzory/[id]`'s detail page. `null` on any failure (no owner, wrong owner, no such design) - same 404-not-403 discipline as `design-review.ts`'s `findOwnedDesignStatus`. */
 export async function findOwnedCustomerDesign(id: string, owner: Owner): Promise<OwnedCustomerDesignListItem | null> {
   if (hasNoOwner(owner)) {
     return null;
@@ -96,7 +96,7 @@ export async function findMyCustomerDesign(id: string): Promise<OwnedCustomerDes
 }
 
 /**
- * The design this owner already has for a byte-identical file, if any —
+ * The design this owner already has for a byte-identical file, if any -
  * 2026-08-30, owner: "client should not be able to save the same project
  * twice."
  *

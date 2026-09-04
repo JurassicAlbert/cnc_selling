@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * The guest order-lookup form — `docs/AUDIT-2026-08-30.md` P2-10 found it
+ * The guest order-lookup form - `docs/AUDIT-2026-08-30.md` P2-10 found it
  * still rendering bare `<input>`s and a hand-styled `<button>` inside
  * `(shop)/zamowienie/sprawdz/page.tsx`.
  *
  * `'use client'` for `component={Link}` only (the same rule
- * `CartContents.tsx`'s header documents) — the form itself is still
+ * `CartContents.tsx`'s header documents) - the form itself is still
  * zero-client-JS: a plain `<form action={lookupOrder}>` bound straight to
  * a Server Action, exactly as before. No state, no controlled inputs.
  *
@@ -50,7 +50,7 @@ export function OrderLookupForm({ action }: { readonly action: (formData: FormDa
             <Button type="submit" variant="contained">
               {SITE.orderLookupSubmitPl}
             </Button>
-            {/* A logged-in customer never needs a token — their own order
+            {/* A logged-in customer never needs a token - their own order
                 history is the shorter path, and saying so here saves them
                 hunting through an email for a string they don't need. */}
             <Button component={Link} href="/moje-konto/zamowienia" variant="text" size="small">

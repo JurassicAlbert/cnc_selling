@@ -3,8 +3,8 @@
  * other: the `/panel` redirect it has always done, and the per-request CSP
  * added 2026-08-31 for `docs/REVIEW-DETAILED.md` SEC-05. Widening the
  * matcher from `/panel/:path*` to (almost) everything is exactly the kind of
- * change that quietly drops the redirect — proxy's own documentation warns
- * about it — so both halves are pinned here.
+ * change that quietly drops the redirect - proxy's own documentation warns
+ * about it - so both halves are pinned here.
  *
  * The CSP mode is documented in `.env.example` as an operator-facing escape
  * hatch. An escape hatch nobody has ever exercised is a claim, not a
@@ -31,7 +31,7 @@ function request(path: string): NextRequest {
   return new NextRequest(new Request(`http://localhost:3000${path}`));
 }
 
-describe('proxy — the /panel gate, unchanged by the CSP work', () => {
+describe('proxy - the /panel gate, unchanged by the CSP work', () => {
   it('redirects an unauthenticated /panel request to the login page', () => {
     const response = proxy(request('/panel/zamowienia'));
 
@@ -51,7 +51,7 @@ describe('proxy — the /panel gate, unchanged by the CSP work', () => {
   });
 });
 
-describe('proxy — CSP_MODE', () => {
+describe('proxy - CSP_MODE', () => {
   it('enforces when unset', () => {
     delete process.env.CSP_MODE;
     const headers = proxy(request('/')).headers;

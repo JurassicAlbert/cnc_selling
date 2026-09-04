@@ -17,19 +17,19 @@ export const metadata: Metadata = {
 };
 
 /**
- * A Server Component throughout — no client JS at all. All rendering
+ * A Server Component throughout - no client JS at all. All rendering
  * (including every MUI component) lives in `CartContents`
- * (`ui/islands/cart/CartContents.tsx`) — `@mui/material` is lint-forbidden
+ * (`ui/islands/cart/CartContents.tsx`) - `@mui/material` is lint-forbidden
  * directly inside `(shop)` Server Components (`ARCHITECTURE.md` §2.1,
  * `biome.json`'s own override), same "put the interactive part in
  * `src/ui/islands` and render it as a child" rule the product page's
  * Configurator already follows. This page's own job is just: read the
  * cart, mount `ThemeRegistry` around the real UI (same "mount where
- * warranted" precedent checkout already set — `ThemeRegistry`'s own header
+ * warranted" precedent checkout already set - `ThemeRegistry`'s own header
  * comment names cart as one of the three intended islands), or show the
  * plain-text empty state when there's nothing to show MUI for at all.
  *
- * `readGuestSessionToken()` only ever READS the cookie — this page never
+ * `readGuestSessionToken()` only ever READS the cookie - this page never
  * mints one. A first-time visitor with no cart yet, and nothing in it,
  * just sees the empty state; the cookie only gets created on the first
  * real `addToCart` (a Server Action, where writing is allowed).

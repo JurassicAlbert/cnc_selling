@@ -1,4 +1,4 @@
-/** Admin static-page queries — unscoped by `isActive`. Every caller here MUST go through `requireStaffSession()` first. */
+/** Admin static-page queries - unscoped by `isActive`. Every caller here MUST go through `requireStaffSession()` first. */
 
 import { prisma } from '@/server/db/client';
 

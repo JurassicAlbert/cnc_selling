@@ -1,11 +1,11 @@
 'use client';
 
 /**
- * Creates a new `PricingSettings` DRAFT — never edits an existing version
+ * Creates a new `PricingSettings` DRAFT - never edits an existing version
  * (`docs/ARCHITECTURE.md` §16A.1 module 7). Prefilled from the currently
  * active version so the admin edits deltas, not blank fields. On success,
  * navigates straight to the new draft's detail page (`/panel/ceny/[version]`)
- * where the simulator lives — a draft is inert until published from there.
+ * where the simulator lives - a draft is inert until published from there.
  */
 
 import { useActionState, useState } from 'react';
@@ -44,7 +44,7 @@ export function PricingDraftForm({ active }: { readonly active: AdminPricingVers
   const [tiers, setTiers] = useState<readonly { readonly key: number; readonly tier: PackagingTierInput }[]>(
     seedTiers.map((tier) => ({ key: newTierKey(), tier })),
   );
-  // Only the top-level rate/VAT/note fields use `fieldValue` here — the
+  // Only the top-level rate/VAT/note fields use `fieldValue` here - the
   // packaging-tier rows below are deliberately left untouched, they're the
   // exact surface of a separate, already-flagged hydration bug (background
   // task) being fixed independently; touching their `name`/`defaultValue`

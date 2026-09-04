@@ -23,18 +23,18 @@ export const metadata: Metadata = {
 const dateFormatter = new Intl.DateTimeFormat('pl-PL', { dateStyle: 'long', timeStyle: 'short' });
 
 /**
- * P9 continuation, 2026-08-28 — the "dyskusja" per uploaded design the
+ * P9 continuation, 2026-08-28 - the "dyskusja" per uploaded design the
  * owner asked for. The status/comment read side already existed
  * (`requireOwnedDesignStatus`, built for P7's admin panel but never
  * rendered anywhere customer-facing); this page finally renders it,
  * plus the file/title info `listMyCustomerDesigns` already shows in the
  * list, plus a real reply form (`DesignReviewDiscussion`, new). Also
  * closes `docs/CHECKLIST.md`'s own honestly-flagged gap: `NEEDS_CHANGES`
- * had a real, tested `reuploadCustomDesign` action but no UI to reach it —
+ * had a real, tested `reuploadCustomDesign` action but no UI to reach it -
  * `ReuploadCustomDesignForm` is shown only for that one status;
  * `checkDesignReviewTransition` inside the action itself is still the real
  * gate, this is just the entry point.
- * `notFound()` on any ownership failure — same 404-not-403 discipline as
+ * `notFound()` on any ownership failure - same 404-not-403 discipline as
  * `requireOwnedDesignStatus` itself.
  */
 export default async function AccountDesignDetailPage({ params }: DesignDetailPageProps) {

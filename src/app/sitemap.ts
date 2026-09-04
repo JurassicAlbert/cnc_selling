@@ -6,7 +6,7 @@ import { listAllActiveProductSlugs } from '@/server/repositories/products';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 
-/** Generated from the DB (ARCHITECTURE.md §18) — never a hand-maintained list. */
+/** Generated from the DB (ARCHITECTURE.md §18) - never a hand-maintained list. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [categories, productSlugs, blogSlugs] = await Promise.all([
     listActiveCategories(),

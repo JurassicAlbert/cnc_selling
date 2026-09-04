@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * The configurator's one Server Action — ARCHITECTURE.md §7.1: "Every
+ * The configurator's one Server Action - ARCHITECTURE.md §7.1: "Every
  * selection change dispatches a Server Action that returns { price,
  * breakdown, moduleLayout, warnings, ... }. The UI renders that response; it
  * never derives a price locally." This is that dispatch target: fetch the
@@ -23,12 +23,12 @@ import { getSession } from '@/server/auth/session';
 export type ConfiguratorSnapshot = {
   readonly steps: readonly StepCode[];
   readonly options: ResolvedOptions;
-  /** Every option, annotated available/unavailable-with-reason — never hidden (§7.2). */
+  /** Every option, annotated available/unavailable-with-reason - never hidden (§7.2). */
   readonly availability: ResolvedOptionAvailability;
   readonly pricing: ConfiguratorPricingResult;
   readonly isComplete: boolean;
   /**
-   * Null when this product offers no real personalization yet — no
+   * Null when this product offers no real personalization yet - no
    * `PersonalizationSpec` row, disabled, or no fonts assigned to it
    * (`availability.fonts` would be empty too). The UI's own gate for
    * "render the real step vs. the honest 'not offered yet' notice."
@@ -40,7 +40,7 @@ export type ConfiguratorSnapshotResult =
   | { readonly ok: true; readonly snapshot: ConfiguratorSnapshot }
   /**
    * `SELECTIONS_INVALID` added 2026-08-31 with BUG-07. This is a read, so
-   * nothing can be corrupted here — but it is still a public HTTP endpoint,
+   * nothing can be corrupted here - but it is still a public HTTP endpoint,
    * and an unbounded `personalizationText` would reach glyph-coverage
    * checking while a wrong-typed field would reach Prisma as a 500. The
    * Configurator ignores every `ok: false` and keeps its previous snapshot,
@@ -55,7 +55,7 @@ export async function getConfiguratorSnapshot(
   quantity: number,
   /**
    * The client only ever sets this from the "Preview as customer" page's
-   * own `?podglad=1` flag — never trusted on its own. Re-verified against
+   * own `?podglad=1` flag - never trusted on its own. Re-verified against
    * a real server-side session here, the same way `ProductPage` itself
    * does, since a Server Action call carries no other proof of who's
    * asking; a customer setting this to `true` by hand gets silently
@@ -79,7 +79,7 @@ export async function getConfiguratorSnapshot(
   // The same narrowing the write path applies (`applicableSteps`), so the
   // UI and the server agree on what "complete" means. Without it the
   // configurator would render a step with an empty picker and hold the
-  // customer at "not finished" for a choice the shop does not offer — the
+  // customer at "not finished" for a choice the shop does not offer - the
   // mirror of the owner's own rule that nothing offered may be blocked.
   const steps = applicableSteps(data, selections);
   const options = resolveOptions(data.options, selections);
@@ -104,7 +104,7 @@ export async function getConfiguratorSnapshot(
   // `design === null` only means "incomplete" for a product type that
   // actually HAS a DESIGN step and the customer hasn't picked one yet.
   // CUSTOM has no DESIGN step at all (its design is the customer's own
-  // upload, via CUSTOM_UPLOAD) — for it, `design` stays null forever and
+  // upload, via CUSTOM_UPLOAD) - for it, `design` stays null forever and
   // that's the correct, complete state; `priceConfiguration`/
   // `calculatePrice` handle a null design explicitly rather than
   // guessing (see price-configuration.ts's header).

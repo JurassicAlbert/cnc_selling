@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * Server Action surface for `@/server/operations/admin-product-images` — the thin half.
+ * Server Action surface for `@/server/operations/admin-product-images` - the thin half.
  *
  * Every export of a `'use server'` module is a public HTTP endpoint, so
  * this file exports ONLY the session-deriving wrappers. The real logic,

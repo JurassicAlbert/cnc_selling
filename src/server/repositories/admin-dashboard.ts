@@ -1,14 +1,14 @@
 /**
- * Dashboard aggregation queries — `docs/ARCHITECTURE.md` §16A module 1,
+ * Dashboard aggregation queries - `docs/ARCHITECTURE.md` §16A module 1,
  * minus the configurator funnel (needs a new `AnalyticsEvent` model and
  * instrumenting every configurator step; a separate slice, not a
- * dashboard-rendering task — tracked as a follow-up, not silently dropped).
+ * dashboard-rendering task - tracked as a follow-up, not silently dropped).
  *
  * Every caller here MUST go through `requireStaffSession()` first, same
- * rule as `admin-orders.ts` — these functions don't check who's asking.
+ * rule as `admin-orders.ts` - these functions don't check who's asking.
  *
  * "Revenue" throughout means orders NOT `CANCELLED`, regardless of payment
- * status — booked revenue, not collected revenue. That's a deliberate
+ * status - booked revenue, not collected revenue. That's a deliberate
  * definition (an e-commerce dashboard could reasonably mean either), named
  * explicitly here so nobody has to re-derive it from the query.
  */
@@ -44,10 +44,10 @@ export async function getDashboardKpis(now: Date = new Date()): Promise<Dashboar
   const from30d = new Date(now.getTime() - 30 * DAY_MS);
 
   // "ordersNd" counts every order placed in the window regardless of
-  // status (an activity metric — a cancelled order is still an order that
+  // status (an activity metric - a cancelled order is still an order that
   // came in) while the revenue rows below are deliberately non-CANCELLED
   // only. AOV is therefore computed against the revenue rows' own count,
-  // NOT `orders30d` — averaging non-cancelled revenue over an order count
+  // NOT `orders30d` - averaging non-cancelled revenue over an order count
   // that includes cancelled orders would understate it.
   const [ordersToday, orders7d, orders30d, revenueRows30d, ordersAwaitingPayment, designsAwaitingReview, ordersInProduction] =
     await Promise.all([
@@ -101,7 +101,7 @@ export async function getRevenueOverTime(range: DateRange): Promise<readonly Rev
 
   // Fill every day in the range, not just days with orders, so the chart's
   // x-axis is a real continuous timeline rather than skipping quiet days.
-  // Deliberately UTC throughout this loop (`setUTCDate`, not `setDate`) —
+  // Deliberately UTC throughout this loop (`setUTCDate`, not `setDate`) -
   // the bucket keys above come from `createdAt.toISOString()`, which is
   // always UTC; walking the range in local time (this server runs in
   // Europe/Warsaw, UTC+1/+2) would misalign the fill loop's day boundaries

@@ -1,4 +1,4 @@
-/** Admin finish queries — unscoped by `isAvailable`. Every caller here MUST go through `requireStaffSession()` first. */
+/** Admin finish queries - unscoped by `isAvailable`. Every caller here MUST go through `requireStaffSession()` first. */
 
 import { prisma } from '@/server/db/client';
 import type { FinishKind } from '@/generated/prisma/enums';

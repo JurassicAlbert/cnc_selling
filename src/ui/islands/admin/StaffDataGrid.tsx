@@ -1,10 +1,10 @@
 'use client';
 
 /**
- * P7c slice 5 — same reasoning as `OpinieDataGrid`: Personel has no
+ * P7c slice 5 - same reasoning as `OpinieDataGrid`: Personel has no
  * detail page, only a per-row revoke action, so this is a standalone
  * `DataGrid` with no `onRowClick`. `currentUserId` is passed in (the page
- * already derived it via `requireAdminSession()` — a client island can't
+ * already derived it via `requireAdminSession()` - a client island can't
  * call that itself) so the acting admin's own row never renders a revoke
  * button, matching the plain-`<Table>` version's own guard exactly.
  */

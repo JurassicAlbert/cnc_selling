@@ -1,8 +1,8 @@
 /**
- * The shape of `OrderItem.snapshot` — shared between `create-order.ts`
+ * The shape of `OrderItem.snapshot` - shared between `create-order.ts`
  * (which writes it) and `repositories/orders.ts` (which reads it back for
  * the confirmation page), so the two can never silently drift apart. Real
- * display strings (`productNamePl`, `designNamePl`, ...), not ids — the
+ * display strings (`productNamePl`, `designNamePl`, ...), not ids - the
  * whole point of a snapshot is surviving a later catalogue rename, per
  * `OrderItem.snapshot`'s own schema comment: "Rendering an order NEVER
  * joins to a live catalogue row."
@@ -27,7 +27,7 @@ export type OrderItemSnapshot = {
   readonly priceBreakdown: PriceBreakdown;
   /**
    * Not derivable from `priceBreakdown` (which keeps the resulting
-   * `machiningGrosze` cost, never the raw rate or which machine it used) —
+   * `machiningGrosze` cost, never the raw rate or which machine it used) -
    * captured separately for the admin production-capacity view (P7b).
    * `null` for `CUSTOM` products: no catalogue design, machining time
    * genuinely unknown until staff reviews the upload (same reasoning

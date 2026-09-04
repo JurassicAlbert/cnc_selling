@@ -1,28 +1,28 @@
 'use client';
 
 /**
- * 2026-08-28, owner feedback (round 2 — "Strona wzorów dalej jest zbyt
+ * 2026-08-28, owner feedback (round 2 - "Strona wzorów dalej jest zbyt
  * biedna", "the patterns page is still too poor"): the previous pass only
  * added plain-text links from a pattern to its products, using hand-rolled
  * `<div>`s with inline styles, same visual register as the rest of the
- * marketing RSC tree — which is correct for product/category pages
+ * marketing RSC tree - which is correct for product/category pages
  * (ARCHITECTURE.md §2.1's "no MUI in the RSC tree" rule), but this page is
  * genuinely a browse-and-select experience, not passive catalogue copy, so
  * it gets the same "interactive island, use MUI fully" treatment checkout
  * and the configurator already have.
  *
  * `'use client'` is required here specifically because of `<Chip
- * component={Link} .../>` below — MUI's polymorphic-component prop passes
+ * component={Link} .../>` below - MUI's polymorphic-component prop passes
  * the `Link` function itself as a prop value, which cannot cross a Server
  * → Client render boundary (confirmed live: "Functions cannot be passed
  * directly to Client Components" crashed the page in dev before this was
  * added). `favoritedIds` therefore also arrives as a plain array, not a
- * `Set` — `Set`/`Map` aren't part of the serializable prop surface either;
+ * `Set` - `Set`/`Map` aren't part of the serializable prop surface either;
  * rebuilt into a `Set` once, locally, since membership checks happen in a
  * render loop.
  *
  * Each "available on" link now actually carries the design selection
- * through via `writeSelectionsToSearch` — the configurator has hydrated
+ * through via `writeSelectionsToSearch` - the configurator has hydrated
  * from the URL on mount since before this pass ("brief §36": refresh/
  * shared-link resumption), this page just never used that mechanism for
  * its own links. A customer picking a pattern here now lands on the
@@ -30,14 +30,14 @@
  * again from scratch.
  *
  * 2026-08-29, owner feedback, verbatim: "pattern should be more like png
- * without background not some div block" — the thumbnail used to sit in a
+ * without background not some div block" - the thumbnail used to sit in a
  * `Box` with `bgcolor: 'background.default'` behind it (a filled card, the
  * "div block"). Every real pattern image is now a transparent SVG (see
  * `prisma/seed.ts`'s `DESIGN_SEEDS`), so it renders as a bare `<img>` with
- * no background/border and `objectFit: 'contain'` — the artwork floats on
+ * no background/border and `objectFit: 'contain'` - the artwork floats on
  * the card's own surface instead of sitting in its own filled tile.
  * `next/image` is not used for this specific image: it cannot optimize SVG
- * sources without `dangerouslyAllowSVG` (unset — same reasoning
+ * sources without `dangerouslyAllowSVG` (unset - same reasoning
  * `Configurator.tsx`'s `DesignMenuItem` and the installation diagram give).
  */
 
@@ -72,7 +72,7 @@ export function PatternsGallery({
 }) {
   const favoritedIdSet = new Set(favoritedIds);
 
-  // 2026-08-29, owner request: real pattern categories — `DesignCollection`
+  // 2026-08-29, owner request: real pattern categories - `DesignCollection`
   // (admin CRUD already existed, `/panel/kolekcje`; seeded rows are new,
   // `prisma/seed.ts`'s `DESIGN_COLLECTION_SEEDS`) surfaced here as a real
   // filter, not just a label. A pattern with no collection (still real and
@@ -144,7 +144,7 @@ export function PatternsGallery({
               }}
             >
               <Box sx={{ position: 'relative', aspectRatio: '1 / 1' }}>
-                {/* biome-ignore lint/performance/noImgElement: transparent SVG pattern art — next/image can't optimize SVG without dangerouslyAllowSVG, same precedent as Configurator.tsx's DesignMenuItem */}
+                {/* biome-ignore lint/performance/noImgElement: transparent SVG pattern art - next/image can't optimize SVG without dangerouslyAllowSVG, same precedent as Configurator.tsx's DesignMenuItem */}
                 <img src={design.thumbnailUrl} alt="" style={{ position: 'absolute', inset: 24, objectFit: 'contain' }} />
                 {design.featured && (
                   <Chip

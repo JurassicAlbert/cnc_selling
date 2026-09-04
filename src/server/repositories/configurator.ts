@@ -13,7 +13,7 @@ import type {
 /**
  * Everything the configurator's server actions need for one product, in one
  * fetch. Assembled here rather than inline in the Server Action so the
- * Prisma query stays in one reviewable place — `src/server/repositories` is
+ * Prisma query stays in one reviewable place - `src/server/repositories` is
  * already the project's convention for "the only files that query Prisma for
  * page content" (see `docs/HANDOVER.md` §9e).
  */
@@ -64,7 +64,7 @@ export type ConfiguratorProductData = {
 
 /**
  * `activeOnly` defaults to `true` (every existing call site's behavior,
- * unchanged) — pass `false` only from a caller already gated behind
+ * unchanged) - pass `false` only from a caller already gated behind
  * `requireStaffSession()`, e.g. the "Preview as customer" admin feature
  * previewing a not-yet-published product's configurator exactly as
  * `/produkt/[slug]/page.tsx` renders it.
@@ -76,7 +76,7 @@ export async function getConfiguratorProductData(
   const [product, machine, pricing] = await Promise.all([
     prisma.product.findFirst({
       // Same `category.isActive` cascade as `products.ts`'s
-      // `findProductBySlug` — a deactivated category (Gres/Panele
+      // `findProductBySlug` - a deactivated category (Gres/Panele
       // podłogowe, 2026-08-28) must block pricing/checkout for its
       // products too, not just hide them from listings.
       where: activeOnly ? { slug, isActive: true, category: { isActive: true } } : { slug },
@@ -106,7 +106,7 @@ export async function getConfiguratorProductData(
         materials: {
           // `docs/REVIEW-DETAILED.md` BUG-03. Without an ORDER BY, Postgres
           // makes no promise about row order, and the configurator takes
-          // `[0]` as its default material — so the default (and therefore
+          // `[0]` as its default material - so the default (and therefore
           // the price, via `priceFactorBp`) could differ between two loads
           // of the same page, surfacing later as an unexplained
           // PRICE_CHANGED at checkout. `sortOrder` is what staff actually
@@ -194,9 +194,9 @@ export async function getConfiguratorProductData(
         },
         // 2026-08-29: which finishes are excluded for THIS product even when
         // the material otherwise allows them (`ProductFinishExclusion`'s own
-        // schema comment — e.g. bejcowanie/lakierowanie off by default for
+        // schema comment - e.g. bejcowanie/lakierowanie off by default for
         // the wall-art "Obrazy" product). A `Set` of ids, filtered against
-        // below — never trusted as "the only finishes", since a material's
+        // below - never trusted as "the only finishes", since a material's
         // own `MaterialFinish` compatibility still applies first.
         finishExclusions: { select: { finishId: true } },
       },

@@ -1,14 +1,14 @@
 /**
- * Nested product sub-resource editors — preset sizes, thicknesses,
+ * Nested product sub-resource editors - preset sizes, thicknesses,
  * material/design compatibility, installation variants. All of these are
  * genuinely deletable (not soft-delete-only): none is FK-referenced from
  * `Order`/`OrderItem` (orders hold an immutable JSON snapshot, never a
- * live join — `OrderItem.snapshot`'s own header). Each mutation still
+ * live join - `OrderItem.snapshot`'s own header). Each mutation still
  * gets its own audit row, entity `'Product'`, since they're all really
  * edits to one product's configuration.
  *
  * `applyXxx(staff, ...)` (pure, testable) / `xxx(...)` (real Server
- * Action) split, same as `admin-products.ts` — `revalidatePath` also
+ * Action) split, same as `admin-products.ts` - `revalidatePath` also
  * needs to stay in the wrapper: it fails the same way `next/headers` does
  * outside a real request (confirmed empirically building P7a).
  */

@@ -9,7 +9,7 @@ const BADGES = [
 ] as const;
 
 /**
- * Four real, verifiable claims about how this business actually operates —
+ * Four real, verifiable claims about how this business actually operates -
  * not the generic "free shipping / money-back guarantee" badges the
  * reference templates use, which nothing confirms are true here yet.
  */

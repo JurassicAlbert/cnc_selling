@@ -1,5 +1,5 @@
 /**
- * T-10 and T-11 — `docs/REVIEW-DETAILED.md` BUG-06 and BUG-07, driven
+ * T-10 and T-11 - `docs/REVIEW-DETAILED.md` BUG-06 and BUG-07, driven
  * through the real write path.
  *
  * This file exists because of what the *pure* tests could not tell anyone.
@@ -7,13 +7,13 @@
  * and `docs/CHECKLIST.md:81` recorded as a completed item that it "rejects
  * e.g. a THICKNESS selection on WALL_ART". Nothing called it. Every one of
  * those assertions ran green while the running application accepted the
- * opposite — `personalizationText` stored and displayed for products with no
+ * opposite - `personalizationText` stored and displayed for products with no
  * `PersonalizationSpec` (so `evaluatePersonalization` returned no issues and
  * **no length limit of any kind applied**), and a `thicknessMm` written into
  * the immutable order snapshot for a wall panel.
  *
- * So every assertion below goes through `applyAddToCart` — a real operation,
- * against real Postgres — and each rejection additionally asserts that
+ * So every assertion below goes through `applyAddToCart` - a real operation,
+ * against real Postgres - and each rejection additionally asserts that
  * **nothing was written**. A check placed after the insert would satisfy a
  * naive "returns ok:false" test while having stored the row.
  *
@@ -125,7 +125,7 @@ async function buildCatalogue() {
       },
     });
 
-  // WALL_ART has a PERSONALIZATION step and — deliberately — **no**
+  // WALL_ART has a PERSONALIZATION step and - deliberately - **no**
   // `PersonalizationSpec` row, which is the exact configuration that made
   // engraved text unbounded. FLOOR_ELEMENT has no PERSONALIZATION step at
   // all, and no THICKNESS-free variant, so it covers the other half.
@@ -143,7 +143,7 @@ async function buildCatalogue() {
     // is what makes the FLOOR_ELEMENT control meaningful: without it,
     // `applicableSteps` would narrow THICKNESS away for want of options, and
     // "thickness is accepted where the step exists" would never be
-    // exercised — leaving the BUG-06 check free to be too aggressive
+    // exercised - leaving the BUG-06 check free to be too aggressive
     // without any test noticing.
     prisma.productThickness.create({
       data: { productId: floorElement.id, thicknessMm: 18, labelPl: '18 mm' },
@@ -233,7 +233,7 @@ describe('the control: these configurations really are orderable', () => {
   });
 });
 
-describe('BUG-06 — a selection for a step the product type does not have', () => {
+describe('BUG-06 - a selection for a step the product type does not have', () => {
   it('rejects thicknessMm on a WALL_ART, and stores nothing', async () => {
     // The audit's own example, and the one `docs/CHECKLIST.md:81` claimed
     // was already enforced.
@@ -270,7 +270,7 @@ describe('BUG-06 — a selection for a step the product type does not have', () 
   });
 });
 
-describe('BUG-07 — engraved text on a product with no PersonalizationSpec', () => {
+describe('BUG-07 - engraved text on a product with no PersonalizationSpec', () => {
   // The hole this closes: `evaluatePersonalization` returns
   // `{ issues: [], fontRequired: false }` when the spec row is missing, so
   // before the schema there was no length limit, no glyph coverage check
@@ -299,7 +299,7 @@ describe('BUG-07 — engraved text on a product with no PersonalizationSpec', ()
   });
 });
 
-describe('BUG-07 — acknowledgedWarnings', () => {
+describe('BUG-07 - acknowledgedWarnings', () => {
   it('accepts a real feasibility code and stores it', async () => {
     const sessionToken = uid();
     const result = await applyAddToCart(
@@ -344,15 +344,15 @@ describe('BUG-07 — acknowledgedWarnings', () => {
   });
 });
 
-describe('BUG-07 — malformed arguments are a typed rejection, not a 500', () => {
+describe('BUG-07 - malformed arguments are a typed rejection, not a 500', () => {
   it.each([
     ['a number where an id belongs', { designId: 42 }],
     ['a string where a number belongs', { widthMm: '400' }],
     ['a non-integer dimension', { heightMm: 400.5 }],
     ['an object where a string belongs', { personalizationText: { length: 1 } }],
   ])('rejects %s', async (_label, override) => {
-    // Cast: the whole point is that a caller bypassing TypeScript — which
-    // any HTTP client does — cannot reach Prisma with these values.
+    // Cast: the whole point is that a caller bypassing TypeScript - which
+    // any HTTP client does - cannot reach Prisma with these values.
     const selections = { ...validFor('wallArt'), ...override } as unknown as Selections;
 
     await expect(add(fixture.wallArtSlug, selections)).resolves.toEqual({ ok: false, configurations: 0 });

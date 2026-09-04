@@ -21,18 +21,18 @@ export const metadata: Metadata = {
 };
 
 /**
- * A Server Component shell around one client island — the form itself
+ * A Server Component shell around one client island - the form itself
  * needs `useActionState` for inline validation feedback, but the cart read
  * needs no interactivity at all.
  *
  * 2026-08-29 rewrite, owner feedback: "Formularz zamówienia również ma
  * bardzo biedne UI/UX" + real weight-based shipping pricing. Delivery
- * methods are no longer a flat, cart-independent list — `resolveDeliveryMethodsForCart`
+ * methods are no longer a flat, cart-independent list - `resolveDeliveryMethodsForCart`
  * (`server/repositories/delivery-methods.ts`) evaluates each one against
  * THIS cart's real weight/dimensions, so it needs the cart resolved first,
  * not fetched in parallel with it. The item list itself moved into
  * `CheckoutForm`'s own real two-column MUI layout (a sticky order-summary
- * panel) — this page no longer hand-rolls a plain-text item list; the
+ * panel) - this page no longer hand-rolls a plain-text item list; the
  * `@mui/material`-forbidden-in-`(shop)`-Server-Components rule
  * (`ARCHITECTURE.md` §2.1) means all of that real UI has to live in the
  * client island anyway.
@@ -61,7 +61,7 @@ export default async function CheckoutPage() {
           <ThemeRegistry>
             {/**
              * One id per render of this page, carried into the form as a
-             * hidden field — `docs/AUDIT-2026-08-30.md` P0-2. Every
+             * hidden field - `docs/AUDIT-2026-08-30.md` P0-2. Every
              * resubmission of this same rendered form (double click,
              * retried request, back-and-resubmit) therefore carries the
              * SAME value, and `createOrder` returns the first attempt's

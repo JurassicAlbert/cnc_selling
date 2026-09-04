@@ -11,21 +11,21 @@ import { AdminSidebarNav } from '@/ui/islands/admin/AdminSidebarNav';
 const SIDEBAR_WIDTH = 260;
 
 /**
- * `/panel/*` shell — `requireStaffSession()` is the real authorization
+ * `/panel/*` shell - `requireStaffSession()` is the real authorization
  * check (redirect if unauthenticated, `notFound()` for `CUSTOMER`);
  * `src/proxy.ts` only pre-empts the unauthenticated case cheaply.
  *
  * Wrapped in `ThemeRegistry` deliberately, unlike the rest of the app
  * (`theme-vars.css`'s header explains why it's normally kept OUT of the
  * root layout). Unlike the rest of the app it also uses its OWN theme
- * (`adminTheme`, not the storefront `theme`) — see that file's header for
+ * (`adminTheme`, not the storefront `theme`) - see that file's header for
  * why the panel deliberately does NOT share the storefront's flattened,
  * accent-free look. `docs/ARCHITECTURE.md` §16A: "Full MUI... standard
- * Material, dense layout, no brand theming investment" — refined
+ * Material, dense layout, no brand theming investment" - refined
  * 2026-08-27 into an explicit Materio-style bento dashboard.
  *
  * Top `AppBar` (search + identity + logout) plus a grouped icon sidebar
- * (`AdminSidebarNav`) — closer to Materio's actual layout than the old
+ * (`AdminSidebarNav`) - closer to Materio's actual layout than the old
  * flat text-link list that used to live entirely in the nav column.
  */
 export default async function PanelLayout({ children }: { readonly children: ReactNode }) {

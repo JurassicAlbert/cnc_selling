@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   title: SITE.authRegisterHeadingPl,
 };
 
-/** 2026-08-28 redesign — same `AuthPanel`/decorative treatment as `/logowanie`, see that page's own header comment. */
+/** 2026-08-28 redesign - same `AuthPanel`/decorative treatment as `/logowanie`, see that page's own header comment. */
 export default async function RegisterPage() {
   const session = await getSession();
   if (session !== null) {

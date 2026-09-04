@@ -1,6 +1,6 @@
 /**
- * Staff/admin account queries. Scoped to `role IN ('STAFF', 'ADMIN')` — the
- * inverse of `admin-customers.ts`'s `role: 'CUSTOMER'` scoping — so a
+ * Staff/admin account queries. Scoped to `role IN ('STAFF', 'ADMIN')` - the
+ * inverse of `admin-customers.ts`'s `role: 'CUSTOMER'` scoping - so a
  * `CUSTOMER` row is never returned here, matching the `invite`/`role
  * change` actions' own restriction to genuine staff accounts.
  */

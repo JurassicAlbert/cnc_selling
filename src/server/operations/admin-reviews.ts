@@ -1,6 +1,6 @@
 /**
  * Staff review moderation. Deliberately, only a status change exists here
- * — no function in this file (or anywhere else in this codebase) can edit
+ * - no function in this file (or anywhere else in this codebase) can edit
  * a review's `bodyPl`/`authorNamePl`/`rating`. §16A.1 module 9: "no
  * facility to author a testimonial in a customer's name," enforced by the
  * shape of the code, not just policy.

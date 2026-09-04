@@ -1,12 +1,12 @@
 /**
- * `docs/REVIEW-DETAILED.md` ARCH-01 — until 2026-08-31 there was no CI at
+ * `docs/REVIEW-DETAILED.md` ARCH-01 - until 2026-08-31 there was no CI at
  * all: no `.github/workflows`, no hooks, and `playwright.config.ts` reading
  * a `process.env.CI` that nothing ever set. A project this disciplined about
  * TDD ran its whole suite only when a human remembered to.
  *
  * These tests exist because **a broken workflow cannot fail locally.** It is
  * a file that only ever executes somewhere else, so the usual feedback loop
- * — write it, run it, see it break — does not apply. The two failure modes
+ * - write it, run it, see it break - does not apply. The two failure modes
  * worth catching here are the ones that produce a *green* run rather than a
  * red one:
  *
@@ -73,7 +73,7 @@ function npmScriptsOf(job: Job): readonly string[] {
 
 const jobs = Object.entries(workflow.jobs);
 
-describe('CI workflow — it parses and it is wired to this repository', () => {
+describe('CI workflow - it parses and it is wired to this repository', () => {
   it('is valid YAML defining at least one job', () => {
     expect(jobs.length).toBeGreaterThan(0);
   });
@@ -118,7 +118,7 @@ describe('CI workflow — it parses and it is wired to this repository', () => {
   });
 });
 
-describe('CI workflow — the verification the Definition of Done names', () => {
+describe('CI workflow - the verification the Definition of Done names', () => {
   const allScripts = jobs.flatMap(([, job]) => npmScriptsOf(job));
 
   it.each(['typecheck', 'lint', 'test', 'build'])('runs npm run %s', (script) => {
@@ -126,7 +126,7 @@ describe('CI workflow — the verification the Definition of Done names', () => 
   });
 });
 
-describe('CI workflow — the database the tests actually need', () => {
+describe('CI workflow - the database the tests actually need', () => {
   function jobRunning(script: string): [string, Job] {
     const found = jobs.find(([, job]) => npmScriptsOf(job).includes(script));
     if (found === undefined) {
@@ -153,8 +153,8 @@ describe('CI workflow — the database the tests actually need', () => {
 
   it('sets TEST_DATABASE_URL wherever npm test runs', () => {
     // The silent-failure guard. `tests/integration/env-setup.ts` does not
-    // throw when this is missing — by design, so `tests/unit` works with no
-    // database at all — which means a CI job without it would run the whole
+    // throw when this is missing - by design, so `tests/unit` works with no
+    // database at all - which means a CI job without it would run the whole
     // integration tier against DATABASE_URL and still report success.
     const [name, job] = jobRunning('test');
     expect(Object.keys(job.env ?? {}), `job "${name}" has no TEST_DATABASE_URL`).toContain(
@@ -182,7 +182,7 @@ describe('CI workflow — the database the tests actually need', () => {
 
   it('sets the secrets the app refuses to start without', () => {
     // `auth.ts` and `guest-session.ts` throw on a missing value, and
-    // `prisma/seed.ts` throws without SEED_ADMIN_EMAIL — all at import or
+    // `prisma/seed.ts` throws without SEED_ADMIN_EMAIL - all at import or
     // build time, so a missing one fails the build rather than a test.
     const [, job] = jobRunning('build');
     const env = Object.keys(job.env ?? {});

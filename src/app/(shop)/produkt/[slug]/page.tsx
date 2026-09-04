@@ -26,7 +26,7 @@ type ProductPageProps = {
   readonly params: Promise<{ readonly slug: string }>;
   /**
    * `?podglad=1` is the "Preview as customer" admin feature
-   * (§16A.5/`ARCHITECTURE.md`) — a staff-only bypass of the `isActive`
+   * (§16A.5/`ARCHITECTURE.md`) - a staff-only bypass of the `isActive`
    * gate so a not-yet-published product can be reviewed on this exact
    * page before going live. A non-staff visitor (or a staff member
    * without the query param) sees the same 404-on-inactive behavior as
@@ -54,7 +54,7 @@ function Chip({ children }: { readonly children: ReactNode }) {
 }
 
 /**
- * A small circular glyph badge for the info cards below — real-but-plain
+ * A small circular glyph badge for the info cards below - real-but-plain
  * inline SVG (no `@mui/icons-material`, no MUI dependency at all), matching
  * `SectionDecoration.tsx`'s own "RSC-safe hand-drawn glyph" precedent
  * rather than reaching for a component library icon in a Server Component.
@@ -88,7 +88,7 @@ const ICON_PATH = {
   care: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z',
 } as const;
 
-/** One "care / material / installation" info block — replaces a bare `Heading`+`Text` pair. */
+/** One "care / material / installation" info block - replaces a bare `Heading`+`Text` pair. */
 function InfoCard({ icon, heading, children }: { readonly icon: keyof typeof ICON_PATH; readonly heading: string; readonly children: ReactNode }) {
   return (
     <div
@@ -111,10 +111,10 @@ function InfoCard({ icon, heading, children }: { readonly icon: keyof typeof ICO
 }
 
 /**
- * Server-rendered from the DB (ARCHITECTURE.md §18) — no client-side fetch
+ * Server-rendered from the DB (ARCHITECTURE.md §18) - no client-side fetch
  * for content. Intro restructured 2026-08-24 to an image-left/info-right
  * PDP layout (matching the owner's reference); the configurator below it is
- * untouched — it's freshly built, tested, and browser-verified this
+ * untouched - it's freshly built, tested, and browser-verified this
  * session, and this pass only restyles the page chrome around it.
  */
 export default async function ProductPage({ params, searchParams }: ProductPageProps) {
@@ -126,8 +126,8 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
 
   // Three independent reads, run together rather than one after another
   // (`docs/AUDIT-2026-08-30.md` P1-7's pattern). None depends on another's
-  // result — the configurator data is keyed by the same `slug`, and the
-  // saved-design list by the session resolved above — so the product page,
+  // result - the configurator data is keyed by the same `slug`, and the
+  // saved-design list by the session resolved above - so the product page,
   // the single hottest page in the shop, was paying three sequential round
   // trips for work that fits in one.
   //
@@ -135,7 +135,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
   // type's `CUSTOM_UPLOAD` step renders it (P9 phase 2's "pick a saved
   // design instead of uploading fresh" path). Fetched regardless because
   // that is still simpler and cheaper than threading a product-type check
-  // through this Server Component to skip one indexed query — and now it
+  // through this Server Component to skip one indexed query - and now it
   // costs no wall time at all.
   const [product, configuratorData, savedDesigns] = await Promise.all([
     isStaffPreview ? getProductBySlugForPreview(slug) : getActiveProductBySlug(slug),
@@ -147,7 +147,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
   }
   const primaryImage = product.images[0] ?? null;
 
-  // A staff preview hit is not real customer traffic — never counted.
+  // A staff preview hit is not real customer traffic - never counted.
   if (!isStaffPreview) {
     void recordAnalyticsEvent({
       name: 'product_view',
@@ -206,7 +206,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
         )}
         <script
           type="application/ld+json"
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: only way to emit JSON-LD; toSafeJsonLd escapes `<` so it can't break out of the script tag — src/ui/seo/json-ld.ts
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: only way to emit JSON-LD; toSafeJsonLd escapes `<` so it can't break out of the script tag - src/ui/seo/json-ld.ts
           dangerouslySetInnerHTML={{ __html: toSafeJsonLd(jsonLd) }}
         />
         <Breadcrumbs
@@ -220,7 +220,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
           {/* grid-template-columns lives here, not inline: an inline style always
               wins the cascade over a stylesheet rule, media query included.
               2026-08-28, owner feedback: the configurator belongs directly
-              beside the photo, not in a separate full-width section below —
+              beside the photo, not in a separate full-width section below -
               the photo column is sticky on desktop so it stays in view while
               the customer works through the configurator's bands. */}
           <style>{`
@@ -270,13 +270,13 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
 
             {/* 2026-08-28, owner feedback: patterns/materials/finish are
                 selected in place, right here, the same way a t-shirt's
-                colour is picked — never a link that navigates the customer
+                colour is picked - never a link that navigates the customer
                 away from the product. The old pattern-thumbnails section
                 that linked out to /wzory is gone; the DESIGN band inside
                 the configurator below already covers "pick a ready-made
                 pattern" without leaving the page.
                 2026-08-29, owner feedback: no "Skonfiguruj produkt" section
-                heading either — the breadcrumb trail (rendered by
+                heading either - the breadcrumb trail (rendered by
                 `Configurator` itself, right after the price/chips above)
                 IS the configurator now; a heading announcing it as a
                 separate section would be exactly the "porozwalane" (spread

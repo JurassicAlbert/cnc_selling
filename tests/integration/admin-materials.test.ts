@@ -24,7 +24,7 @@ function staffActor(): CurrentSession {
 }
 
 function testJpegBytes(): Buffer {
-  // Smallest real JPEG magic-byte header `file-type` will actually sniff as image/jpeg (SOI + APP0 marker), padded — content doesn't matter, only the header.
+  // Smallest real JPEG magic-byte header `file-type` will actually sniff as image/jpeg (SOI + APP0 marker), padded - content doesn't matter, only the header.
   return Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, ...Array(64).fill(0), 0xff, 0xd9]);
 }
 

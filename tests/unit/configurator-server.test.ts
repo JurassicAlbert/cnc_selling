@@ -9,7 +9,7 @@ import type { FontRow, PersonalizationSpecRow } from '@/server/mapping/to-domain
 
 /**
  * The server-side glue between `domain/compatibility` / `domain/pricing` /
- * `domain/feasibility` / `domain/modules` and a real product's rows —
+ * `domain/feasibility` / `domain/modules` and a real product's rows -
  * ARCHITECTURE.md §7.1's `derived` state and §7.2's option resolution.
  * Fixture-driven, exactly like `tests/unit/mapping.test.ts`: no database, a
  * mistake here does not throw, it produces a plausible wrong price or option
@@ -154,13 +154,13 @@ describe('resolveOptions', () => {
     expect(result.installVariantCodes).toEqual(['ON_TOP', 'OVERLAY']);
   });
 
-  it('lists every font, unfiltered — no compatibility rule narrows font choice', () => {
+  it('lists every font, unfiltered - no compatibility rule narrows font choice', () => {
     const result = resolveOptions(optionData, EMPTY_SELECTIONS);
     expect(result.fontIds).toEqual(['inter']);
   });
 });
 
-describe('resolveOptionAvailability — every option, annotated, never hidden (§7.2)', () => {
+describe('resolveOptionAvailability - every option, annotated, never hidden (§7.2)', () => {
   it('marks a structurally unavailable material with its own reason', () => {
     const result = resolveOptionAvailability(optionData, EMPTY_SELECTIONS);
     const entry = result.materials.find((m) => m.id === 'unavailable-material');
@@ -366,7 +366,7 @@ describe('priceConfiguration', () => {
   });
 
   /**
-   * This test used to assert the opposite — that an impossible line width
+   * This test used to assert the opposite - that an impossible line width
    * produced `blockingError: true` and a `LINE_TOO_THIN` finding.
    *
    * Reversed deliberately on 2026-08-31, at the owner's instruction: "we
@@ -377,7 +377,7 @@ describe('priceConfiguration', () => {
    *
    * Pattern selection is off, so the pattern is a property of a product we
    * already make rather than artwork being scaled to a size the customer
-   * chose — and the metadata these rules read (`referenceWidthMm: 600`,
+   * chose - and the metadata these rules read (`referenceWidthMm: 600`,
    * `minLineWidthUm: 1200`, identical on every seeded design) was seed
    * scaffolding, never a measurement. The effect was a shop that refused
    * itself: two products were 100% unbuildable while still being listed and
@@ -393,7 +393,7 @@ describe('priceConfiguration', () => {
     const thinLineData: ConfiguratorPricingData = {
       ...pricingData,
       // The material demands a far wider line than this design could ever
-      // produce — previously an immediate hard block.
+      // produce - previously an immediate hard block.
       material: { ...pricingData.material, minLineWidthUm: 50_000 }, // 50 mm
     };
     const result = priceConfiguration(
@@ -412,7 +412,7 @@ describe('priceConfiguration', () => {
   /**
    * The other half of the same decision: only the three DESIGN-derived
    * findings were switched off. Every constraint on something the customer
-   * genuinely chooses still blocks — this is the machine's real Z-axis
+   * genuinely chooses still blocks - this is the machine's real Z-axis
    * limit, and the test below it covers the same for module splitting.
    */
   it('still blocks on a real machine limit, which is not a pattern question', () => {
@@ -449,7 +449,7 @@ describe('priceConfiguration', () => {
 });
 
 // ---------------------------------------------------------------------------
-// priceConfiguration — personalization (§7.1, domain/personalization)
+// priceConfiguration - personalization (§7.1, domain/personalization)
 // ---------------------------------------------------------------------------
 
 const personalizationSpecFixture: PersonalizationSpecRow = {
@@ -461,7 +461,7 @@ const personalizationSpecFixture: PersonalizationSpecRow = {
   pricePerCharGrosze: 50,
 };
 
-// Basic Latin + Latin-1 Supplement + Latin Extended-A — covers every Polish
+// Basic Latin + Latin-1 Supplement + Latin Extended-A - covers every Polish
 // diacritic (ó sits in Latin-1 Supplement, the rest in Latin Extended-A) but
 // nothing outside those three blocks, so an em dash is a real gap to test.
 const fontFixture: FontRow = {
@@ -474,13 +474,13 @@ const fontFixture: FontRow = {
   ],
 };
 
-describe('priceConfiguration — personalization', () => {
+describe('priceConfiguration - personalization', () => {
   const base: ConfiguratorPricingData = {
     ...pricingData,
     personalizationSpec: personalizationSpecFixture,
   };
 
-  it('has no personalization issues when no text is entered — it is optional', () => {
+  it('has no personalization issues when no text is entered - it is optional', () => {
     const result = priceConfiguration(base, selections({ widthMm: 600, heightMm: 400 }), 1);
     expect(result.status).toBe('priced');
     if (result.status === 'priced') {
@@ -518,16 +518,22 @@ describe('priceConfiguration — personalization', () => {
     }
   });
 
-  it('reports a character genuinely outside the font\'s cmap as a blocking issue — the mistake an engraving cannot undo', () => {
+  it('reports a character genuinely outside the font\'s cmap as a blocking issue - the mistake an engraving cannot undo', () => {
+    // U+2014, by code point: this is the one place in the repository that
+    // needs a literal em-dash, because it is the *subject* of the test - a
+    // character the engraving font genuinely has no glyph for. A hyphen IS
+    // in the cmap, so writing one here makes the test assert nothing, which
+    // is exactly what happened when the owner's no-em-dash sweep first ran.
+    const notInTheFont = String.fromCharCode(0x2014);
     const result = priceConfiguration(
       { ...base, font: fontFixture },
-      selections({ widthMm: 600, heightMm: 400, personalizationText: 'Ala—Ola' }),
+      selections({ widthMm: 600, heightMm: 400, personalizationText: `Ala${notInTheFont}Ola` }),
       1,
     );
     expect(result.status).toBe('priced');
     if (result.status === 'priced') {
       expect(result.personalizationIssues).toEqual([
-        { code: 'UNSUPPORTED_CHARACTER', character: '—' },
+        { code: 'UNSUPPORTED_CHARACTER', character: notInTheFont },
       ]);
       expect(result.blockingError).toBe(true);
     }

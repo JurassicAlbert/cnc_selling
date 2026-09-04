@@ -1,5 +1,5 @@
 /**
- * Admin material queries — unscoped by `isAvailable`, unlike the
+ * Admin material queries - unscoped by `isAvailable`, unlike the
  * product-material picker in `admin-products.ts`'s
  * `listMaterialOptionsForAdmin` (which exists only to populate a
  * compatible-material dropdown, not to manage materials themselves).

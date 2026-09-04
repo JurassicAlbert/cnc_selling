@@ -1,5 +1,5 @@
 /**
- * `computeDefaultSelections` — the configurator's starting configuration.
+ * `computeDefaultSelections` - the configurator's starting configuration.
  *
  * It exists because of owner feedback ("The price for the product should be
  * clear, no waiting for configure"), so a product page shows a real price on
@@ -7,11 +7,11 @@
  * where the application chooses selections **on the customer's behalf**, and
  * therefore the one place where choosing a field the product type does not
  * have would produce a page that prices fine and then refuses to add to the
- * cart — the exact shape the owner ruled out on 2026-08-31.
+ * cart - the exact shape the owner ruled out on 2026-08-31.
  *
  * That was not hypothetical when BUG-06 landed. It filled `finishId` from
  * the material's first available finish for *every* product, and `JEWELRY`
- * has no FINISH step (§5) — so the bracelet would have defaulted to a finish
+ * has no FINISH step (§5) - so the bracelet would have defaulted to a finish
  * it is not allowed to carry, priced happily, and been rejected by the new
  * write-path check the moment anyone pressed "Dodaj do koszyka".
  *

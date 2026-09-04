@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * Passwordless login — the "magic-link-equivalent" path
+ * Passwordless login - the "magic-link-equivalent" path
  * `docs/HANDOVER.md`'s P6 section describes: `submitOtpRequest` sends a
  * code by email (Better Auth's `emailOTP` plugin, via `mailer.ts`),
  * `submitOtpLogin` verifies it and signs in. Two separate `useActionState`
  * hooks, switched between by one small piece of local state (`state.sent`
- * from the first action) — the code-entry step only ever shows once a
+ * from the first action) - the code-entry step only ever shows once a
  * request has actually gone out.
  *
  * P9 phase 9: converted to real MUI, same reasoning as `LoginForm.tsx`.

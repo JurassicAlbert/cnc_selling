@@ -18,14 +18,14 @@ export const metadata: Metadata = {
 
 /**
  * Real MUI `Accordion`, not the raw `<details>/<summary>` this page used
- * before — the owner's own ask ("polished MUI design, preferably an
+ * before - the owner's own ask ("polished MUI design, preferably an
  * accordion"). `ThemeRegistry` is mounted around just the accordion list,
  * the same "wrap the one real interactive island, not the whole page"
  * precedent the product page's Configurator already established
  * (`ThemeRegistry.tsx`'s own header comment: mounting it at the root
  * shipped the full MUI+Emotion runtime to pages with zero interactive MUI
  * components and measurably hurt mobile LCP). The homepage's own FAQ
- * teaser deliberately keeps the lighter `<details>` version — it's on the
+ * teaser deliberately keeps the lighter `<details>` version - it's on the
  * highest-traffic, most LCP-sensitive page on the site, and doesn't need
  * a full accordion, just a glance-and-click preview.
  */
@@ -51,7 +51,7 @@ export default async function FaqPage() {
         {jsonLd !== null && (
           <script
             type="application/ld+json"
-            // biome-ignore lint/security/noDangerouslySetInnerHtml: only way to emit JSON-LD; toSafeJsonLd escapes `<` so it can't break out of the script tag — src/ui/seo/json-ld.ts
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: only way to emit JSON-LD; toSafeJsonLd escapes `<` so it can't break out of the script tag - src/ui/seo/json-ld.ts
             dangerouslySetInnerHTML={{ __html: toSafeJsonLd(jsonLd) }}
           />
         )}

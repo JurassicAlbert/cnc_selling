@@ -27,7 +27,7 @@ export default async function AdminSupportRequestDetailPage({ params }: SupportR
       <Chip size="small" label={adminSupportRequestStatusLabel(request.status)} sx={{ mb: 3 }} />
 
       <Text>
-        {request.namePl ?? request.email} — {request.email}
+        {request.namePl ?? request.email} - {request.email}
       </Text>
       <Text muted>{request.createdAt.toLocaleString('pl-PL')}</Text>
       <Text muted>

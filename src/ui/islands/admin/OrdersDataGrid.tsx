@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * First real `@mui/x-data-grid` usage in this codebase (P7c slice 2) —
+ * First real `@mui/x-data-grid` usage in this codebase (P7c slice 2) -
  * `plPL`'s DataGrid locale is wired in `src/ui/theme/theme.ts`, so the
  * grid's own chrome (pagination "Wierszy na stronie", sort/filter menu
  * labels) renders in Polish automatically, no per-instance config needed.
  *
- * Column definitions mirror the plain `<Table>` this replaces 1:1 — same
+ * Column definitions mirror the plain `<Table>` this replaces 1:1 - same
  * data, same `AdminOrderListItem` shape from `admin-orders.ts`, nothing
  * new server-side. `onRowClick` navigates to the order's real detail page,
  * the natural DataGrid interaction on top of the existing `Numer` link.

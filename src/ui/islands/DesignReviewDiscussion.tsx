@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * P9 continuation, 2026-08-28 — the customer-facing half of the design
+ * P9 continuation, 2026-08-28 - the customer-facing half of the design
  * review "dyskusja". The read side already existed
  * (`design-review.ts`'s `requireOwnedDesignStatus`, unused until now); this
  * island is the reply form, calling the new `postCustomerDesignComment`

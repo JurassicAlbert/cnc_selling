@@ -1,17 +1,17 @@
 /**
  * The throttles for the actions that authenticate, register, or send mail
- * to a caller-supplied address — `docs/REVIEW-DETAILED.md` SEC-01.
+ * to a caller-supplied address - `docs/REVIEW-DETAILED.md` SEC-01.
  *
  * Why these exist at all: every auth form in this project calls
  * `auth.api.signInEmail(...)` and friends **directly** from a Server
  * Action. Better Auth does ship a rate limiter, but it is installed as its
  * HTTP router's `onRequest` hook, so it only ever runs for requests that
- * reach `auth.handler` — i.e. `/api/auth/*`, a path this application's own
+ * reach `auth.handler` - i.e. `/api/auth/*`, a path this application's own
  * forms never take. The result was unlimited password guessing and an
  * unmetered "email me a code" endpoint.
  *
  * These take `email`/`ip` as explicit parameters and read nothing from the
- * request, which is what makes them testable — the same split, for the
+ * request, which is what makes them testable - the same split, for the
  * same reason, as every `apply*`/wrapper pair in `src/server/operations`.
  * The Server Actions read the real values and pass them in.
  */
@@ -27,7 +27,7 @@ const ALLOWED: ThrottleVerdict = { allowed: true };
 /**
  * Addresses are compared case-insensitively everywhere else that matters
  * (Better Auth's own lookup, `User.email @unique` in practice), so the
- * counter has to agree — otherwise `Ala@example.pl` and `ala@example.pl`
+ * counter has to agree - otherwise `Ala@example.pl` and `ala@example.pl`
  * would be five free attempts each.
  */
 function normalizeEmail(email: string): string {
@@ -73,7 +73,7 @@ async function consumeAll(
  * development, the e2e suite, and any deployment whose proxy does not set
  * `X-Forwarded-For`. Folding all of those into one shared `"ip:unknown"`
  * bucket would lock out every visitor simultaneously the moment traffic
- * picked up — a far worse failure than not applying this dimension. The
+ * picked up - a far worse failure than not applying this dimension. The
  * per-email limit still applies in every one of those cases.
  */
 function ipEntry(
@@ -122,7 +122,7 @@ export async function consumeRegisterAttempt(attempt: { readonly ip: string | nu
   return consumeAll(ipEntry('register', attempt.ip, AUTH_RATE_LIMITS.registerPerIp), now);
 }
 
-/** §16.1's "order creation per IP" — `docs/AUDIT-2026-08-30.md` P1-8, unblocked once the storage question was answered. */
+/** §16.1's "order creation per IP" - `docs/AUDIT-2026-08-30.md` P1-8, unblocked once the storage question was answered. */
 export async function consumeOrderAttempt(attempt: { readonly ip: string | null }, now?: Date): Promise<ThrottleVerdict> {
   return consumeAll(ipEntry('order', attempt.ip, AUTH_RATE_LIMITS.orderPerIp), now);
 }

@@ -1,11 +1,11 @@
 /**
  * Staff blog-post mutations. Same `applyXxx(staff, ...)` / `xxx(...)` split
- * as every other admin action file. No delete — `isActive` toggle only,
+ * as every other admin action file. No delete - `isActive` toggle only,
  * matching `admin-static-pages.ts`'s own convention exactly.
  *
  * `publishedAt` is a real draft/scheduled-publish mechanism already built
  * into `blog.ts`'s public query (`isActive && publishedAt` set and not in
- * the future — a null `publishedAt` is a draft) — this is the first admin
+ * the future - a null `publishedAt` is a draft) - this is the first admin
  * screen to actually let staff set it, rather than only the seed script.
  */
 

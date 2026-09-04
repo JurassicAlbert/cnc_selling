@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * The RODO/cookie consent banner — P6 Part E. Only rendered by
+ * The RODO/cookie consent banner - P6 Part E. Only rendered by
  * `layout.tsx` when `readConsentChoice()` returned `null` (no choice made
- * yet this visit) — once a choice is made, `submitConsentChoice` revalidates
+ * yet this visit) - once a choice is made, `submitConsentChoice` revalidates
  * the layout and this component simply stops being rendered, no local
  * "dismissed" state needed.
  */

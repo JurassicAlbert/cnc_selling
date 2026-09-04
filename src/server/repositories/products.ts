@@ -8,7 +8,7 @@ export type ProductCardData = {
   readonly namePl: string;
   readonly shortDescPl: string;
   /**
-   * The advertised "od X zł" — GROSS, and the cheapest configuration a
+   * The advertised "od X zł" - GROSS, and the cheapest configuration a
    * customer can actually buy (`server/pricing/starting-price.ts`). `null`
    * means no price may be shown at all: never fall back to
    * `minPriceGrosze`, which is the net internal clamp this replaced
@@ -18,13 +18,13 @@ export type ProductCardData = {
   readonly primaryImageUrl: string | null;
   readonly categoryNamePl: string;
   readonly categorySlug: string;
-  /** Real, from `PersonalizationSpec.isEnabled` — not every product offers it. */
+  /** Real, from `PersonalizationSpec.isEnabled` - not every product offers it. */
   readonly hasPersonalization: boolean;
   readonly productionDaysMin: number;
   readonly productionDaysMax: number;
   readonly minWidthMm: number;
   readonly maxWidthMm: number;
-  /** A real many-to-many join (`ProductMaterial`) — every seeded product has exactly one today, but the card must not assume that's permanent. */
+  /** A real many-to-many join (`ProductMaterial`) - every seeded product has exactly one today, but the card must not assume that's permanent. */
   readonly materials: readonly { readonly namePl: string }[];
 };
 
@@ -49,7 +49,7 @@ export async function listActiveProductsByCategorySlug(
       ...(materialSlug ? { materials: { some: { material: { slug: materialSlug } } } } : {}),
     },
     // Sorted by the price customers are actually shown, not by the
-    // internal net clamp — otherwise "od najtańszych" could order the list
+    // internal net clamp - otherwise "od najtańszych" could order the list
     // differently from the numbers on the cards. Nulls sort last either
     // way: a product with no advertised price belongs at the end of a
     // price-sorted list, not the front.
@@ -112,9 +112,9 @@ export async function listCategoryFilterMaterials(
 
 /**
  * Every active product, for the homepage's single honest "Nasze produkty"
- * grid — no fake curation. Also joins `category.isActive`: a deactivated
+ * grid - no fake curation. Also joins `category.isActive`: a deactivated
  * category (e.g. Gres/Panele podłogowe, 2026-08-28) must hide its products
- * everywhere, not just from its own category page and nav — this repository
+ * everywhere, not just from its own category page and nav - this repository
  * is the shared source for the homepage grid, sitewide search
  * (`searchActiveProducts` below reuses this), and the sitemap.
  */
@@ -162,7 +162,7 @@ export async function listAllActiveProducts(): Promise<ProductCardData[]> {
 /**
  * A real search, not decoration: diacritic-insensitive matching
  * (`matchesPl`, already built in P1) against name and short description.
- * Filtered in memory rather than a DB `LIKE` — reasonable at today's scale
+ * Filtered in memory rather than a DB `LIKE` - reasonable at today's scale
  * (a handful of products); revisit if the catalogue ever grows enough for
  * that to matter.
  */
@@ -195,14 +195,14 @@ export type ProductDetail = {
   readonly maxWidthMm: number;
   readonly minHeightMm: number;
   readonly maxHeightMm: number;
-  /** Floor/panel products: the customer must state final dimensions (§11) — no trimming after the fact. */
+  /** Floor/panel products: the customer must state final dimensions (§11) - no trimming after the fact. */
   readonly requiresExactSize: boolean;
   readonly category: { readonly slug: string; readonly namePl: string };
   readonly images: readonly { readonly url: string; readonly altPl: string }[];
   readonly materials: readonly { readonly namePl: string }[];
   /**
    * Rights-clear, active designs this product's configurator actually
-   * offers — 2026-08-28, owner feedback: patterns were only ever visible by
+   * offers - 2026-08-28, owner feedback: patterns were only ever visible by
    * opening the configurator and stepping through it; now shown directly in
    * the product's own properties, so a customer can see what's available
    * before starting the configurator. Same `rightsStatus` filter
@@ -219,7 +219,7 @@ export type ProductDetail = {
 async function findProductBySlug(slug: string, activeOnly: boolean): Promise<ProductDetail | null> {
   const product = await prisma.product.findFirst({
     // A deactivated category hides its products from direct-URL access too,
-    // not just from listings — matching how a deactivated product already
+    // not just from listings - matching how a deactivated product already
     // 404s. `activeOnly: false` (staff preview only, see
     // `getProductBySlugForPreview`) deliberately skips both checks.
     where: activeOnly ? { slug, isActive: true, category: { isActive: true } } : { slug },
@@ -275,14 +275,14 @@ async function findProductBySlug(slug: string, activeOnly: boolean): Promise<Pro
 }
 
 /**
- * `cache()` from React, not a data cache — `docs/REVIEW-DETAILED.md` PERF-02.
+ * `cache()` from React, not a data cache - `docs/REVIEW-DETAILED.md` PERF-02.
  * It memoizes for the duration of ONE request, nothing longer, so there is no
  * staleness to reason about: an admin edit is visible on the very next
  * request either way.
  *
  * It is here because each of the five `generateMetadata` routes calls its
- * repository function twice — once for the metadata, once for the page body
- * — and Next deduplicates `fetch`, not Prisma. Every one of those pages was
+ * repository function twice - once for the metadata, once for the page body
+ * - and Next deduplicates `fetch`, not Prisma. Every one of those pages was
  * issuing the identical query twice per render.
  */
 export const getActiveProductBySlug = cache(
@@ -290,10 +290,10 @@ export const getActiveProductBySlug = cache(
 );
 
 /**
- * Same shape as `getActiveProductBySlug`, minus the `isActive` filter —
+ * Same shape as `getActiveProductBySlug`, minus the `isActive` filter -
  * §16A.5's "Preview as customer" admin feature, letting staff see a
  * not-yet-published product exactly as `/produkt/[slug]/page.tsx` renders
- * it. **Callers MUST gate this behind `requireStaffSession()`** — it has
+ * it. **Callers MUST gate this behind `requireStaffSession()`** - it has
  * no auth check of its own, matching every other admin-only repository
  * function in this codebase (`admin-*.ts`), even though this one happens
  * to live in the public `products.ts` module because it shares the exact

@@ -1,11 +1,11 @@
 /**
  * Staff design/collection mutations. `Design.thumbnailUrl`/`previewUrl`
- * are both required and distinct (not one image reused) — like
+ * are both required and distinct (not one image reused) - like
  * `admin-materials.ts`, create/update take `FormData` directly. Same
  * `applyXxx(staff, ...)` / `xxx(...)` split as every other admin action
- * file — `revalidatePath` only in the wrapper.
+ * file - `revalidatePath` only in the wrapper.
  *
- * No delete action for either entity — `Design` cascades its
+ * No delete action for either entity - `Design` cascades its
  * `ProductDesign` assignments and orphans live `Configuration` rows on
  * delete (confirmed via the actual migration SQL, not assumed);
  * `DesignCollection` is technically SET NULL-safe but kept to the same
@@ -131,7 +131,7 @@ export async function setCollectionActive(id: string, isActive: boolean): Promis
   revalidatePath(`/panel/kolekcje/${id}`);
 }
 
-/** Bulk activate/deactivate from the grid's selection toolbar (P7c) — see `admin-categories.ts`'s `bulkSetCategoryActive` for the pattern. */
+/** Bulk activate/deactivate from the grid's selection toolbar (P7c) - see `admin-categories.ts`'s `bulkSetCategoryActive` for the pattern. */
 export async function applyBulkSetCollectionActive(staff: CurrentSession, ids: readonly string[], isActive: boolean): Promise<void> {
   for (const id of ids) {
     await applySetCollectionActive(staff, id, isActive);
@@ -171,7 +171,7 @@ export async function setCollectionSortOrder(id: string, sortOrder: number): Pro
 
 // --- Collections: CSV import ------------------------------------------------
 //
-// Expected header row: slug,namePl,descPl,sortOrder — same pattern as
+// Expected header row: slug,namePl,descPl,sortOrder - same pattern as
 // `admin-categories.ts`'s `applyImportCategoriesFromCsv` (see its own header
 // comment for the full rationale: every row goes through the real
 // `applyCreateCollection`, a bad row never aborts the batch).
@@ -292,7 +292,7 @@ function readDesignFields(formData: FormData): DesignFields {
     minLineWidthUm: Number(formData.get('minLineWidthUm') ?? 0),
     minDetailSpacingUm: Number(formData.get('minDetailSpacingUm') ?? 0),
     // `REQUIRES_PERMISSION` (the Prisma column default) unless the form
-    // explicitly submits something else — §12: never silently sellable.
+    // explicitly submits something else - §12: never silently sellable.
     minEngraveDepthUm: optionalNumber(formData, 'minEngraveDepthUm'),
     recommendedMethod: String(formData.get('recommendedMethod') ?? 'CNC_ENGRAVE') as ProductionMethod,
     minRecommendedWidthMm: Number(formData.get('minRecommendedWidthMm') ?? 0),
@@ -322,7 +322,7 @@ function validateDesignFields(fields: DesignFields): string | null {
     return 'Nazwa jest wymagana.';
   }
   if (fields.detailLevel < 1 || fields.detailLevel > 5) {
-    return `Poziom szczegółowości musi być liczbą od 1 do 5 — podano ${fields.detailLevel}.`;
+    return `Poziom szczegółowości musi być liczbą od 1 do 5 - podano ${fields.detailLevel}.`;
   }
   return null;
 }
@@ -460,7 +460,7 @@ export async function setDesignActive(id: string, isActive: boolean): Promise<vo
   revalidatePath(`/panel/wzory/${id}`);
 }
 
-/** Bulk activate/deactivate from the grid's selection toolbar (P7c) — see `admin-categories.ts`'s `bulkSetCategoryActive` for the pattern. */
+/** Bulk activate/deactivate from the grid's selection toolbar (P7c) - see `admin-categories.ts`'s `bulkSetCategoryActive` for the pattern. */
 export async function applyBulkSetDesignActive(staff: CurrentSession, ids: readonly string[], isActive: boolean): Promise<void> {
   for (const id of ids) {
     await applySetDesignActive(staff, id, isActive);
@@ -500,7 +500,7 @@ export async function setDesignSortOrder(id: string, sortOrder: number): Promise
 
 /**
  * Copies the core scalar record plus the existing `thumbnailUrl`/
- * `previewUrl` (both files are reused, not re-uploaded — a duplicate
+ * `previewUrl` (both files are reused, not re-uploaded - a duplicate
  * starts pointing at the same images until staff replaces them) but not
  * the material-compatibility rows or any product assignment, both of
  * which are frequently design-specific. Starts inactive, same "review
@@ -546,7 +546,7 @@ export async function applyDuplicateDesign(staff: CurrentSession, id: string): P
     rightsNotes: original.rightsNotes,
     sortOrder: original.sortOrder,
     // A duplicate starts unfeatured, same "starts inactive" discipline as
-    // `isActive` below — a copy shouldn't inherit a curated highlight
+    // `isActive` below - a copy shouldn't inherit a curated highlight
     // without a deliberate re-review.
     featured: false,
   };
@@ -574,7 +574,7 @@ export async function duplicateDesign(id: string): Promise<DesignMutationResult>
   return result;
 }
 
-/** See `duplicateProductAndGo`'s own comment — same zero-JS-button shape. */
+/** See `duplicateProductAndGo`'s own comment - same zero-JS-button shape. */
 export async function duplicateDesignAndGo(id: string): Promise<void> {
   const result = await duplicateDesign(id);
   if (result.ok) {

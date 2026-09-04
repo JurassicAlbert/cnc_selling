@@ -9,23 +9,23 @@ import type { OrderConfirmationView } from '@/server/repositories/orders';
  * order-confirmation page (`(shop)/zamowienie/[orderNumber]/page.tsx`), the
  * logged-in order-history detail page
  * (`(shop)/moje-konto/zamowienia/[orderNumber]/page.tsx`), and the admin
- * order page (`(admin)/panel/zamowienia/[orderNumber]/page.tsx`) — same
+ * order page (`(admin)/panel/zamowienia/[orderNumber]/page.tsx`) - same
  * `OrderConfirmationView`-shaped data, same display, extracted once a
  * second real caller needed it rather than duplicated.
  *
  * 2026-08-29 rewrite, owner feedback: "Dymki z informacjami to dalej
- * typowy vanilla/raw html/css" — real MUI now. No `'use client'` needed
- * (no interactivity) — lives in `ui/primitives`, outside the `(shop)`/
+ * typowy vanilla/raw html/css" - real MUI now. No `'use client'` needed
+ * (no interactivity) - lives in `ui/primitives`, outside the `(shop)`/
  * `(marketing)` app directories the `@mui/material`-ban lint rule scopes
  * to (`ARCHITECTURE.md` §2.1), so it renders fine as a plain Server
- * Component as long as an ancestor mounts `ThemeRegistry` — same
+ * Component as long as an ancestor mounts `ThemeRegistry` - same
  * `DuplicateButton.tsx` precedent. Both customer-facing call sites now
  * render this INSIDE their own `ThemeRegistry` wrap (it used to sit
  * outside, back when this was plain HTML).
  *
  * Also fixes a second real gap the owner flagged directly: the delivery
  * method and pickup point a customer actually chose were never shown back
- * to them anywhere — `deliveryMethodNamePl`/`pickupPointLabel` are real
+ * to them anywhere - `deliveryMethodNamePl`/`pickupPointLabel` are real
  * fields on `Order` (P9 continuation, round 9) that simply weren't wired
  * into this view yet.
  */
@@ -35,7 +35,7 @@ export type OrderSummaryBankDetails = {
 };
 
 /**
- * Only the fields this component actually reads — deliberately narrower
+ * Only the fields this component actually reads - deliberately narrower
  * than `OrderConfirmationView` so a field added there for one caller (e.g.
  * P9 phase 7's `shipment`) never forces every other caller's own view type
  * (`AdminOrderView` here) to grow a matching field it has no use for.
@@ -65,7 +65,7 @@ export function OrderSummary({
               <Typography variant="body2" color="text.secondary">
                 {item.snapshot.productNamePl} × {item.quantity}
                 {item.snapshot.materialNamePl !== null || item.snapshot.designNamePl !== null
-                  ? ` — ${[item.snapshot.materialNamePl, item.snapshot.designNamePl].filter((v) => v !== null).join(', ')}`
+                  ? ` - ${[item.snapshot.materialNamePl, item.snapshot.designNamePl].filter((v) => v !== null).join(', ')}`
                   : ''}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>

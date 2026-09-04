@@ -1,4 +1,4 @@
-/** Staff static-page mutations. Same `applyXxx(staff, ...)` / `xxx(...)` split as every other admin action file. No delete — `isActive` toggle only. */
+/** Staff static-page mutations. Same `applyXxx(staff, ...)` / `xxx(...)` split as every other admin action file. No delete - `isActive` toggle only. */
 
 import { revalidatePath } from 'next/cache';
 

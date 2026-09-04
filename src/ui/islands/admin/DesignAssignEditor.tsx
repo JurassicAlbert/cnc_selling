@@ -34,7 +34,7 @@ export function DesignAssignEditor({
       {designs.map((design) => (
         <Stack key={design.designId} direction="row" spacing={2} sx={{ alignItems: 'center' }}>
           <Typography sx={{ flex: 1 }}>
-            {design.code} — {design.namePl} ({formatPln(design.surchargeGrosze)})
+            {design.code} - {design.namePl} ({formatPln(design.surchargeGrosze)})
           </Typography>
           <form action={removeProductDesign.bind(null, productId, design.designId)}>
             <IconButton type="submit" size="small" aria-label={ADMIN.removePl}>
@@ -51,7 +51,7 @@ export function DesignAssignEditor({
             <TextField select label={ADMIN.designAssignFieldDesignPl} name="designId" size="small" sx={{ width: 220 }} defaultValue={available[0]?.id}>
               {available.map((option) => (
                 <MenuItem key={option.id} value={option.id}>
-                  {option.code} — {option.namePl}
+                  {option.code} - {option.namePl}
                 </MenuItem>
               ))}
             </TextField>

@@ -1,8 +1,8 @@
 /**
- * Admin `ProductCollection` queries — unscoped by `isActive`, unlike the
+ * Admin `ProductCollection` queries - unscoped by `isActive`, unlike the
  * real public read. Every caller here MUST go through `requireStaffSession()`
  * first. Deliberately a separate model/file from `DesignCollection`
- * (`admin-designs.ts`'s `AdminCollection*` exports) — that groups patterns,
+ * (`admin-designs.ts`'s `AdminCollection*` exports) - that groups patterns,
  * this groups sellable, independently-created products (P9 phase 4).
  */
 

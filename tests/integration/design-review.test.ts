@@ -5,11 +5,11 @@ import type { DesignReviewStatus } from '@/domain/design-review/transitions';
 import { withTestTransaction } from './setup';
 
 /**
- * The real DB round-trip for `ARCHITECTURE.md` §13.3's review workflow —
+ * The real DB round-trip for `ARCHITECTURE.md` §13.3's review workflow -
  * every legal transition, illegal transitions correctly refused before
  * any write happens, re-upload after `NEEDS_CHANGES`, and comment
  * authorship. Uses `withTestTransaction` throughout (write and read both
- * via `tx`) rather than the app's `prisma` singleton — see
+ * via `tx`) rather than the app's `prisma` singleton - see
  * `authz.test.ts`'s header for why those two approaches can't be mixed
  * within one test.
  *
@@ -17,7 +17,7 @@ import { withTestTransaction } from './setup';
  * `tests/unit/design-review-transitions.test.ts`'s pure domain
  * assertions: that `domain/design-review/transitions.ts`'s string
  * literals (`'PENDING_REVIEW'`, `'APPROVED'`, ...) are exactly what
- * Prisma's generated `DesignReviewStatus` enum actually contains — a
+ * Prisma's generated `DesignReviewStatus` enum actually contains - a
  * renamed enum value in the schema would fail these tests at the
  * `tx.customerDesign.update` call, not silently mismatch.
  */
@@ -40,7 +40,7 @@ async function seedPendingDesign(tx: Parameters<Parameters<typeof withTestTransa
   });
 }
 
-/** Only writes if the domain function actually allows the transition — mirrors how a real caller (a future P7 review action) must gate its own write. */
+/** Only writes if the domain function actually allows the transition - mirrors how a real caller (a future P7 review action) must gate its own write. */
 async function applyTransition(
   tx: Parameters<Parameters<typeof withTestTransaction>[0]>[0],
   designId: string,
@@ -78,7 +78,7 @@ describe('the review lifecycle, real DB round-trip', () => {
       expect(reloaded.status).toBe('NEEDS_CHANGES');
 
       // The re-upload itself creates a NEW UploadedFile and repoints
-      // `fileId` — see `server/actions/design-review.ts`'s real
+      // `fileId` - see `server/actions/design-review.ts`'s real
       // implementation. Here we only assert the status half of that,
       // which is what the domain transition function governs.
       const backToPending = await applyTransition(tx, design.id, 'NEEDS_CHANGES', 'PENDING_REVIEW', 'customer');
@@ -88,7 +88,7 @@ describe('the review lifecycle, real DB round-trip', () => {
     });
   });
 
-  it('PENDING_REVIEW → REJECTED (staff) is terminal — no further transition writes', async () => {
+  it('PENDING_REVIEW → REJECTED (staff) is terminal - no further transition writes', async () => {
     await withTestTransaction(async (tx) => {
       const design = await seedPendingDesign(tx);
       const rejected = await applyTransition(tx, design.id, 'PENDING_REVIEW', 'REJECTED', 'staff');
@@ -97,13 +97,13 @@ describe('the review lifecycle, real DB round-trip', () => {
       const attemptedRecovery = await applyTransition(tx, design.id, 'REJECTED', 'PENDING_REVIEW', 'customer');
       expect(attemptedRecovery.ok).toBe(false);
 
-      // The illegal attempt must not have written anything — status stays REJECTED.
+      // The illegal attempt must not have written anything - status stays REJECTED.
       const reloaded = await tx.customerDesign.findUniqueOrThrow({ where: { id: design.id } });
       expect(reloaded.status).toBe('REJECTED');
     });
   });
 
-  it('a customer cannot approve their own design — illegal actor, no write', async () => {
+  it('a customer cannot approve their own design - illegal actor, no write', async () => {
     await withTestTransaction(async (tx) => {
       const design = await seedPendingDesign(tx);
       const result = await applyTransition(tx, design.id, 'PENDING_REVIEW', 'APPROVED', 'customer');
@@ -115,7 +115,7 @@ describe('the review lifecycle, real DB round-trip', () => {
   });
 });
 
-describe('review comments — authorship persists correctly', () => {
+describe('review comments - authorship persists correctly', () => {
   it('stores staff and customer comments distinctly, in order', async () => {
     await withTestTransaction(async (tx) => {
       const design = await seedPendingDesign(tx);

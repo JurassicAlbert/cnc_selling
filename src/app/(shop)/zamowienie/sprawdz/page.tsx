@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 /**
  * Still zero-client-JS in the way that matters: the form just redirects to
  * the real confirmation URL, which does the actual lookup and constant-time
- * token check. Only the rendering moved into an island — `@mui/material` is
+ * token check. Only the rendering moved into an island - `@mui/material` is
  * lint-forbidden directly inside `(shop)` Server Components
  * (`ARCHITECTURE.md` §2.1), so a real form has to live in
  * `src/ui/islands/`. `docs/AUDIT-2026-08-30.md` P2-10.

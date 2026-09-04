@@ -1,5 +1,5 @@
 /**
- * The one rolling-window rate limiter — `docs/ARCHITECTURE.md` §16.1's
+ * The one rolling-window rate limiter - `docs/ARCHITECTURE.md` §16.1's
  * "rate limits: uploads per session/hour, order creation per IP, auth
  * attempts".
  *
@@ -10,7 +10,7 @@
  * swapping to Redis later is a rewrite of this file and nothing else.
  *
  * **One statement, deliberately.** Reading a count and writing back
- * `count + 1` loses updates under concurrency — and concurrency is
+ * `count + 1` loses updates under concurrency - and concurrency is
  * precisely the condition a rate limiter exists for, so a racy limiter
  * reports protection it does not provide. `INSERT … ON CONFLICT DO UPDATE
  * … RETURNING` decides, increments and reports in one atomic step. This is
@@ -39,7 +39,7 @@ type CounterRow = { readonly count: number; readonly windowStart: Date };
 /**
  * Counts one attempt against `key` and says whether it is permitted.
  *
- * Always counts, including the refused attempt — that is what makes
+ * Always counts, including the refused attempt - that is what makes
  * hammering a locked-out key keep it locked out rather than letting an
  * attacker free-run once the limit is reached. `retryAfterSeconds` is
  * measured from the window's own start, so it shrinks as the window

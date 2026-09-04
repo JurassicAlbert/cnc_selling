@@ -49,7 +49,7 @@ describe('applyCreatePaymentMethodConfig', () => {
     expect(await prisma.auditLog.count({ where: { entity: 'PaymentMethodConfig', action: 'create', actorEmail: staff.email } })).toBe(1);
   });
 
-  it('never appears in the real public checkout listing while isConnected is false — a new row is never accidentally live', async () => {
+  it('never appears in the real public checkout listing while isConnected is false - a new row is never accidentally live', async () => {
     const result = await applyCreatePaymentMethodConfig(staffActor(), validInput({ namePl: `${PREFIX}nowa` }));
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error('unreachable');
@@ -69,7 +69,7 @@ describe('applyCreatePaymentMethodConfig', () => {
 });
 
 describe('applyUpdatePaymentMethodConfig', () => {
-  it('updates fields but leaves isConnected untouched — the form has no way to set it', async () => {
+  it('updates fields but leaves isConnected untouched - the form has no way to set it', async () => {
     const staff = staffActor();
     const created = await applyCreatePaymentMethodConfig(staff, validInput());
     if (!created.ok) throw new Error('setup failed');
@@ -105,7 +105,7 @@ describe('applySetPaymentMethodConfigActive', () => {
     const staff = staffActor();
     const created = await applyCreatePaymentMethodConfig(staff, validInput());
     if (!created.ok) throw new Error('setup failed');
-    // Simulate a real integration going live — only ever done by real code, never this form.
+    // Simulate a real integration going live - only ever done by real code, never this form.
     await prisma.paymentMethodConfig.update({ where: { id: created.id }, data: { isConnected: true } });
 
     expect((await listActivePaymentMethods()).some((m) => m.id === created.id)).toBe(true);

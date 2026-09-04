@@ -1,5 +1,5 @@
 /**
- * Order creation — `docs/ARCHITECTURE.md` §15.3's own numbered steps,
+ * Order creation - `docs/ARCHITECTURE.md` §15.3's own numbered steps,
  * followed exactly: recompute every line from `Configuration` + current
  * `PricingSettings`, compare to the displayed total, build the snapshot,
  * insert `Order` + `OrderItem[]` + initial `OrderEvent`, clear the cart,
@@ -8,14 +8,14 @@
  * Two phases, deliberately: everything that only READS (re-pricing every
  * cart item, comparing against the cached price) happens BEFORE any
  * transaction opens, so a stale-price rejection never holds a database
- * connection for longer than it has to. Only the writes — clearing the
+ * connection for longer than it has to. Only the writes - clearing the
  * converted `CartItem` rows, the per-month order-number counter,
- * `Order`/`OrderItem`/`OrderEvent` — run inside `prisma.$transaction`, all
+ * `Order`/`OrderItem`/`OrderEvent` - run inside `prisma.$transaction`, all
  * or nothing together.
  *
  * 2026-08-30 (`docs/AUDIT-2026-08-30.md` P0-2): this used to have no
- * idempotency mechanism at all, so two submissions of one checkout — two
- * tabs, a retried request, a back-and-resubmit — each created a real order
+ * idempotency mechanism at all, so two submissions of one checkout - two
+ * tabs, a retried request, a back-and-resubmit - each created a real order
  * for one purchase. Two independent guards now make that impossible, and
  * they cover different cases on purpose:
  *
@@ -46,22 +46,22 @@ import { findPickupPointById } from '@/server/delivery/pickup-points';
 import { SITE } from '@/content/pl/site';
 import type { OrderItemSnapshot } from './snapshot';
 
-/** A real placeholder, same discipline as the withdrawal-exemption text — versioned so a later real Regulamin can supersede it traceably. */
+/** A real placeholder, same discipline as the withdrawal-exemption text - versioned so a later real Regulamin can supersede it traceably. */
 const TERMS_VERSION = '1.0-draft';
 
 export type CreateOrderInput = {
   /**
    * One checkout render's own submission id (`docs/AUDIT-2026-08-30.md`
    * P0-2). Minted server-side per page load, carried in a hidden field, so
-   * every resubmission of the SAME rendered form — a double click, a retry
-   * after a dropped connection, a back-and-resubmit — arrives carrying this
+   * every resubmission of the SAME rendered form - a double click, a retry
+   * after a dropped connection, a back-and-resubmit - arrives carrying this
    * same value and gets the first order back instead of a second one.
    */
   readonly idempotencyKey: string;
   readonly sessionToken: string | null;
   readonly userId: string | null;
   readonly email: string;
-  /** Required, per owner request — never `null` (§ schema comment on `Order.phone`). */
+  /** Required, per owner request - never `null` (§ schema comment on `Order.phone`). */
   readonly phone: string;
   readonly firstName: string;
   readonly lastName: string;
@@ -72,21 +72,21 @@ export type CreateOrderInput = {
   readonly city: string;
   readonly paymentMethodConfigId: string;
   readonly deliveryMethodId: string;
-  /** Required (and re-validated against `server/delivery/pickup-points.ts`) only when the chosen `DeliveryMethod.requiresPickupPoint` is true — `null` otherwise. */
+  /** Required (and re-validated against `server/delivery/pickup-points.ts`) only when the chosen `DeliveryMethod.requiresPickupPoint` is true - `null` otherwise. */
   readonly pickupPointId: string | null;
-  /** Instructions FOR the courier (gate code, floor, "leave with neighbour") — shown on shipping labels/handed to the courier, never to internal staff-only views. */
+  /** Instructions FOR the courier (gate code, floor, "leave with neighbour") - shown on shipping labels/handed to the courier, never to internal staff-only views. */
   readonly courierNotePl: string | null;
-  /** A note FOR US about the shipment — nothing to do with production, staff-visible only. */
+  /** A note FOR US about the shipment - nothing to do with production, staff-visible only. */
   readonly internalShipmentNotePl: string | null;
 };
 
 export type CreateOrderResult =
   | { readonly ok: true; readonly orderNumber: string; readonly accessToken: string }
   | { readonly ok: false; readonly code: 'CART_EMPTY' }
-  /** Another checkout — a second tab, a second device — consumed this cart while this one was being submitted. Nothing was charged twice; the customer is told to check their orders. */
+  /** Another checkout - a second tab, a second device - consumed this cart while this one was being submitted. Nothing was charged twice; the customer is told to check their orders. */
   | { readonly ok: false; readonly code: 'CART_CHANGED' }
   | { readonly ok: false; readonly code: 'PRICE_CHANGED' }
-  /** A pattern, material or finish in this cart is no longer offered — `docs/REVIEW-DETAILED.md` SEC-03. */
+  /** A pattern, material or finish in this cart is no longer offered - `docs/REVIEW-DETAILED.md` SEC-03. */
   | { readonly ok: false; readonly code: 'OPTION_UNAVAILABLE' }
   | { readonly ok: false; readonly code: 'DELIVERY_METHOD_INVALID' }
   | { readonly ok: false; readonly code: 'PAYMENT_METHOD_INVALID' }
@@ -106,7 +106,7 @@ function toJsonInput<T>(value: T): Prisma.InputJsonValue {
 
 /**
  * Thrown inside the transaction when the cart rows this checkout priced are
- * no longer there to claim — another checkout of the same cart committed
+ * no longer there to claim - another checkout of the same cart committed
  * first. Prisma rolls the whole transaction back on any throw, so nothing
  * partial survives; the caller turns this into a real result code.
  */
@@ -134,7 +134,7 @@ async function findOrderByIdempotencyKey(
 
 export async function createOrder(input: CreateOrderInput): Promise<CreateOrderResult> {
   // Fast path for the overwhelmingly common repeat: this submission already
-  // succeeded once. Answer with the order it produced — the customer who
+  // succeeded once. Answer with the order it produced - the customer who
   // double-clicked still belongs on their real confirmation page, not on an
   // error. The `@unique` index is the actual guarantee (this read alone
   // would race); this just avoids doing all the pricing work again.
@@ -153,7 +153,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
 
   // `resolveDeliveryMethodsForCart` re-runs the EXACT same real weight/
   // locker-fit/free-threshold evaluation the checkout page used to render
-  // the picker — never trusts a price the client last rendered, and never
+  // the picker - never trusts a price the client last rendered, and never
   // trusts that a method still exists, is still active, or is still
   // feasible for this cart between page load and submission.
   const [deliveryMethods, paymentMethodConfig] = await Promise.all([
@@ -169,14 +169,14 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     return { ok: false, code: 'DELIVERY_METHOD_INVALID' };
   }
   // `isConnected: false` (an unconnected provider like Przelewy24) is
-  // rejected the same as a non-existent id — never just "disabled and
+  // rejected the same as a non-existent id - never just "disabled and
   // explained," since there's no real payment flow behind it to send
   // anyone into (§15's "no fake payment" rule).
   if (paymentMethodConfig === null) {
     return { ok: false, code: 'PAYMENT_METHOD_INVALID' };
   }
   // A method that requires a pickup point (`requiresPickupPoint`) never
-  // trusts the id/label the client last rendered — the id is re-looked-up
+  // trusts the id/label the client last rendered - the id is re-looked-up
   // in the same static dataset the picker searched, same "never trust the
   // client" discipline as the delivery/payment method checks just above.
   const pickupPoint =
@@ -213,7 +213,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     }
     // A mismatch here means the catalogue changed since this was added or
     // last edited (a price, a pricing version, or the configuration itself
-    // stopped being feasible) — reject before ever touching the database,
+    // stopped being feasible) - reject before ever touching the database,
     // per §15.3: "compare to the displayed total."
     if (
       validated.pricing.priceBreakdown.unitGrossGrosze !== item.priceGrossGrosze ||
@@ -237,7 +237,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   const vatGrosze = sumGrosze(revalidated.map((r) => r.lineVatGrosze));
   // `deliveryMethod.priceGrosze` here is already the real, fully evaluated
   // price for THIS cart (weight tier / free-shipping threshold / flat-rate
-  // fallback — `resolveDeliveryMethodsForCart` above) — every per-item
+  // fallback - `resolveDeliveryMethodsForCart` above) - every per-item
   // price in `revalidated` was just confirmed to match `cart`'s own cached
   // figures, so re-deriving it again from the post-revalidation total would
   // only ever agree, never differ.
@@ -254,7 +254,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     prisma.$transaction(async (tx) => {
       // CLAIMED FIRST, before anything is written (`docs/AUDIT-2026-08-30.md`
       // P0-2). These are exactly the rows just priced and about to be charged
-      // — not "whatever is in the cart at commit time," which could include
+      // - not "whatever is in the cart at commit time," which could include
       // something added in a second tab after this checkout started reading.
       //
       // Deleting them up front also makes this the concurrency choke point: a
@@ -325,12 +325,12 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
         select: { id: true },
       });
 
-      // Automatic DESIGN_REVIEW entry — domain/order-status/transitions.ts's
+      // Automatic DESIGN_REVIEW entry - domain/order-status/transitions.ts's
       // own header: "happens automatically as soon as a custom design is
       // attached, no human decides to route an order there." Inert today (no
       // seeded product carries a CUSTOM_UPLOAD design, so customDesignId is
       // always null) but wired through the same tested state machine every
-      // later staff-side transition will also use — not a bespoke check.
+      // later staff-side transition will also use - not a bespoke check.
       const hasUnapprovedCustomDesign = revalidated.some(
         ({ item }) =>
           item.customDesignId !== null && item.customDesignStatus !== 'APPROVED',
@@ -365,8 +365,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   try {
     ({ orderNumber } = await placeOrder());
   } catch (error) {
-    // Both failure shapes below mean the same thing to the customer —
-    // "someone already checked this cart out" — but only one of them means
+    // Both failure shapes below mean the same thing to the customer -
+    // "someone already checked this cart out" - but only one of them means
     // it was THEM, submitting the same form twice. Re-reading the key
     // distinguishes the two: a hit is this submission's own winning attempt
     // (the other request got there first), so the caller lands on their real
@@ -384,7 +384,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     throw error;
   }
 
-  // Cache invalidation deliberately does NOT live here — it moved up to
+  // Cache invalidation deliberately does NOT live here - it moved up to
   // `actions/checkout.ts`, which is the layer that actually runs inside a
   // request. `revalidatePath` throws "static generation store missing"
   // anywhere else, which made this whole function untestable the moment a
@@ -392,7 +392,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   // tests hit exactly that). Same split the `apply*`/wrapper pairs already
   // use: real logic here, framework side effects in the action.
 
-  // After commit, never inside the transaction — network I/O must not hold
+  // After commit, never inside the transaction - network I/O must not hold
   // a pooled DB connection open, and a mailer failure must never undo an
   // order that has already, correctly, been created (§15.3 note 3: "no fake
   // email delivery... the order still succeeds").
@@ -403,7 +403,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       // Safe today: only BANK_TRANSFER/CONTACT_ARRANGED are ever seeded
       // `isConnected: true`, so `paymentMethodConfig` (checked above) can
       // never resolve to anything else in practice. Revisit this cast the
-      // day a real third provider actually goes connected — the mailer
+      // day a real third provider actually goes connected - the mailer
       // template itself would need a real Przelewy24/card/PayPal copy
       // block first, which is out of this phase's scope.
       paymentMethod: paymentMethodConfig.provider as 'BANK_TRANSFER' | 'CONTACT_ARRANGED',

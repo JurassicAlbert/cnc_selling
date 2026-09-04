@@ -1,5 +1,5 @@
 /**
- * The option list for each configurator step — ARCHITECTURE.md §7.2.
+ * The option list for each configurator step - ARCHITECTURE.md §7.2.
  *
  * The actual filtering rules live in `domain/compatibility` and are already
  * unit-tested there. This module is thin on purpose: it only reshapes a real
@@ -20,7 +20,7 @@ export type MaterialOptionRow = {
   readonly id: string;
   readonly namePl: string;
   readonly isAvailable: boolean;
-  /** Real, sourced material photography (§9g) — the 2D preview's background swatch, never invented. */
+  /** Real, sourced material photography (§9g) - the 2D preview's background swatch, never invented. */
   readonly imageUrl: string;
 };
 
@@ -28,7 +28,7 @@ export type FinishOptionRow = {
   readonly id: string;
   readonly namePl: string;
   readonly isAvailable: boolean;
-  /** Real, sourced finish photography — same swatch-image treatment `MaterialOptionRow.imageUrl` already gets. */
+  /** Real, sourced finish photography - same swatch-image treatment `MaterialOptionRow.imageUrl` already gets. */
   readonly imageUrl: string;
 };
 
@@ -39,7 +39,7 @@ export type DesignOptionRow = {
   readonly rightsStatus: string;
   /** This design's own DesignMaterial rows. Empty means every material the product allows. */
   readonly allowedMaterialIds: readonly string[];
-  /** The 2D preview's overlay artwork — the same placeholder SVG shown everywhere else this design appears. */
+  /** The 2D preview's overlay artwork - the same placeholder SVG shown everywhere else this design appears. */
   readonly previewUrl: string;
 };
 
@@ -61,7 +61,7 @@ export type FontOptionRow = {
   readonly id: string;
   readonly namePl: string;
   /**
-   * The exact same file `seedFont` parsed the coverage from — the 2D
+   * The exact same file `seedFont` parsed the coverage from - the 2D
    * preview loads this via the Font Loading API so the glyphs it draws are
    * never a stand-in for what validation actually checked (the `Font`
    * model's own header: "the preview MUST render with this same file, or
@@ -70,7 +70,7 @@ export type FontOptionRow = {
   readonly fileUrl: string;
 };
 
-/** A real `ProductPresetSize` row — 2026-08-29: SIZE picked from a short, real, staff-curated list instead of typed free-form, wherever the product doesn't require an exact customer-supplied size (`Product.requiresExactSize`). */
+/** A real `ProductPresetSize` row - 2026-08-29: SIZE picked from a short, real, staff-curated list instead of typed free-form, wherever the product doesn't require an exact customer-supplied size (`Product.requiresExactSize`). */
 export type PresetSizeOptionRow = {
   readonly id: string;
   readonly widthMm: number;
@@ -85,7 +85,7 @@ export type ConfiguratorOptionData = {
   readonly designs: readonly DesignOptionRow[];
   readonly thicknesses: readonly ThicknessOptionRow[];
   readonly installVariants: readonly InstallationVariantOptionRow[];
-  /** Already scoped to this product's `PersonalizationSpec.allowedFontIds` — never every Font row. */
+  /** Already scoped to this product's `PersonalizationSpec.allowedFontIds` - never every Font row. */
   readonly fonts: readonly FontOptionRow[];
   /** Empty for a product with none seeded yet, or for one where `requiresExactSize` makes a fixed list nonsensical. */
   readonly presetSizes: readonly PresetSizeOptionRow[];
@@ -94,12 +94,12 @@ export type ConfiguratorOptionData = {
 export type ResolvedOptions = {
   readonly materialIds: readonly string[];
   readonly designIds: readonly string[];
-  /** Empty before a material is chosen — there is nothing to resolve finishes against yet. */
+  /** Empty before a material is chosen - there is nothing to resolve finishes against yet. */
   readonly finishIds: readonly string[];
   readonly thicknessesMm: readonly number[];
-  /** Unfiltered — nothing narrows which installation variants exist. */
+  /** Unfiltered - nothing narrows which installation variants exist. */
   readonly installVariantCodes: readonly string[];
-  /** Unfiltered — no compatibility rule narrows which font applies, unlike material/design. */
+  /** Unfiltered - no compatibility rule narrows which font applies, unlike material/design. */
   readonly fontIds: readonly string[];
 };
 
@@ -167,12 +167,12 @@ function designAllowedMaterialIds(
 }
 
 // ---------------------------------------------------------------------------
-// Annotated availability — ARCHITECTURE.md §7.2: "Unavailable options are
-// shown disabled with a Polish reason, not hidden — a hidden option looks
+// Annotated availability - ARCHITECTURE.md §7.2: "Unavailable options are
+// shown disabled with a Polish reason, not hidden - a hidden option looks
 // like a missing feature; a disabled one with a reason teaches the customer
 // the rule." `resolveOptions` above answers "which ids may I select"; this
 // answers "what do I render for every option that exists, and why is one of
-// them greyed out" — every reason is derived by comparing two calls to the
+// them greyed out" - every reason is derived by comparing two calls to the
 // already-tested `domain/compatibility` functions, never by re-implementing
 // their rules here.
 // ---------------------------------------------------------------------------
@@ -195,10 +195,10 @@ export type OptionAvailability = {
 export type ResolvedOptionAvailability = {
   readonly materials: readonly OptionAvailability[];
   readonly designs: readonly OptionAvailability[];
-  /** Empty before a material is chosen — there is nothing to enumerate yet. */
+  /** Empty before a material is chosen - there is nothing to enumerate yet. */
   readonly finishes: readonly OptionAvailability[];
   readonly thicknesses: readonly OptionAvailability[];
-  /** Every font always available — no compatibility rule narrows it, same as installation variants. */
+  /** Every font always available - no compatibility rule narrows it, same as installation variants. */
   readonly fonts: readonly OptionAvailability[];
 };
 

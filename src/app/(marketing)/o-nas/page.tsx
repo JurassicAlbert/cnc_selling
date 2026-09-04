@@ -13,9 +13,9 @@ export const metadata: Metadata = {
 };
 
 /**
- * 2026-08-29, owner request — a real "O nas" page for the new navbar
+ * 2026-08-29, owner request - a real "O nas" page for the new navbar
  * structure (Produkty / O nas / FAQ / Kolekcje / Koszyk / Konto). Plain
- * static marketing copy — no MUI needed, matches every other RSC-only
+ * static marketing copy - no MUI needed, matches every other RSC-only
  * marketing page's register (ARCHITECTURE.md §2.1).
  */
 export default function AboutPage() {

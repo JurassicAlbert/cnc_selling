@@ -61,7 +61,7 @@ describe('getActiveProductBySlug / getProductBySlugForPreview', () => {
     expect((await getActiveProductBySlug(product.slug))?.namePl).toBe('Testowy produkt podglądu');
   });
 
-  it('getProductBySlugForPreview returns an inactive product — the staff "preview as customer" bypass', async () => {
+  it('getProductBySlugForPreview returns an inactive product - the staff "preview as customer" bypass', async () => {
     const { product } = await seedProduct({ isActive: false });
     expect((await getProductBySlugForPreview(product.slug))?.namePl).toBe('Testowy produkt podglądu');
   });
@@ -82,7 +82,7 @@ describe('getActiveProductBySlug / getProductBySlugForPreview', () => {
 /**
  * 2026-08-28, owner feedback: deactivating Gres/Panele podłogowe's
  * *category* left their products still reachable everywhere except the
- * category page and nav — `listAllActiveProducts`/`getActiveProductBySlug`
+ * category page and nav - `listAllActiveProducts`/`getActiveProductBySlug`
  * only ever checked `product.isActive`, never `category.isActive`. Fixed
  * by joining `category: { isActive: true }` into every public product
  * query in `products.ts`; these tests are the real DB round-trip for that.
@@ -93,7 +93,7 @@ describe('deactivated category cascades to its products', () => {
     expect(await getActiveProductBySlug(product.slug)).toBeNull();
   });
 
-  it('getProductBySlugForPreview still returns it — the staff bypass ignores category state too', async () => {
+  it('getProductBySlugForPreview still returns it - the staff bypass ignores category state too', async () => {
     const { product } = await seedProduct({ isActive: true, categoryActive: false });
     expect((await getProductBySlugForPreview(product.slug))?.namePl).toBe('Testowy produkt podglądu');
   });

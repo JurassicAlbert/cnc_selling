@@ -4,7 +4,7 @@ import { SITE } from '@/content/pl/site';
 
 /**
  * The search form, extracted out of `SiteHeader` into its own banded
- * section (2026-08-25) — the owner's explicit feedback was that search
+ * section (2026-08-25) - the owner's explicit feedback was that search
  * belongs below the nav bar as its own section, not squeezed into the nav
  * row. Same GET-form pattern as before, zero client JS.
  *
@@ -15,9 +15,9 @@ import { SITE } from '@/content/pl/site';
  * performance property for a cosmetic one.
  *
  * What the audit DID fix here is accessibility (P2-10/§11): the input had
- * no accessible name at all. A placeholder is not a label — it is not
+ * no accessible name at all. A placeholder is not a label - it is not
  * announced as one by screen readers and it vanishes the moment anyone
- * types — so this now carries a real `aria-label`, and a visible
+ * types - so this now carries a real `aria-label`, and a visible
  * `:focus-visible` ring (`theme-vars.css`) so keyboard users can see where
  * they are.
  */
@@ -31,7 +31,7 @@ export function SearchBar() {
     >
       <Container>
         {/* The real `<search>` landmark rather than `role="search"` on the
-            form — same semantics for assistive technology, no ARIA needed
+            form - same semantics for assistive technology, no ARIA needed
             (§11: don't add ARIA where an element already says it). */}
         <search>
           <form

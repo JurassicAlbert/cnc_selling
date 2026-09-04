@@ -7,7 +7,7 @@ function normalizeSpaces(value: string): string {
   return value.replace(/[\u00a0\u202f\u2009]/g, ' ');
 }
 
-describe('pluralPl — the three Polish forms', () => {
+describe('pluralPl - the three Polish forms', () => {
   const modul = NOUNS.module;
 
   it('uses the singular for 1', () => {
@@ -26,7 +26,7 @@ describe('pluralPl — the three Polish forms', () => {
     expect(pluralPl(21, modul)).toBe('modułów');
   });
 
-  it('returns to the "few" form at 22, 23, 24 — the case English intuition misses', () => {
+  it('returns to the "few" form at 22, 23, 24 - the case English intuition misses', () => {
     expect(pluralPl(22, modul)).toBe('moduły');
     expect(pluralPl(23, modul)).toBe('moduły');
     expect(pluralPl(24, modul)).toBe('moduły');

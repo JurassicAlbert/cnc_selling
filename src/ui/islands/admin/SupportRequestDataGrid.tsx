@@ -36,7 +36,7 @@ export function SupportRequestDataGrid({ rows }: { readonly rows: readonly Admin
       headerName: ADMIN.supportRequestColumnOrderPl,
       flex: 1,
       minWidth: 150,
-      valueFormatter: (value: string | null) => value ?? '—',
+      valueFormatter: (value: string | null) => value ?? '-',
     },
     {
       field: 'status',

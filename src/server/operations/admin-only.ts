@@ -1,6 +1,6 @@
 /**
  * The `ADMIN`-only assertion, for `apply*` functions whose wrapper gates on
- * `requireAdminSession()` — `docs/REVIEW-DETAILED.md` SEC-04.
+ * `requireAdminSession()` - `docs/REVIEW-DETAILED.md` SEC-04.
  *
  * The wrapper's gate is the one a real request meets, and it stays the
  * primary control. This exists because that gate is **unreachable from a
@@ -12,7 +12,7 @@
  *
  * So the rule is asserted twice: once at the boundary, where it belongs, and
  * once here, where it can be driven. Call it as the **first statement** of
- * the `apply` — a check that runs after the write returns a refusal to a
+ * the `apply` - a check that runs after the write returns a refusal to a
  * caller whose bank account has already been changed.
  *
  * Returns a refusal rather than throwing, because every operation using it

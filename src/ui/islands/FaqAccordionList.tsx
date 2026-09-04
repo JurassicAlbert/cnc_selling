@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * The one real interactive part of `/faq` — pulled into its own client
+ * The one real interactive part of `/faq` - pulled into its own client
  * island because `ARCHITECTURE.md` §2.1's own lint rule (`noRestrictedImports`)
  * forbids importing `@mui/material` directly in a (marketing)/(shop) Server
  * Component. The page itself stays a Server Component (the actual `Faq` data

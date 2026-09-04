@@ -1,8 +1,8 @@
 /**
- * The `Selections` <-> URL query-string mapping — extracted out of
+ * The `Selections` <-> URL query-string mapping - extracted out of
  * `Configurator.tsx` (a `'use client'` file) into its own plain module.
  * Next.js treats every export of a `'use client'` file as a client
- * reference, even a pure non-component function — so a Server Component
+ * reference, even a pure non-component function - so a Server Component
  * (the cart page's "Edytuj" link) cannot import `writeSelectionsToSearch`
  * from `Configurator.tsx` directly, only render it. This file has no
  * directive at all, so both the client island and server pages can import

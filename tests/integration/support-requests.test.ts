@@ -6,7 +6,7 @@ import { prisma } from '@/server/db/client';
 
 /**
  * P9 phase 8. `submitOrderSupportRequest`'s order/shipment context is
- * re-verified server-side (real `accessToken`, constant-time compare) —
+ * re-verified server-side (real `accessToken`, constant-time compare) -
  * never trusted from a client-supplied `orderNumber` alone. Covers the
  * two "context fails to verify" cases explicitly: the whole submission
  * must still succeed, just without the link.
@@ -91,12 +91,12 @@ describe('submitSupportRequest (standalone)', () => {
 
   /**
    * 2026-08-30 duplicate sweep. The form is zero-JS, so nothing on the
-   * client disables it while the action runs — a double-click, or a browser
+   * client disables it while the action runs - a double-click, or a browser
    * retry after a dropped connection, filed the same question twice and
    * staff had no way to tell whether the customer really asked twice.
    */
   it('a double-submitted identical message is filed once', async () => {
-    // The SAME email each time — a double-click resubmits one form, so every
+    // The SAME email each time - a double-click resubmits one form, so every
     // field matches. `validFormData()` randomises the address per call.
     const email = `${uid()}@example.test`;
     expect((await applySubmitSupportRequest(null, validFormData({ email }))).ok).toBe(true);
@@ -162,9 +162,9 @@ describe('submitOrderSupportRequest (contextual)', () => {
 });
 
 /**
- * P9 continuation, 2026-08-28 — "informacje kontaktowe i pomoc do firmy"
+ * P9 continuation, 2026-08-28 - "informacje kontaktowe i pomoc do firmy"
  * (owner feedback): a customer could file a request but never see it again
- * — `applySubmitSupportRequest` already existed, `listSupportRequestsForUser`
+ * - `applySubmitSupportRequest` already existed, `listSupportRequestsForUser`
  * is the missing read side, for `/moje-konto/pomoc`.
  */
 describe('listSupportRequestsForUser', () => {
@@ -196,7 +196,7 @@ describe('listSupportRequestsForUser', () => {
 
   it('returns an empty list for a guest submission (no userId)', async () => {
     await applySubmitSupportRequest(null, validFormData());
-    // Nothing to assert an id against — this just confirms a real user with
+    // Nothing to assert an id against - this just confirms a real user with
     // no requests gets an empty list, not an error.
     const user = await prisma.user.create({ data: { email: `${uid()}@example.test`, name: 'Test Customer', role: 'CUSTOMER' } });
     expect(await listSupportRequestsForUser(user.id)).toHaveLength(0);

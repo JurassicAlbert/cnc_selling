@@ -1,8 +1,8 @@
 /**
- * Staff `Shipment` mutations — one upsert per order (1:1, no separate
+ * Staff `Shipment` mutations - one upsert per order (1:1, no separate
  * create/update/list like the catalogue entities: a shipment has no
  * standalone admin page, it's always nested on that order's detail page).
- * Manual only — nothing here ever calls a carrier API, because none is
+ * Manual only - nothing here ever calls a carrier API, because none is
  * integrated anywhere in this project (§9/§15's "no fake carrier
  * tracking" rule): every field is exactly what a staff member typed.
  */

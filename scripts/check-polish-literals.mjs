@@ -1,22 +1,22 @@
 #!/usr/bin/env node
 /**
  * Flags a Polish string literal inside a component. All Polish copy belongs
- * in `src/content/pl` — that is not a translation convention here, it is
+ * in `src/content/pl` - that is not a translation convention here, it is
  * what keeps a "review the Polish copy" task a review of a handful of files
  * instead of a crawl through every component (ARCHITECTURE.md §4, §17.5).
  *
  * A standalone script, not a Biome/ESLint rule: Biome 2.x's GritQL plugin
  * system can express this, but it is still an early feature and the syntax
  * for "any string containing one of these nine characters" is not worth
- * fighting for a check this simple. Plain text scanning is not weaker here —
+ * fighting for a check this simple. Plain text scanning is not weaker here -
  * the check does not need an AST, only "does this file contain Polish text
  * outside an allowed spot", and reading the file as text answers that
  * directly.
  *
  * Heuristic, not exhaustive: it matches the nine Polish-specific diacritics
  * (ą ć ę ł ń ó ś ź ż, either case). That catches the large majority of real
- * Polish sentences — genuine Polish text with zero diacritic characters is
- * rare — but a diacritic-free Polish string (e.g. "Kontakt", "System") will
+ * Polish sentences - genuine Polish text with zero diacritic characters is
+ * rare - but a diacritic-free Polish string (e.g. "Kontakt", "System") will
  * slip through. Precision was chosen over recall deliberately: flagging
  * English technical strings or CSS values too would train people to ignore
  * the warnings.
@@ -36,6 +36,38 @@ const POLISH_DIACRITICS = /[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/u;
 const ROOT = process.cwd();
 
 const SCAN_GLOBS = ['src/app/**/*.{ts,tsx}', 'src/ui/**/*.{ts,tsx}'];
+
+/**
+ * Second rule, added 2026-09-04 at the owner's request: the em-dash must not
+ * appear anywhere in this project. Not in Polish copy, not in a comment, not
+ * in documentation.
+ *
+ * Matched by code point rather than written literally, so this file does not
+ * itself violate the rule it enforces.
+ *
+ * Scanned far more widely than the Polish-literal rule above, because the
+ * instruction was "anywhere": all of `src` (minus generated Prisma output),
+ * `docs`, `tests`, `scripts`, `prisma/seed.ts` and the root markdown. Applied
+ * migrations are deliberately exempt - editing one changes the checksum
+ * Prisma stores for it and makes every later `migrate` report drift, which is
+ * a worse problem than a dash in an SQL comment.
+ *
+ * One real exception exists and is expected to stay:
+ * `tests/unit/configurator-server.test.ts` builds the character from its code
+ * point, because there it is the subject of the test rather than prose.
+ */
+const EM_DASH = String.fromCharCode(0x2014);
+const EM_DASH_GLOBS = [
+  'src/**/*.{ts,tsx,css}',
+  'docs/**/*.md',
+  'tests/**/*.ts',
+  'scripts/**/*.mjs',
+  'prisma/seed.ts',
+  'prisma/schema.prisma',
+  '*.md',
+  '*.ts',
+];
+const EM_DASH_EXCLUDE = ['src/generated/**', 'prisma/migrations/**'];
 const EXCLUDE_GLOBS = ['src/content/pl/**', '**/*.test.ts', '**/*.spec.ts'];
 
 async function main() {
@@ -86,10 +118,46 @@ async function main() {
     console.error(`  ${v.file}:${v.lineNumber}  ${v.text}`);
   }
   console.error(
-    '\nMove this text to src/content/pl and reference it by name — no Polish string ' +
+    '\nMove this text to src/content/pl and reference it by name - no Polish string ' +
       'literal belongs directly inside a component (ARCHITECTURE.md §4, §17.5).',
   );
   process.exitCode = 1;
 }
 
+async function checkEmDash() {
+  const files = await fg(EM_DASH_GLOBS, { cwd: ROOT, ignore: EM_DASH_EXCLUDE, absolute: true });
+  const violations = [];
+
+  for (const file of files) {
+    const text = await readFile(file, 'utf8');
+    if (!text.includes(EM_DASH)) {
+      continue;
+    }
+    const lines = text.split(String.fromCharCode(10));
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i] ?? '';
+      if (line.includes(EM_DASH)) {
+        violations.push({
+          file: relative(ROOT, file).split(sep).join('/'),
+          lineNumber: i + 1,
+          text: line.trim().slice(0, 80),
+        });
+      }
+    }
+  }
+
+  if (violations.length === 0) {
+    console.log(`check-em-dash: clean (${files.length} files scanned)`);
+    return;
+  }
+
+  console.error(`check-em-dash: found ${violations.length} em-dash(es):`);
+  for (const v of violations) {
+    console.error(`  ${v.file}:${v.lineNumber}  ${v.text}`);
+  }
+  console.error('Use a plain hyphen, a comma or a full stop, or rewrite the sentence.');
+  process.exitCode = 1;
+}
+
 await main();
+await checkEmDash();

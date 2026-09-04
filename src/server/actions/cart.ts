@@ -1,12 +1,12 @@
 'use server';
 
 /**
- * Server Action surface for the cart — the thin half. Every real mutation
+ * Server Action surface for the cart - the thin half. Every real mutation
  * lives in `@/server/operations/cart`; this file only ever does the two
  * things that genuinely need a request: derive who is asking, and tell
  * Next.js what to re-render.
  *
- * `docs/ARCHITECTURE.md` §16.1 — "Every Server Action re-derives the actor
+ * `docs/ARCHITECTURE.md` §16.1 - "Every Server Action re-derives the actor
  * from the session. No id is ever trusted from the request." That is what
  * `currentOwner()` below is; nothing here accepts an owner, a user id or a
  * cart id from the caller. See `docs/AUDIT-2026-08-30.md` P0-1 for why the
@@ -16,7 +16,7 @@
  * (`docs/AUDIT-2026-08-30.md` P1-5). The cart badge is rendered by
  * `StorefrontChrome` from the `(shop)`/`(marketing)` layouts, so a
  * page-scoped invalidation left it showing a stale count on every other
- * page until the client Router Cache expired on its own — the same bug that
+ * page until the client Router Cache expired on its own - the same bug that
  * was already fixed for order completion, just never carried across.
  */
 
@@ -65,7 +65,7 @@ export async function addToCart(
 }
 
 /**
- * `addToCart` returns a result `useActionState` callers inspect — this
+ * `addToCart` returns a result `useActionState` callers inspect - this
  * fire-and-forget wrapper is for the saved-configurations page's own
  * zero-client-JS `<form action={addSavedConfigurationToCart.bind(null, ...)}>`
  * (`moje-konto/projekty/page.tsx`), which has no inline error UI to show a
@@ -82,7 +82,7 @@ export async function addSavedConfigurationToCart(
 }
 
 /**
- * `formData` as the trailing parameter — not a plain `quantity: number` —
+ * `formData` as the trailing parameter - not a plain `quantity: number` -
  * so this can be bound with `.bind(null, cartItemId)` and used directly as
  * a `<form action>` on the cart page's own per-row quantity form, the same
  * zero-client-JS pattern as `CategoryFilterForm`. A non-numeric or missing
@@ -95,7 +95,7 @@ export async function updateCartItemQuantity(cartItemId: string, formData: FormD
   revalidateCart();
 }
 
-/** The cart page's +/- stepper — a pair of zero-JS forms bound with `.bind(null, cartItemId, 1)` / `.bind(null, cartItemId, -1)`. */
+/** The cart page's +/- stepper - a pair of zero-JS forms bound with `.bind(null, cartItemId, 1)` / `.bind(null, cartItemId, -1)`. */
 export async function adjustCartItemQuantity(cartItemId: string, delta: 1 | -1): Promise<void> {
   const owner = await currentOwner();
   await applyAdjustCartItemQuantity(owner, cartItemId, delta);
@@ -130,7 +130,7 @@ export async function updateCartItemConfiguration(
 
 /**
  * Removes a saved project from `/moje-konto/projekty`. Refused server-side
- * if the project is still in the cart — see the operations half for why
+ * if the project is still in the cart - see the operations half for why
  * that is a refusal rather than a cascade.
  */
 export async function deleteSavedConfiguration(configurationId: string): Promise<void> {

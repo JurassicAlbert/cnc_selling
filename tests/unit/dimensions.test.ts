@@ -21,7 +21,7 @@ function codes(dimensions: { widthMm: number; heightMm: number }): string[] {
   return validateDimensions(dimensions, ENVELOPE).map((issue) => issue.code);
 }
 
-describe('validateDimensions — valid cases', () => {
+describe('validateDimensions - valid cases', () => {
   it('accepts a mid-range size', () => {
     expect(codes({ widthMm: 600, heightMm: 900 })).toEqual([]);
   });
@@ -45,7 +45,7 @@ describe('validateDimensions — valid cases', () => {
   });
 });
 
-describe('validateDimensions — range violations', () => {
+describe('validateDimensions - range violations', () => {
   it('rejects a width one millimetre below the minimum', () => {
     expect(codes({ widthMm: 199, heightMm: 400 })).toEqual(['WIDTH_BELOW_MIN']);
   });
@@ -76,7 +76,7 @@ describe('validateDimensions — range violations', () => {
   });
 });
 
-describe('validateDimensions — aspect ratio', () => {
+describe('validateDimensions - aspect ratio', () => {
   it('rejects an extremely tall sliver', () => {
     // 250 / 1400 = 0.178...
     expect(codes({ widthMm: 250, heightMm: 1400 })).toContain(
@@ -105,7 +105,7 @@ describe('validateDimensions — aspect ratio', () => {
   });
 });
 
-describe('validateDimensions — invalid input', () => {
+describe('validateDimensions - invalid input', () => {
   it('rejects zero', () => {
     expect(codes({ widthMm: 0, heightMm: 400 })).toEqual(['WIDTH_NOT_POSITIVE']);
   });

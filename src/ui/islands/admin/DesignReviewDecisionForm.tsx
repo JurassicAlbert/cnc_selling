@@ -52,7 +52,7 @@ export function DesignReviewDecisionForm({ designId }: { readonly designId: stri
           name="productionMethod"
           defaultValue={fieldValue('productionMethod', '')}
         >
-          <MenuItem value="">—</MenuItem>
+          <MenuItem value="">-</MenuItem>
           {PRODUCTION_METHODS.map((method) => (
             <MenuItem key={method} value={method}>
               {adminProductionMethodLabel(method)}

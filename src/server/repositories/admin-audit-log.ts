@@ -1,5 +1,5 @@
 /**
- * Read-only view over `AuditLog` — every mutation across every P7b slice
+ * Read-only view over `AuditLog` - every mutation across every P7b slice
  * has been writing here since `writeAuditLog()` was introduced (P7a). No
  * new schema, no new writes: this is purely "the audit log viewer" half
  * of `docs/ARCHITECTURE.md` §16A.1 module 11, the checklist's own last
@@ -12,7 +12,7 @@ import type { Prisma } from '@/generated/prisma/client';
 export type AdminAuditLogListFilters = {
   readonly entity?: string;
   readonly action?: string;
-  /** Matches `actorEmail` (contains) or `entityId` (exact) — one search box covers both, since either is how staff will actually look something up. */
+  /** Matches `actorEmail` (contains) or `entityId` (exact) - one search box covers both, since either is how staff will actually look something up. */
   readonly search?: string;
 };
 
@@ -44,7 +44,7 @@ export async function listAuditLogs(filters: AdminAuditLogListFilters): Promise<
   return logs;
 }
 
-/** Populates the entity filter dropdown from what's actually been written — self-updating as new slices add new entities, never a hardcoded list that drifts. */
+/** Populates the entity filter dropdown from what's actually been written - self-updating as new slices add new entities, never a hardcoded list that drifts. */
 export async function listAuditLogEntities(): Promise<readonly string[]> {
   const rows = await prisma.auditLog.findMany({ distinct: ['entity'], select: { entity: true }, orderBy: { entity: 'asc' } });
   return rows.map((r) => r.entity);
@@ -53,7 +53,7 @@ export async function listAuditLogEntities(): Promise<readonly string[]> {
 const RECORD_ACTIVITY_LIMIT = 100;
 
 /**
- * A single record's full mutation history — the "activity timeline"
+ * A single record's full mutation history - the "activity timeline"
  * embedded on each entity's own admin detail page, distinct from
  * `listAuditLogs`'s cross-entity Dziennik zdarzeń view. Same underlying
  * table, scoped to one `(entity, entityId)` pair.

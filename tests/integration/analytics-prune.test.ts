@@ -6,7 +6,7 @@ import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';
 
 /**
- * `docs/CHECKLIST.md`'s "12-month pruning of analytics rows" — real,
+ * `docs/CHECKLIST.md`'s "12-month pruning of analytics rows" - real,
  * staff-triggered retention (no scheduler exists anywhere in this
  * project). `now` is always passed explicitly rather than read from
  * `Date.now()` internally, specifically so this is deterministically

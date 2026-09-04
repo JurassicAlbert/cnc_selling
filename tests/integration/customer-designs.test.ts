@@ -4,7 +4,7 @@ import { findOwnedDesignByChecksum, listOwnedCustomerDesigns } from '@/server/re
 import { prisma } from '@/server/db/client';
 
 /**
- * P9 phase 2's "moje wzory" library — real DB round-trip for the query
+ * P9 phase 2's "moje wzory" library - real DB round-trip for the query
  * that page (and the configurator's reuse picker) is built on. Uses the
  * app's own `prisma` singleton (this repository function does too, unlike
  * `design-review.test.ts`'s `withTestTransaction`-scoped tests), so
@@ -70,7 +70,7 @@ describe('listOwnedCustomerDesigns', () => {
     expect(result[0]?.originalName).toBe('projekt.svg');
   });
 
-  it('never returns another owner’s designs — same isolation `findOwnedDesignId` already relies on', async () => {
+  it('never returns another owner’s designs - same isolation `findOwnedDesignId` already relies on', async () => {
     const mine = uid();
     const someoneElses = uid();
     await seedCustomerDesign({ sessionToken: someoneElses, titlePl: 'Nie moje' });
@@ -120,13 +120,13 @@ describe('listOwnedCustomerDesigns', () => {
 /**
  * 2026-08-30, owner: "client should not be able to save the same project
  * twice." `uploadCustomDesign` creates a `CustomerDesign` per upload, and
- * `/moje-konto/wzory` lists those rows directly — so re-picking the same
+ * `/moje-konto/wzory` lists those rows directly - so re-picking the same
  * file, or double-submitting the form, put two identical entries in a
  * customer's own library, each with its own review thread. This is the
  * lookup that stops it; the action itself reads `next/headers` and can only
  * be exercised end to end by the e2e suite.
  */
-describe('findOwnedDesignByChecksum — one design per identical file, per owner', () => {
+describe('findOwnedDesignByChecksum - one design per identical file, per owner', () => {
   const CHECKSUM = 'b'.repeat(64);
 
   it('finds this owner’s existing design for a byte-identical file', async () => {

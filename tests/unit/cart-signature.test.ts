@@ -7,7 +7,7 @@ import type { Selections } from '@/domain/configuration/steps';
  * `docs/AUDIT-2026-08-30.md` P1-4. These assertions are the actual product
  * rule, not an implementation detail: what counts as "the same line" in a
  * cart. Getting it wrong in either direction is a real customer-visible
- * bug — merge too eagerly and someone who ordered two different sizes
+ * bug - merge too eagerly and someone who ordered two different sizes
  * receives one; merge too little and a double-click leaves a duplicate.
  */
 
@@ -60,13 +60,13 @@ describe('cartItemSignature', () => {
     expect(cartItemSignature('product-1', { ...BASE, ...change })).not.toBe(cartItemSignature('product-1', BASE));
   });
 
-  it('does not fold engraved text case — two different engravings are two different products', () => {
+  it('does not fold engraved text case - two different engravings are two different products', () => {
     expect(cartItemSignature('product-1', { ...BASE, personalizationText: 'ANNA' })).not.toBe(
       cartItemSignature('product-1', BASE),
     );
   });
 
-  it('ignores trailing whitespace in engraved text — the engraver would too', () => {
+  it('ignores trailing whitespace in engraved text - the engraver would too', () => {
     expect(cartItemSignature('product-1', { ...BASE, personalizationText: '  Anna  ' })).toBe(
       cartItemSignature('product-1', BASE),
     );
@@ -75,7 +75,7 @@ describe('cartItemSignature', () => {
   /**
    * Without a distinct marker for "unset", a null field and a field whose
    * value happens to be the next field's value could produce the same
-   * joined string — two different configurations silently merging into one.
+   * joined string - two different configurations silently merging into one.
    */
   it('never collides an unset field with an empty-string value', () => {
     expect(cartItemSignature('p', { ...EMPTY, personalizationText: '' })).not.toBe(cartItemSignature('p', EMPTY));

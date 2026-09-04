@@ -3,14 +3,14 @@
 /**
  * 2026-08-28, owner feedback, verbatim analogy: "wzory powinny być w
  * produkcie do wyboru tak jak kolor koszulki" (patterns should be a choice
- * in the product like a t-shirt color) — a real e-commerce variant-swatch
+ * in the product like a t-shirt color) - a real e-commerce variant-swatch
  * picker, not a text-labelled `ToggleButtonGroup` buried behind a wizard
  * step. The image data was already there and already fetched
  * (`MaterialOptionRow.imageUrl`, `DesignOptionRow.previewUrl`,
- * `FinishOptionRow.imageUrl` — the last one newly added to the option-row
+ * `FinishOptionRow.imageUrl` - the last one newly added to the option-row
  * projection specifically for this), just never rendered as a swatch.
  *
- * Renders EVERY entry, never just the selectable ones — same
+ * Renders EVERY entry, never just the selectable ones - same
  * ARCHITECTURE.md §7.2 rule `OptionStep` already follows: an unavailable
  * option is shown disabled with a real Polish reason on hover
  * (`DisabledExplanation`), not hidden.

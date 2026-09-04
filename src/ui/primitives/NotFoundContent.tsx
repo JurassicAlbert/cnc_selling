@@ -7,13 +7,13 @@ import { Section } from '@/ui/primitives/Section';
 import { Text } from '@/ui/primitives/Text';
 
 /**
- * The body of every 404 in the app, without any chrome of its own — which
+ * The body of every 404 in the app, without any chrome of its own - which
  * is the entire reason it exists separately from the pages that render it.
  *
  * Next.js resolves `notFound()` to the nearest `not-found.tsx` and renders
  * it inside the layouts above that boundary. So a truly unmatched URL hits
  * `app/not-found.tsx`, which sits under the bare root layout and must
- * supply the storefront chrome itself — while a `notFound()` called from
+ * supply the storefront chrome itself - while a `notFound()` called from
  * inside `(shop)`/`(marketing)` hits that group's own boundary, where the
  * group layout has ALREADY rendered the chrome. Rendering it in both
  * places drew the header and search bar twice, live, on `/wzory`
@@ -35,7 +35,7 @@ export function NotFoundContent() {
          * Every destination here is checked to be a real, reachable page.
          * The first version of this list offered "Przeglądaj wzory" →
          * `/wzory`, which is itself deliberately `notFound()`-ed at the
-         * owner's request — a 404 page whose own escape route was another
+         * owner's request - a 404 page whose own escape route was another
          * 404. Found by actually clicking through it, not by reading it.
          */}
         <nav

@@ -7,14 +7,14 @@ import { describe, expect, it } from 'vitest';
  * mechanically rather than by convention.
  *
  * In the App Router, EVERY exported async function in a `'use server'`
- * module is a publicly reachable HTTP endpoint — not just the ones a
+ * module is a publicly reachable HTTP endpoint - not just the ones a
  * component happens to import. Next.js's own documentation is explicit
  * that such a function must do its own authorization.
  *
  * This codebase's testability convention is an `applyXxx(actor, …)` /
  * `xxx(…)` pair: the wrapper derives the real actor from the session, the
  * `apply` half takes it as a parameter so an integration test can call it
- * without a request scope. That split is good — but only as long as the
+ * without a request scope. That split is good - but only as long as the
  * `apply` half is NOT exported from a `'use server'` module. Exported from
  * one, it becomes an endpoint that accepts a FORGED actor: a request
  * carrying `{ role: 'ADMIN' }` as argument 1 gets admin privileges with no
@@ -22,7 +22,7 @@ import { describe, expect, it } from 'vitest';
  *
  * That was a real, live hole in this codebase (~80 endpoints, including
  * staff-role changes, pricing publication and marking orders paid) found
- * by the 2026-08-30 audit — `docs/AUDIT-2026-08-30.md` P0-1. The fix moved
+ * by the 2026-08-30 audit - `docs/AUDIT-2026-08-30.md` P0-1. The fix moved
  * every `apply*` into `src/server/operations/`, a plain module directory
  * with no `'use server'` anywhere in it. This test is what stops it coming
  * back the next time someone adds an action the same way.
@@ -87,7 +87,7 @@ describe('server action boundary', () => {
    * CALLER's own id as a parameter will act as whoever the caller names.
    *
    * A parameter naming the SUBJECT of the mutation is a different thing
-   * and stays allowed — `anonymizeCustomer(userId)` and
+   * and stays allowed - `anonymizeCustomer(userId)` and
    * `changeStaffRole(userId, role)` both name whose record is being
    * changed, and both still derive the acting admin from the session
    * before touching it. The names below are the ones that specifically

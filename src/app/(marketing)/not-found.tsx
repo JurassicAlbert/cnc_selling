@@ -4,7 +4,7 @@
  * deliberately (owner's request to hide the patterns page for now), so this
  * is a page real visitors land on, not just an error path.
  *
- * No `StorefrontChrome` — `(marketing)/layout.tsx` already rendered it.
+ * No `StorefrontChrome` - `(marketing)/layout.tsx` already rendered it.
  * See `NotFoundContent`'s header for the full rule.
  */
 export { NotFoundContent as default } from '@/ui/primitives/NotFoundContent';

@@ -85,7 +85,7 @@ describe('applyUpdateCategory', () => {
 
 describe('applySetCategoryActive', () => {
   /**
-   * `queryActiveCategories`, not `listActiveCategories` — changed 2026-08-31
+   * `queryActiveCategories`, not `listActiveCategories` - changed 2026-08-31
    * with PERF-01. The storefront's read is now `unstable_cache`-wrapped and
    * invalidated by `revalidateTag` from the `'use server'` wrapper, which
    * this test cannot call (it needs a real request). Asserting through the
@@ -230,7 +230,7 @@ describe('applyImportCategoriesFromCsv', () => {
   it('preserves Polish diacritics through the CSV round trip', async () => {
     const staff = staffActor();
     const slug = uid();
-    const csv = `slug,namePl,descPl,seoTitlePl,seoDescPl,imageUrl,sortOrder\n${slug},Żółw i dąb — ćma łąka źrebię,Opis,SEO,SEO opis,,0\n`;
+    const csv = `slug,namePl,descPl,seoTitlePl,seoDescPl,imageUrl,sortOrder\n${slug},Żółw i dąb - ćma łąka źrebię,Opis,SEO,SEO opis,,0\n`;
 
     const result = await applyImportCategoriesFromCsv(staff, csv);
     expect(result.ok).toBe(true);
@@ -238,6 +238,6 @@ describe('applyImportCategoriesFromCsv', () => {
     expect(result.createdCount).toBe(1);
 
     const category = await prisma.category.findUniqueOrThrow({ where: { slug } });
-    expect(category.namePl).toBe('Żółw i dąb — ćma łąka źrebię');
+    expect(category.namePl).toBe('Żółw i dąb - ćma łąka źrebię');
   });
 });

@@ -1,8 +1,8 @@
 /**
- * Production queue — read-only (no mutations live here; status changes stay
+ * Production queue - read-only (no mutations live here; status changes stay
  * on `/panel/zamowienia/[orderNumber]`, already built in P7a). "Queued
  * work" is exactly the stages after payment/design-review and before
- * shipped/completed — nothing earlier can be produced yet, nothing later
+ * shipped/completed - nothing earlier can be produced yet, nothing later
  * still needs the machine.
  */
 
@@ -22,7 +22,7 @@ function itemAreaM2(snapshot: OrderItemSnapshot, quantity: number): number {
 function itemMachineMinutes(snapshot: OrderItemSnapshot, quantity: number): number {
   // `typeof !== 'number'`, not `=== null`: orders placed before this field
   // existed have it genuinely absent from the stored JSON (`undefined`),
-  // not explicitly `null` — both mean "unknown rate," same as a real
+  // not explicitly `null` - both mean "unknown rate," same as a real
   // `CUSTOM`-product `null`.
   if (typeof snapshot.machiningMilliMinutesPerM2 !== 'number') {
     return 0;
@@ -106,7 +106,7 @@ export type OrderModuleManifestItem = {
   readonly modules: OrderItemSnapshot['moduleLayout']['modules'];
 };
 
-/** For the module-manifest section on `/panel/zamowienia/[orderNumber]` — one row per `OrderItem`, only the modules (not the full snapshot `findOrderForAdmin` already returns). */
+/** For the module-manifest section on `/panel/zamowienia/[orderNumber]` - one row per `OrderItem`, only the modules (not the full snapshot `findOrderForAdmin` already returns). */
 export async function listOrderModuleManifest(orderNumber: string): Promise<readonly OrderModuleManifestItem[]> {
   const order = await prisma.order.findUnique({
     where: { orderNumber },

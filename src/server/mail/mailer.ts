@@ -1,22 +1,22 @@
 /**
- * `Mailer { send(template, to, data) }` — `docs/ARCHITECTURE.md`'s own §14
+ * `Mailer { send(template, to, data) }` - `docs/ARCHITECTURE.md`'s own §14
  * table entry, verbatim. A real interface, deliberately allowed to be
  * unconfigured: "if the mailer is unconfigured, the app logs and marks the
- * notification as not sent" (§14) — "the order still succeeds, and the UI
- * says the confirmation will follow — it does not claim an email was sent"
+ * notification as not sent" (§14) - "the order still succeeds, and the UI
+ * says the confirmation will follow - it does not claim an email was sent"
  * (§15.3).
  *
  * Restructured for P6 (2026-08-26): `send` used to take one hardcoded
  * template/data pair (`'order-confirmation'` only). Better Auth's
  * `emailOTP` plugin needs a second, differently-shaped template
  * (`'verification-otp'`), so `send` is now generic over `MailTemplate` and
- * `MailDataFor<T>` maps each template to its own data shape — a real
+ * `MailDataFor<T>` maps each template to its own data shape - a real
  * interface change, not just widening a literal type, so a caller passing
  * the wrong data shape for a given template is still a compile error.
  *
  * `ResendMailer` is the real implementation, used whenever `RESEND_API_KEY`
  * is set; `UnconfiguredMailer` (same safe-fallback behaviour as before)
- * otherwise. No SDK dependency — Resend's send endpoint is one small JSON
+ * otherwise. No SDK dependency - Resend's send endpoint is one small JSON
  * POST, not worth a package for.
  */
 
@@ -34,16 +34,16 @@ export type OrderConfirmationMailData = {
 };
 
 /**
- * `statusPl` — the real customer-facing Polish label, `content/pl/
+ * `statusPl` - the real customer-facing Polish label, `content/pl/
  * messages.ts`'s own `orderStatusMessage()`, not `content/pl/admin.ts`'s
  * staff-facing one. Deliberate: this text goes to a customer, and the two
  * copies are allowed to diverge (the admin one can afford to be terser/more
- * internal) — reusing the wrong one would silently couple customer-facing
+ * internal) - reusing the wrong one would silently couple customer-facing
  * wording to whatever staff-screen phrasing happens to exist.
  *
  * Deliberately no free-text note field: `applyOrderStatusTransition`'s
  * `notePl` is an internal staff/audit note (shown in the admin order-event
- * timeline), not vetted as customer-safe — forwarding it verbatim into a
+ * timeline), not vetted as customer-safe - forwarding it verbatim into a
  * real customer email risks leaking internal-only commentary. A genuine
  * customer-facing reason field, if wanted, needs its own explicit UI
  * distinct from the audit note, not a silent reuse of it.
@@ -76,7 +76,7 @@ export type MailSendResult = {
    * Returned rather than logged (`docs/REVIEW-DETAILED.md` SEC-02): the
    * tests need to assert what the real template renders, and reading that
    * off a log line is what put a login code into the application log in the
-   * first place. A subject is safe to hand back — the body is not, and is
+   * first place. A subject is safe to hand back - the body is not, and is
    * deliberately not returned.
    */
   readonly subject: string;
@@ -151,21 +151,21 @@ function renderSubjectAndText<T extends MailTemplate>(template: T, data: MailDat
   // The code is deliberately NOT in the subject (`docs/REVIEW-DETAILED.md`
   // SEC-02). A subject is what a phone shows on a locked screen, what a
   // mail client puts in a notification, and what every "preview" surface
-  // renders — none of which should carry a credential. The body is the
+  // renders - none of which should carry a credential. The body is the
   // only place it belongs.
   return {
-    subject: `Kod ${otpPurposePl(d.purpose)} — RYT`,
+    subject: `Kod ${otpPurposePl(d.purpose)} - RYT`,
     text: `Kod ${otpPurposePl(d.purpose)}: ${d.otp}\n\nKod jest ważny przez 5 minut. Jeśli to nie Ty prosiłeś/aś o ten kod, zignoruj tę wiadomość.`,
   };
 }
 
 /**
  * Placeholder values available to a DB-stored `EmailTemplate` override for
- * each template — deliberately only ever built from the same typed
+ * each template - deliberately only ever built from the same typed
  * `MailDataFor<T>` shape `renderSubjectAndText` already consumes, never
  * arbitrary object properties. The admin edit screen shows these key names
  * as a hint, sourced from `content/pl/admin.ts`'s own static copy of this
- * same set — kept in sync by hand, not derived.
+ * same set - kept in sync by hand, not derived.
  */
 function buildPlaceholders<T extends MailTemplate>(template: T, data: MailDataFor<T>): Record<string, string> {
   if (template === 'order-confirmation') {
@@ -180,14 +180,14 @@ function buildPlaceholders<T extends MailTemplate>(template: T, data: MailDataFo
   return { otp: d.otp, otpPurposePl: otpPurposePl(d.purpose) };
 }
 
-/** `{{key}}` substitution. An unmatched token is left as literal text — a safe no-op, not an error, since an admin typo shouldn't ever throw mid-send. */
+/** `{{key}}` substitution. An unmatched token is left as literal text - a safe no-op, not an error, since an admin typo shouldn't ever throw mid-send. */
 function interpolate(text: string, placeholders: Record<string, string>): string {
   return text.replace(/\{\{(\w+)\}\}/g, (match, key: string) => placeholders[key] ?? match);
 }
 
 /**
  * Looks up a DB-stored override for `template` before falling back to the
- * hardcoded default — the one place both `Mailer` implementations share
+ * hardcoded default - the one place both `Mailer` implementations share
  * this logic, so it can't drift between them. A missing row (nothing
  * configured, or the DB is unreachable) is not an error: `renderSubjectAndText`
  * is always a safe, complete fallback.
@@ -206,7 +206,7 @@ async function resolveSubjectAndText<T extends MailTemplate>(template: T, data: 
 }
 
 /**
- * Logs and reports "not sent" — never throws, never blocks whatever called
+ * Logs and reports "not sent" - never throws, never blocks whatever called
  * it. Order creation's own caller treats a failed/unsent email as a
  * non-fatal side effect (`docs/ARCHITECTURE.md` §15.3), and Better Auth's
  * `emailOTP` plugin has no fallback path of its own if `sendVerificationOTP`
@@ -219,7 +219,7 @@ class UnconfiguredMailer implements Mailer {
     // Never the subject, never the body, never the address
     // (`docs/REVIEW-DETAILED.md` SEC-02). This used to log
     // `{ template, subject, to }`, and the OTP subject contained the code,
-    // so every login code reached the application log in plaintext — with
+    // so every login code reached the application log in plaintext - with
     // no production guard, since this implementation is selected purely by
     // RESEND_API_KEY being unset. An admin can also put `{{otp}}` into a
     // DB-stored template, so the guarantee has to come from not logging
@@ -228,7 +228,7 @@ class UnconfiguredMailer implements Mailer {
       // Loud, and once per send: a production shop silently not sending
       // order confirmations is its own incident, and the operator needs to
       // find out from the log rather than from a customer. Still does not
-      // throw — §14/§15.3 are explicit that the order must succeed even
+      // throw - §14/§15.3 are explicit that the order must succeed even
       // when the notification cannot be delivered.
       logger.error('mailer.not_configured', { template, recipient: recipientTag(to) });
       return { sent: false, subject };
@@ -236,8 +236,8 @@ class UnconfiguredMailer implements Mailer {
 
     if (devSecretLoggingEnabled()) {
       // Opt-in, development only, and clearly labelled. This is the
-      // workflow `logging/logger.ts`'s header describes — reading an OTP
-      // out of the dev server's own output — kept deliberately rather than
+      // workflow `logging/logger.ts`'s header describes - reading an OTP
+      // out of the dev server's own output - kept deliberately rather than
       // by accident.
       logger.warn('mailer.unconfigured_send_with_secrets', { template, to, subject, text });
       return { sent: false, subject };
@@ -250,7 +250,7 @@ class UnconfiguredMailer implements Mailer {
 
 /**
  * Resend's HTTP API directly (https://resend.com/docs/api-reference/emails/send-email)
- * — a single JSON POST, so a full SDK dependency isn't worth adding. Errors
+ * - a single JSON POST, so a full SDK dependency isn't worth adding. Errors
  * are caught and logged rather than thrown, matching `UnconfiguredMailer`'s
  * contract: a failed send is always reported as `{ sent: false }`, never an
  * exception the caller has to handle.

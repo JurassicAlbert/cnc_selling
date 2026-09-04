@@ -1,16 +1,16 @@
 'use client';
 
 /**
- * Runs on mount, no separate "simulate" button — the "publish blocked until
+ * Runs on mount, no separate "simulate" button - the "publish blocked until
  * simulation viewed" rule (`docs/ARCHITECTURE.md` §16A.1 module 7) means
  * there must be no path to Publish that skips ever seeing this table. The
  * Publish button below only becomes enabled once this fetch has resolved
- * (success or error — an error is still "reviewed," it just means don't
+ * (success or error - an error is still "reviewed," it just means don't
  * publish yet). A real `ConfirmSubmitButton` dialog gates the actual publish
- * call — this changes every price on the site, and is genuinely
+ * call - this changes every price on the site, and is genuinely
  * irreversible (publishing flips the previously-active version inactive in
  * the same atomic transaction, no path back). Replaced a `window.confirm()`
- * placeholder — see `ConfirmSubmitButton`'s own doc comment.
+ * placeholder - see `ConfirmSubmitButton`'s own doc comment.
  */
 
 import { useEffect, useState } from 'react';
@@ -25,7 +25,7 @@ import { ConfirmSubmitButton } from '@/ui/primitives/ConfirmSubmitButton';
 
 function delta(current: number | null, draft: number | null): string {
   if (current === null || draft === null) {
-    return '—';
+    return '-';
   }
   const diff = draft - current;
   const sign = diff > 0 ? '+' : '';

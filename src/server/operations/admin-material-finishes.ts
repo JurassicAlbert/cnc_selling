@@ -1,4 +1,4 @@
-/** Material↔finish compatibility — a plain toggle, no extra fields on `MaterialFinish` (unlike `ProductMaterial`'s `priceFactorBp`). Deletable freely, same reasoning as slice 1's `ProductMaterial`/`ProductDesign` editors. */
+/** Material↔finish compatibility - a plain toggle, no extra fields on `MaterialFinish` (unlike `ProductMaterial`'s `priceFactorBp`). Deletable freely, same reasoning as slice 1's `ProductMaterial`/`ProductDesign` editors. */
 
 import { revalidatePath } from 'next/cache';
 

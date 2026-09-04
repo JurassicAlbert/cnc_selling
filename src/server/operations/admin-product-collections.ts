@@ -1,8 +1,8 @@
 /**
- * Staff `ProductCollection` mutations — same `applyXxx(staff, ...)` /
+ * Staff `ProductCollection` mutations - same `applyXxx(staff, ...)` /
  * `xxx(...)` split as every other admin action file. Deliberately a
  * separate file/model from `DesignCollection`'s collection actions in
- * `admin-designs.ts` (P9 phase 4) — do not merge them, they mean different
+ * `admin-designs.ts` (P9 phase 4) - do not merge them, they mean different
  * things (a grouping of sellable products vs. a grouping of patterns).
  */
 

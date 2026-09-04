@@ -28,7 +28,7 @@ export function ThicknessesEditor({ productId, thicknesses }: { readonly product
       {thicknesses.map((thickness) => (
         <Stack key={thickness.id} direction="row" spacing={2} sx={{ alignItems: 'center' }}>
           <Typography sx={{ flex: 1 }}>
-            {thickness.labelPl} — ×{(thickness.priceFactorBp / 100).toFixed(0)}%
+            {thickness.labelPl} - ×{(thickness.priceFactorBp / 100).toFixed(0)}%
           </Typography>
           <form action={removeThickness.bind(null, productId, thickness.id)}>
             <IconButton type="submit" size="small" aria-label={ADMIN.removePl}>

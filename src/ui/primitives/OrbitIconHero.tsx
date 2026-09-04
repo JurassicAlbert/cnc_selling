@@ -11,13 +11,13 @@ import {
 } from '@/ui/icons';
 
 /**
- * Three genuinely distinct orbits (2026-08-26 — the owner said every icon
+ * Three genuinely distinct orbits (2026-08-26 - the owner said every icon
  * was animating on the same single circle, just spread around it, and
  * wanted real separate rings). Each `RING_RADII` value lines up exactly
  * with one of the static decorative circles drawn below, so the icons
  * visibly travel ON the drawn rings rather than at an unrelated fixed
  * radius the way the single-orbit version did. Inner rings spin faster
- * than outer ones — real orbital mechanics, not just decoration.
+ * than outer ones - real orbital mechanics, not just decoration.
  */
 const RING_RADII = [90, 130, 170] as const;
 const RING_DURATIONS_S = [45, 60, 80] as const;
@@ -41,14 +41,14 @@ const ORBITERS: readonly Orbiter[] = [
 ];
 
 type OrbitIconHeroProps = {
-  /** Overall diameter in px — the whole layout is authored at 360 and uniformly scaled, so the footer can use a smaller size without re-tuning every radius. */
+  /** Overall diameter in px - the whole layout is authored at 360 and uniformly scaled, so the footer can use a smaller size without re-tuning every radius. */
   readonly size?: number;
 };
 
 /**
- * The orbiting-icon graphic — moved from the hero into the footer
+ * The orbiting-icon graphic - moved from the hero into the footer
  * (2026-08-26, owner's request), replaced in the hero by `HeroHexMosaic`.
- * Pure CSS — no JS, no animation library, still a Server Component; see
+ * Pure CSS - no JS, no animation library, still a Server Component; see
  * `docs/HANDOVER.md` §9e on why that matters here.
  */
 export function OrbitIconHero({ size = 360 }: OrbitIconHeroProps) {

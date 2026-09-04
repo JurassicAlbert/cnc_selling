@@ -1,15 +1,15 @@
 /**
- * Real, internal DB-driven support/contact submission — no fake external
+ * Real, internal DB-driven support/contact submission - no fake external
  * communication integration (§9/§15): this creates a row a staff member
  * reads and answers through the panel, nothing more. `email` is always
  * captured directly (even for a logged-in user), same "capture, don't
  * re-read from the profile" discipline as `Order`'s own buyer fields.
  *
  * Order/shipment context is re-verified here, never trusted from a hidden
- * form field alone — same ownership discipline as `reviews.ts`'s guest
+ * form field alone - same ownership discipline as `reviews.ts`'s guest
  * (accessToken, constant-time compare) / logged-in (`getSession()`) split.
- * A request whose context fails to verify is still submitted — just
- * without the link — rather than the whole submission being rejected:
+ * A request whose context fails to verify is still submitted - just
+ * without the link - rather than the whole submission being rejected:
  * getting the message to staff matters more than the optional context.
  *
  * Same `applyXxx(sessionUserId, ...)` / `xxx(...)` split as every other
@@ -57,7 +57,7 @@ function validateFields(fields: SupportRequestFields): string | null {
   return null;
 }
 
-/** Resolves a real, verified `Order`+`Shipment` id pair for the optional context — never trusts `orderNumber`/`token` alone without checking them against the real row. */
+/** Resolves a real, verified `Order`+`Shipment` id pair for the optional context - never trusts `orderNumber`/`token` alone without checking them against the real row. */
 async function resolveVerifiedOrderContext(
   orderNumber: string | null,
   token: string | null,
@@ -96,7 +96,7 @@ async function resolveVerifiedOrderContext(
  *
  * A window rather than a unique constraint, because a customer writing in
  * again a week later with the same subject and message IS a real second
- * request — usually because nobody answered the first one, which is exactly
+ * request - usually because nobody answered the first one, which is exactly
  * when they must not be silently swallowed.
  */
 const DUPLICATE_SUPPORT_REQUEST_WINDOW_MS = 5 * 60 * 1000;
@@ -108,7 +108,7 @@ const DUPLICATE_SUPPORT_REQUEST_WINDOW_MS = 5 * 60 * 1000;
  * `text` column), so no value can impersonate a field boundary and make two
  * different submissions hash alike. Written as `\u0000` deliberately: a
  * literal NUL in source is invisible in review, turns the file binary to
- * every diff tool, and has already bitten this codebase once — the first
+ * every diff tool, and has already bitten this codebase once - the first
  * cart-signature encoding used one and Postgres refused to store it.
  */
 const SEPARATOR = '\u0000';
@@ -173,7 +173,7 @@ function isUniqueConstraintViolation(error: unknown): boolean {
  * Identity of one submission: the message itself, the order it is about,
  * and which five-minute bucket it landed in.
  *
- * The bucket is deliberately coarse and deliberately not a rolling window —
+ * The bucket is deliberately coarse and deliberately not a rolling window -
  * a unique index can only compare equal values, not ranges. Two clicks
  * either side of a bucket boundary are caught by the time-window query
  * above instead; between them the realistic cases are covered.
@@ -188,7 +188,7 @@ function supportRequestDedupeKey(fields: SupportRequestFields, orderId: string |
   return createHash('sha256').update(parts.join(SEPARATOR)).digest('hex');
 }
 
-/** Standalone `/kontakt` form — no order context. Pure/testable half. */
+/** Standalone `/kontakt` form - no order context. Pure/testable half. */
 export async function applySubmitSupportRequest(sessionUserId: string | null, formData: FormData): Promise<SubmitSupportRequestResult> {
   const fields = readFields(formData);
   const issue = validateFields(fields);
@@ -198,13 +198,13 @@ export async function applySubmitSupportRequest(sessionUserId: string | null, fo
   return createSupportRequest(fields, { userId: sessionUserId, orderId: null, shipmentId: null });
 }
 
-/** The real Server Action — derives the session from the actual request. */
+/** The real Server Action - derives the session from the actual request. */
 export async function submitSupportRequest(formData: FormData): Promise<SubmitSupportRequestResult> {
   const session = await getSession();
   return applySubmitSupportRequest(session?.userId ?? null, formData);
 }
 
-/** Contextual form embedded on an order/shipment page — `orderNumber` always given; `token` only for the guest confirmation page (null when the logged-in account page renders this, since session ownership covers it instead). Pure/testable half. */
+/** Contextual form embedded on an order/shipment page - `orderNumber` always given; `token` only for the guest confirmation page (null when the logged-in account page renders this, since session ownership covers it instead). Pure/testable half. */
 export async function applySubmitOrderSupportRequest(
   sessionUserId: string | null,
   orderNumber: string,
@@ -220,7 +220,7 @@ export async function applySubmitOrderSupportRequest(
   return createSupportRequest(fields, { userId: sessionUserId, orderId: context.orderId, shipmentId: context.shipmentId });
 }
 
-/** The real Server Action — derives the session from the actual request. */
+/** The real Server Action - derives the session from the actual request. */
 export async function submitOrderSupportRequest(orderNumber: string, token: string | null, formData: FormData): Promise<SubmitSupportRequestResult> {
   const session = await getSession();
   return applySubmitOrderSupportRequest(session?.userId ?? null, orderNumber, token, formData);

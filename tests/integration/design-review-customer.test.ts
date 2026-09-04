@@ -5,10 +5,10 @@ import { findOwnedDesignStatus } from '@/server/repositories/design-review';
 import { prisma } from '@/server/db/client';
 
 /**
- * P9 continuation, 2026-08-28 — the customer-facing half of the design
+ * P9 continuation, 2026-08-28 - the customer-facing half of the design
  * review "dyskusja" the owner asked for. `findOwnedDesignStatus` itself
  * predates this pass (built for P7, never consumed by any page until now)
- * and had no direct test either — covered here alongside the new write
+ * and had no direct test either - covered here alongside the new write
  * side. Real `prisma` singleton + PREFIX cleanup, same shape as
  * `customer-designs.test.ts` (this file's functions take an `Owner`
  * derived from cookies in the real request, not a `tx` parameter, so
@@ -58,7 +58,7 @@ describe('applyPostCustomerDesignComment', () => {
     expect(comments[0]?.bodyPl).toBe('Mam pytanie o ten projekt.');
   });
 
-  it('refuses to post for a design the caller does not own — no write', async () => {
+  it('refuses to post for a design the caller does not own - no write', async () => {
     const design = await seedDesign(uid());
 
     const result = await applyPostCustomerDesignComment({ userId: null, sessionToken: uid() }, design.id, 'Nie moje.');
@@ -95,7 +95,7 @@ describe('findOwnedDesignStatus', () => {
     expect(result?.comments[1]?.authorType).toBe('customer');
   });
 
-  it('returns null for a design owned by someone else — 404, not 403', async () => {
+  it('returns null for a design owned by someone else - 404, not 403', async () => {
     const design = await seedDesign(uid());
 
     const result = await findOwnedDesignStatus(design.id, { userId: null, sessionToken: uid() });

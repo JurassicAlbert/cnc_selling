@@ -14,11 +14,11 @@ export const metadata: Metadata = {
 };
 
 /**
- * P9 continuation, 2026-08-28 — owner feedback verbatim: "Sekcja
+ * P9 continuation, 2026-08-28 - owner feedback verbatim: "Sekcja
  * użytkownika po zalogowaniu dalej jest strasznie biedna" (the account
  * section is still terribly poor). Previously this page was a name plus
  * two bare text links. Now a real dashboard (`AccountDashboard`, the MUI
- * presentational half — kept out of this file since `@mui/material` can't
+ * presentational half - kept out of this file since `@mui/material` can't
  * be imported directly in a `(shop)` server component, ARCHITECTURE.md
  * §2.1), pulling together every account resource this session's work made
  * real: order status *and* shipment tracking, uploaded + favourited

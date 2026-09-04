@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Error boundary for every `(marketing)` route — the same reasoning as
+ * Error boundary for every `(marketing)` route - the same reasoning as
  * `(shop)/error.tsx`, and it matters just as much here: the home page, the
  * blog, the FAQ and the pattern gallery are where most first-time visitors
  * land, and a failure there previously took the whole site's chrome down

@@ -1,5 +1,5 @@
 /**
- * Security headers and the Content-Security-Policy — ARCHITECTURE.md §16.1
+ * Security headers and the Content-Security-Policy - ARCHITECTURE.md §16.1
  * ("Security headers + strict CSP"), built 2026-08-31 for
  * `docs/REVIEW-DETAILED.md` SEC-05. Until then the second half of that
  * sentence was implemented (`/api/plik/[fileId]` serves customer SVGs as
@@ -8,8 +8,8 @@
  * `Strict-Transport-Security`, `Referrer-Policy` and `Permissions-Policy`
  * across the repository returned zero matches.
  *
- * Pure on purpose — no `next/server`, no request, no environment reads
- * beyond what a caller passes in — so the policy itself is unit-testable
+ * Pure on purpose - no `next/server`, no request, no environment reads
+ * beyond what a caller passes in - so the policy itself is unit-testable
  * (`tests/unit/security-headers.test.ts`) without booting a server. The two
  * consumers are `next.config.ts` (the static headers, which never vary per
  * request) and `src/proxy.ts` (the CSP, which must, because of the nonce).
@@ -19,7 +19,7 @@
  * A nonce has to be fresh per request, so it cannot come from
  * `next.config.ts`'s static `headers()`. The other five headers have no
  * per-request component, and `next.config.ts` applies them to static assets
- * and image-optimizer responses too — paths the proxy matcher deliberately
+ * and image-optimizer responses too - paths the proxy matcher deliberately
  * skips.
  *
  * ## Known cost: this forecloses static rendering
@@ -28,12 +28,12 @@
  * (`node_modules/next/dist/server/app-render/app-render.js:209-210`) and
  * stamps it onto the framework's own script tags. A prerendered page has a
  * stale nonce baked into its HTML, so a nonce-based CSP and static/ISR/PPR
- * are mutually exclusive — Next's own CSP guide says so. Every storefront
+ * are mutually exclusive - Next's own CSP guide says so. Every storefront
  * route is already dynamic today (`docs/REVIEW-PERFORMANCE.md` Finding 1
  * measured 91 of 93), so this costs nothing right now, but **PERF-01 cannot
  * make catalogue pages static while this is enforced with a nonce.** The
  * escape route, if that trade is ever worth making, is Next's experimental
- * `sri` (hash-based integrity, static-compatible) — recorded in
+ * `sri` (hash-based integrity, static-compatible) - recorded in
  * `docs/AI-CHECKLIST.md` under PERF-01 as a dependency rather than left to
  * be rediscovered.
  */
@@ -48,7 +48,7 @@ export type SecurityHeader = {
 /**
  * 16 bytes from the platform CSPRNG, base64-encoded.
  *
- * Next's own guide suggests `Buffer.from(crypto.randomUUID())` — that works,
+ * Next's own guide suggests `Buffer.from(crypto.randomUUID())` - that works,
  * but base64-encodes 36 *text* characters to carry 122 bits, where this
  * carries 128 in 24. The character set matters more than the length:
  * standard base64 (`A-Za-z0-9+/=`) is inside the set Next's extractor
@@ -64,13 +64,13 @@ export function generateNonce(): string {
 /**
  * `script-src` is the strict one: nonce + `'strict-dynamic'`, never
  * `'unsafe-inline'`. `'strict-dynamic'` is what lets the App Router keep
- * working — the initial script carries the nonce, and every chunk it then
+ * working - the initial script carries the nonce, and every chunk it then
  * injects inherits that trust, which a host allowlist could not express.
  *
  * `style-src` is deliberately **not** strict, and this is the one real
  * compromise in here. MUI/Emotion inject `<style>` elements from the browser
  * for anything not server-rendered, and `ThemeRegistry` is mounted from
- * `error.tsx` boundaries, which React renders with no props of ours — there
+ * `error.tsx` boundaries, which React renders with no props of ours - there
  * is no path by which a per-request nonce could reach them. Adding a nonce
  * to `style-src` anyway would be actively worse than omitting it: CSP3 makes
  * browsers ignore `'unsafe-inline'` as soon as a nonce is present, so it
@@ -81,7 +81,7 @@ export function generateNonce(): string {
  * `img-src` needs `data:` (inline SVG icons and `next/image`'s blur
  * placeholders) and `blob:`. `font-src 'self'` is enough because
  * `next/font/google` downloads at build time and serves from this origin
- * (`src/ui/theme/fonts.ts`) — no runtime request to Google.
+ * (`src/ui/theme/fonts.ts`) - no runtime request to Google.
  */
 export function buildContentSecurityPolicy(options: {
   readonly nonce: string;

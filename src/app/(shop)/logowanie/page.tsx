@@ -17,13 +17,13 @@ export const metadata: Metadata = {
 };
 
 /**
- * 2026-08-28 redesign, owner feedback ("bare vanilla html/css look") — the
+ * 2026-08-28 redesign, owner feedback ("bare vanilla html/css look") - the
  * decorative hex/engraving accent (`Section`'s own `decorative` prop, the
  * same system the homepage/category pages already use) plus a real `Paper`
  * panel (`AuthPanel`) and `Tabs` (`AuthTabs`) replace what used to be a
  * bare heading and two stacked forms. `BotanicalEngraving` was the one
  * illustration still unused anywhere on the site; `ICON_PAIRS.heroLeft` is
- * reused (already the site's own precedent for one repeat being fine — see
+ * reused (already the site's own precedent for one repeat being fine - see
  * that constant's own comment) rather than inventing a ninth icon.
  */
 export default async function LoginPage() {

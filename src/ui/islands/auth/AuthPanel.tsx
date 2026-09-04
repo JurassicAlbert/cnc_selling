@@ -3,12 +3,12 @@
 /**
  * 2026-08-28, owner feedback: "cały formularz logowania dalej ma zbyt
  * biedne UI/UX... wygląda jakbyś na siłę chciał dostosować do
- * minimalistycznego frontendu i wychodzi vanilla html/css look" — the
+ * minimalistycznego frontendu i wychodzi vanilla html/css look" - the
  * login/register pages were a bare heading + a raw `Stack` of `TextField`s
  * with no visual framing at all. `theme.ts`'s flattened shadows/minimal
  * radius are a deliberate brand choice (ARCHITECTURE.md §2.1: "the stock
  * Material look reads as admin dashboard"), not licence to skip real
- * visual design — this panel earns its presence with a real `Paper`
+ * visual design - this panel earns its presence with a real `Paper`
  * frame, a brand icon badge, and (for login) real `Tabs` instead of two
  * separate forms stacked with a plain divider between them, which is
  * exactly the "bolted-on" look that was flagged.

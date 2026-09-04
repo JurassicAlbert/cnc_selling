@@ -1,7 +1,7 @@
 /**
- * P9 continuation, 2026-08-28 — "wzory, które dodał do ulubionych" (owner
+ * P9 continuation, 2026-08-28 - "wzory, które dodał do ulubionych" (owner
  * feedback). `applyToggleFavoriteDesign` takes the userId explicitly
- * (testable); `toggleFavoriteDesign` derives it from the real session —
+ * (testable); `toggleFavoriteDesign` derives it from the real session -
  * same `applyXxx`/`xxx` split as every other mutation in this codebase.
  */
 

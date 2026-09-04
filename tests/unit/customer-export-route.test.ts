@@ -1,10 +1,10 @@
 /**
- * SEC-10 — found 2026-08-31 while verifying SEC-04 in a real browser.
+ * SEC-10 - found 2026-08-31 while verifying SEC-04 in a real browser.
  *
  * `/panel/klienci/[id]/eksport` is a GET route handler with a **side
  * effect**: it builds the customer's full RODO Art. 15 export and writes an
  * `AuditLog` row with `action: 'export'`. It was linked from the customer
- * page with `next/link`, and Next prefetches `<Link>` targets — so merely
+ * page with `next/link`, and Next prefetches `<Link>` targets - so merely
  * opening a customer's page fired
  *
  *   GET /panel/klienci/<id>/eksport?_rsc=… → 200
@@ -14,7 +14,7 @@
  * attributed to the staff member who had only looked at the page.
  *
  * The harm is not wasted work. `ARCHITECTURE.md` §16A.2 invariant 4 makes
- * the audit log the record of what happened — and it was recording RODO
+ * the audit log the record of what happened - and it was recording RODO
  * exports that nobody performed. A compliance record that reports accesses
  * which never occurred is worse than no record, because it will be believed.
  *
@@ -22,7 +22,7 @@
  * `/api/plik/[fileId]` already follows in `weryfikacja/[designId]/page.tsx`,
  * so this was the odd one out rather than a new idea), and the route itself
  * refuses a prefetch. The refusal runs before the session read, which is
- * both correct — nothing should happen for a speculative request — and what
+ * both correct - nothing should happen for a speculative request - and what
  * makes it testable: `getSession()` reads `next/headers` and would throw
  * outside a request scope.
  */

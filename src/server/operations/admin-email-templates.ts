@@ -1,14 +1,14 @@
 /**
- * Email-template edits — subject/body only, the same closed set `mailer.ts`
+ * Email-template edits - subject/body only, the same closed set `mailer.ts`
  * already knows about (`EmailTemplate.key` matches `MailTemplate`). No
  * create/delete action exists: every key this project will ever have is
  * already seeded (`prisma/seed.ts`'s `seedEmailTemplates`).
  *
- * **`ADMIN`, not `STAFF`** — changed 2026-08-31, `docs/REVIEW-DETAILED.md`
+ * **`ADMIN`, not `STAFF`** - changed 2026-08-31, `docs/REVIEW-DETAILED.md`
  * SEC-04. These bodies are customer-facing email, `verification-otp`
  * included: whoever can rewrite them can rewrite what a sign-in message
  * says and where it tells the reader to go. `refuseUnlessAdmin` repeats the
- * wrapper's gate inside the `apply` so a test can reach it — see
+ * wrapper's gate inside the `apply` so a test can reach it - see
  * `admin-only.ts`.
  */
 

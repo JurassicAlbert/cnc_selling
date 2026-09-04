@@ -1,4 +1,4 @@
-# Detailed review — 2026-08-30
+# Detailed review - 2026-08-30
 
 Commit `e774e40`, branch `main`. Companion to `REVIEW-OVERVIEW.md`.
 
@@ -19,11 +19,11 @@ correct at commit `e774e40`.
 
 ---
 
-# P0 — Critical
+# P0 - Critical
 
 ---
 
-## SEC-01 — Login, registration and OTP requests are completely unthrottled
+## SEC-01 - Login, registration and OTP requests are completely unthrottled
 
 - **Status:** CONFIRMED BUG · SECURITY CONCERN
 - **Severity:** P0
@@ -34,7 +34,7 @@ correct at commit `e774e40`.
 **Current behaviour.** All four auth Server Actions call Better Auth's
 programmatic API directly (`auth.api.signInEmail({ body, headers })`).
 Better Auth's rate limiter is installed as the **HTTP router's**
-`onRequest` hook — `node_modules/better-auth/dist/api/index.mjs:163-169`,
+`onRequest` hook - `node_modules/better-auth/dist/api/index.mjs:163-169`,
 `const rateLimitResponse = await onRequestRateLimit(currentRequest, ctx)`.
 It only runs for requests that reach `auth.handler`, i.e.
 `/api/auth/[...all]`. A direct `auth.api.*` call bypasses the router
@@ -42,7 +42,7 @@ entirely, so the limiter never executes. `betterAuth({...})` in
 `auth.ts` also sets no `rateLimit` option of its own.
 
 Confirmed default, `node_modules/better-auth/dist/context/create-context.mjs:169-174`:
-`enabled: options.rateLimit?.enabled ?? isProduction` — enabled in
+`enabled: options.rateLimit?.enabled ?? isProduction` - enabled in
 production, but only on the path this app does not use.
 
 **What this allows.**
@@ -50,11 +50,11 @@ production, but only on the path this app does not use.
 1. **Unlimited password guessing** against `submitLogin`. `signInEmail` has
    no attempt counter of its own.
 2. **Unlimited OTP email sending** via `submitOtpRequest`: anyone can make
-   the shop email any address, repeatedly — inbox flooding for a victim,
+   the shop email any address, repeatedly - inbox flooding for a victim,
    direct cost and sender-reputation damage for the shop.
 3. **Unlimited account creation** via `submitRegister`.
 
-**Partially mitigated:** OTP *verification* is bounded — the `emailOTP`
+**Partially mitigated:** OTP *verification* is bounded - the `emailOTP`
 plugin allows 3 attempts (`node_modules/better-auth/dist/plugins/email-otp/routes.mjs:246-253`)
 and codes expire in 300s. So the six-digit code is not brute-forceable.
 The request endpoint and password login are not covered by that.
@@ -72,7 +72,7 @@ unmetered outbound email endpoint, on a store that takes real orders.
   same limiter you build for order creation. A `RateLimit` table in
   Postgres (`key`, `count`, `windowStart`) with an atomic
   `INSERT … ON CONFLICT DO UPDATE … RETURNING count` is one statement and
-  needs no new infrastructure — the same shape `create-order.ts` already
+  needs no new infrastructure - the same shape `create-order.ts` already
   uses for `OrderNumberCounter`. Key on `email` **and** on client IP
   (`x-forwarded-for`, already read by `actions/upload.ts:requestIpAddress`).
 - *Alternative:* configure `betterAuth({ rateLimit: { … } })` and route the
@@ -83,7 +83,7 @@ Suggested limits: 5 failed logins per email per 15 min; 10 per IP per 15
 min; 3 OTP requests per email per hour; 20 registrations per IP per day.
 Fail with a real Polish message, not a silent no-op.
 
-**Dependencies.** Resolve `OPEN_ITEMS.md` §6 (storage choice) first — the
+**Dependencies.** Resolve `OPEN_ITEMS.md` §6 (storage choice) first - the
 same table serves order creation.
 
 **Test required.** Integration: N+1 failed logins for one email → the N+1th
@@ -102,7 +102,7 @@ upload limiter.
 
 ---
 
-## SEC-02 — One-time login codes are written to application logs in plaintext
+## SEC-02 - One-time login codes are written to application logs in plaintext
 
 - **Status:** CONFIRMED BUG · SECURITY CONCERN
 - **Severity:** P0
@@ -124,7 +124,7 @@ logger.info('mailer.unconfigured_send', { template, subject, to });
 
 `createMailer()` selects `UnconfiguredMailer` purely on
 `RESEND_API_KEY`/`EMAIL_FROM` being absent. There is **no production
-guard** — a deployment that forgets those two variables silently starts
+guard** - a deployment that forgets those two variables silently starts
 writing every login code and every recipient address to stdout. This is not
 theoretical: `logger.ts`'s own header documents the workflow of grepping
 the log for an OTP.
@@ -137,7 +137,7 @@ than the database is, and is retained. Anyone with log access can sign in
 as any user, no password needed.
 
 **Recommended solution.**
-1. Never put the OTP in the subject — move it into the body only, and
+1. Never put the OTP in the subject - move it into the body only, and
    never log the body.
 2. Log an event with no secret: `{ template, toHash: sha256(to).slice(0,8), sent: false }`.
 3. Gate the fallback: if `NODE_ENV === 'production'` and no mailer is
@@ -158,7 +158,7 @@ as any user, no password needed.
 
 ---
 
-## SEC-03 — Compatibility and availability rules are never enforced on the write path
+## SEC-03 - Compatibility and availability rules are never enforced on the write path
 
 - **Status:** CONFIRMED BUG · SECURITY CONCERN
 - **Severity:** P0
@@ -174,8 +174,8 @@ post-filter. `Material.isAvailable`, `Design.isActive` and
 *rendering*, and are simply absent from the `*ById` maps used for
 *pricing*.
 
-`priceAndValidateSelections` — the single function behind add-to-cart, cart
-edit and checkout re-pricing — then does plain map lookups:
+`priceAndValidateSelections` - the single function behind add-to-cart, cart
+edit and checkout re-pricing - then does plain map lookups:
 
 ```ts
 const design = selections.designId === null ? null : (data.designsById.get(selections.designId) ?? null);
@@ -184,7 +184,7 @@ const design = selections.designId === null ? null : (data.designsById.get(selec
 It calls `checkConfigurationComplete` and nothing else. It never calls
 `resolveOptions` / `resolveOptionAvailability`, and `domain/compatibility`
 is not imported on this path at all. Confirmed by
-`grep -rn "availableDesigns|availableMaterials|availableFinishes" src` —
+`grep -rn "availableDesigns|availableMaterials|availableFinishes" src` -
 every hit is in `resolve-options.ts` or the domain module itself.
 
 **Five rules that are therefore unenforced server-side:**
@@ -210,13 +210,13 @@ Action arguments. Two realistic paths:
 2. **Crafted request.** A direct POST with any `designId` that has a
    `ProductDesign` row.
 
-**Current exploitability with today's seed data:** verified by SQL — zero
+**Current exploitability with today's seed data:** verified by SQL - zero
 non-sellable designs and zero unavailable materials are currently linked to
 an active product, and the one `DesignMaterial` narrowing row belongs to a
 leftover e2e design attached to no product. So the hole is **live but not
 currently loaded**. It arms itself the first time staff retire anything.
 
-**Why it matters.** `Design.rightsStatus` is not a preference — the schema
+**Why it matters.** `Design.rightsStatus` is not a preference - the schema
 comment calls it enforcement of brief §12's requirement that nothing is
 assumed free to reproduce, "enforced by a query filter, not by
 discipline". On the write path there is no filter, so a `RESTRICTED` or
@@ -238,17 +238,17 @@ if (selections.fontId !== null && !options.fontIds.includes(selections.fontId)) 
 ```
 
 `resolveOptions` is already pure, already tested, and already produces
-exactly these lists. Do **not** re-implement the rules — reuse them. That
+exactly these lists. Do **not** re-implement the rules - reuse them. That
 also makes `resolveOptions` the single definition of "selectable", which is
 what §7.2 intends.
 
 Returning `null` gives callers the existing `CONFIGURATION_INVALID` /
 `PRICE_CHANGED` behaviour, so no new error surface is needed. Note the
 customer-facing consequence: a saved project whose pattern was retired now
-fails to add with a blunt message — worth a dedicated Polish string
+fails to add with a blunt message - worth a dedicated Polish string
 (`SITE.cartOptionNoLongerAvailablePl`) rather than reusing the generic one.
 
-**Dependencies.** Do BUG-03 in the same change — the auto-selected default
+**Dependencies.** Do BUG-03 in the same change - the auto-selected default
 design is drawn from the same unfiltered list.
 
 **Test required.** Integration, on the write path (not the pure function):
@@ -265,14 +265,14 @@ T-03.
 
 ---
 
-# P1 — High
+# P1 - High
 
 ---
 
-## BUG-02 — The advertised "from" price is net, and lower than any real configuration
+## BUG-02 - The advertised "from" price is net, and lower than any real configuration
 
 - **Status:** CONFIRMED BUG · UX/UI · SEO
-- **Severity:** P1 (the highest-impact P1 — it is on every listing page)
+- **Severity:** P1 (the highest-impact P1 - it is on every listing page)
 - **Area:** ecommerce / content / SEO / consumer-law exposure
 - **Files:** [src/ui/primitives/ProductCard.tsx](src/ui/primitives/ProductCard.tsx) (line 168), [src/app/(shop)/produkt/[slug]/page.tsx](src/app/(shop)/produkt/[slug]/page.tsx) (price block and `jsonLd`), [src/domain/pricing/calculate.ts](src/domain/pricing/calculate.ts)
 - **Routes:** `/`, `/[category]`, `/produkt/[slug]`, `/szukaj`, `/kolekcje/[slug]`
@@ -322,7 +322,7 @@ the legal exposure, a customer who clicks "od 150 zł" and lands on 709 zł
 bounces.
 
 **Recommended solution.** Compute a real cheapest-sellable gross price per
-product and store it — do not compute it per request.
+product and store it - do not compute it per request.
 
 1. Add `startingPriceGrossGrosze Int?` to `Product`.
 2. Populate it by running the existing `priceConfiguration` over each
@@ -337,7 +337,7 @@ product and store it — do not compute it per request.
    today, and in the JSON-LD. Fall back to hiding the price rather than
    showing a wrong one when it is `null`.
 5. While you are in the JSON-LD, `availability` is hardcoded
-   `https://schema.org/InStock` for made-to-order goods — see BUG-24.
+   `https://schema.org/InStock` for made-to-order goods - see BUG-24.
 
 **Alternative if that is too much for now:** show
 `formatPln(grossFor(minPriceGrosze, vatRateBp))` and change the label from
@@ -356,17 +356,17 @@ and both are gross. See T-04.
 
 ---
 
-## BUG-03 — A placeholder design is silently attached to every order, non-deterministically
+## BUG-03 - A placeholder design is silently attached to every order, non-deterministically
 
 - **Status:** CONFIRMED BUG
 - **Severity:** P1
 - **Area:** ecommerce correctness / content / production
-- **Files:** [src/ui/islands/configurator/Configurator.tsx](src/ui/islands/configurator/Configurator.tsx) (lines 174, 197-210 `computeDefaultSelections`), [src/server/repositories/configurator.ts](src/server/repositories/configurator.ts) (lines 106, 140 — the `materials`/`designs` selects)
+- **Files:** [src/ui/islands/configurator/Configurator.tsx](src/ui/islands/configurator/Configurator.tsx) (lines 174, 197-210 `computeDefaultSelections`), [src/server/repositories/configurator.ts](src/server/repositories/configurator.ts) (lines 106, 140 - the `materials`/`designs` selects)
 - **Routes:** `/produkt/[slug]`, `/koszyk`, `/zamowienie/[orderNumber]`, `/panel/zamowienia/[orderNumber]/karta-produkcyjna`
 
 **Current behaviour.** Pattern selection is deliberately hidden
 (`const PATTERN_SELECTION_ENABLED = false`, an owner decision recorded in
-that file's header). The DESIGN crumb is removed from the UI — but
+that file's header). The DESIGN crumb is removed from the UI - but
 `computeDefaultSelections` still runs:
 
 ```ts
@@ -380,9 +380,9 @@ Three separate defects follow.
 records one.** Verified live: with pattern selection off, the cart line for
 a default configuration reads
 
-> Dąb · **Wzór podstawowy — do zastąpienia** · Olejowanie
+> Dąb · **Wzór podstawowy - do zastąpienia** · Olejowanie
 
-`Wzór podstawowy — do zastąpienia` translates as *"basic pattern — to be
+`Wzór podstawowy - do zastąpienia` translates as *"basic pattern - to be
 replaced"*. It is an internal placeholder (`slug: wzor-podstawowy`,
 `code: WZR-001`). It is shown to the customer in the cart, and
 `create-order.ts:buildOrderItemInput` copies `designNamePl` and
@@ -404,13 +404,13 @@ Verified: all 13 `Design.sortOrder` values are `0`, so even adding
 Because `machiningMilliMinutesPerM2` and `ProductDesign.surchargeGrosze`
 are pricing inputs, two loads of the same product page can legitimately
 produce **two different prices for a configuration the customer perceives
-as identical** — which then surfaces as a `PRICE_CHANGED` rejection at
+as identical** - which then surfaces as a `PRICE_CHANGED` rejection at
 checkout with no explanation.
 
 **3. The default is drawn from the unfiltered list** (see SEC-03), so the
 auto-attached design is not checked for `isActive` or `rightsStatus`. If
 `wzor-podstawowy` were ever deactivated, the default would silently become
-whatever row came back first — possibly a non-sellable one.
+whatever row came back first - possibly a non-sellable one.
 
 **Why it matters.** Combined: a customer buys a product whose engraving
 they never chose, at a price that can vary between page loads, described in
@@ -426,7 +426,7 @@ their order by an internal placeholder string.
 3. Decide what "no pattern" means while selection is hidden. Two honest
    options:
    - **Make it a real, named product option.** Rename `wzor-podstawowy` to
-     something a customer can read and accept (e.g. „Bez wzoru — sam
+     something a customer can read and accept (e.g. „Bez wzoru - sam
      grawer tekstu") and make sure its `machiningMilliMinutesPerM2` and
      surcharge reflect that. Cheapest change, and the snapshot stops lying.
    - **Make DESIGN genuinely optional for these product types.** Drop
@@ -449,7 +449,7 @@ T-05.
 
 ---
 
-## BUG-04 — The order confirmation never shows shipping, VAT or the net subtotal
+## BUG-04 - The order confirmation never shows shipping, VAT or the net subtotal
 
 - **Status:** CONFIRMED BUG · UX/UI
 - **Severity:** P1
@@ -482,7 +482,7 @@ shipping line generates a support request every time.
 
 **Recommended solution.** Add `subtotalNetGrosze`, `vatGrosze` and
 `shippingGrosze` to `OrderConfirmationView` and to both queries (they are
-plain columns on a row already being read — no extra query). Render, in
+plain columns on a row already being read - no extra query). Render, in
 `OrderSummary`, above "Razem":
 
 ```
@@ -507,7 +507,7 @@ item lines + shipping equal `totalGrossGrosze`. See T-06.
 
 ---
 
-## BUG-05 — "Duplikuj" reintroduces the lost-update race that P0-3 fixed
+## BUG-05 - "Duplikuj" reintroduces the lost-update race that P0-3 fixed
 
 - **Status:** **RESOLVED 2026-08-31** (was CONFIRMED BUG)
 - **Severity:** P1
@@ -548,7 +548,7 @@ await prisma.cartItem.updateMany({
 });
 ```
 
-The `findUnique` becomes unnecessary — `findOwnedCartItem` above already
+The `findUnique` becomes unnecessary - `findOwnedCartItem` above already
 proves the row exists and is owned.
 
 **Test required.** Integration: two concurrent `applyDuplicateCartItem`
@@ -562,7 +562,7 @@ either way. See T-07.
 
 ### What was built (2026-08-31)
 
-The sibling's shape, verbatim — `updateMany` with `quantity: { lt:
+The sibling's shape, verbatim - `updateMany` with `quantity: { lt:
 MAX_CART_ITEM_QUANTITY }` in the `where` and `{ increment: 1 }` in the
 data. The `findUnique` it replaced was redundant as well as racy:
 `findOwnedCartItem` above had already proved the row exists and is owned.
@@ -573,7 +573,7 @@ identically before and after. T-07 adds three:
 
 - two concurrent duplicates → quantity **3**. Failed before the fix.
 - eight concurrent duplicates → quantity **9**. Before the fix this produced
-  **2** — seven of eight increments lost.
+  **2** - seven of eight increments lost.
 - four concurrent duplicates one short of the cap → exactly
   `MAX_CART_ITEM_QUANTITY`. This one passed before the fix too, by luck:
   clamping 24 + 1 gives the right answer either way. It is kept because it
@@ -589,7 +589,7 @@ converge on the same result. Checked rather than assumed.
 
 ---
 
-## BUG-06 — Four step-machine guards are written, tested, and never called
+## BUG-06 - Four step-machine guards are written, tested, and never called
 
 - **Status:** **RESOLVED 2026-08-31** (was CONFIRMED BUG · ARCHITECTURAL CONCERN)
 - **Severity:** P1
@@ -597,7 +597,7 @@ converge on the same result. Checked rather than assumed.
 - **Files:** [src/domain/configuration/steps.ts](src/domain/configuration/steps.ts) (`isStepEnterable`, `furthestEnterableStepIndex`, `checkStepEntry`, `checkStepAppliesToProductType`), [src/server/configurator/validate-and-price.ts](src/server/configurator/validate-and-price.ts)
 
 **Current behaviour.** `grep -rn "checkStepAppliesToProductType|checkStepEntry|furthestEnterableStepIndex|isStepEnterable" src`
-outside the defining module returns exactly **one** hit — a comment in
+outside the defining module returns exactly **one** hit - a comment in
 `Configurator.tsx:405` saying `isStepEnterable` no longer restricts
 anything. Production uses only `stepsForProductType` and
 `checkConfigurationComplete`.
@@ -661,7 +661,7 @@ branch cannot accept unbounded text.
 
 ---
 
-## BUG-07 — `zod` is a dependency that nothing imports; Server Action inputs are unvalidated
+## BUG-07 - `zod` is a dependency that nothing imports; Server Action inputs are unvalidated
 
 - **Status:** **RESOLVED 2026-08-31** (was CONFIRMED BUG · ARCHITECTURAL CONCERN)
 - **Severity:** P1
@@ -676,11 +676,11 @@ malformed payload, extra fields, type coercion, injection strings" to
 
 What validation actually exists is hand-written and uneven:
 
-- `actions/checkout.ts` — genuinely good: real Polish NIP checksum, postal
+- `actions/checkout.ts` - genuinely good: real Polish NIP checksum, postal
   code, phone, email, per-field error codes. This is the model.
-- `actions/cart.ts` — `Number(formData.get('quantity'))` with a
+- `actions/cart.ts` - `Number(formData.get('quantity'))` with a
   `Number.isFinite` guard and a clamp. Adequate for quantity.
-- `addToCart(productSlug, selections, acknowledgedWarnings, quantity)` —
+- `addToCart(productSlug, selections, acknowledgedWarnings, quantity)` -
   **no shape validation at all.** `selections` is destructured straight
   into a Prisma `create`; `acknowledgedWarnings` is spread into a
   `String[]` column with no element count, no length cap and no allow-list
@@ -711,7 +711,7 @@ strategy does not exist, so the next contributor will assume it does.
 Either is defensible; leaving a declared-but-unused validation dependency
 alongside a documented validation strategy that does not exist is not.
 
-### What was built (2026-08-31) — both bugs, one change
+### What was built (2026-08-31) - both bugs, one change
 
 They were fixed together because they are the same hole seen from two
 sides: `priceAndValidateSelections` is the single write path for
@@ -719,7 +719,7 @@ add-to-cart, cart edit and checkout re-pricing, and it looked at neither
 the *shape* of what it was given nor whether the fields belonged to this
 product type.
 
-**Zod, not removal** — §2 already said to use it, and this is the one place
+**Zod, not removal** - §2 already said to use it, and this is the one place
 it lives: `src/domain/configuration/input-schema.ts`.
 `selectionsSchema` bounds every field; `acknowledgedWarningsSchema` is
 `z.enum(FEASIBILITY_CODES).max(16)`. `FeasibilityCode` is now **derived
@@ -731,32 +731,32 @@ malformed, since the UI cannot produce one.
 **`findSelectionOutsideProductType`** (`domain/configuration/steps.ts`)
 wraps the previously-uncalled `checkStepAppliesToProductType`, so its 30
 existing assertions finally guard something reachable. It takes the
-**product type's** steps, not `applicableSteps`' narrowed list — those
+**product type's** steps, not `applicableSteps`' narrowed list - those
 answer different questions, and conflating them would turn
 `OPTION_UNAVAILABLE` (a message a customer on a stale link can act on) into
 a generic invalid-configuration error.
 
 `priceAndValidateSelections` now parses first, then rejects an
-out-of-type selection, then does everything it did before — and **returns
+out-of-type selection, then does everything it did before - and **returns
 the parsed selections**, so `applyAddToCart` can no longer keep using the
 caller's raw object. That last part mattered: the pre-fix run of the new
 tests produced a real `TypeError:
 selections.personalizationText.trim is not a function` out of
-`cartItemSignature` — precisely the 500 this issue predicted.
+`cartItemSignature` - precisely the 500 this issue predicted.
 
 **A regression the write-path fix created, caught before it shipped.**
 `computeDefaultSelections` filled `finishId` from the material's first
 available finish for *every* product, and `JEWELRY` has no FINISH step
 (§5). The seeded bracelet's oak offers oiling, so its default carried a
 finish the product type forbids: the page would have priced happily and
-then refused at "Dodaj do koszyka" — the exact shape the owner ruled out on
+then refused at "Dodaj do koszyka" - the exact shape the owner ruled out on
 2026-08-31. The defaults are now step-aware
 (`computeDefaultSelections(options, productTypeCode)`, exported so
 `tests/unit/configurator-defaults.test.ts` can assert it against the same
 `findSelectionOutsideProductType` the server uses). A side effect worth
 noting: the bracelet's default price moved 57,54 → **57,39 zł**, because a
 finish was never legitimately part of that configuration. The advertised
-"od 55,69 zł" had always excluded it — the configurator default and the
+"od 55,69 zł" had always excluded it - the configurator default and the
 advertised price now come from the same rule.
 
 **Verified live** on a production build: the bracelet configures, prices at
@@ -766,7 +766,7 @@ advertised price now come from the same rule.
 themselves; `tests/unit/configurator-defaults.test.ts` (11) for the client
 defaults; `tests/integration/step-and-input-validation.test.ts` (18) drives
 every rule through `applyAddToCart` against real Postgres, and **each
-rejection also asserts that no `Configuration` row was written** — a check
+rejection also asserts that no `Configuration` row was written** - a check
 placed after the insert would satisfy a "returns ok:false" test while
 having stored the row.
 
@@ -785,7 +785,7 @@ to say exactly that instead of implying all four were enforced.
 
 ---
 
-## ADMIN-01 — Order, customer and audit lists silently truncate
+## ADMIN-01 - Order, customer and audit lists silently truncate
 
 - **Status:** CONFIRMED BUG
 - **Severity:** P1
@@ -800,7 +800,7 @@ and no "showing 100 of N" indicator.
 
 **This is already happening.** The development database holds **166
 orders**. The panel shows the newest 100. Sixty-six real orders are
-unreachable — not "will be", *are*, right now. The only workaround is
+unreachable - not "will be", *are*, right now. The only workaround is
 guessing filters until the target falls inside the newest 100 of the
 filtered set.
 
@@ -828,7 +828,7 @@ orders 101-150 and `total` is 150. See T-08.
 
 ---
 
-## SEC-04 — `STAFF` can change the bank account and irreversibly anonymize customers
+## SEC-04 - `STAFF` can change the bank account and irreversibly anonymize customers
 
 - **Status:** **RESOLVED 2026-08-31** (was CONFIRMED BUG · SECURITY CONCERN)
 - **Severity:** P1
@@ -841,7 +841,7 @@ files: only `admin-pricing`, `admin-staff` and `admin-analytics` use
 those 22 are not catalogue edits and deserve separate treatment from the
 already-recorded `OPEN_ITEMS.md` §7 question:
 
-1. **`applyUpdateStoreSettings`** writes `StoreSettings.bankAccountNumber` —
+1. **`applyUpdateStoreSettings`** writes `StoreSettings.bankAccountNumber` -
    the account number every bank-transfer customer is told to pay into, on
    the confirmation page and in the confirmation email. A compromised or
    malicious `STAFF` account redirects all incoming payments. §16.3 gives
@@ -854,7 +854,7 @@ already-recorded `OPEN_ITEMS.md` §7 question:
    email, including `verification-otp`.
 
 **Recommended solution.** Move these three to `requireAdminSession()`.
-Unlike the catalogue question, this needs no owner decision — none of the
+Unlike the catalogue question, this needs no owner decision - none of the
 three is a day-to-day catalogue task, and §16.3 already assigns all three
 to `ADMIN`. Consider a second confirmation (re-entered password, or a typed
 confirmation string) on the bank-account field specifically.
@@ -877,16 +877,16 @@ satisfied the letter of the recommendation, and it would have been
 outside a request scope, so no test in this repository can reach it
 (`tests/integration/authz.test.ts`'s header records the same constraint from
 P4). A rule that lives only where no test can reach it is the exact shape of
-SEC-03 — a correct, well-tested function that the write path never called.
+SEC-03 - a correct, well-tested function that the write path never called.
 
 So the gate is asserted twice:
 
-- **`requireAdminSession()` in the wrapper** — the gate a real request meets,
+- **`requireAdminSession()` in the wrapper** - the gate a real request meets,
   and still the primary control. Guarded mechanically by
   `tests/unit/admin-only-operations.test.ts`, which checks *per function*
   rather than per file, because `admin-pricing.ts` correctly contains both
   gates (`simulatePricingDraft` is a read, and reads are `STAFF`).
-- **`refuseUnlessAdmin(actor)` as the first statement of each `apply`** —
+- **`refuseUnlessAdmin(actor)` as the first statement of each `apply`** -
   the same rule where a test can drive it. `src/server/operations/admin-only.ts`.
   A separate test asserts the guard appears *before* the first Prisma call in
   each of the three: a check that runs after the write returns a refusal to a
@@ -896,7 +896,7 @@ The actor parameter was renamed `staff` → `admin` in all three, so the
 signature no longer says something the function refuses.
 
 **The UI half, which the recommendation did not name.** Enforcement alone
-would have left a `STAFF` looking at a settings form whose submit 404s —
+would have left a `STAFF` looking at a settings form whose submit 404s -
 the shape the owner ruled out on 2026-08-31 ("there shouldn't be cases where
 we allow something but its blocked by system"). So:
 
@@ -909,7 +909,7 @@ we allow something but its blocked by system"). So:
   also fixes a **pre-existing** inconsistency: `/panel/ceny` and
   `/panel/ustawienia/personel` were already `ADMIN`-gated pages that the nav
   offered to every `STAFF` account, so clicking them produced a 404. Hiding a
-  link is presentation, not a control — every route and operation still
+  link is presentation, not a control - every route and operation still
   enforces its own gate.
 
 **Verified in a real browser against a production build**, by temporarily
@@ -917,14 +917,14 @@ demoting the panel account to `STAFF` and restoring it afterwards:
 
 | | `ADMIN` | `STAFF` |
 |---|---|---|
-| Sidebar entries | 23 | **21** — „Ceny" and „Ustawienia" absent |
+| Sidebar entries | 23 | **21** - „Ceny" and „Ustawienia" absent |
 | `/panel/ustawienia` direct URL | renders | **„Nie znaleziono takiej strony"** (404, not 403) |
 | Customer page | anonymize form | read-only, with the admin-only notice |
 
 **Tests.** `tests/integration/admin-authorization.test.ts` (10) drives all
 three `apply*` with `STAFF`, `CUSTOMER` and `ADMIN` actors against real
-Postgres, and asserts for every refusal that **nothing changed** — the bank
-account, the customer's identity, the template body — plus that no audit row
+Postgres, and asserts for every refusal that **nothing changed** - the bank
+account, the customer's identity, the template body - plus that no audit row
 is written for a refused attempt. `tests/unit/admin-only-operations.test.ts`
 (14) covers the wrapper half mechanically.
 
@@ -934,7 +934,7 @@ with the reversal recorded in each rather than quietly swapped.
 
 ---
 
-## SEC-10 — Opening a customer's page silently performed a RODO export
+## SEC-10 - Opening a customer's page silently performed a RODO export
 
 - **Status:** **RESOLVED 2026-08-31** · CONFIRMED BUG · SECURITY CONCERN
 - **Severity:** P1
@@ -942,7 +942,7 @@ with the reversal recorded in each rather than quietly swapped.
 - **Files:** [src/app/(admin)/panel/klienci/[id]/eksport/route.ts](src/app/(admin)/panel/klienci/[id]/eksport/route.ts), [src/app/(admin)/panel/klienci/[id]/page.tsx](src/app/(admin)/panel/klienci/[id]/page.tsx)
 
 **New finding**, not in the 2026-08-30 audit. Found while verifying SEC-04 in
-a real browser — the customer page's activity timeline showed an „Eksport"
+a real browser - the customer page's activity timeline showed an „Eksport"
 entry nobody had triggered.
 
 **Confirmed, twice.** The network log showed
@@ -967,7 +967,7 @@ accesses which never occurred is worse than no record, because it will be
 believed. Every customer-page view also serialised that customer's complete
 personal data into a response nobody read.
 
-**Fixed in two layers.** The link is a plain `<a>` — the convention
+**Fixed in two layers.** The link is a plain `<a>` - the convention
 `/api/plik/[fileId]` already followed in `weryfikacja/[designId]/page.tsx`,
 so this link was the odd one out rather than a new idea. And the route
 refuses any request carrying `next-router-prefetch` or `purpose: prefetch`,
@@ -978,19 +978,19 @@ speculative request.
 page produced no request to the export route and left the export-row count
 unchanged at 6.
 
-**Tests.** `tests/unit/customer-export-route.test.ts` (4) — the route returns
+**Tests.** `tests/unit/customer-export-route.test.ts` (4) - the route returns
 404 for both prefetch header forms (and passing without a request scope also
 proves the guard runs before `getSession()`), plus a mechanical check that
 the page renders a plain anchor.
 
 **Worth checking when adding any route handler:** a GET with a side effect
 must never be reachable from a `<Link>`. Nothing else in the codebase
-currently has one — `/api/plik/[fileId]` reads and streams, and writes
+currently has one - `/api/plik/[fileId]` reads and streams, and writes
 nothing.
 
 ---
 
-## SEC-05 — No security headers and no Content-Security-Policy anywhere
+## SEC-05 - No security headers and no Content-Security-Policy anywhere
 
 - **Status:** **RESOLVED 2026-08-31** (was MISSING FUNCTIONALITY · SECURITY CONCERN)
 - **Severity:** P1
@@ -1008,7 +1008,7 @@ unauthenticated `/panel` traffic.
 attachments or rasterized previews, never inlined into the document." The
 second half is genuinely done (`/api/plik/[fileId]` forces
 `Content-Disposition: attachment` for `image/svg+xml`). The first half was
-never built — and, unlike the rate limits, it is **not** recorded in
+never built - and, unlike the rate limits, it is **not** recorded in
 `CHECKLIST.md` or `OPEN_ITEMS.md`, so it is a gap nobody is tracking.
 
 **Related, smaller:** `/api/plik/[fileId]` sets `Content-Type` from the
@@ -1023,7 +1023,7 @@ CSP is the layer that contains a mistake in any of them. `X-Frame-Options`/
 **Recommended solution.** Add a `headers()` block in `next.config.ts`:
 
 - `X-Content-Type-Options: nosniff` (site-wide, and explicitly on `/api/plik/*`)
-- `Referrer-Policy: strict-origin-when-cross-origin` — also stops the guest
+- `Referrer-Policy: strict-origin-when-cross-origin` - also stops the guest
   order `?token=` leaking to third parties via `Referer` (see BUG-22)
 - `X-Frame-Options: DENY` / `frame-ancestors 'none'`
 - `Strict-Transport-Security` (production only)
@@ -1045,12 +1045,12 @@ The policy itself lives in a pure module, `src/server/security/headers.ts`,
 so it can be unit-tested without a server. It has two consumers, split on
 whether a header varies per request:
 
-- **`next.config.ts` → `headers()`** — `X-Content-Type-Options: nosniff`,
+- **`next.config.ts` → `headers()`** - `X-Content-Type-Options: nosniff`,
   `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options:
   DENY`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`, and
   `Strict-Transport-Security: max-age=63072000; includeSubDomains` **in
   production only**. Also `poweredByHeader: false`, which was not on the list
-  above — Next sends `X-Powered-By: Next.js` by default, and it buys nothing.
+  above - Next sends `X-Powered-By: Next.js` by default, and it buys nothing.
   These cover static assets, the image optimizer and `/api/*`, which the
   proxy matcher deliberately does not touch.
 - **`src/proxy.ts` → the CSP**, because the nonce must be fresh per request.
@@ -1067,7 +1067,7 @@ developer's machine for two years.
 
 **`style-src` keeps `'unsafe-inline'`, deliberately.** The audit note above
 suggested the nonce path via `@mui/material-nextjs`. That provider does
-accept `options.nonce` and does stamp it on the styles it emits — but the
+accept `options.nonce` and does stamp it on the styles it emits - but the
 nonce cannot *reach* it. `ThemeRegistry` is a Client Component with ~22 call
 sites, several of which are themselves client (`AccountNav`) or are
 `error.tsx` boundaries that React renders with no props of ours. There is no
@@ -1075,7 +1075,7 @@ path by which a per-request value gets to those. Adding a nonce to
 `style-src` anyway would be worse than omitting it: under CSP3 a nonce makes
 browsers ignore `'unsafe-inline'` entirely, so it would break every
 client-side Emotion style rather than tighten anything. Style injection is
-also a far smaller prize than script injection — Google's own strict-CSP
+also a far smaller prize than script injection - Google's own strict-CSP
 guidance grades on `script-src`. The reasoning is in the module and pinned by
 a test, so it cannot be "tightened" by accident later.
 
@@ -1088,14 +1088,14 @@ thing that silently switches the policy off.
 `headers['content-security-policy'] || headers['content-security-policy-report-only']`.
 The published guide only mentions the enforcing header. Because Next reads
 both, a report-only rollout applies the nonce to framework scripts exactly as
-enforcement would — so the violations it reports are real, not a flood of
+enforcement would - so the violations it reports are real, not a flood of
 false ones from Next's own bootstrap. That is what makes `CSP_MODE=report-only`
 a usable watch mode rather than noise.
 
 **Verified.** All six headers on a real production response
 (`npm run build && next start`, read with curl). The enforced policy carried
 through home, product, cart, checkout, `/panel` and `/panel/zamowienia` in a
-real browser with **zero console messages** — including a MUI Menu popover
+real browser with **zero console messages** - including a MUI Menu popover
 (a portal created after hydration, which is precisely the client-side
 Emotion case), the `@mui/x-charts` revenue chart, and a Server Action
 re-pricing a material change from 57,54 zł to 57,32 zł, which proves
@@ -1117,7 +1117,7 @@ script tags, and that five real pages produce no CSP violation.
 Next reads the nonce from the **request** CSP header at render time, so a
 prerendered page ships a stale nonce. **A nonce-based CSP and static/ISR are
 mutually exclusive**, and Next's own guide says PPR is too. Every storefront
-route is dynamic today, so this costs nothing right now — but PERF-01 step
+route is dynamic today, so this costs nothing right now - but PERF-01 step
 (3) is now blocked on a choice: keep the nonce and take the win from step (1)
 alone, or move `script-src` to Next's experimental `sri` hash path. Weakening
 `script-src` to `'unsafe-inline'` to unblock caching would trade away all of
@@ -1126,7 +1126,7 @@ SEC-05 and is the owner's decision, not an implementation detail. Recorded in
 
 ---
 
-## PERF-01 — Not one page is prerendered; the storefront is 100% dynamic
+## PERF-01 - Not one page is prerendered; the storefront is 100% dynamic
 
 - **Status:** CONFIRMED · PERFORMANCE
 - **Severity:** P1
@@ -1158,10 +1158,10 @@ Confirmed absent from the entire codebase: `React.cache`, `unstable_cache`,
 falls back to dynamic anyway.
 
 **Why it matters.** §18 states "Catalogue pages are RSC + ISR so they are
-fully server-rendered — the reason MUI is confined to islands (§2.1)".
+fully server-rendered - the reason MUI is confined to islands (§2.1)".
 `CHECKLIST.md:102` records LCP as `[~]` "improved, not clearly acceptable
-yet". The project pays a real ongoing cost — MUI is lint-banned from the
-storefront, and the storefront is hand-written primitives as a result — to
+yet". The project pays a real ongoing cost - MUI is lint-banned from the
+storefront, and the storefront is hand-written primitives as a result - to
 protect a metric whose single biggest lever is switched off. Every product
 page view is ~6 uncached Postgres round trips.
 
@@ -1176,7 +1176,7 @@ page view is ~6 uncached Postgres round trips.
 2. **Isolate the request-scoped part.** Move the cart badge, the account
    name and the consent banner into their own components rendered inside
    `<Suspense>`. With `cacheComponents: true` (Next 16, which also enables
-   PPR by default — `node_modules/next/dist/docs/…/cacheComponents.md`) the
+   PPR by default - `node_modules/next/dist/docs/…/cacheComponents.md`) the
    static shell prerenders and only the personalised fragment streams.
 3. **Then** the catalogue pages can genuinely be static/ISR again, and
    `generateStaticParams` starts earning its keep.
@@ -1195,7 +1195,7 @@ a product page, before and after, recorded in `REVIEW-PERFORMANCE.md`.
 
 ---
 
-## PERF-02 — Every `generateMetadata` page queries the same row twice
+## PERF-02 - Every `generateMetadata` page queries the same row twice
 
 - **Status:** **RESOLVED 2026-09-04** (was CONFIRMED · PERFORMANCE)
 - **Severity:** P1
@@ -1203,7 +1203,7 @@ a product page, before and after, recorded in `REVIEW-PERFORMANCE.md`.
 - **Files:** `src/app/(shop)/produkt/[slug]/page.tsx`, `src/app/(shop)/[category]/page.tsx`, `src/app/(shop)/kolekcje/[slug]/page.tsx`, `src/app/(marketing)/blog/[slug]/page.tsx`, `src/app/(marketing)/strony/[slug]/page.tsx`
 
 **Current behaviour.** Each of these five files calls the same repository
-function twice per request — once in `generateMetadata`, once in the page
+function twice per request - once in `generateMetadata`, once in the page
 body (`getActiveProductBySlug`, `getActiveCategoryBySlug`, …). Prisma calls
 are not deduplicated by Next automatically; only `fetch` is, and only
 under specific cache settings. No `React.cache()` wrapper exists anywhere
@@ -1228,7 +1228,7 @@ queries per render to ~2.
 ### What was built (2026-09-04)
 
 All five repository functions are wrapped in `cache()` from React, plus
-`getSession()` (PERF-05) — which mattered more than the five: every
+`getSession()` (PERF-05) - which mattered more than the five: every
 `require*Session` delegates to it, so a panel render reached three or four
 real Better Auth session lookups.
 
@@ -1252,11 +1252,11 @@ On the product page specifically, `Product` went from 3 identical queries to
 
 ---
 
-# P2 — Medium
+# P2 - Medium
 
 ---
 
-## BUG-08 — Free-shipping threshold compares gross against a net-documented field
+## BUG-08 - Free-shipping threshold compares gross against a net-documented field
 
 - **Status:** CONFIRMED BUG
 - **Severity:** P2
@@ -1265,18 +1265,18 @@ On the product page specifically, `Product` went from 3 identical queries to
 The schema documents the field as *"Order subtotal (**net**) at or above
 which this method becomes free."* The code compares
 `cart.subtotalGrossGrosze`. Free shipping therefore triggers at
-`threshold / 1.23` net — 23% earlier than the documented policy. With the
+`threshold / 1.23` net - 23% earlier than the documented policy. With the
 seeded 500 zł threshold that is 406,50 zł net.
 
 **Observed consequence**, live: a 709,16 zł cart showed **all four** active
-delivery methods at "0,00 zł — Darmowa dostawa". The real InPost tier for
+delivery methods at "0,00 zł - Darmowa dostawa". The real InPost tier for
 that cart's computed weight (70×70 cm oak at the 18 mm fallback thickness ≈
 6.2 kg) is `do 10 kg` = **51,61 zł**, absorbed by the shop.
 
 Two separable things:
 - **The bug:** pick one unit and make code, schema comment and admin form
-  label agree. (Gross is arguably the better UX — "spend 500 zł" means the
-  number the customer sees — so fixing the *comment* may be the right call.)
+  label agree. (Gross is arguably the better UX - "spend 500 zł" means the
+  number the customer sees - so fixing the *comment* may be the right call.)
 - **The business question (RECOMMENDATION, owner's decision):** a flat 500 zł
   free-shipping threshold on made-to-order furniture means the carefully
   built weight-tier machinery almost never fires. Worth revisiting the
@@ -1287,7 +1287,7 @@ schema comment and admin label match it.
 
 ---
 
-## BUG-09 — "Duplikuj" still says and looks like "duplicate" after becoming "+1"
+## BUG-09 - "Duplikuj" still says and looks like "duplicate" after becoming "+1"
 
 - **Status:** CONFIRMED · UX/UI · content
 - **Severity:** P2
@@ -1299,21 +1299,21 @@ updated to record the reversal. The **user-visible label and icon were
 not**: the control still reads „Duplikuj", still uses `ContentCopyIcon`,
 and sits inches from a `+` stepper that now does exactly the same thing.
 
-**Recommended:** remove the control (the `+` covers it) — or, if a
+**Recommended:** remove the control (the `+` covers it) - or, if a
 one-click "+1" shortcut is wanted, relabel to „Dodaj kolejną sztukę" with a
 `+`-style icon. Do not leave a button promising a second line.
 
 ---
 
-## BUG-10 — Mobile navigation has no menu
+## BUG-10 - Mobile navigation has no menu
 
 - **Status:** CONFIRMED · UX/UI · accessibility
 - **Severity:** P2
 - **Files:** [src/ui/primitives/SiteHeader.tsx](src/ui/primitives/SiteHeader.tsx)
 
-`flexWrap: 'wrap'` is the entire responsive strategy — no breakpoint, no
+`flexWrap: 'wrap'` is the entire responsive strategy - no breakpoint, no
 hamburger. **Measured** at 375×812: the `<header>` is **149.6 px** tall
-(three wrapped rows), plus the separate `SearchBar` band ≈ 68 px — roughly
+(three wrapped rows), plus the separate `SearchBar` band ≈ 68 px - roughly
 **27% of the viewport** consumed before any content, on every page.
 
 Also measured on the same render: every top-level nav target is **22 px**
@@ -1322,7 +1322,7 @@ and the 44 px practical target. Detail in `REVIEW-UX-UI.md`.
 
 ---
 
-## BUG-11 — Upload resolution and aspect warnings can never fire
+## BUG-11 - Upload resolution and aspect warnings can never fire
 
 - **Status:** CONFIRMED · MISSING FUNCTIONALITY
 - **Severity:** P2
@@ -1330,12 +1330,12 @@ and the 44 px practical target. Detail in `REVIEW-UX-UI.md`.
 
 Both upload paths call `inspectUploadedFile({ bytes, target: null })`, and
 `target === null` skips `evaluateResolution` and `evaluateAspectMismatch`
-entirely. So §13.1 steps 6 and 7 — the DPI check ("warn below 150 DPI, warn
-hard below 100") and the aspect-mismatch warning — **never run in
+entirely. So §13.1 steps 6 and 7 - the DPI check ("warn below 150 DPI, warn
+hard below 100") and the aspect-mismatch warning - **never run in
 production**, and `CustomerDesign.autoWarnings` is always `[]`.
 
 The code documents *why* honestly (`CUSTOM_UPLOAD` precedes `SIZE`, so no
-target size exists yet) — but the consequence is that a real, unit-tested
+target size exists yet) - but the consequence is that a real, unit-tested
 safety feature is dead, and the design-review queue shows staff an empty
 warnings list that looks like "we checked and it's fine".
 
@@ -1347,7 +1347,7 @@ empty warning list.
 
 ---
 
-## BUG-12 — Post-response work is fire-and-forget, not `after()`
+## BUG-12 - Post-response work is fire-and-forget, not `after()`
 
 - **Status:** LIKELY BUG · ARCHITECTURAL CONCERN
 - **Severity:** P2
@@ -1367,7 +1367,7 @@ local Node server.
 
 ---
 
-## BUG-13 — A quantity changed in another tab is charged at the old value
+## BUG-13 - A quantity changed in another tab is charged at the old value
 
 - **Status:** LIKELY BUG
 - **Severity:** P2
@@ -1375,7 +1375,7 @@ local Node server.
 
 `createOrder` reads the cart (including `quantity`) before opening the
 transaction, then claims rows with
-`deleteMany({ where: { id: { in: cartItemIds }, cartId } })` — by id only.
+`deleteMany({ where: { id: { in: cartItemIds }, cartId } })` - by id only.
 A quantity change committed between the read and the transaction does not
 change the id, so the claim still succeeds and the order is written with
 the **stale** quantity. The two-tab case the idempotency work covers is
@@ -1384,11 +1384,11 @@ add/remove; this is edit.
 **Recommended:** claim conditionally on the quantities that were priced,
 e.g. delete each row with `where: { id, cartId, quantity }`, and treat a
 short count as the existing `CART_CHANGED`. The infrastructure is already
-there — only the predicate needs widening.
+there - only the predicate needs widening.
 
 ---
 
-## BUG-14 — Switching delivery carrier leaves a stale pickup point
+## BUG-14 - Switching delivery carrier leaves a stale pickup point
 
 - **Status:** CONFIRMED BUG · UX/UI
 - **Severity:** P2
@@ -1399,7 +1399,7 @@ Choose an InPost Paczkomat, pick a point, then switch to DPD Pickup: the
 green confirmation Alert disappears (`findPickupPointById(dpd, inpostId)`
 is `null`) but the hidden field still submits the InPost id, and
 `disabledReason` only checks for `null`, so the submit button stays
-enabled. The server correctly rejects with `PICKUP_POINT_INVALID` — the
+enabled. The server correctly rejects with `PICKUP_POINT_INVALID` - the
 customer just gets a failed submission for no visible reason.
 
 **Recommended:** reset `selectedPickupPointId` (and the query) in the
@@ -1408,7 +1408,7 @@ rather than `selectedPickupPointId`.
 
 ---
 
-## BUG-15 — Re-uploading a design orphans the previous file and its bytes
+## BUG-15 - Re-uploading a design orphans the previous file and its bytes
 
 - **Status:** CONFIRMED BUG
 - **Severity:** P2
@@ -1418,7 +1418,7 @@ The re-upload creates a new `UploadedFile` and repoints
 `CustomerDesign.fileId` at it. The previous `UploadedFile` row keeps
 existing with no `design` relation, and its bytes (plus preview) stay on
 disk forever. Nothing lists or reaps them, and nothing can serve them
-(`/api/plik` still would, for the owner — arguably a small privacy point:
+(`/api/plik` still would, for the owner - arguably a small privacy point:
 a superseded design remains fetchable indefinitely).
 
 **Recommended:** either keep them deliberately as a review history
@@ -1428,7 +1428,7 @@ transaction. Choose one and write it down; today it is neither.
 
 ---
 
-## BUG-16 — Sitemap is missing most of the site; no `lastModified`
+## BUG-16 - Sitemap is missing most of the site; no `lastModified`
 
 - **Status:** MISSING FUNCTIONALITY · SEO
 - **Severity:** P2
@@ -1442,7 +1442,7 @@ entry sets `lastModified`, though every model carries `updatedAt`.
 
 ---
 
-## BUG-17 — `robots.ts` allows crawling of the panel, the account area and token URLs
+## BUG-17 - `robots.ts` allows crawling of the panel, the account area and token URLs
 
 - **Status:** CONFIRMED · SECURITY CONCERN · SEO
 - **Severity:** P2
@@ -1464,7 +1464,7 @@ to the order confirmation, cart, checkout and account routes; add
 
 ---
 
-## BUG-18 — `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` is not set or documented
+## BUG-18 - `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` is not set or documented
 
 - **Status:** LIKELY BUG · deployment
 - **Severity:** P2
@@ -1476,11 +1476,11 @@ Next encrypts variables captured by inline/bound Server Actions
 self-hosted deployments must set a stable
 `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` shared across instances.
 
-This codebase binds closures pervasively — `adjustCartItemQuantity.bind(null, item.cartItemId, 1)`,
+This codebase binds closures pervasively - `adjustCartItemQuantity.bind(null, item.cartItemId, 1)`,
 `removeCartItem.bind(...)`, `submitGuestReview.bind(null, orderNumber, token)`,
 and so on. Without a stable key, a two-instance deployment (or a rolling
 redeploy while a page is open) fails to decrypt bound arguments and cart
-buttons break for some requests and not others — a maddening intermittent
+buttons break for some requests and not others - a maddening intermittent
 bug.
 
 `serverActions.allowedOrigins` is also unset; fine for a single-origin
@@ -1492,7 +1492,7 @@ warning.
 
 ---
 
-## BUG-19 — The order snapshot omits fields the architecture requires
+## BUG-19 - The order snapshot omits fields the architecture requires
 
 - **Status:** CONFIRMED · MISSING FUNCTIONALITY
 - **Severity:** P2
@@ -1507,9 +1507,9 @@ production days**, and the customer design file reference."
 Missing from `OrderItemSnapshot`: `productSlug`, material `family`,
 `productionDaysMin/Max`. Also missing, and required elsewhere:
 
-- `materialNotesPl` — §12 says it renders "on the product page **and** in
+- `materialNotesPl` - §12 says it renders "on the product page **and** in
   the configurator summary **and** in the order confirmation".
-- The installation variant's `namePl` and `receivesPl` — §6.5 says the "Co
+- The installation variant's `namePl` and `receivesPl` - §6.5 says the "Co
   otrzymujesz" line "goes into the summary **and the order snapshot**".
   Only the bare enum code (`ON_TOP` / `OVERLAY` / `REPLACEMENT`) is stored,
   so rendering it in Polish either requires a live lookup (breaking the
@@ -1520,14 +1520,14 @@ argument for doing it now.
 
 ---
 
-## BUG-20 — Marking an order paid writes no `OrderEvent`
+## BUG-20 - Marking an order paid writes no `OrderEvent`
 
 - **Status:** CONFIRMED BUG
 - **Severity:** P2
 - **Files:** [src/server/operations/admin-orders.ts](src/server/operations/admin-orders.ts) (`applyMarkOrderPaid`)
 
 The payment transition writes an `AuditLog` entry but no `OrderEvent`. The
-order timeline — the thing staff and customers actually read — therefore
+order timeline - the thing staff and customers actually read - therefore
 never shows that payment was received, only status changes. §16A.1 module 2
 lists "payment marking" alongside "order event timeline".
 
@@ -1536,7 +1536,7 @@ non-status event type) inside the same conditional update.
 
 ---
 
-## BUG-21 — Editing a cart line can still leave a duplicate saved project
+## BUG-21 - Editing a cart line can still leave a duplicate saved project
 
 - **Status:** LIKELY BUG
 - **Severity:** P2
@@ -1551,12 +1551,12 @@ The cart lines merge; the saved projects do not. The read-side dedupe in
 duplicate exists in the database and is invisible.
 
 **Recommended:** in the merge branch, delete the now-redundant
-`Configuration` after the `CartItem` merge (it is safe — `OrderItem` never
+`Configuration` after the `CartItem` merge (it is safe - `OrderItem` never
 joins to `Configuration`, as `applyDeleteConfiguration` already documents).
 
 ---
 
-## PERF-03 — Every admin list except three loads its whole table
+## PERF-03 - Every admin list except three loads its whole table
 
 - **Status:** ARCHITECTURAL CONCERN · PERFORMANCE
 - **Severity:** P2
@@ -1575,7 +1575,7 @@ Not urgent; do not pre-optimise all 22.
 
 ---
 
-## PERF-04 — Three Turbopack over-bundling warnings
+## PERF-04 - Three Turbopack over-bundling warnings
 
 - **Status:** CONFIRMED · PERFORMANCE (build)
 - **Severity:** P2
@@ -1589,11 +1589,11 @@ over bundling."
 **Recommended:** build the path from a validated literal map of the five
 `PublicImageKind` values rather than interpolating, or move the filesystem
 write behind a small non-bundled boundary. The build currently succeeds, so
-this is hygiene, not breakage — but a clean build is worth keeping clean.
+this is hygiene, not breakage - but a clean build is worth keeping clean.
 
 ---
 
-## SEC-06 — Runtime writes into `public/` are deployment-fragile and unvalidated
+## SEC-06 - Runtime writes into `public/` are deployment-fragile and unvalidated
 
 - **Status:** ARCHITECTURAL CONCERN · SECURITY CONCERN
 - **Severity:** P2
@@ -1601,33 +1601,33 @@ this is hygiene, not breakage — but a clean build is worth keeping clean.
 
 Admin-uploaded product, category, material, finish and design images are
 written into `public/images/{kind}/{ownerId}/{uuid}.{ext}` at runtime. The
-file header is honest that this assumes a long-running Node server — but
+file header is honest that this assumes a long-running Node server - but
 §3 names Vercel as a deployment target, where `public/` is immutable and
 these uploads vanish on the next deploy. Documented in one place,
 contradicted in another.
 
 Two smaller points in the same file:
-- `savePublicImage` has **no size cap** (customer uploads do — 25 MB via
+- `savePublicImage` has **no size cap** (customer uploads do - 25 MB via
   `domain/upload/inspect.ts`). An admin can write an arbitrarily large
   file.
 - `ownerId` is interpolated into a path with no validation.
   `deletePublicImage` explicitly guards against `..`; `savePublicImage`
   does not. Not currently reachable (every caller passes a cuid from the
   database), which is why this is a defence-in-depth note rather than a
-  vulnerability — but the asymmetry between the two functions is the kind
+  vulnerability - but the asymmetry between the two functions is the kind
   of thing that becomes one.
 
 ---
 
-## SEC-07 — RODO anonymization leaves full PII on orders and support requests
+## SEC-07 - RODO anonymization leaves full PII on orders and support requests
 
 - **Status:** ARCHITECTURAL CONCERN · compliance
 - **Severity:** P2
 - **Files:** [src/server/operations/admin-customers.ts](src/server/operations/admin-customers.ts)
 
 `applyAnonymizeCustomer` scrubs `User` and revokes sign-in. Its comment
-argues that `Configuration` and `UploadedFile` carry no name/email/phone —
-correct — but does not mention that **`Order` does**: `email`, `firstName`,
+argues that `Configuration` and `UploadedFile` carry no name/email/phone -
+correct - but does not mention that **`Order` does**: `email`, `firstName`,
 `lastName`, `phone`, `street`, `postalCode`, `city` are all retained
 verbatim, as is `SupportRequest.email`/`namePl`.
 
@@ -1644,7 +1644,7 @@ for the owner, not a unilateral change.
 
 ---
 
-## SEC-08 — Guest upload rate limit resets with the cookie
+## SEC-08 - Guest upload rate limit resets with the cookie
 
 - **Status:** CONFIRMED · SECURITY CONCERN
 - **Severity:** P2
@@ -1662,7 +1662,7 @@ SEC-01 makes this nearly free.
 
 ---
 
-## SEC-09 — `/api/plik/[fileId]` buffers whole files; §16.1 says it streams
+## SEC-09 - `/api/plik/[fileId]` buffers whole files; §16.1 says it streams
 
 - **Status:** CONFIRMED · PERFORMANCE · doc divergence
 - **Severity:** P2
@@ -1678,7 +1678,7 @@ route "streams via the storage adapter".
 
 ---
 
-## ARCH-01 — There is no CI
+## ARCH-01 - There is no CI
 
 - **Status:** **RESOLVED 2026-08-31** (was MISSING FUNCTIONALITY · ARCHITECTURAL CONCERN)
 - **Severity:** P2
@@ -1695,10 +1695,10 @@ was the single highest-leverage process fix available.
 
 Two jobs, deliberately separate:
 
-- **`verify`** — `npm ci` → create both databases → `db:deploy` ×2 →
+- **`verify`** - `npm ci` → create both databases → `db:deploy` ×2 →
   `db:seed` ×2 → `typecheck` → `lint` → `test` → `build`. Fast and
   deterministic; this is what a branch-protection rule should require.
-- **`e2e`** — `needs: verify`, installs Chromium + WebKit, runs the
+- **`e2e`** - `needs: verify`, installs Chromium + WebKit, runs the
   Playwright suite (whose own `webServer` builds and starts the app), and
   uploads the HTML report as an artifact.
 
@@ -1707,7 +1707,7 @@ parallel-contention flake** (`REVIEW-TEST-COVERAGE.md`), and a flake there
 must not hide a real failure in `verify`.
 
 **The database setup mirrors `docker-compose.yml` exactly**, down to the
-published port (5433) and the init script — the workflow runs
+published port (5433) and the init script - the workflow runs
 `docker/postgres-init/01-databases.sql` itself rather than repeating the
 SQL, so "works locally" and "works in CI" cannot drift. Both databases are
 created because both are genuinely used: `next build` reads `DATABASE_URL`
@@ -1717,12 +1717,12 @@ tier is redirected to `TEST_DATABASE_URL` by `tests/integration/env-setup.ts`.
 **Both databases are seeded.** This is not incidental: `offered-is-buildable`
 sweeps every offered combination of every *active product*, and
 `starting-price` exhaustively searches the seeded catalogue. On an empty
-database those iterate nothing and **pass vacuously** — a green run that
+database those iterate nothing and **pass vacuously** - a green run that
 proves nothing, which is worse than a red one. A new `npm run db:seed:test`
 (`scripts/seed-test-db.mjs`) mirrors the existing `db:deploy:test` and makes
 this a command rather than a remembered incantation.
 
-### Verified — and what could not be
+### Verified - and what could not be
 
 A workflow only ever executes somewhere else, so the ordinary write-run-fix
 loop does not apply. Two things were done instead of hoping.
@@ -1740,33 +1740,33 @@ npm run build           →  succeeds, 81 static pages generated
 
 The database was then dropped. This matters most for the four migrations
 added earlier the same day (`RateLimit`, the OTP subject, the retired
-placeholder design, `startingPriceGrossGrosze`) — the local databases had
+placeholder design, `startingPriceGrossGrosze`) - the local databases had
 grown incrementally through `migrate dev` and **had never been proven to
 apply from scratch**, which is exactly what CI does on every run.
 
 **2. `tests/unit/ci-workflow.test.ts` (12) parses the workflow** and pins
 the two failure modes that produce a *green* run rather than a red one: a
 step invoking an npm script that has been renamed, and `npm test` running
-without `TEST_DATABASE_URL` — which `env-setup.ts` deliberately does not
+without `TEST_DATABASE_URL` - which `env-setup.ts` deliberately does not
 throw on (unit tests must work with no database), so the entire integration
 tier would silently run against `DATABASE_URL` and still report success.
 
 **Not verified: the workflow has never executed on GitHub.** That cannot be
-done from here. The runner-specific parts — `actions/setup-node` caching,
+done from here. The runner-specific parts - `actions/setup-node` caching,
 the service-container port mapping, `psql` on the runner image, and
-`npx playwright install --with-deps` — are conventional but unproven. Expect
+`npx playwright install --with-deps` - are conventional but unproven. Expect
 the first run to need a small correction.
 
 **`workers: process.env.CI ? 1 : undefined`** was added to
 `playwright.config.ts`: the recorded flake is parallel contention over one
 shared database, and a first CI run that is red for that reason teaches a
 team to ignore CI. This is the documented diagnosis applied, **not a
-measured fix** — raise it once the suite has a few green runs. The real
+measured fix** - raise it once the suite has a few green runs. The real
 repair is ARCH-03.
 
 ---
 
-## ARCH-02 — `Configurator.tsx` is 1 525 lines
+## ARCH-02 - `Configurator.tsx` is 1 525 lines
 
 - **Status:** ARCHITECTURAL CONCERN
 - **Severity:** P2
@@ -1775,18 +1775,18 @@ repair is ARCH-03.
 The largest file in the repository by a factor of three. It holds the step
 machine, the breadcrumb menus, size popovers, the personalization form,
 custom-upload handling, the warnings/acknowledgement UI, and price display.
-It is coherent and well commented — but it is where every future
+It is coherent and well commented - but it is where every future
 configurator change lands, and it currently has no component test of its
 own.
 
-**Recommended:** extract along seams that already exist —
+**Recommended:** extract along seams that already exist -
 `<ConfiguratorBreadcrumbs>`, `<SizeStep>`, `<PersonalizationStep>`,
-`<CustomUploadStep>`, `<PriceAndWarnings>` — and add component tests per
+`<CustomUploadStep>`, `<PriceAndWarnings>` - and add component tests per
 piece. Do not restructure the state model; it works.
 
 ---
 
-## ARCH-03 — Development database is polluted with test artifacts
+## ARCH-03 - Development database is polluted with test artifacts
 
 - **Status:** RECOMMENDATION
 - **Severity:** P2
@@ -1805,7 +1805,7 @@ which is exactly the question an audit should not have to ask.
 
 ---
 
-## BUG-22 — Order `accessToken` travels in the query string
+## BUG-22 - Order `accessToken` travels in the query string
 
 - **Status:** ARCHITECTURAL CONCERN · SECURITY CONCERN
 - **Severity:** P2
@@ -1823,7 +1823,7 @@ successful lookup and redirecting to the clean URL.
 
 ---
 
-## BUG-23 — Order numbers use server-local time
+## BUG-23 - Order numbers use server-local time
 
 - **Status:** LIKELY BUG
 - **Severity:** P2
@@ -1840,21 +1840,21 @@ changes.
 
 ---
 
-# P3 — Polish
+# P3 - Polish
 
 ---
 
-- **BUG-24** — JSON-LD `availability: 'https://schema.org/InStock'` is hardcoded for made-to-order goods; `MadeToOrder`/`PreOrder` is accurate. `src/app/(shop)/produkt/[slug]/page.tsx`.
-- **BUG-25** — "Odbiór osobisty" (personal collection) displays „Darmowa dostawa — Twoje zamówienie kwalifikuje się do darmowej wysyłki tą metodą". Nonsense for a method with no shipping. Verified live. `CheckoutForm.tsx` + `evaluateDeliveryMethod`'s threshold branch.
-- **BUG-26** — `ProductCard` images declare `sizes="(max-width: 768px) 50vw, 300px"` but render at ~87vw on a 375px viewport (measured 327px). Under-requests at DPR ≥ 2. (Image sizing is otherwise correct — verified that a 327px slot fetches `w=384`.)
-- **BUG-27** — Cart badge count is `aria-hidden="true"` with no alternative, so screen readers hear the total but not the item count. `SiteHeader.tsx`.
-- **BUG-28** — No skip link. The only in-page anchor is the hero CTA. With a 3-row mobile nav this is a real WCAG 2.4.1 gap.
-- **BUG-29** — `<nav>` has no `aria-label`; the footer's link groups are not a labelled landmark.
-- **BUG-30** — Removing a cart item has no confirmation and no undo; a mis-tap discards a fully configured, priced item.
-- **BUG-31** — Only one `Font` row is seeded, and it is `Inter`, the site's own UI face. The whole cmap-coverage apparatus (§17.2) currently guards a single sans-serif, and `Font` has no admin screen (`OPEN_ITEMS.md` §8). Honest limitation; worth stating in customer-facing copy.
-- **BUG-32** — All 13 `Design.sortOrder` values are `0`; `Material`/`Finish` ordering is similarly unset in the configurator queries. See BUG-03.
-- **BUG-33** — `ARCHITECTURE.md` §6.7 still says "Duplicate configuration deep-copies the `Configuration` row rather than incrementing quantity." Reversed on 2026-08-30; the schema comment and the operation comment were updated, this one was missed.
-- **BUG-34** — The pricing simulator's "cannot publish without viewing it" rule (§16A.1 module 7) is enforced only in `PricingSimulator.tsx` (`disabled={result === null}`). `publishPricingVersion` accepts a direct call. `ADMIN`-only, so low risk — but the invariant is UI-deep, not enforced.
+- **BUG-24** - JSON-LD `availability: 'https://schema.org/InStock'` is hardcoded for made-to-order goods; `MadeToOrder`/`PreOrder` is accurate. `src/app/(shop)/produkt/[slug]/page.tsx`.
+- **BUG-25** - "Odbiór osobisty" (personal collection) displays „Darmowa dostawa - Twoje zamówienie kwalifikuje się do darmowej wysyłki tą metodą". Nonsense for a method with no shipping. Verified live. `CheckoutForm.tsx` + `evaluateDeliveryMethod`'s threshold branch.
+- **BUG-26** - `ProductCard` images declare `sizes="(max-width: 768px) 50vw, 300px"` but render at ~87vw on a 375px viewport (measured 327px). Under-requests at DPR ≥ 2. (Image sizing is otherwise correct - verified that a 327px slot fetches `w=384`.)
+- **BUG-27** - Cart badge count is `aria-hidden="true"` with no alternative, so screen readers hear the total but not the item count. `SiteHeader.tsx`.
+- **BUG-28** - No skip link. The only in-page anchor is the hero CTA. With a 3-row mobile nav this is a real WCAG 2.4.1 gap.
+- **BUG-29** - `<nav>` has no `aria-label`; the footer's link groups are not a labelled landmark.
+- **BUG-30** - Removing a cart item has no confirmation and no undo; a mis-tap discards a fully configured, priced item.
+- **BUG-31** - Only one `Font` row is seeded, and it is `Inter`, the site's own UI face. The whole cmap-coverage apparatus (§17.2) currently guards a single sans-serif, and `Font` has no admin screen (`OPEN_ITEMS.md` §8). Honest limitation; worth stating in customer-facing copy.
+- **BUG-32** - All 13 `Design.sortOrder` values are `0`; `Material`/`Finish` ordering is similarly unset in the configurator queries. See BUG-03.
+- **BUG-33** - `ARCHITECTURE.md` §6.7 still says "Duplicate configuration deep-copies the `Configuration` row rather than incrementing quantity." Reversed on 2026-08-30; the schema comment and the operation comment were updated, this one was missed.
+- **BUG-34** - The pricing simulator's "cannot publish without viewing it" rule (§16A.1 module 7) is enforced only in `PricingSimulator.tsx` (`disabled={result === null}`). `publishPricingVersion` accepts a direct call. `ADMIN`-only, so low risk - but the invariant is UI-deep, not enforced.
 
 ---
 
@@ -1862,19 +1862,19 @@ changes.
 
 | Document says | Code does | Issue |
 |---|---|---|
-| §7.2 / §6.4 — availability & rights "enforced by a query filter, not by discipline" | not filtered on the write path | SEC-03 |
-| §16.1 — "Security headers + strict CSP" | none exist | SEC-05 |
-| §16.1 — rate limits on "auth attempts" | none | SEC-01 |
-| §16.1 — "No PII in logs beyond user id" | OTP + recipient logged | SEC-02 |
-| §16.1 — `/api/plik` "streams via the storage adapter" | buffers fully | SEC-09 |
-| §16.3 — `STAFF`: customers **read**; settings **ADMIN** | STAFF can anonymize + change bank details | SEC-04 |
-| §18 — "Catalogue pages are RSC + ISR" | 91/93 routes dynamic, no caching primitives at all | PERF-01 |
-| §2 — Zod "reused for client hints and server enforcement" | imported nowhere | BUG-07 |
-| §6.8 — snapshot includes slug, family, production days | absent | BUG-19 |
-| §6.5 — variant "Co otrzymujesz" goes into the snapshot | only the enum code | BUG-19 |
-| §12 — `materialNotesPl` shown in the order confirmation | not in the snapshot or the view | BUG-19 |
-| §13.1.6-7 — DPI and aspect warnings | never run (`target: null`) | BUG-11 |
-| §6.7 — "Duplicate deep-copies the Configuration" | now increments quantity (deliberate reversal) | BUG-33 |
-| `CHECKLIST.md:81` — step guards "reject a THICKNESS selection on WALL_ART" | never called | BUG-06 |
-| `DeliveryMethod.freeShippingThresholdGrosze` — "(net)" | compared against gross | BUG-08 |
-| `public-images.ts` — "deployment target is a long-running Node server" | §3 names Vercel | SEC-06 |
+| §7.2 / §6.4 - availability & rights "enforced by a query filter, not by discipline" | not filtered on the write path | SEC-03 |
+| §16.1 - "Security headers + strict CSP" | none exist | SEC-05 |
+| §16.1 - rate limits on "auth attempts" | none | SEC-01 |
+| §16.1 - "No PII in logs beyond user id" | OTP + recipient logged | SEC-02 |
+| §16.1 - `/api/plik` "streams via the storage adapter" | buffers fully | SEC-09 |
+| §16.3 - `STAFF`: customers **read**; settings **ADMIN** | STAFF can anonymize + change bank details | SEC-04 |
+| §18 - "Catalogue pages are RSC + ISR" | 91/93 routes dynamic, no caching primitives at all | PERF-01 |
+| §2 - Zod "reused for client hints and server enforcement" | imported nowhere | BUG-07 |
+| §6.8 - snapshot includes slug, family, production days | absent | BUG-19 |
+| §6.5 - variant "Co otrzymujesz" goes into the snapshot | only the enum code | BUG-19 |
+| §12 - `materialNotesPl` shown in the order confirmation | not in the snapshot or the view | BUG-19 |
+| §13.1.6-7 - DPI and aspect warnings | never run (`target: null`) | BUG-11 |
+| §6.7 - "Duplicate deep-copies the Configuration" | now increments quantity (deliberate reversal) | BUG-33 |
+| `CHECKLIST.md:81` - step guards "reject a THICKNESS selection on WALL_ART" | never called | BUG-06 |
+| `DeliveryMethod.freeShippingThresholdGrosze` - "(net)" | compared against gross | BUG-08 |
+| `public-images.ts` - "deployment target is a long-running Node server" | §3 names Vercel | SEC-06 |

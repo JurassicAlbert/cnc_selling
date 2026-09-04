@@ -14,7 +14,7 @@ type CategoryFilterFormProps = {
 
 /**
  * A real filter/sort sidebar with zero client JavaScript. A native `<form
- * method="get">` re-navigates the browser with new query params on submit —
+ * method="get">` re-navigates the browser with new query params on submit -
  * the server re-renders the category page against them (see
  * `src/app/(shop)/[category]/page.tsx`). No client island needed for
  * something this simple, which keeps a static category page static: no MUI,
@@ -22,8 +22,8 @@ type CategoryFilterFormProps = {
  * reason to ship any client JS at all.
  *
  * Honestly scoped: with 0-1 products per category today there is very
- * little to actually filter down from. It's real and correctly wired —
- * ready to matter once the catalogue grows — not decoration.
+ * little to actually filter down from. It's real and correctly wired -
+ * ready to matter once the catalogue grows - not decoration.
  */
 export function CategoryFilterForm({
   actionPath,

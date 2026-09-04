@@ -1,5 +1,5 @@
 /**
- * Shape validation for the untrusted arguments a Server Action receives —
+ * Shape validation for the untrusted arguments a Server Action receives -
  * `docs/REVIEW-DETAILED.md` BUG-07.
  *
  * `zod` was a declared dependency that **nothing imported** (`grep -rn
@@ -17,7 +17,7 @@
  * as untrusted." Before this, `addToCart(productSlug, selections,
  * acknowledgedWarnings, quantity)` destructured `selections` straight into a
  * Prisma `create` and spread `acknowledgedWarnings` into a `String[]` column
- * with no element count, no length cap and no allow-list — a direct POST
+ * with no element count, no length cap and no allow-list - a direct POST
  * could write arbitrary strings of arbitrary size.
  *
  * **This is a shape check, not a business check.** Whether a `designId`
@@ -35,7 +35,7 @@ import { FEASIBILITY_CODES } from '@/domain/feasibility/rules';
 /**
  * A hard ceiling on engraved text, independent of any
  * `PersonalizationSpec`. The spec's own `maxCharacters` is the real limit
- * and is much smaller — but `evaluatePersonalization` returns no issues at
+ * and is much smaller - but `evaluatePersonalization` returns no issues at
  * all when a product has no spec row, which is how unbounded text reached
  * the database and the order snapshot (BUG-06). This is the floor under
  * that hole: generous enough never to argue with a real limit, small enough
@@ -51,7 +51,7 @@ export const MAX_PERSONALIZATION_TEXT_LENGTH = 1_000;
 export const MAX_ACKNOWLEDGED_WARNINGS = 16;
 
 /**
- * Every id in this application is a `cuid()` — 25 characters. The bound is
+ * Every id in this application is a `cuid()` - 25 characters. The bound is
  * deliberately loose rather than exact: a stricter pattern would couple this
  * module to Prisma's id strategy, and the value is looked up against the
  * database immediately afterwards anyway. The point is to reject a megabyte,

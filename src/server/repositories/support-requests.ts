@@ -1,11 +1,11 @@
 /**
- * P9 continuation, 2026-08-28 — the customer-facing half of support
+ * P9 continuation, 2026-08-28 - the customer-facing half of support
  * requests. `SubmitSupportRequestResult`/`applySubmitSupportRequest`
  * (`server/actions/support-requests.ts`) already let a logged-in customer
- * *file* a request; there was no way for them to see it again afterward —
+ * *file* a request; there was no way for them to see it again afterward -
  * only the admin side (`admin-support-requests.ts`) could list them.
- * `adminNotesPl` is deliberately never selected here — the schema's own
- * comment says it's "Staff-only — never shown to the customer".
+ * `adminNotesPl` is deliberately never selected here - the schema's own
+ * comment says it's "Staff-only - never shown to the customer".
  */
 
 import { prisma } from '@/server/db/client';

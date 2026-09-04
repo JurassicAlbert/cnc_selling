@@ -15,7 +15,7 @@ type IconComponent = ComponentType<{ readonly size?: number }>;
  * Category slug -> a real, already-built icon (`src/ui/icons/index.tsx`).
  * `ChairIcon`/`DiamondIcon`/`GridViewIcon`/`ViewColumnIcon`/
  * `ImagePlaceholderIcon` were added during the P2 redesign but never wired
- * to anything — this is that wiring, added 2026-08-25 for the category-tile
+ * to anything - this is that wiring, added 2026-08-25 for the category-tile
  * and product-card badges. `EngineeringIcon` is the catch-all for `inne`.
  */
 const CATEGORY_ICONS: Record<string, IconComponent> = {

@@ -1,10 +1,10 @@
 /**
- * Session read helpers — mirrors `server/session/guest-session.ts`'s own
+ * Session read helpers - mirrors `server/session/guest-session.ts`'s own
  * split, but for a different underlying reason. `next/headers`'s
  * `headers()`/`cookies()` throw outside a real request scope (P4's
  * `find*`/`require*` lesson, `docs/HANDOVER.md` §9). Better Auth's own
- * `auth.api.getSession` doesn't call `next/headers` internally at all — it
- * takes a plain `Headers` object as an explicit parameter — so the actual
+ * `auth.api.getSession` doesn't call `next/headers` internally at all - it
+ * takes a plain `Headers` object as an explicit parameter - so the actual
  * boundary here is narrower than P4's: `getSessionFromHeaders` below is a
  * genuine pure function, callable from Vitest with a hand-built `Headers`
  * carrying a `Cookie` header, no request-scope trickery needed. Only
@@ -44,16 +44,16 @@ export async function getSessionFromHeaders(headers: Headers): Promise<CurrentSe
 }
 
 /**
- * Request-scoped memoization — `docs/REVIEW-DETAILED.md` PERF-05. A single
+ * Request-scoped memoization - `docs/REVIEW-DETAILED.md` PERF-05. A single
  * storefront render calls this at least twice (`StorefrontChrome` for the
  * account name, the page itself for ownership), and every `require*Session`
  * below delegates to it, so a panel page reached three or four calls. Each
- * one was a real Better Auth session lookup — a database read.
+ * one was a real Better Auth session lookup - a database read.
  *
  * `cache()` is the correct tool rather than a data cache: the value is
  * per-user and must never outlive the request that produced it, which is
  * exactly React's guarantee here. `nextHeaders()` stays *inside* the cached
- * function deliberately — it is itself request-scoped, so there is nothing to
+ * function deliberately - it is itself request-scoped, so there is nothing to
  * pass in, and keeping the signature argument-free means the memo key is the
  * request itself.
  */
@@ -64,7 +64,7 @@ export const getSession = cache(async (): Promise<CurrentSession | null> => {
 export async function requireSession(): Promise<CurrentSession> {
   const session = await getSession();
   if (session === null) {
-    throw new Error('No active session — this action requires being logged in');
+    throw new Error('No active session - this action requires being logged in');
   }
   return session;
 }
@@ -72,11 +72,11 @@ export async function requireSession(): Promise<CurrentSession> {
 /**
  * Gate for `/panel/*` pages and their Server Actions. `redirect()`/
  * `notFound()` both work from a Server Action, not just a Server Component
- * — Next.js recognizes the control-flow error they throw either way — so
+ * - Next.js recognizes the control-flow error they throw either way - so
  * this is safe to call from both the panel layout and `src/server/actions/
  * admin-*.ts`.
  *
- * A `CUSTOMER` gets `notFound()`, never a 403 — the same "don't reveal
+ * A `CUSTOMER` gets `notFound()`, never a 403 - the same "don't reveal
  * existence" rule already applied to `/api/plik/[fileId]` and the owned-
  * resource lookups in `design-review.ts` (`docs/ARCHITECTURE.md` §16.2).
  */
@@ -93,7 +93,7 @@ export async function requireStaffSession(): Promise<CurrentSession> {
 
 /**
  * Gate for the panel's highest-privilege screens (staff-user management,
- * `/panel/ustawienia/personel`) — everything `requireStaffSession()` does,
+ * `/panel/ustawienia/personel`) - everything `requireStaffSession()` does,
  * plus `notFound()` for `STAFF` too. Same "don't reveal existence" reasoning
  * for a `STAFF` here as for a `CUSTOMER` on `requireStaffSession()`.
  */

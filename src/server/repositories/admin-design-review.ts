@@ -1,5 +1,5 @@
 /**
- * Admin design-review queue — unscoped by owner, unlike
+ * Admin design-review queue - unscoped by owner, unlike
  * `repositories/design-review.ts`'s `Owned*` functions. Every caller here
  * MUST go through `requireStaffSession()` first.
  */

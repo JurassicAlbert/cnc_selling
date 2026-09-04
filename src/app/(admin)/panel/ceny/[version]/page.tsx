@@ -29,7 +29,7 @@ export default async function AdminPricingVersionPage({ params }: PricingVersion
   return (
     <>
       <Typography variant="h5" sx={{ mb: 1 }}>
-        {ADMIN.pricingHeadingPl} — #{row.version}
+        {ADMIN.pricingHeadingPl} - #{row.version}
       </Typography>
       <Link href="/panel/ceny">{ADMIN.pricingBackToListPl}</Link>
 
@@ -85,7 +85,7 @@ function PackagingTiersReadout({ tiers }: { readonly tiers: unknown }) {
   return (
     <Stack spacing={0.5} sx={{ mb: 2 }}>
       {tiers.map((tier: { readonly maxAreaM2: number | null; readonly maxModules: number | null; readonly priceGrosze: number }, i: number) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: this list is a fixed, ordered, immutable snapshot of one pricing version's JSON — it never reorders or changes after being read
+        // biome-ignore lint/suspicious/noArrayIndexKey: this list is a fixed, ordered, immutable snapshot of one pricing version's JSON - it never reorders or changes after being read
         <Typography key={i} variant="body2" color="text.secondary">
           {tier.maxAreaM2 ?? ADMIN.pricingTierNoLimitPl} m² / {tier.maxModules ?? ADMIN.pricingTierNoLimitPl} mod. → {formatPln(tier.priceGrosze)}
         </Typography>

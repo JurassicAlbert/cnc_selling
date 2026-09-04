@@ -8,7 +8,7 @@ import { pruneAnalyticsEvents } from '@/server/actions/admin-analytics';
 import { ConfirmSubmitButton } from '@/ui/primitives/ConfirmSubmitButton';
 
 /**
- * `docs/CHECKLIST.md`'s "12-month pruning of analytics rows" — real,
+ * `docs/CHECKLIST.md`'s "12-month pruning of analytics rows" - real,
  * staff-triggered (no scheduler exists anywhere in this project). Uses
  * `ConfirmSubmitButton`'s `onConfirm`/`pending` mode rather than its
  * `formId` mode: this isn't a plain form submission, it calls the Server

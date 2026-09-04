@@ -18,9 +18,9 @@ export const metadata: Metadata = {
 };
 
 /**
- * Real public pattern-browsing page — P9 phase 3, redesigned 2026-08-28
+ * Real public pattern-browsing page - P9 phase 3, redesigned 2026-08-28
  * (owner feedback, twice: this was a dead-end gallery, then a visually
- * thin one). Now a real MUI island (`PatternsGallery`) — a browse-and-
+ * thin one). Now a real MUI island (`PatternsGallery`) - a browse-and-
  * select experience gets the same "interactive island, use MUI fully"
  * treatment as checkout/the configurator, not the marketing-page RSC
  * register (ARCHITECTURE.md §2.1). This page itself stays a Server
@@ -33,7 +33,7 @@ export default async function PatternsPage() {
   // ukryj na razie podstronę dla wzorów" (the patterns section isn't
   // working out, hide the page for now). The route, the repository layer,
   // the admin CRUD, and every underlying `Design`/`DesignCollection` row
-  // are all untouched — only public access to this one page is gated, the
+  // are all untouched - only public access to this one page is gated, the
   // same "hidden, not deleted" precedent every other `isActive`-style
   // toggle in this project already uses. Removing this one line is the
   // entire re-enable path.

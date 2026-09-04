@@ -1,4 +1,4 @@
-# Performance review — 2026-08-30
+# Performance review - 2026-08-30
 
 Commit `e774e40`.
 
@@ -12,8 +12,8 @@ honesty about its absence.
 | Rendering mode per route | `npm run build` | **91 dynamic, 2 static** |
 | Build success + warnings | `npm run build` | succeeds; **3 Turbopack over-bundling warnings** |
 | Mobile header height | live DOM, 375×812 | **149.56 px** |
-| Horizontal overflow (mobile) | live DOM | none — `scrollWidth === clientWidth === 375` |
-| Responsive image serving | live DOM + Resource Timing | **correct** — a 327 px slot fetches `w=384`, `srcset` has 9 entries |
+| Horizontal overflow (mobile) | live DOM | none - `scrollWidth === clientWidth === 375` |
+| Responsive image serving | live DOM + Resource Timing | **correct** - a 327 px slot fetches `w=384`, `srcset` has 9 entries |
 | Focus ring | computed style | 3 px, present |
 | Queries per page render | counted from the call graph | product page ≈ **13**, incl. 2 session lookups and a duplicated product query |
 | Test suite duration | `npm test` | 52.25 s for 831 tests |
@@ -33,7 +33,7 @@ honesty about its absence.
 
 ---
 
-## Finding 1 (PERF-01) — Not one page is prerendered
+## Finding 1 (PERF-01) - Not one page is prerendered
 
 **Measured**, from the production build at this commit:
 
@@ -47,8 +47,8 @@ Not the homepage. Not `/[category]`. Not `/produkt/[slug]`. Not `/o-nas`,
 
 ### Cause
 
-`StorefrontChrome` — rendered by both `(shop)/layout.tsx` and
-`(marketing)/layout.tsx` — calls, on every request:
+`StorefrontChrome` - rendered by both `(shop)/layout.tsx` and
+`(marketing)/layout.tsx` - calls, on every request:
 
 ```ts
 const [categories, collections, session, consentChoice, sessionToken] = await Promise.all([
@@ -74,19 +74,19 @@ runtime benefit.
 ### Why this is the most important item in this document
 
 `ARCHITECTURE.md` §18: "Catalogue pages are RSC + ISR so they are fully
-server-rendered — the reason MUI is confined to islands (§2.1)." The
-project pays a permanent, enforced cost for that reasoning — MUI is
+server-rendered - the reason MUI is confined to islands (§2.1)." The
+project pays a permanent, enforced cost for that reasoning - MUI is
 lint-banned from storefront Server Components, and the storefront is
-hand-written primitives reading CSS variables as a result — while the
+hand-written primitives reading CSS variables as a result - while the
 larger half of the same argument is switched off. Every catalogue page view
 is an uncached round trip to Postgres.
 
 ### Recommended fix, in order of payoff
 
-> ### Step 1 attempted and backed out — 2026-09-04
+> ### Step 1 attempted and backed out - 2026-09-04
 >
 > `unstable_cache` with a `cacheTag`, invalidated by `revalidateTag` from the
-> four category and three collection writers, was built in full — including
+> four category and three collection writers, was built in full - including
 > the shared tag module, a mechanical guard that every writer sets its tag,
 > and an end-to-end test that created a category in the panel and looked for
 > it in the storefront nav.
@@ -103,17 +103,17 @@ is an uncached round trip to Postgres.
 >
 > A cross-request cache whose invalidation is unproven means an admin edit
 > that silently takes minutes to reach the shop. That is not a thing to guess
-> about, so step 1 waits for the same `cacheComponents` decision below — which
+> about, so step 1 waits for the same `cacheComponents` decision below - which
 > also replaces `unstable_cache` with the supported `use cache` and makes the
 > whole question moot. **What did ship is the request-scoped half** (PERF-02 /
 > PERF-05), measured at 36 → 26 queries on a product page.
 >
-> Anyone picking this up: `revalidateTag` also changed signature in Next 16 —
+> Anyone picking this up: `revalidateTag` also changed signature in Next 16 -
 > it now takes a second `profile` argument, and the one-argument form is
 > deprecated but still type-checks.
 
 **1. Cache the chrome's static halves.** `listActiveCategories()` and
-`listActiveCollections()` change when an admin edits a category — which is
+`listActiveCollections()` change when an admin edits a category - which is
 rare, and already goes through an `operations/admin-*` function that calls
 `revalidatePath`. Wrap them with `'use cache'` + `cacheTag`, or
 `unstable_cache` with a tag, and revalidate the tag from those operations.
@@ -122,7 +122,7 @@ change.
 
 **2. Isolate the request-scoped fragment.** Move the cart badge, the
 account name and the consent banner into their own components inside
-`<Suspense>`. Then enable `cacheComponents: true` in `next.config.ts` —
+`<Suspense>`. Then enable `cacheComponents: true` in `next.config.ts` -
 per `node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/cacheComponents.md`,
 this makes Next "prerender a static HTML shell that is served immediately
 while dynamic content streams in", and it implements Partial Prerendering
@@ -134,10 +134,10 @@ as the App Router default (the old `experimental.ppr` flag is gone in 16).
 **Migration note:** `cacheComponents` is a behavioural change, not a flag
 flip. Read `node_modules/next/dist/docs/01-app/02-guides/migrating-to-cache-components.md`
 first. It also enables React `<Activity>`-based state preservation across
-client navigations, which affects the configurator's mount behaviour — the
+client navigations, which affects the configurator's mount behaviour - the
 one place in this app where that could surprise.
 
-> ### Blocker added 2026-08-31 by SEC-05 — resolve before writing any code
+> ### Blocker added 2026-08-31 by SEC-05 - resolve before writing any code
 >
 > SEC-05 shipped a **nonce-based Content-Security-Policy** issued per
 > request from `src/proxy.ts`. Next stamps that nonce onto its own script
@@ -147,7 +147,7 @@ one place in this app where that could surprise.
 > the document would disagree and the page would load zero JavaScript.
 >
 > **Steps 2 and 3 above are therefore incompatible with the CSP as it
-> stands** — Next's own CSP guide states this directly, including that
+> stands** - Next's own CSP guide states this directly, including that
 > "Partial Prerendering (PPR) is incompatible with nonce-based CSP".
 >
 > **Step 1 is not affected** and is still worth doing on its own: caching
@@ -161,7 +161,7 @@ one place in this app where that could surprise.
 > | Keep the nonce | A strict `script-src` with no `'unsafe-inline'` | Catalogue pages stay dynamic; PPR unavailable |
 > | Move to `experimental.sri` | Static/ISR/PPR **and** a strict `script-src` | An experimental, App-Router-only Next feature |
 >
-> The third option — weakening `script-src` to `'unsafe-inline'` — trades
+> The third option - weakening `script-src` to `'unsafe-inline'` - trades
 > away the whole of SEC-05 for a caching win and **must not be done as an
 > implementation detail** of this item.
 
@@ -170,9 +170,9 @@ worth as much.
 
 ---
 
-## Finding 2 (PERF-02) — Duplicate query on every `generateMetadata` route
+## Finding 2 (PERF-02) - Duplicate query on every `generateMetadata` route
 
-Five pages call the same repository function twice per request — once in
+Five pages call the same repository function twice per request - once in
 `generateMetadata`, once in the page body:
 
 | Route | Function called twice |
@@ -195,7 +195,7 @@ export const getActiveProductBySlug = cache(async (slug: string) => { … });
 
 ---
 
-## Finding 3 (PERF-05) — ~13 queries to render one product page
+## Finding 3 (PERF-05) - ~13 queries to render one product page
 
 Counted from the call graph (not profiled):
 
@@ -213,26 +213,26 @@ Counted from the call graph (not profiled):
 
 Two of those stand out beyond PERF-01/02:
 
-- **`getSession()` is called twice per render** — once by the layout's
+- **`getSession()` is called twice per render** - once by the layout's
   `StorefrontChrome`, once by the page. Better Auth performs a real
   database lookup each time. Wrapping `getSession` in `React.cache()` makes
   the second call free and is a two-line change with no behavioural risk.
 - **`listOwnedCustomerDesigns` runs on every product page** and is used
   only by the `CUSTOM` product type's upload step. The code documents this
   as deliberate ("cheap, and now costs no wall time because of
-  `Promise.all`") — which is true for latency and false for connection
+  `Promise.all`") - which is true for latency and false for connection
   pressure. Once the product type is known, skip it.
 
 The internal `Promise.all` usage across the codebase is good and was
 verified: `create-order.ts` re-prices items in parallel, `ProductPage`
 parallelises its three reads, `StorefrontChrome` parallelises five, and
 `configurator.ts` parallelises product/machine/pricing. The
-`recordAnalyticsEvent`/mailer calls are deliberately not awaited — correct
+`recordAnalyticsEvent`/mailer calls are deliberately not awaited - correct
 for latency, and a real risk on serverless (BUG-12).
 
 ---
 
-## Finding 4 (PERF-04) — Three Turbopack over-bundling warnings
+## Finding 4 (PERF-04) - Three Turbopack over-bundling warnings
 
 `npm run build` emits, from `src/server/storage/public-images.ts`:
 
@@ -243,7 +243,7 @@ for latency, and a real risk on serverless (BUG-12).
 | 66 (`rm(path.join(PUBLIC_IMAGES_ROOT, relative))`) | **16 924 files** |
 
 Turbopack: "Overly broad patterns can lead to build performance issues and
-over bundling." The build succeeds, so this is hygiene — but a clean build
+over bundling." The build succeeds, so this is hygiene - but a clean build
 is worth keeping clean, and these are the only three warnings.
 
 **Fix:** build the directory from a literal map keyed by the five
@@ -252,7 +252,7 @@ finite paths.
 
 ---
 
-## Finding 5 (PERF-03) — Admin lists have no server-side pagination
+## Finding 5 (PERF-03) - Admin lists have no server-side pagination
 
 22 of 25 `admin-*` repositories issue unbounded `findMany` and serialize the
 whole table into the RSC payload for a client `DataGrid`. The three that do
@@ -281,8 +281,8 @@ Reviewed structurally. `EXPLAIN ANALYZE` was **not** run.
 
 **No N+1 patterns found.** Cart, order, product and configurator reads all
 use nested `select`, which Prisma resolves in a bounded number of queries.
-The one genuine second round trip — the fonts query in
-`getConfiguratorProductData` — is explained in a comment and is correct
+The one genuine second round trip - the fonts query in
+`getConfiguratorProductData` - is explained in a comment and is correct
 (`allowedFontIds` is a scalar array, so it cannot be joined in the first
 query).
 
@@ -319,11 +319,11 @@ Two observations:
   measured 3.8 s LCP. That is evidence, not a preference. Nothing in this
   review recommends mounting MUI sitewide.
 - **`Configurator.tsx` is 1 525 lines** and ships as a single client
-  component on the product page — the most-visited page in the shop. It
+  component on the product page - the most-visited page in the shop. It
   pulls in `@mui/material` Menu, Popover, TextField and the icon set. It is
   the largest single client payload on the storefront. Splitting it
   (ARCH-02) would allow the size/personalization steps to load lazily.
-  Worth doing after PERF-01, and worth measuring before and after — this is
+  Worth doing after PERF-01, and worth measuring before and after - this is
   exactly the kind of change that should not be made on intuition.
 - **P2-11 from the previous audit still stands:** `CheckoutForm.tsx`
   imports `searchPickupPoints`/`findPickupPointById` as runtime values, so
@@ -333,12 +333,12 @@ Two observations:
 
 ## Images and fonts
 
-Both verified, both **correct** — recorded so they are not re-audited:
+Both verified, both **correct** - recorded so they are not re-audited:
 
 - Every `next/image` sets `sizes`; `srcset` has 9 entries; a 327 px slot
   actually downloads `w=384`. The hero image sets `priority`. The one nit
   is `ProductCard`'s `sizes="(max-width: 768px) 50vw, 300px"` where the real
-  mobile width is ~87vw — under-serves at DPR ≥ 2 (BUG-26).
+  mobile width is ~87vw - under-serves at DPR ≥ 2 (BUG-26).
 - Fonts are self-hosted through `next/font` with the `latin-ext` subset
   (the §17.1 trap), so there is no third-party request and no layout shift
   from font loading.
@@ -364,11 +364,11 @@ reads, `StorefrontChrome`'s five, `configurator.ts`'s product/machine/pricing,
 - `zamowienie/[orderNumber]/page.tsx` deliberately does **not** start
   `getStoreSettings()` before the order lookup, because `notFound()` throws
   and an unawaited promise would become an unhandled rejection. The
-  reasoning is written into the file. **Correct — do not "optimise" this.**
+  reasoning is written into the file. **Correct - do not "optimise" this.**
 
 **Remaining opportunities, all small:**
 
-- `getSession()` twice per render (PERF-05) — fix with `React.cache`, not
+- `getSession()` twice per render (PERF-05) - fix with `React.cache`, not
   with parallelism.
 - `listOwnedCustomerDesigns` on every product page regardless of type.
 - The fonts query in `getConfiguratorProductData` is inherently a second
@@ -376,16 +376,16 @@ reads, `StorefrontChrome`'s five, `configurator.ts`'s product/machine/pricing,
   relation, which is a schema change not worth making for this alone.
 
 **Deferrable work that currently runs inline:** none. Analytics and email
-are already deferred — the problem is that they are deferred *wrongly*
+are already deferred - the problem is that they are deferred *wrongly*
 (`void` instead of `after()`, BUG-12), not that they block.
 
 ---
 
 ## Recommended order of work
 
-1. **PERF-01 step 1** — cache categories/collections. Small, safe, immediate.
-2. **PERF-02 + the `getSession` cache** — six `React.cache()` wrappers.
-3. **PERF-01 step 2** — `<Suspense>` the personalised chrome, enable `cacheComponents`. Re-run the build and confirm `/`, `/[category]`, `/produkt/[slug]` are no longer plain `ƒ`. **Blocked since 2026-08-31 on the nonce-vs-static decision under Finding 1 — take that to the owner before starting, and do not resolve it by weakening `script-src`.**
+1. **PERF-01 step 1** - cache categories/collections. Small, safe, immediate.
+2. **PERF-02 + the `getSession` cache** - six `React.cache()` wrappers.
+3. **PERF-01 step 2** - `<Suspense>` the personalised chrome, enable `cacheComponents`. Re-run the build and confirm `/`, `/[category]`, `/produkt/[slug]` are no longer plain `ƒ`. **Blocked since 2026-08-31 on the nonce-vs-static decision under Finding 1 - take that to the owner before starting, and do not resolve it by weakening `script-src`.**
 4. **Run Lighthouse mobile on a product page before and after 1-3**, and record the real numbers in this file. Nothing after this point should be attempted without those numbers.
-5. **PERF-04** — clear the three build warnings.
-6. **ARCH-02 / PERF-03** — split `Configurator.tsx` and add admin pagination, both measured.
+5. **PERF-04** - clear the three build warnings.
+6. **ARCH-02 / PERF-03** - split `Configurator.tsx` and add admin pagination, both measured.

@@ -1,18 +1,18 @@
 /**
- * P9 continuation, 2026-08-28 — the real account dashboard body, redesigned
+ * P9 continuation, 2026-08-28 - the real account dashboard body, redesigned
  * again the same day after direct owner feedback that the first pass still
  * "looked vanilla html/css". Real icon badges (reusing the exact icons
- * `AccountNav`'s tabs already use — icon↔section association reinforced,
+ * `AccountNav`'s tabs already use - icon↔section association reinforced,
  * not four new arbitrary icons), an initials `Avatar` in the greeting, a
  * responsive 2-column card grid instead of one long vertical stack, and a
  * real hover lift on each card. No `'use client'`: nothing here is
- * interactive (every action lives on its own sub-page) — lives under
+ * interactive (every action lives on its own sub-page) - lives under
  * `src/ui/islands` only because it needs `@mui/material`, which
  * `src/app/(shop)` server components cannot import directly
  * (ARCHITECTURE.md §2.1 / biome's `noRestrictedImports`).
  *
  * `justifyContent`/`alignItems`/`flexWrap`/`gap` all go through `sx`, not
- * as direct `Stack` props — this MUI version's `Stack` type overload
+ * as direct `Stack` props - this MUI version's `Stack` type overload
  * doesn't accept those as top-level props (see `DashboardCharts.tsx`).
  */
 

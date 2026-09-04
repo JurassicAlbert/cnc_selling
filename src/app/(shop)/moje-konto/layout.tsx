@@ -6,7 +6,7 @@ import { Container } from '@/ui/primitives/Container';
 import { Section } from '@/ui/primitives/Section';
 import { AccountNav } from '@/ui/islands/AccountNav';
 
-/** Session gate for every `/moje-konto/*` route — redirects to `/logowanie` once, here, rather than in each page. */
+/** Session gate for every `/moje-konto/*` route - redirects to `/logowanie` once, here, rather than in each page. */
 export default async function AccountLayout({ children }: { readonly children: ReactNode }) {
   const session = await getSession();
   if (session === null) {

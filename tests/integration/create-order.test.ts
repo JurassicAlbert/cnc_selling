@@ -9,16 +9,16 @@ import { prisma } from '@/server/db/client';
 /**
  * P9 phases 5 & 6: `createOrder` re-checks both the chosen `DeliveryMethod`
  * and the chosen `PaymentMethodConfig` itself, never trusting whatever the
- * checkout form last rendered — the same "never trust client-side prices"
+ * checkout form last rendered - the same "never trust client-side prices"
  * discipline as its own per-item re-pricing loop. Both checks run BEFORE
  * that pricing loop (right after the cart-emptiness check, in that order:
  * cart → delivery → payment), so they're reachable with a minimal, real
- * but not-necessarily-priceable cart item — same bare-bones
+ * but not-necessarily-priceable cart item - same bare-bones
  * `Configuration`/`CartItem` shape `auth.test.ts`'s cart-merge tests
  * already use. The "creates a real order with correctly computed
  * shipping/payment" success path needs a genuinely priceable
  * product/config (materials, thicknesses, dimension envelope, pricing
- * version) — that's exercised end-to-end instead by the existing real e2e
+ * version) - that's exercised end-to-end instead by the existing real e2e
  * checkout spec (`tests/e2e/checkout.spec.ts`) plus this session's own
  * live browser/DB verification, not duplicated here.
  */
@@ -94,7 +94,7 @@ async function seedPaymentMethodConfig(overrides: { readonly isActive?: boolean;
 }
 
 /**
- * The bare product above is deliberately unpriceable — enough to reach the
+ * The bare product above is deliberately unpriceable - enough to reach the
  * delivery/payment/pickup checks, never enough to actually create an order.
  * The idempotency and concurrency tests below need a real order to actually
  * come out the other end, so they use the real seeded catalogue instead:
@@ -104,8 +104,8 @@ async function seedPaymentMethodConfig(overrides: { readonly isActive?: boolean;
  * matches what checkout will recompute (a mismatch is `PRICE_CHANGED`,
  * which would make these tests pass for the wrong reason).
  *
- * Rather than hardcode ids or a size known to be feasible — both of which
- * silently rot when the seed changes — this walks the product's own real
+ * Rather than hardcode ids or a size known to be feasible - both of which
+ * silently rot when the seed changes - this walks the product's own real
  * option combinations and takes the first that genuinely prices.
  */
 const PRICEABLE_PRODUCT_SLUG = 'obraz-drewniany-z-grawerem';
@@ -113,14 +113,14 @@ const PRICEABLE_PRODUCT_SLUG = 'obraz-drewniany-z-grawerem';
 async function firstPriceableSelections(): Promise<{ readonly selections: Selections; readonly productId: string }> {
   const data = await getConfiguratorProductData(PRICEABLE_PRODUCT_SLUG);
   if (data === null) {
-    throw new Error(`No "${PRICEABLE_PRODUCT_SLUG}" in this database — seed it first (npm run db:seed against TEST_DATABASE_URL)`);
+    throw new Error(`No "${PRICEABLE_PRODUCT_SLUG}" in this database - seed it first (npm run db:seed against TEST_DATABASE_URL)`);
   }
   const presetSizes = await prisma.productPresetSize.findMany({
     where: { productId: data.productId },
     orderBy: { sortOrder: 'asc' },
     select: { widthMm: true, heightMm: true },
   });
-  // A product's smallest allowed size is NOT reliably priceable — a design
+  // A product's smallest allowed size is NOT reliably priceable - a design
   // has its own real minimum recommended width, below which feasibility
   // blocks (a genuine catalogue fact this project's e2e spec already
   // documents, not a bug). With no preset sizes to lean on, walk a spread
@@ -157,7 +157,7 @@ async function firstPriceableSelections(): Promise<{ readonly selections: Select
       }
     }
   }
-  throw new Error(`No priceable option combination for "${PRICEABLE_PRODUCT_SLUG}" — the seeded catalogue changed`);
+  throw new Error(`No priceable option combination for "${PRICEABLE_PRODUCT_SLUG}" - the seeded catalogue changed`);
 }
 
 async function seedPriceableGuestCart() {
@@ -165,7 +165,7 @@ async function seedPriceableGuestCart() {
   const { selections, productId } = await firstPriceableSelections();
   const validated = await priceAndValidateSelections(PRICEABLE_PRODUCT_SLUG, selections);
   if (!validated.ok) {
-    throw new Error('unreachable — firstPriceableSelections only returns combinations that price');
+    throw new Error('unreachable - firstPriceableSelections only returns combinations that price');
   }
   const configuration = await prisma.configuration.create({
     data: {
@@ -227,7 +227,7 @@ afterEach(async () => {
   await prisma.paymentMethodConfig.deleteMany({ where: { namePl: { startsWith: PREFIX } } });
 });
 
-describe('createOrder — delivery method validation', () => {
+describe('createOrder - delivery method validation', () => {
   it('rejects a delivery method id that does not exist', async () => {
     const { sessionToken } = await seedGuestCartWithOneItem();
 
@@ -236,7 +236,7 @@ describe('createOrder — delivery method validation', () => {
     expect(result).toEqual({ ok: false, code: 'DELIVERY_METHOD_INVALID' });
   });
 
-  it('rejects a real but deactivated delivery method — never trusts what the form last rendered', async () => {
+  it('rejects a real but deactivated delivery method - never trusts what the form last rendered', async () => {
     const { sessionToken } = await seedGuestCartWithOneItem();
     const method = await seedDeliveryMethod({ isActive: false });
 
@@ -245,7 +245,7 @@ describe('createOrder — delivery method validation', () => {
     expect(result).toEqual({ ok: false, code: 'DELIVERY_METHOD_INVALID' });
   });
 
-  it('still rejects with CART_EMPTY for an empty cart even when the delivery method id is bogus — cart-emptiness is checked first', async () => {
+  it('still rejects with CART_EMPTY for an empty cart even when the delivery method id is bogus - cart-emptiness is checked first', async () => {
     const sessionToken = uid();
     await prisma.cart.create({ data: { sessionToken } });
 
@@ -257,7 +257,7 @@ describe('createOrder — delivery method validation', () => {
   });
 });
 
-describe('createOrder — payment method validation', () => {
+describe('createOrder - payment method validation', () => {
   it('rejects a payment method config id that does not exist', async () => {
     const { sessionToken } = await seedGuestCartWithOneItem();
     const delivery = await seedDeliveryMethod();
@@ -277,7 +277,7 @@ describe('createOrder — payment method validation', () => {
     expect(result).toEqual({ ok: false, code: 'PAYMENT_METHOD_INVALID' });
   });
 
-  it('rejects a real, active, but unconnected payment method — never treated as "disabled but selectable", always fully unreachable', async () => {
+  it('rejects a real, active, but unconnected payment method - never treated as "disabled but selectable", always fully unreachable', async () => {
     const { sessionToken } = await seedGuestCartWithOneItem();
     const delivery = await seedDeliveryMethod();
     const payment = await seedPaymentMethodConfig({ isConnected: false });
@@ -290,12 +290,12 @@ describe('createOrder — payment method validation', () => {
 
 /**
  * 2026-08-29, owner request: real pickup-point ("paczkomat/punkt odbioru")
- * validation for a `DeliveryMethod` with `requiresPickupPoint: true` — the
+ * validation for a `DeliveryMethod` with `requiresPickupPoint: true` - the
  * id is re-checked against `server/delivery/pickup-points.ts`'s own static
  * dataset, never trusted from whatever the checkout form last rendered,
  * same layering as the delivery/payment method checks above.
  */
-describe('createOrder — pickup point validation', () => {
+describe('createOrder - pickup point validation', () => {
   it('rejects a required pickup point that was never chosen', async () => {
     const { sessionToken } = await seedGuestCartWithOneItem();
     const delivery = await seedDeliveryMethod({ requiresPickupPoint: true });
@@ -306,7 +306,7 @@ describe('createOrder — pickup point validation', () => {
     expect(result).toEqual({ ok: false, code: 'PICKUP_POINT_INVALID' });
   });
 
-  it('rejects a pickup point id that does not exist in the dataset — never trusts an id echoed back by the client', async () => {
+  it('rejects a pickup point id that does not exist in the dataset - never trusts an id echoed back by the client', async () => {
     const { sessionToken } = await seedGuestCartWithOneItem();
     const delivery = await seedDeliveryMethod({ requiresPickupPoint: true });
     const payment = await seedPaymentMethodConfig();
@@ -327,23 +327,23 @@ describe('createOrder — pickup point validation', () => {
 
     // Both the delivery and payment checks pass; the next real rejection is
     // the per-item re-pricing loop, since the bare-bones seeded product has
-    // no pricing rules — proof this path is reached at all, not stuck on
+    // no pricing rules - proof this path is reached at all, not stuck on
     // pickup-point validation for a method that never asked for one.
     expect(result).toEqual({ ok: false, code: 'PRICE_CHANGED' });
   });
 });
 
 /**
- * `docs/AUDIT-2026-08-30.md` P0-2 — the worst functional bug the audit
+ * `docs/AUDIT-2026-08-30.md` P0-2 - the worst functional bug the audit
  * found. Before this, `createOrder` had no idempotency mechanism at all:
  * two submissions of one checkout both read a non-empty cart, both priced,
  * and both created a real `Order`. The checkout form's `useFormStatus()`
  * disables its own button while pending, which covers a plain double-click
- * in one tab and nothing else — not two tabs, not a retried request after a
+ * in one tab and nothing else - not two tabs, not a retried request after a
  * dropped connection, not a back-and-resubmit, not a direct POST to the
  * action endpoint. These tests exercise the mechanism itself, below the UI.
  */
-describe('createOrder — idempotency and concurrency', () => {
+describe('createOrder - idempotency and concurrency', () => {
   it('creates a real order from a genuinely priceable cart (the premise the rest of this block depends on)', async () => {
     const { sessionToken } = await seedPriceableGuestCart();
     const delivery = await seedDeliveryMethod();
@@ -365,7 +365,7 @@ describe('createOrder — idempotency and concurrency', () => {
     const second = await createOrder(input);
 
     expect(first.ok).toBe(true);
-    // Not merely "the second one failed" — the customer who hit submit
+    // Not merely "the second one failed" - the customer who hit submit
     // twice must still land on their real order, with the same number and
     // the same access token, not on an error page.
     expect(second).toEqual(first);
@@ -391,7 +391,7 @@ describe('createOrder — idempotency and concurrency', () => {
     const delivery = await seedDeliveryMethod();
     const payment = await seedPaymentMethodConfig();
     // Two tabs: same cart, two separate page loads, so two separate keys.
-    // The idempotency key cannot help here — the cart claim inside the
+    // The idempotency key cannot help here - the cart claim inside the
     // transaction is what stops the second one.
     const results = await Promise.all([
       createOrder(baseInput({ sessionToken, deliveryMethodId: delivery.id, paymentMethodConfigId: payment.id })),

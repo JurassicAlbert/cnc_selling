@@ -3,8 +3,8 @@
 /**
  * `'use client'` is required here, not optional: `<Button component={Link}>`
  * below needs `Link` (`next/link`) in client scope. Passing `Link` as a
- * `component` PROP from a Server Component crashes at runtime — "Functions
- * cannot be passed directly to Client Components" — confirmed live; a
+ * `component` PROP from a Server Component crashes at runtime - "Functions
+ * cannot be passed directly to Client Components" - confirmed live; a
  * Client Component reference used directly as JSX serializes fine across
  * the Server→Client boundary, but forwarded indirectly through another
  * component's prop, it doesn't (same "no function props across the
@@ -12,17 +12,17 @@
  * `Theme` object). Every other `component={Link}` use in this codebase
  * (`PatternsGallery.tsx`, `AccountNav.tsx`, ...) is already inside a
  * `'use client'` file for exactly this reason. No hooks/interactivity are
- * added by this directive — MUI's `Button`/`IconButton`/`Paper` were
+ * added by this directive - MUI's `Button`/`IconButton`/`Paper` were
  * already Client Components being rendered from the server tree either
  * way; this only changes how `CartContents` itself is evaluated.
  *
  * 2026-08-29 visual pass, owner feedback: "Taka zwykła biała karta w
- * koszyku ... za mało polished" — same hover-lift/accent-border language
+ * koszyku ... za mało polished" - same hover-lift/accent-border language
  * `AccountOrdersList.tsx` already established for order cards (this
  * project's own real precedent for "polished," not an arbitrary new
  * style), a real quantity-stepper "pill" instead of three loose icon
  * buttons, and the numeric quantity field promoted from a raw `<input>` to
- * a real MUI `TextField` (safe now — this file is already a client
+ * a real MUI `TextField` (safe now - this file is already a client
  * boundary; no reason left to keep one control less polished than the
  * rest).
  */
@@ -42,14 +42,14 @@ import { AddIcon, CartIcon, ContentCopyIcon, DeleteIcon, RemoveIcon } from '@/ui
 import { Text } from '@/ui/primitives/Text';
 
 /**
- * The real MUI cart UI — 2026-08-29, owner feedback: "ulepsz ui i ux widzę
+ * The real MUI cart UI - 2026-08-29, owner feedback: "ulepsz ui i ux widzę
  * że w koszyku dalej panuje straszny vanilla html/css/js". Lives here
  * rather than directly in `(shop)/koszyk/page.tsx` per `ARCHITECTURE.md`
  * §2.1: `@mui/material` is lint-forbidden inside `(marketing)/(shop)`
- * Server Components (`biome.json`'s own override) — "put the interactive
+ * Server Components (`biome.json`'s own override) - "put the interactive
  * part in `src/ui/islands` and render it as a child," exactly what this
  * is. Every control is STILL a zero-client-JS `<form action={...}>` bound
- * directly to a Server Action — the `'use client'` directive is required
+ * directly to a Server Action - the `'use client'` directive is required
  * for `component={Link}` (see the header comment above), not because any
  * control needs client-side state.
  */
@@ -185,7 +185,7 @@ function CartRow({ item }: { readonly item: CartItemView }) {
 
         <Divider sx={{ my: 0.5, maxWidth: 320 }} />
 
-        {/* Direct numeric entry for a bigger jump than the +/- stepper — still zero-JS, still clamped server-side (`updateCartItemQuantity`). */}
+        {/* Direct numeric entry for a bigger jump than the +/- stepper - still zero-JS, still clamped server-side (`updateCartItemQuantity`). */}
         <form action={updateCartItemQuantity.bind(null, item.cartItemId)} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <TextField
             type="number"
@@ -196,7 +196,7 @@ function CartRow({ item }: { readonly item: CartItemView }) {
             slotProps={{ htmlInput: { min: 1, max: MAX_CART_ITEM_QUANTITY } }}
             sx={{ width: 96 }}
           />
-          {/* `formNoValidate`: the `max` attribute above is a UX hint only —
+          {/* `formNoValidate`: the `max` attribute above is a UX hint only -
               the real enforcement is server-side (`updateCartItemQuantity`'s
               `clampCartQuantity` call). Without this, the browser's own
               HTML5 constraint validation would silently block submission of

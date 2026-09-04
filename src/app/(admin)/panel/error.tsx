@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Error boundary for `/panel/*` — `docs/AUDIT-2026-08-30.md` §7.
+ * Error boundary for `/panel/*` - `docs/AUDIT-2026-08-30.md` §7.
  *
  * The panel had none either, so a failed admin query dropped a staff member
  * onto the customer-styled root error page with no sidebar and no way back
@@ -9,7 +9,7 @@
  *
  * No `ThemeRegistry` here: unlike the storefront, `panel/layout.tsx`
  * already mounts one (with the admin theme), and a route-group `error.tsx`
- * renders inside its layout — nesting a second provider would override the
+ * renders inside its layout - nesting a second provider would override the
  * admin theme with the storefront one on the error page only, which is
  * exactly the kind of inconsistency that makes a failure look worse than it
  * is.

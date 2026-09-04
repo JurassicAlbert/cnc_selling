@@ -26,7 +26,7 @@ export default async function AdminDesignReviewDetailPage({ params }: DesignRevi
       <Chip size="small" label={design.status} sx={{ mb: 3 }} />
 
       {design.mimeType.startsWith('image/') && design.mimeType !== 'image/svg+xml' ? (
-        // biome-ignore lint/performance/noImgElement: a private, authorized customer upload — next/image's remote-loader config doesn't apply
+        // biome-ignore lint/performance/noImgElement: a private, authorized customer upload - next/image's remote-loader config doesn't apply
         <img
           src={`/api/plik/${design.fileId}?preview=1`}
           alt={design.originalName}
@@ -56,14 +56,14 @@ export default async function AdminDesignReviewDetailPage({ params }: DesignRevi
         {ADMIN.designReviewCommentsHeadingPl}
       </Typography>
       {design.comments.length === 0 ? (
-        <Typography color="text.secondary">—</Typography>
+        <Typography color="text.secondary">-</Typography>
       ) : (
         <List dense>
           {design.comments.map((comment) => (
             <ListItem key={comment.id} disableGutters>
               <ListItemText
                 primary={comment.bodyPl}
-                secondary={`${comment.authorType} — ${comment.createdAt.toLocaleString('pl-PL')}`}
+                secondary={`${comment.authorType} - ${comment.createdAt.toLocaleString('pl-PL')}`}
               />
             </ListItem>
           ))}

@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@m
 import { ADMIN } from '@/content/pl/admin';
 import type { OrderModuleManifestItem } from '@/server/repositories/admin-production';
 
-/** "Module manifest" (§16A.1 module 2/10) — one table per order item, listing its real `ModuleSpec` rows from the immutable snapshot. Used on both the admin order detail page and the printable production brief. */
+/** "Module manifest" (§16A.1 module 2/10) - one table per order item, listing its real `ModuleSpec` rows from the immutable snapshot. Used on both the admin order detail page and the printable production brief. */
 export function OrderModuleManifest({ items }: { readonly items: readonly OrderModuleManifestItem[] }) {
   return (
     <>

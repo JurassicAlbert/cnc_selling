@@ -1,13 +1,13 @@
 'use client';
 
 /**
- * Password login — same `useActionState`/`renderKey` shape as
+ * Password login - same `useActionState`/`renderKey` shape as
  * `CheckoutForm.tsx` (see that file's header for why: `defaultValue`-based
  * uncontrolled inputs only apply on first mount, so a validation error
  * needs the form to remount to show the server's echoed-back values).
  *
  * P9 phase 9 (sitewide MUI form audit, closing pass): converted from raw
- * `<input>`/`<button>` to real MUI — `ThemeRegistry` now mounted on
+ * `<input>`/`<button>` to real MUI - `ThemeRegistry` now mounted on
  * `/logowanie`, same "mount around just the real interactive island"
  * precedent every earlier phase this session already established.
  */

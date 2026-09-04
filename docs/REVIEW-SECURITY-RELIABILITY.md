@@ -1,4 +1,4 @@
-# Security & reliability review — 2026-08-30
+# Security & reliability review - 2026-08-30
 
 Commit `e774e40`. Full issue detail (evidence, fixes, acceptance criteria)
 lives in `REVIEW-DETAILED.md`; this document is the security-shaped view of
@@ -51,7 +51,7 @@ enforced for rendering but not for writing.**
 | Storage keys are opaque UUIDs, never derived from user input | `actions/upload.ts` | read |
 | PDF active content rejected | `containsSuspiciousPdfTokens` | read; honest about being a heuristic |
 | Role elevation impossible via sign-up | `auth.ts` sets `role: { input: false }` | read |
-| Every admin mutation is audit-logged | all 25 `operations/admin-*.ts` | scanned all 25 — **none missing** |
+| Every admin mutation is audit-logged | all 25 `operations/admin-*.ts` | scanned all 25 - **none missing** |
 | Pricing writes are ADMIN-only and append-only | `admin-pricing.ts` | read; `applyPublishPricingVersion` is the only `isActive` writer |
 | No fake payment / tracking / email states | `PaymentMethodConfig.isConnected` gates checkout; `Shipment` is staff-managed; mailer reports `{ sent: false }` | read |
 | Server Action CSRF | framework-level Origin↔Host check, on by default | `node_modules/next/dist/docs/01-app/02-guides/server-actions.md` |
@@ -60,19 +60,19 @@ enforced for rendering but not for writing.**
 
 ## P0 findings
 
-### SEC-01 — Authentication is entirely unthrottled
+### SEC-01 - Authentication is entirely unthrottled
 
 Login, registration, OTP request and OTP verification are Server Actions
 calling `auth.api.*` **directly**. Better Auth's rate limiter is installed
 in its HTTP router's `onRequest` hook
 (`node_modules/better-auth/dist/api/index.mjs:163-169`), which only runs
-for traffic through `auth.handler` — i.e. `/api/auth/*`. This application's
+for traffic through `auth.handler` - i.e. `/api/auth/*`. This application's
 own forms never take that path, and `betterAuth({…})` sets no `rateLimit`
 option.
 
 **Attack surface:**
 - unlimited password guessing (`signInEmail` has no attempt counter);
-- unlimited outbound email — `submitOtpRequest` will mail any address on
+- unlimited outbound email - `submitOtpRequest` will mail any address on
   demand, as many times as asked, at the shop's cost and reputation;
 - unlimited account creation.
 
@@ -84,13 +84,13 @@ bounded.
 §16.1 requires rate limits on "auth attempts". Fix and tests:
 `REVIEW-DETAILED.md` SEC-01 / `REVIEW-TEST-COVERAGE.md` T-01.
 
-### SEC-02 — One-time login codes are logged in plaintext
+### SEC-02 - One-time login codes are logged in plaintext
 
 `renderSubjectAndText` builds the OTP subject as
 `` `Twój kod ${purpose}: ${otp}` ``, and `UnconfiguredMailer.send` logs
 `{ template, subject, to }`. `createMailer()` selects that implementation
 whenever `RESEND_API_KEY`/`EMAIL_FROM` are unset, **with no environment
-guard** — and unset is the project's documented default state.
+guard** - and unset is the project's documented default state.
 
 Anyone who can read application logs can sign in as any user without a
 password. Recipient addresses are logged too, against §16.1's "No PII in
@@ -101,15 +101,15 @@ excusing it.
 The fix must include a **production guard**: an unconfigured mailer in
 production should fail loudly, not degrade to logging secrets. See T-02.
 
-### SEC-03 — Sellability is enforced for display only
+### SEC-03 - Sellability is enforced for display only
 
 `domain/compatibility/resolve.ts` correctly implements §7.2's filters
 (`isAvailable`, `isActive`, `rightsStatus ∈ {APPROVED_COMMERCIAL,
 PUBLIC_DOMAIN}`, `DesignMaterial` narrowing, variant thickness cap) and is
 called **only** from `resolve-options.ts`, whose output feeds the UI.
 
-`priceAndValidateSelections` — the shared write path for add-to-cart, cart
-edit and checkout re-pricing — reads material, design and finish from
+`priceAndValidateSelections` - the shared write path for add-to-cart, cart
+edit and checkout re-pricing - reads material, design and finish from
 `getConfiguratorProductData`'s maps, which are built with **no `where`
 clause and no post-filter**. It checks completeness and nothing else.
 
@@ -124,43 +124,43 @@ Threat model:
 The schema comment on `Design.rightsStatus` says sellability is "enforced
 by a query filter, not by discipline". On the write path there is neither.
 A `RESTRICTED` or `REQUIRES_PERMISSION` design can be ordered and
-manufactured — a copyright exposure, not a UX defect (brief §12).
+manufactured - a copyright exposure, not a UX defect (brief §12).
 
-**Currently loaded?** No — verified by SQL: zero non-sellable designs and
+**Currently loaded?** No - verified by SQL: zero non-sellable designs and
 zero unavailable materials are linked to an active product today, and the
 single `DesignMaterial` narrowing row belongs to a leftover e2e design
 attached to no product. The hole is live and unloaded; it arms itself the
 first time staff retire anything.
 
 Fix: call the existing `resolveOptions` from
-`priceAndValidateSelections` — do not re-implement the rules. See T-03.
+`priceAndValidateSelections` - do not re-implement the rules. See T-03.
 
 ---
 
 ## P1 findings
 
-### SEC-04 — `STAFF` can redirect payments and destroy accounts — **RESOLVED 2026-08-31**
+### SEC-04 - `STAFF` can redirect payments and destroy accounts - **RESOLVED 2026-08-31**
 
 Of 25 `operations/admin-*.ts` modules, only `admin-pricing`, `admin-staff`
 and `admin-analytics` require `ADMIN`. Three of the remaining 22 are not
 catalogue work and are separable from the open "may STAFF edit the
 catalogue?" question (`OPEN_ITEMS.md` §7):
 
-1. **`applyUpdateStoreSettings`** — writes `StoreSettings.bankAccountNumber`,
+1. **`applyUpdateStoreSettings`** - writes `StoreSettings.bankAccountNumber`,
    the account every bank-transfer customer is told to pay into. A
    compromised `STAFF` account redirects all incoming payment.
-2. **`applyAnonymizeCustomer`** — scrubs identity **and deletes `Session`
+2. **`applyAnonymizeCustomer`** - scrubs identity **and deletes `Session`
    and `Account` rows**, permanently ending the customer's ability to sign
    in. Irreversible, and §16.3 grants `STAFF` only "customers (read)".
-3. **`applyUpdateEmailTemplate`** — rewrites customer-facing email bodies,
+3. **`applyUpdateEmailTemplate`** - rewrites customer-facing email bodies,
    including `verification-otp`.
 
 §16.3 assigns all three to `ADMIN`. No owner decision is needed. Consider a
 second confirmation step on the bank-account field specifically.
 
 **Fixed 2026-08-31.** All three wrappers gate on `requireAdminSession()`,
-and — because that gate reads `next/headers` and is therefore unreachable
-from any test in this repository — each `apply*` also calls
+and - because that gate reads `next/headers` and is therefore unreachable
+from any test in this repository - each `apply*` also calls
 `refuseUnlessAdmin(actor)` as its first statement. The doubling is the
 point: SEC-03 was a correct, unit-tested rule that the write path never
 called, and "enforced only where no test can look" is the same shape. The
@@ -168,18 +168,18 @@ panel followed the enforcement, so a `STAFF` is not offered controls the
 system will refuse. The bank-account confirmation is carried as **UX-22**,
 deliberately not folded into a security fix.
 
-### SEC-10 — Opening a customer's page performed a RODO export — **found and fixed 2026-08-31**
+### SEC-10 - Opening a customer's page performed a RODO export - **found and fixed 2026-08-31**
 
 Not in the original audit. Found while verifying SEC-04 in a browser.
 
 `/panel/klienci/[id]/eksport` is a GET route handler **with a side effect**:
 it builds the customer's full RODO Art. 15 export and writes an `AuditLog`
 row. The page linked to it with `next/link`, and Next prefetches `<Link>`
-targets — so merely opening a customer's page produced
+targets - so merely opening a customer's page produced
 `GET …/eksport?_rsc=… → 200` and an audit row claiming an export had been
 performed, attributed to a staff member who had only looked at the page.
 
-**Threat-model note.** The exposure is not confidentiality — the reader was
+**Threat-model note.** The exposure is not confidentiality - the reader was
 already authorized to see that customer. It is **integrity of the compliance
 record**: §16A.2 invariant 4 makes the audit log the account of what
 happened, and it was reporting RODO accesses that never occurred. A log that
@@ -194,7 +194,7 @@ Fixed in two layers: the link is a plain `<a>` (the convention
 be reachable from a `<Link>`. Nothing else in the codebase currently has
 one.
 
-### SEC-05 — No security headers, no CSP — **RESOLVED 2026-08-31**
+### SEC-05 - No security headers, no CSP - **RESOLVED 2026-08-31**
 
 A case-insensitive search across the repository for
 `Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options`,
@@ -202,8 +202,8 @@ A case-insensitive search across the repository for
 returned **zero matches**. `next.config.ts` defined no `headers()`.
 
 §16.1 requires "Security headers + strict CSP". The SVG half of that
-sentence was implemented; the headers half was never built and — unlike the
-rate limits — was **not recorded in `CHECKLIST.md` or `OPEN_ITEMS.md`**, so
+sentence was implemented; the headers half was never built and - unlike the
+rate limits - was **not recorded in `CHECKLIST.md` or `OPEN_ITEMS.md`**, so
 nobody was tracking it.
 
 This mattered here specifically because the application renders
@@ -215,7 +215,7 @@ customer-derived image previews, admin-uploaded images served from
 the policy itself in the pure, unit-tested `src/server/security/headers.ts`.
 `script-src` is strict (`'nonce-…' 'strict-dynamic'`, no `'unsafe-inline'`);
 `style-src` keeps `'unsafe-inline'` because Emotion injects styles from the
-browser and `error.tsx` boundaries can never receive a nonce — a nonce there
+browser and `error.tsx` boundaries can never receive a nonce - a nonce there
 would *disable* that allowance under CSP3 and break every client-side style,
 so this is a considered position, not an oversight. Enforced by default,
 `CSP_MODE=report-only|off` as the operator escape hatch.
@@ -232,7 +232,7 @@ decision above.
 Full detail, including the verification and the conflict this creates with
 PERF-01: `REVIEW-DETAILED.md` SEC-05.
 
-### ADMIN-01 — The audit log silently forgets
+### ADMIN-01 - The audit log silently forgets
 
 Beyond the operator impact (`REVIEW-DETAILED.md`), the audit-log truncation
 is a *compliance* problem: §16A.2 invariant 4 makes the log the record of
@@ -245,7 +245,7 @@ entries with no pagination and no indication that more exist.
 
 | ID | Issue | Note |
 |---|---|---|
-| **SEC-06** | Runtime writes into `public/` | Documented as safe for a long-running Node host; §3 names Vercel, where it silently fails. No size cap (customer uploads have one). `ownerId` interpolated into a path with no `..` guard, while the sibling `deletePublicImage` does guard — not reachable today (callers pass cuids), but an asymmetry worth closing |
+| **SEC-06** | Runtime writes into `public/` | Documented as safe for a long-running Node host; §3 names Vercel, where it silently fails. No size cap (customer uploads have one). `ownerId` interpolated into a path with no `..` guard, while the sibling `deletePublicImage` does guard - not reachable today (callers pass cuids), but an asymmetry worth closing |
 | **SEC-07** | RODO anonymization is partial | `Order` retains email, full name, phone and full address; `SupportRequest` retains email and name. Retention is legitimate for accounting; the gap is that the module presents the scrub as complete, nothing bounds retention, and no purge path exists |
 | **SEC-08** | Upload limit resets with the cookie | The limiter keys on `sessionToken`; discarding the cookie mints a new one and resets the count. Fixing SEC-01's IP-aware limiter makes this nearly free |
 | **SEC-09** | `/api/plik` buffers whole files | `storage.get()` loads up to 25 MB into memory per request; §16.1 says it streams. Also missing `nosniff` while serving user bytes `inline` |
@@ -280,7 +280,7 @@ repository.
 | ID | Scenario | Current | Risk |
 |---|---|---|---|
 | **BUG-05** | Two rapid "Duplikuj" clicks | read-then-write; one increment lost | Regression of the P0-3 fix from the same commit |
-| **BUG-13** | Quantity edited in tab B while tab A checks out | order written with the stale quantity — the claim matches on id only | Customer charged for a quantity they changed |
+| **BUG-13** | Quantity edited in tab B while tab A checks out | order written with the stale quantity - the claim matches on id only | Customer charged for a quantity they changed |
 | **BUG-12** | Response returns before the confirmation email is sent | `void mailer.send(…)`, no `after()` | On serverless, confirmation emails silently never send |
 | **BUG-21** | Line B edited into line A's configuration | cart lines merge; a duplicate `Configuration` survives, hidden by read-side dedupe | Data drift, invisible |
 | **BUG-15** | Design re-uploaded | previous `UploadedFile` row and blobs orphaned forever | Unbounded storage growth; superseded designs stay fetchable |
@@ -292,7 +292,7 @@ Verified good: a `PRICE_CHANGED` rejection happens **before** any write; a
 never undoes a committed order; `revalidatePath('/', 'layout')` clears the
 stale cart badge. The one honest weakness is that a customer whose
 configuration became invalid gets a single generic message with no
-indication of *which* option went away — which becomes noticeable as soon
+indication of *which* option went away - which becomes noticeable as soon
 as SEC-03 starts rejecting retired patterns.
 
 ---
@@ -301,7 +301,7 @@ as SEC-03 starts rejecting retired patterns.
 
 - **Every payment-callback scenario** (duplicate callback, delayed
   callback, browser closed before callback, payment succeeded but order
-  creation failed). No provider is connected — `OPEN_ITEMS.md` §1 — so
+  creation failed). No provider is connected - `OPEN_ITEMS.md` §1 - so
   there is no handler to test. `przelewy24.ts` is a real, spec-accurate,
   unit-tested client with no network calls; that is the correct state.
   Writing callback tests now would be fake coverage.

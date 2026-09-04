@@ -1,4 +1,4 @@
-/** Staff FAQ mutations. Same `applyXxx(staff, ...)` / `xxx(...)` split as every other admin action file — `revalidatePath` only in the wrapper. No delete — `isActive` toggle only, consistent with every other panel entity. */
+/** Staff FAQ mutations. Same `applyXxx(staff, ...)` / `xxx(...)` split as every other admin action file - `revalidatePath` only in the wrapper. No delete - `isActive` toggle only, consistent with every other panel entity. */
 
 import { revalidatePath } from 'next/cache';
 

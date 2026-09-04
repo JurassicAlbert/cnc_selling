@@ -1,14 +1,14 @@
 /**
- * P9 continuation, 2026-08-28 — owner feedback: "zarządzanie zamówieniami
+ * P9 continuation, 2026-08-28 - owner feedback: "zarządzanie zamówieniami
  * itp itd dalej jest zbyt biednie" (order management is still too poor).
  * Replaces the plain-`<div>` `OrderSummary`/`OrderShipmentInfo` primitives
- * on the account order-detail page specifically — those two stay untouched
- * for their other two callers (`(shop)/zamowienie/[orderNumber]` — a guest
+ * on the account order-detail page specifically - those two stay untouched
+ * for their other two callers (`(shop)/zamowienie/[orderNumber]` - a guest
  * confirmation page with no MUI mounted, and the admin order page, which
- * has its own dedicated admin chrome already) — this is a real MUI
+ * has its own dedicated admin chrome already) - this is a real MUI
  * `Card`/`Chip`/`Divider` rebuild for the account panel's own detail view.
  *
- * No `'use client'`: nothing here is interactive — lives under
+ * No `'use client'`: nothing here is interactive - lives under
  * `src/ui/islands` only for `@mui/material` access (ARCHITECTURE.md §2.1).
  */
 
@@ -115,7 +115,7 @@ export function AccountOrderDetail({
                 <Typography variant="body2" color="text.secondary">
                   {item.snapshot.productNamePl} × {item.quantity}
                   {item.snapshot.materialNamePl !== null || item.snapshot.designNamePl !== null
-                    ? ` — ${[item.snapshot.materialNamePl, item.snapshot.designNamePl].filter((v) => v !== null).join(', ')}`
+                    ? ` - ${[item.snapshot.materialNamePl, item.snapshot.designNamePl].filter((v) => v !== null).join(', ')}`
                     : ''}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0 }}>

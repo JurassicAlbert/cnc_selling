@@ -12,7 +12,7 @@ type EmailTemplateDetailPageProps = {
 };
 
 export default async function AdminEmailTemplateDetailPage({ params }: EmailTemplateDetailPageProps) {
-  // ADMIN-only, 2026-08-31 (SEC-04) — gated here as well as on the list
+  // ADMIN-only, 2026-08-31 (SEC-04) - gated here as well as on the list
   // page, since this URL is reachable directly.
   await requireAdminSession();
   const { key } = await params;

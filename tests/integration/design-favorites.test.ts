@@ -5,9 +5,9 @@ import { listFavoriteDesigns, listFavoritedDesignIds } from '@/server/repositori
 import { prisma } from '@/server/db/client';
 
 /**
- * P9 continuation, 2026-08-28 — "wzory, które dodał do ulubionych" (owner
+ * P9 continuation, 2026-08-28 - "wzory, które dodał do ulubionych" (owner
  * feedback). `DesignFavorite` is login-only by design (schema's own
- * comment) — no guest/sessionToken half to test here, unlike
+ * comment) - no guest/sessionToken half to test here, unlike
  * `customer-designs.test.ts`.
  */
 
@@ -49,7 +49,7 @@ afterEach(async () => {
 });
 
 describe('applyToggleFavoriteDesign', () => {
-  it('favourites on the first call, unfavourites on the second — a real toggle, not a one-way add', async () => {
+  it('favourites on the first call, unfavourites on the second - a real toggle, not a one-way add', async () => {
     const user = await seedUser();
     const design = await seedDesign('Wzór testowy');
 

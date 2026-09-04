@@ -9,12 +9,12 @@
  * front of a real deployment, and the first entry is the original client.
  * **It is client-controllable when nothing trusted sets it**, so this is
  * only ever used for rate limiting and for the `ipConfirmedIp` consent
- * record — never as an authorization input.
+ * record - never as an authorization input.
  *
  * `null` in local development with no proxy in front, and in the e2e
  * suite. That is honest rather than a value to invent, and every caller
  * treats `null` as "this dimension does not apply" instead of folding
- * every unattributable request into one shared bucket — see
+ * every unattributable request into one shared bucket - see
  * `rate-limit/auth-throttle.ts` for why that distinction matters.
  */
 

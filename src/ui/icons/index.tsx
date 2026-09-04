@@ -1,21 +1,21 @@
 /**
- * RSC-safe icons — plain inline SVG, no `@mui/icons-material`.
+ * RSC-safe icons - plain inline SVG, no `@mui/icons-material`.
  *
  * Every file in `@mui/icons-material` carries its own `"use client"`
  * directive and wraps its path in `SvgIcon`, an Emotion-`styled` component.
  * Used inside a plain Server Component (no `ThemeRegistry`/
  * `AppRouterCacheProvider` above it to own Emotion's style cache), that
- * produces a genuine hydration mismatch — confirmed live: React logged
+ * produces a genuine hydration mismatch - confirmed live: React logged
  * "Hydration failed because the server rendered HTML didn't match the
  * client", pointing at the `<style data-emotion>` tag `SvgIcon` emits.
  * `SiteHeader` renders on every page via the root layout, so wrapping it in
  * `ThemeRegistry` to fix this would ship the full MUI+Emotion+React client
- * runtime sitewide again — exactly the regression `docs/HANDOVER.md` §9e
+ * runtime sitewide again - exactly the regression `docs/HANDOVER.md` §9e
  * already fixed once.
  *
  * The path data below is copied verbatim from the corresponding
  * `@mui/icons-material` source files (real Material Design icons, MIT-
- * licensed same as the rest of MUI) — only the Emotion-styled wrapper is
+ * licensed same as the rest of MUI) - only the Emotion-styled wrapper is
  * dropped, not the artwork.
  */
 
@@ -24,7 +24,7 @@ import type { CSSProperties } from 'react';
 type IconProps = {
   readonly size?: number;
   readonly style?: CSSProperties;
-  /** Used by `SiteHeader`'s `.nav-dropdown-chevron` rotate rule — plain CSS, no client JS. */
+  /** Used by `SiteHeader`'s `.nav-dropdown-chevron` rotate rule - plain CSS, no client JS. */
   readonly className?: string;
 };
 
@@ -111,7 +111,7 @@ export const PersonIcon = makeIcon(
   'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4m0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4',
 );
 
-/** Dropdown chevron — rotated 180° via `.nav-dropdown[open] &` in `theme-vars.css`, not a second icon. */
+/** Dropdown chevron - rotated 180° via `.nav-dropdown[open] &` in `theme-vars.css`, not a second icon. */
 export const ExpandMoreIcon = makeIcon('M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z');
 
 export const ContentCopyIcon = makeIcon(
@@ -132,7 +132,7 @@ export const PrecisionManufacturingIcon = makeIcon(
 
 /**
  * Two real Material icons rather than one, because outline vs filled is the
- * whole signal on a favourite toggle — `FavoriteDesignButton` previously
+ * whole signal on a favourite toggle - `FavoriteDesignButton` previously
  * used the literal text glyphs `♡`/`♥`, which render at wildly different
  * weights and baselines across fonts and platforms and are the clearest
  * "unfinished prototype" tell left on `/wzory`

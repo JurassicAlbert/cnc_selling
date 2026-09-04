@@ -5,11 +5,11 @@ import { listAuditLogsForEntity } from '@/server/repositories/admin-audit-log';
 
 /**
  * A single record's mutation history, embedded on that entity's own admin
- * detail page — `docs/CHECKLIST.md`'s "activity timeline on every record,
+ * detail page - `docs/CHECKLIST.md`'s "activity timeline on every record,
  * from the audit log". Distinct from `/panel/dziennik-zdarzen` (the
  * cross-entity log viewer): this is scoped to one `(entity, entityId)` pair
  * and reads no `searchParams`, so it's a plain async Server Component, not
- * a client island — no interactivity needed, just a fetch + render.
+ * a client island - no interactivity needed, just a fetch + render.
  */
 export async function RecordActivityTimeline({ entity, entityId }: { readonly entity: string; readonly entityId: string }) {
   const logs = await listAuditLogsForEntity(entity, entityId);

@@ -16,7 +16,7 @@ import { prisma } from '@/server/db/client';
  *
  * `send()` now returns the resolved subject instead, so the same
  * template-rendering assertions are made against the real API rather than a
- * side effect — and the log assertions below are inverted: they check that
+ * side effect - and the log assertions below are inverted: they check that
  * the secret is *absent*.
  */
 
@@ -35,7 +35,7 @@ function capturedLog(): { readonly lines: () => string } {
   };
 }
 
-describe('mailer — never logs a credential (SEC-02)', () => {
+describe('mailer - never logs a credential (SEC-02)', () => {
   it('does not put the one-time code in the log, at any level', async () => {
     const log = capturedLog();
 
@@ -84,7 +84,7 @@ describe('mailer — never logs a credential (SEC-02)', () => {
 
   /**
    * An admin can put `{{otp}}` anywhere they like in a DB-stored template
-   * — the seeded row did exactly that. The guarantee has to hold whatever
+   * - the seeded row did exactly that. The guarantee has to hold whatever
    * the template says, which is why it is enforced by never logging the
    * rendered text rather than by trusting the default copy.
    */
@@ -117,7 +117,7 @@ describe('mailer — never logs a credential (SEC-02)', () => {
   });
 });
 
-describe('mailer — EmailTemplate DB override', () => {
+describe('mailer - EmailTemplate DB override', () => {
   it('uses the DB-stored template text when a row exists for the key, interpolating real placeholder values', async () => {
     const original = await prisma.emailTemplate.findUniqueOrThrow({ where: { key: 'order-confirmation' } });
     await prisma.emailTemplate.update({
@@ -157,7 +157,7 @@ describe('mailer — EmailTemplate DB override', () => {
   });
 });
 
-describe('mailer — order-status-update (P6, staff order transitions)', () => {
+describe('mailer - order-status-update (P6, staff order transitions)', () => {
   it('renders the real customer-facing status label, not the admin one', async () => {
     const result = await mailer.send('order-status-update', 'customer@example.test', {
       orderNumber: '2026/08/9997',

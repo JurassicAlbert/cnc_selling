@@ -25,7 +25,7 @@ function buildSnapshot(overrides: Partial<OrderItemSnapshot> = {}): OrderItemSna
     installationVariant: null,
     personalizationText: null,
     moduleLayout: { cols: 1, rows: 1, totalModules: 1, isModular: false, modules: [] },
-    // biome-ignore lint/suspicious/noExplicitAny: minimal stub — these tests never read priceBreakdown
+    // biome-ignore lint/suspicious/noExplicitAny: minimal stub - these tests never read priceBreakdown
     priceBreakdown: {} as any,
     machiningMilliMinutesPerM2: null,
     ...overrides,
@@ -107,7 +107,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Far enough in the future that no other test file's `createdAt: now()`
 // default fixtures (real wall-clock time) can ever land inside these
-// windows — full isolation from cross-file parallel noise, not just a
+// windows - full isolation from cross-file parallel noise, not just a
 // same-file precaution. `getDashboardKpis`'s date-scoped fields
 // (orders*/revenue*/AOV) all key off the explicit `now` parameter it
 // already accepts specifically for this reason.
@@ -115,9 +115,9 @@ const ISOLATED_NOW = new Date('2030-06-15T12:00:00.000Z');
 
 describe('getDashboardKpis', () => {
   // `getDashboardKpis` is deliberately unscoped (no test-fixture-prefix
-  // filter — it queries every real order, matching its real production
+  // filter - it queries every real order, matching its real production
   // purpose). A prior version of this describe block asserted BEFORE/AFTER
-  // deltas against the real `now()` — still flaky under `npm test`'s
+  // deltas against the real `now()` - still flaky under `npm test`'s
   // parallel file execution, since another file's concurrent order-creation
   // (or its own afterEach cleanup, for the two fields below with no date
   // scoping at all) can land inside the measurement window in either
@@ -138,7 +138,7 @@ describe('getDashboardKpis', () => {
 
   it('counts orders awaiting payment, pending design reviews, and in-production orders correctly', async () => {
     // Not date-scoped at all (global counts by design), so no `now` pin can
-    // isolate them — a before/after delta can go negative from an unrelated
+    // isolate them - a before/after delta can go negative from an unrelated
     // concurrent test's own cleanup, observed live. An absolute lower bound
     // on the value immediately after seeding is what's actually robust:
     // this test's own row is guaranteed present at that point (nothing else
@@ -247,6 +247,6 @@ describe('getTopEntities', () => {
     const topMaterials = await getTopEntities({ from, to }, 'material', 5);
 
     expect(topDesigns).toEqual([{ name: 'W-014', revenueGrosze: 2000, quantity: 1 }]);
-    expect(topMaterials).toEqual([]); // materialNamePl is null — CUSTOM-style item, correctly skipped
+    expect(topMaterials).toEqual([]); // materialNamePl is null - CUSTOM-style item, correctly skipped
   });
 });

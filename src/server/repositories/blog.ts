@@ -10,7 +10,7 @@ export type BlogPostSummary = {
   readonly publishedAt: Date;
 };
 
-/** Published means `isActive` and `publishedAt` is set and not in the future — a null `publishedAt` is a draft. */
+/** Published means `isActive` and `publishedAt` is set and not in the future - a null `publishedAt` is a draft. */
 export async function listPublishedBlogPosts(): Promise<BlogPostSummary[]> {
   const posts = await prisma.blogPost.findMany({
     where: { isActive: true, publishedAt: { not: null, lte: new Date() } },
@@ -47,11 +47,11 @@ async function queryPublishedBlogPostBySlug(slug: string): Promise<BlogPostDetai
 }
 
 /**
- * Request-scoped memoization — `docs/REVIEW-DETAILED.md` PERF-02. This page's
+ * Request-scoped memoization - `docs/REVIEW-DETAILED.md` PERF-02. This page's
  * `generateMetadata` and its body both call `getPublishedBlogPostBySlug`, and Next
  * deduplicates `fetch`, not Prisma, so the identical query ran twice per
  * render. `cache()` lasts exactly one request, so there is no staleness to
- * reason about — an admin edit shows on the next request either way.
+ * reason about - an admin edit shows on the next request either way.
  */
 export const getPublishedBlogPostBySlug = cache(queryPublishedBlogPostBySlug);
 

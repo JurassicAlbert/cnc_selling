@@ -53,7 +53,7 @@ function codesOf(overrides: Partial<FeasibilityInput> = {}): string[] {
   return evaluateFeasibility({ ...BASE, ...overrides }).map((f) => f.code);
 }
 
-describe('evaluateFeasibility — line width scales with the product', () => {
+describe('evaluateFeasibility - line width scales with the product', () => {
   it('passes at the design reference width', () => {
     expect(codesOf()).not.toContain('LINE_TOO_THIN');
   });
@@ -87,7 +87,7 @@ describe('evaluateFeasibility — line width scales with the product', () => {
     });
   });
 
-  it('blocks rather than warns — a line too thin cannot be cut at all', () => {
+  it('blocks rather than warns - a line too thin cannot be cut at all', () => {
     const finding = evaluateFeasibility({ ...BASE, widthMm: 300 }).find(
       (f) => f.code === 'LINE_TOO_THIN',
     );
@@ -95,7 +95,7 @@ describe('evaluateFeasibility — line width scales with the product', () => {
   });
 });
 
-describe('evaluateFeasibility — detail spacing', () => {
+describe('evaluateFeasibility - detail spacing', () => {
   it('fails when scaled-down details would merge', () => {
     expect(codesOf({ widthMm: 200 })).toContain('DETAIL_SPACING_TOO_TIGHT');
   });
@@ -107,7 +107,7 @@ describe('evaluateFeasibility — detail spacing', () => {
   });
 });
 
-describe('evaluateFeasibility — very detailed designs', () => {
+describe('evaluateFeasibility - very detailed designs', () => {
   const detailed: DesignConstraints = {
     ...DESIGN,
     detailLevel: 5,
@@ -143,7 +143,7 @@ describe('evaluateFeasibility — very detailed designs', () => {
   });
 });
 
-describe('evaluateFeasibility — notices', () => {
+describe('evaluateFeasibility - notices', () => {
   it('notes a modular build without treating it as a problem', () => {
     const finding = evaluateFeasibility({ ...BASE, moduleCount: 6 }).find(
       (f) => f.code === 'MODULAR_BUILD',
@@ -166,9 +166,9 @@ describe('evaluateFeasibility — notices', () => {
   });
 });
 
-describe('evaluateFeasibility — machine thickness limit', () => {
+describe('evaluateFeasibility - machine thickness limit', () => {
   it('says nothing when the product type has no thickness step at all', () => {
-    // thicknessMm: null — e.g. WALL_ART, KITCHEN_TILE (§5's step table).
+    // thicknessMm: null - e.g. WALL_ART, KITCHEN_TILE (§5's step table).
     expect(codesOf({ thicknessMm: null })).not.toContain('THICKNESS_EXCEEDS_MACHINE');
   });
 
@@ -176,7 +176,7 @@ describe('evaluateFeasibility — machine thickness limit', () => {
     expect(codesOf({ thicknessMm: 27 })).not.toContain('THICKNESS_EXCEEDS_MACHINE');
   });
 
-  it('allows a thickness exactly at the machine limit — inclusive, not exclusive', () => {
+  it('allows a thickness exactly at the machine limit - inclusive, not exclusive', () => {
     expect(codesOf({ thicknessMm: 100 })).not.toContain('THICKNESS_EXCEEDS_MACHINE');
   });
 
@@ -196,7 +196,7 @@ describe('evaluateFeasibility — machine thickness limit', () => {
   });
 });
 
-describe('evaluateFeasibility — floor elements', () => {
+describe('evaluateFeasibility - floor elements', () => {
   it('warns that an exact match to existing flooring is not guaranteed', () => {
     const finding = evaluateFeasibility({ ...BASE, isFloorElement: true }).find(
       (f) => f.code === 'FLOOR_MATCH_NOT_GUARANTEED',
@@ -256,7 +256,7 @@ describe('the add-to-cart gate', () => {
   });
 });
 
-describe('design: null — CUSTOM products with no catalog design (P4)', () => {
+describe('design: null - CUSTOM products with no catalog design (P4)', () => {
   it('never produces any design-derived finding, regardless of size or material', () => {
     const codes = codesOf({ design: null, widthMm: 50, material: MDF });
     expect(codes).not.toContain('LINE_TOO_THIN');
@@ -281,7 +281,7 @@ describe('design: null — CUSTOM products with no catalog design (P4)', () => {
   it('produces no findings at all for an otherwise-plain configuration', () => {
     // MDF specifically (not BASE's default OAK, which is naturally
     // variable and always produces its own NATURAL_VARIATION notice
-    // regardless of design) — isolates this assertion to the
+    // regardless of design) - isolates this assertion to the
     // design-derived findings this describe block is actually about.
     expect(codesOf({ design: null, material: MDF })).toEqual([]);
   });

@@ -1,4 +1,4 @@
-/** Product photo upload/reorder/alt-text/delete. Uses `public-images.ts`, not `local-disk.ts` — see that module's header for why these are a different class of file. */
+/** Product photo upload/reorder/alt-text/delete. Uses `public-images.ts`, not `local-disk.ts` - see that module's header for why these are a different class of file. */
 
 import { revalidatePath } from 'next/cache';
 

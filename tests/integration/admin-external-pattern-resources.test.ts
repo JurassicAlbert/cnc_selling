@@ -60,7 +60,7 @@ describe('applyCreateExternalPatternResource', () => {
     expect(result.ok).toBe(false);
   });
 
-  it('rejects a non-http(s) URL, e.g. a `javascript:` URI — this only ever renders as a real `<a href>`', async () => {
+  it('rejects a non-http(s) URL, e.g. a `javascript:` URI - this only ever renders as a real `<a href>`', async () => {
     const result = await applyCreateExternalPatternResource(staffActor(), validInput({ url: 'javascript:alert(1)' }));
     expect(result.ok).toBe(false);
   });

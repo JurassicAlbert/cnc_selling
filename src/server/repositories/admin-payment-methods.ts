@@ -1,4 +1,4 @@
-/** Admin `PaymentMethodConfig` queries — unscoped, unlike the real public `isConnected`-gated read. Every caller here MUST go through `requireStaffSession()` first. */
+/** Admin `PaymentMethodConfig` queries - unscoped, unlike the real public `isConnected`-gated read. Every caller here MUST go through `requireStaffSession()` first. */
 
 import { prisma } from '@/server/db/client';
 import type { PaymentMethod } from '@/generated/prisma/enums';

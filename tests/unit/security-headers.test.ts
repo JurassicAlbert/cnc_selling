@@ -1,12 +1,12 @@
 /**
- * `docs/REVIEW-DETAILED.md` SEC-05 — ARCHITECTURE.md §16.1 requires
+ * `docs/REVIEW-DETAILED.md` SEC-05 - ARCHITECTURE.md §16.1 requires
  * "Security headers + strict CSP", and before 2026-08-31 a case-insensitive
  * search for every one of those header names across the whole repository
  * returned nothing.
  *
  * These tests pin the *policy*, not the plumbing: which directives exist,
- * which relaxations are allowed and in which environment, and — the part
- * that is easy to get subtly, silently wrong — that Next.js's own parser can
+ * which relaxations are allowed and in which environment, and - the part
+ * that is easy to get subtly, silently wrong - that Next.js's own parser can
  * actually extract the nonce we generate. A CSP that the framework cannot
  * read a nonce out of does not fail loudly; it just quietly stops applying
  * the nonce to the framework's own scripts, and every script on the page is
@@ -27,7 +27,7 @@ import {
 /**
  * Next's real extractor, imported from the installed package rather than
  * re-implemented here. If a Next upgrade changes how it reads the nonce,
- * this test is meant to fail — that is the signal we want, and the reason
+ * this test is meant to fail - that is the signal we want, and the reason
  * for reaching into `dist/` deliberately (`node_modules/next/dist/server/
  * app-render/app-render.js:209-210` is the only caller).
  */
@@ -49,7 +49,7 @@ function directive(csp: string, name: string): string {
 
 const NONCE = 'dGVzdC1ub25jZS0xMjM0';
 
-describe('generateNonce — unguessable, single-use, and readable by Next', () => {
+describe('generateNonce - unguessable, single-use, and readable by Next', () => {
   it('never repeats', () => {
     const seen = new Set(Array.from({ length: 500 }, () => generateNonce()));
     expect(seen.size).toBe(500);
@@ -74,7 +74,7 @@ describe('generateNonce — unguessable, single-use, and readable by Next', () =
   });
 });
 
-describe('buildContentSecurityPolicy — script execution', () => {
+describe('buildContentSecurityPolicy - script execution', () => {
   it('allows scripts only by nonce, never by ‘unsafe-inline’', () => {
     for (const isDev of [true, false]) {
       const scriptSrc = directive(buildContentSecurityPolicy({ nonce: NONCE, isDev }), 'script-src');
@@ -101,11 +101,11 @@ describe('buildContentSecurityPolicy — script execution', () => {
   });
 });
 
-describe('buildContentSecurityPolicy — styles', () => {
+describe('buildContentSecurityPolicy - styles', () => {
   /**
    * The deliberate relaxation. Emotion injects `<style>` elements from the
    * browser for anything not already server-rendered, and MUI is mounted
-   * from `error.tsx` boundaries too — which React renders with no props of
+   * from `error.tsx` boundaries too - which React renders with no props of
    * our own, so no nonce can ever reach them. `'unsafe-inline'` for styles
    * is the documented cost; `script-src` stays strict, which is where XSS
    * actually lives.
@@ -118,14 +118,14 @@ describe('buildContentSecurityPolicy — styles', () => {
 
   it('carries no nonce in style-src, which would disable that allowance', () => {
     // A nonce in style-src makes browsers ignore 'unsafe-inline' entirely
-    // (CSP3) — the exact failure mode this pairing has to avoid.
+    // (CSP3) - the exact failure mode this pairing has to avoid.
     expect(directive(buildContentSecurityPolicy({ nonce: NONCE, isDev: false }), 'style-src')).not.toContain(
       'nonce-',
     );
   });
 });
 
-describe('buildContentSecurityPolicy — everything else', () => {
+describe('buildContentSecurityPolicy - everything else', () => {
   const prod = buildContentSecurityPolicy({ nonce: NONCE, isDev: false });
 
   it('locks down the directives an injection would reach for', () => {
@@ -150,7 +150,7 @@ describe('buildContentSecurityPolicy — everything else', () => {
     expect(imgSrc).toContain('blob:');
   });
 
-  it('allows fonts only from this origin — next/font self-hosts them', () => {
+  it('allows fonts only from this origin - next/font self-hosts them', () => {
     expect(directive(prod, 'font-src')).toBe("font-src 'self'");
   });
 
@@ -206,7 +206,7 @@ describe('baseSecurityHeaders', () => {
     expect(headerValue(baseSecurityHeaders({ isProduction: false }), 'Strict-Transport-Security')).toBeUndefined();
   });
 
-  it('never includes the CSP — that one is per-request, in the proxy', () => {
+  it('never includes the CSP - that one is per-request, in the proxy', () => {
     for (const isProduction of [true, false]) {
       const keys = baseSecurityHeaders({ isProduction }).map((header) => header.key.toLowerCase());
       expect(keys).not.toContain('content-security-policy');
@@ -232,7 +232,7 @@ describe('resolveCspMode / cspHeaderName', () => {
 
   it('falls back to enforcing on an unrecognised value rather than silently disabling', () => {
     // A typo in an env var must never be the thing that turns the policy
-    // off — failing closed is the whole point of this header.
+    // off - failing closed is the whole point of this header.
     expect(resolveCspMode('reportonly')).toBe('enforce');
     expect(resolveCspMode('yes')).toBe('enforce');
   });

@@ -18,7 +18,7 @@ import { AUTH_RATE_LIMITS } from '@/server/rate-limit/rules';
  * endpoint that would email any address on demand.
  *
  * Tested here rather than through `submitLogin`/`submitOtpRequest`, which
- * call `next/headers` and therefore cannot run outside a real request —
+ * call `next/headers` and therefore cannot run outside a real request -
  * the same split, for the same reason, as every `apply*`/wrapper pair in
  * `src/server/operations`. These functions take the email and IP
  * explicitly; the actions read them from the request and pass them in.
@@ -95,7 +95,7 @@ describe('login throttling', () => {
    * There is genuinely no IP to attribute an attempt to in local
    * development, in the e2e suite, and behind any proxy that does not set
    * `X-Forwarded-For`. Folding all of those into one shared bucket would
-   * lock out every visitor at once the moment traffic picked up — a far
+   * lock out every visitor at once the moment traffic picked up - a far
    * worse failure than not applying the IP dimension at all. The per-email
    * limit still applies.
    */
@@ -109,8 +109,8 @@ describe('login throttling', () => {
 
 describe('OTP request throttling', () => {
   /**
-   * The abuse here is not guessing — the plugin caps verification at three
-   * attempts — it is that an unthrottled request endpoint will mail any
+   * The abuse here is not guessing - the plugin caps verification at three
+   * attempts - it is that an unthrottled request endpoint will mail any
    * address, repeatedly, at the shop's cost and to a victim's inbox.
    */
   it('refuses to keep mailing the same address', async () => {
@@ -131,7 +131,7 @@ describe('OTP request throttling', () => {
     expect((await consumeOtpRequest({ email: email(), ip: attacker })).allowed).toBe(false);
   });
 
-  it('does not share a counter with login — a throttled login still leaves OTP available', async () => {
+  it('does not share a counter with login - a throttled login still leaves OTP available', async () => {
     const address = email();
     for (let i = 0; i < AUTH_RATE_LIMITS.loginPerEmail.limit + 1; i++) {
       await consumeLoginAttempt({ email: address, ip: null });

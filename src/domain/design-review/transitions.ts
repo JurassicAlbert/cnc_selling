@@ -1,5 +1,5 @@
 /**
- * Customer-design review transitions — `ARCHITECTURE.md` §13.3's diagram,
+ * Customer-design review transitions - `ARCHITECTURE.md` §13.3's diagram,
  * encoded the same way `domain/order-status/transitions.ts` encodes the
  * order graph (that file's shape is copied here deliberately, not
  * reinvented):
@@ -12,19 +12,19 @@
  *       └──reject──────────▶ REJECTED (terminal)
  * ```
  *
- * `fromStatus: null` is the creation event — a customer's own upload
+ * `fromStatus: null` is the creation event - a customer's own upload
  * starts a design at `PENDING_REVIEW` (`CustomerDesign.status`'s schema
  * default), the same way `OrderEvent.fromStatus: null` represents order
  * creation. Only the edges the diagram actually draws exist here:
  * `APPROVED` has no outgoing edge in the spec, so it's terminal in this
- * function exactly like `REJECTED` — if a future phase needs to revoke
+ * function exactly like `REJECTED` - if a future phase needs to revoke
  * an approval, that is a new, deliberate edge to add then, not something
  * to guess at now.
  */
 
 export type DesignReviewStatus = 'PENDING_REVIEW' | 'APPROVED' | 'NEEDS_CHANGES' | 'REJECTED';
 
-/** Matches `DesignReviewComment.authorType` ("staff" | "customer") — no `system` actor exists in this graph, unlike order status. */
+/** Matches `DesignReviewComment.authorType` ("staff" | "customer") - no `system` actor exists in this graph, unlike order status. */
 export type DesignReviewActorType = 'staff' | 'customer';
 
 export type DesignReviewTransitionInput = {

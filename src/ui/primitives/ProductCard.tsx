@@ -15,30 +15,30 @@ type ProductCardProps = {
   readonly imageUrl: string | null;
   /**
    * GROSS, and the cheapest configuration a customer can actually buy
-   * (`server/pricing/starting-price.ts`). `null` renders no price at all —
+   * (`server/pricing/starting-price.ts`). `null` renders no price at all -
    * never zero, and never a fallback to `minPriceGrosze`, which is the net
    * internal clamp this card used to advertise
    * (`docs/REVIEW-DETAILED.md` BUG-02).
    */
   readonly startingPriceGrossGrosze: number | null;
-  /** Real, from `PersonalizationSpec.isEnabled` — not every product offers it. */
+  /** Real, from `PersonalizationSpec.isEnabled` - not every product offers it. */
   readonly hasPersonalization: boolean;
   readonly productionDaysMin: number;
   readonly productionDaysMax: number;
   readonly minWidthMm: number;
   readonly maxWidthMm: number;
   readonly materials: readonly { readonly namePl: string }[];
-  /** Set on the homepage's first card only — see CategoryTile.tsx's comment on why this matters. */
+  /** Set on the homepage's first card only - see CategoryTile.tsx's comment on why this matters. */
   readonly priority?: boolean;
 };
 
 /**
- * The v2 product card — image, category label, name, real price, two image
+ * The v2 product card - image, category label, name, real price, two image
  * badges (category icon + a "Grawer" pill only when personalization is
- * genuinely enabled), and — added 2026-08-25, round 2 — a compact facts row
+ * genuinely enabled), and - added 2026-08-25, round 2 - a compact facts row
  * (production time, width range) plus a material chip, all real DB fields,
  * to make the card more informative without inventing anything (no rating,
- * no "bestseller"/popularity claim — §16A.1 module 9 forbids fabricated
+ * no "bestseller"/popularity claim - §16A.1 module 9 forbids fabricated
  * social proof, and this project has followed that everywhere). `materials`
  * is a real many-to-many join; every seeded product has exactly one today,
  * but this renders the first plus a "+N" suffix so it doesn't silently
@@ -79,7 +79,7 @@ export function ProductCard({
         }}
       >
         {imageUrl !== null && (
-          // Decorative: the visible name below already labels the link — see
+          // Decorative: the visible name below already labels the link - see
           // CategoryTile.tsx's comment for why a second `alt` here would be
           // a real duplication, not just a test-locator inconvenience.
           <Image
@@ -125,7 +125,7 @@ export function ProductCard({
             font: 'var(--mui-font-subtitle1)',
             letterSpacing: 'var(--mui-letter-spacing-h5)',
             color: 'var(--mui-palette-text-primary)',
-            // Product names are catalogue data of unpredictable length —
+            // Product names are catalogue data of unpredictable length -
             // `pretty` keeps a two-line name from leaving one word alone on
             // the second line, `anywhere` stops an unbroken one overflowing
             // the card. Neither changes where anything sits.
@@ -159,7 +159,7 @@ export function ProductCard({
           </div>
         )}
         {/*
-         * `subtitle2` rather than `body2` — identical size (0.875rem), so
+         * `subtitle2` rather than `body2` - identical size (0.875rem), so
          * nothing reflows, but weight 600 instead of 400. Price is the one
          * thing on a product card a customer is actually comparing, and it
          * was the lightest text in the block: quieter than the product name

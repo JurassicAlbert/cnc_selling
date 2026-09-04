@@ -3,7 +3,7 @@
 /**
  * Status-transition buttons + the "mark paid" action for one order.
  * `candidates` is computed server-side (`checkOrderStatusTransition` run
- * against every `OrderStatus` for `actorType: 'staff'`) — this component
+ * against every `OrderStatus` for `actorType: 'staff'`) - this component
  * only renders what the domain's own state machine already says is legal,
  * never re-derives the graph.
  */
@@ -21,7 +21,7 @@ import { DisabledExplanation } from '@/ui/primitives/DisabledExplanation';
 
 export type StatusCandidate = {
   readonly status: OrderStatus;
-  /** True when the only reason this edge doesn't apply yet is the DESIGN_REVIEW gate — shown disabled with an explanation, per §16A.5 ("explain every disabled control"), rather than hidden. */
+  /** True when the only reason this edge doesn't apply yet is the DESIGN_REVIEW gate - shown disabled with an explanation, per §16A.5 ("explain every disabled control"), rather than hidden. */
   readonly blockedByDesignReview: boolean;
 };
 

@@ -1,6 +1,6 @@
 /**
  * `AuditLog` (`prisma/schema.prisma`) has existed since before P7 but was
- * never written to — no admin mutation existed yet. `docs/ARCHITECTURE.md`
+ * never written to - no admin mutation existed yet. `docs/ARCHITECTURE.md`
  * §16A.2 invariant 4: "Every mutation is audited." `actorEmail` is
  * denormalised on the model itself (survives staff account deletion), so
  * it's captured here rather than joined later from `actorId`.

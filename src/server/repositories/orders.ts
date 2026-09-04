@@ -1,7 +1,7 @@
 /**
- * Guest order lookup — `docs/ARCHITECTURE.md` §15.4/§16.1: constant-time
+ * Guest order lookup - `docs/ARCHITECTURE.md` §15.4/§16.1: constant-time
  * `accessToken` comparison, and a wrong token is indistinguishable from a
- * nonexistent order (`null` either way) — the same "404, not 403"
+ * nonexistent order (`null` either way) - the same "404, not 403"
  * discipline already used for file access, so an order's existence is
  * never probeable by trying tokens.
  */
@@ -18,7 +18,7 @@ export type OrderConfirmationItemView = {
   readonly snapshot: OrderItemSnapshot;
 };
 
-/** P9 phase 7: the customer-facing slice of `Shipment` — no `internalNotesPl`/`issueResolutionPl`, staff-only fields. */
+/** P9 phase 7: the customer-facing slice of `Shipment` - no `internalNotesPl`/`issueResolutionPl`, staff-only fields. */
 export type OrderShipmentView = {
   readonly carrier: string | null;
   readonly trackingNumber: string | null;
@@ -36,7 +36,7 @@ export type OrderConfirmationView = {
   readonly paymentMethod: PaymentMethod;
   readonly totalGrossGrosze: number;
   readonly email: string;
-  /** 2026-08-29, owner feedback: the customer-facing confirmation never showed which delivery method or pickup point they'd actually chosen — a real gap, not by design. */
+  /** 2026-08-29, owner feedback: the customer-facing confirmation never showed which delivery method or pickup point they'd actually chosen - a real gap, not by design. */
   readonly deliveryMethodNamePl: string;
   readonly pickupPointLabel: string | null;
   readonly items: readonly OrderConfirmationItemView[];
@@ -60,11 +60,11 @@ export type OrderSummaryView = {
   readonly totalGrossGrosze: number;
   readonly createdAt: Date;
   readonly itemCount: number;
-  /** `null` until staff creates a `Shipment` row — most orders start their life this way. P9 continuation: surfaced on `/moje-konto` so "state after order but before shipping" is visible without opening each order individually. */
+  /** `null` until staff creates a `Shipment` row - most orders start their life this way. P9 continuation: surfaced on `/moje-konto` so "state after order but before shipping" is visible without opening each order individually. */
   readonly shipmentStatus: ShipmentStatus | null;
 };
 
-/** Order history (P6 Part C) — `Order.userId` is already indexed. */
+/** Order history (P6 Part C) - `Order.userId` is already indexed. */
 export async function listOrdersForUser(userId: string): Promise<readonly OrderSummaryView[]> {
   const orders = await prisma.order.findMany({
     where: { userId },
@@ -89,7 +89,7 @@ export async function listOrdersForUser(userId: string): Promise<readonly OrderS
 }
 
 /**
- * The order-history detail view — ownership checked by `userId`, not by
+ * The order-history detail view - ownership checked by `userId`, not by
  * `accessToken` (unlike `findOrderForConfirmation`'s guest lookup): a logged
  * in customer viewing their own history has already proven who they are via
  * their session, so no token is needed or shown here.
@@ -161,7 +161,7 @@ export async function findOrderForConfirmation(
   const provided = Buffer.from(token);
   const expected = Buffer.from(order.accessToken);
   // `timingSafeEqual` throws on a length mismatch rather than returning
-  // `false` — guarded explicitly so a wrong-length token 404s instead of
+  // `false` - guarded explicitly so a wrong-length token 404s instead of
   // 500ing.
   const matches = provided.length === expected.length && timingSafeEqual(provided, expected);
   if (!matches) {

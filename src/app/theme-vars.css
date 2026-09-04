@@ -1,29 +1,29 @@
 /**
- * The theme's CSS custom properties, as a plain stylesheet — no React, no
+ * The theme's CSS custom properties, as a plain stylesheet - no React, no
  * Emotion, no client JS.
  *
  * Found via a real Lighthouse audit (2026-08-23), not assumed: with
  * `ThemeRegistry` (MUI's `AppRouterCacheProvider` + `ThemeProvider` +
  * `CssBaseline`) wrapping every page from the root layout, mobile
- * performance was 74/100 and LCP was 3.8s on a page — a product detail page
- * — with zero interactive MUI components. ~154KB of JS chunks were the full
+ * performance was 74/100 and LCP was 3.8s on a page - a product detail page
+ * - with zero interactive MUI components. ~154KB of JS chunks were the full
  * MUI + Emotion + React client runtime, shipped to a page that used none of
  * it; every RSC primitive (`Heading`, `Text`, `Container`, `Section`,
  * `Card`, `SiteHeader`) only ever needed the CSS custom properties, which
  * `cssVariables: true` was supposed to make free. Wrapping the whole app in
  * a client provider to get a `<style>` tag defeated that, exactly the R3
  * risk ARCHITECTURE.md §23 names ("MUI is client-side; naive use kills SEO
- * and LCP") — the lint rule stops `@mui/material` imports in server
+ * and LCP") - the lint rule stops `@mui/material` imports in server
  * components, but nothing stopped the theme WRAPPER from shipping to pages
  * that don't need it.
  *
- * `ThemeRegistry` still exists and is still correct — it is what a real
+ * `ThemeRegistry` still exists and is still correct - it is what a real
  * interactive island (P3's configurator, cart, checkout) will need. It is
  * no longer mounted at the root. Wrap it around the specific route or
  * component subtree that first needs a live `@mui/material` component, not
  * around `{children}` in `src/app/layout.tsx` again.
  *
- * Values duplicate `src/ui/theme/theme.ts` deliberately — same convention
+ * Values duplicate `src/ui/theme/theme.ts` deliberately - same convention
  * as `scripts/generate-placeholder-images.mjs`'s palette copy. If the theme
  * changes, update both. The font shorthands used to be MUI's stock default
  * Typography scale (read off a live page rather than assumed); as of
@@ -45,7 +45,7 @@
   --mui-palette-error-main: #8c3a2e;
 
   /*
-   * The type scale, mirroring `src/ui/theme/theme.ts` exactly — see that
+   * The type scale, mirroring `src/ui/theme/theme.ts` exactly - see that
    * file's `typography` comment for the reasoning behind every value. These
    * are what the RSC primitives (`Heading`, `Text`) actually read, since
    * `ThemeRegistry` is deliberately not mounted site-wide.
@@ -54,11 +54,11 @@
    * the desktop value exactly at 1200px (the `Container` max-width). That
    * is not a nicety: without a live ThemeProvider there is no
    * `responsiveFontSizes()`, and a fixed 96px `h1` rendered as literal 96px
-   * on a 375px phone and overflowed the viewport — a real bug found by
+   * on a 375px phone and overflowed the viewport - a real bug found by
    * looking at a page at mobile width, not by any type-check.
    *
    * 2026-08-30: rebuilt from MUI's stock Material scale (which was only
-   * ever family-swapped) into a real one — one consistent ratio, weight
+   * ever family-swapped) into a real one - one consistent ratio, weight
    * rising as size falls, line-height falling as size rises.
    */
   --mui-font-h1: 400 clamp(2.25rem, calc(2.25rem + (100vw - 375px) * 0.04364), 4.5rem)/1.06 var(--font-display);
@@ -77,7 +77,7 @@
 
   /*
    * Letter-spacing has to be its own token: the CSS `font` shorthand above
-   * carries weight, size, line-height and family, but NOT tracking — so a
+   * carries weight, size, line-height and family, but NOT tracking - so a
    * primitive setting `font: var(--mui-font-h1)` silently gets
    * `letter-spacing: normal` and loses whatever the theme specified. That
    * is exactly what used to happen: every RSC heading on the storefront
@@ -95,7 +95,7 @@
 
   /*
    * Reading measure. Body copy previously ran the full width of the
-   * `Container` — 1200px, about 150 characters per line, against a
+   * `Container` - 1200px, about 150 characters per line, against a
    * comfortable target of 60–75. The eye loses its place returning to the
    * start of a line long before that.
    *
@@ -105,7 +105,7 @@
    */
   --measure-prose: 68ch;
 
-  /* Spacing scale — shared rhythm for the header/footer/card redesign
+  /* Spacing scale - shared rhythm for the header/footer/card redesign
      (2026-08-25), so new components stop scattering literal pixel values. */
   --space-1: 4px;
   --space-2: 8px;
@@ -117,7 +117,7 @@
   --space-8: 64px;
 
   /* Warm-tinted shadows (built from the primary ink color at low alpha,
-     not pure black) and a real card radius — the previous `borderRadius: 2`
+     not pure black) and a real card radius - the previous `borderRadius: 2`
      literal was 2px, not a design unit, which is a real part of why cards
      and the header read as flat/unstyled. */
   --shadow-sm: 0 1px 2px rgba(46, 42, 38, 0.06), 0 1px 3px rgba(46, 42, 38, 0.08);
@@ -129,13 +129,13 @@ body {
   background-color: var(--mui-palette-background-default);
   /* Round 3, 2026-08-25: the owner asked to replace the flat background
      with a hexagonal "material tile" motif (per-section, see
-     SectionDecoration.tsx) rather than a sitewide geometric wash — the
+     SectionDecoration.tsx) rather than a sitewide geometric wash - the
      earlier round's blueprint grid (repeating-linear-gradient) is removed
      here since a technical-drawing grid and a honeycomb pattern are two
      different visual languages that would fight each other. The faint
      feTurbulence grain stays: paper-like tactility, not a geometric
      pattern, so it doesn't compete with the hexagons.
-     Deliberately no `background-attachment: fixed` anywhere here — a known
+     Deliberately no `background-attachment: fixed` anywhere here - a known
      mobile-Safari scroll-jank trap, and this project tests on
      mobile-safari in e2e. */
   background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='180'%20height='180'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.85'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23n)'%20opacity='0.06'/%3E%3C/svg%3E");
@@ -146,7 +146,7 @@ body {
 
 /* Responsive density for the hexagon decoration (SectionDecoration.tsx),
    added 2026-08-25 per the owner's brief: full cluster on desktop, only
-   the small `.hex-core` subset on tablet, nothing at all on phones —
+   the small `.hex-core` subset on tablet, nothing at all on phones -
    "never allow the decorative pattern to interfere with readability." */
 @media (max-width: 899px) {
   .hex-extra {
@@ -160,7 +160,7 @@ body {
 }
 
 /*
- * Global utility classes — the only way to express real `:hover`/
+ * Global utility classes - the only way to express real `:hover`/
  * `:focus-visible` states from a Server Component, since every primitive
  * here is RSC-only inline `style={}` with no client JS. Added 2026-08-25
  * alongside the header/footer/card depth pass.
@@ -177,7 +177,7 @@ body {
 .nav-link:focus-visible {
   color: var(--mui-palette-secondary-main);
 }
-/* The nav icon set is decorative — the link text alone is the accessible name. */
+/* The nav icon set is decorative - the link text alone is the accessible name. */
 .nav-link svg {
   flex-shrink: 0;
 }
@@ -199,7 +199,7 @@ body {
  * 2026-08-29, navbar UX pass: a live count+price badge on the cart icon
  * ("koło koszyka dodać jakieś ładne UX pokazujące cenę i ilość elementów w
  * koszyku na bieżąco"). `itemCount`/`totalGrossGrosze` come from
- * `StorefrontChrome`'s own server-side read (`getCartSummaryForRequest`) —
+ * `StorefrontChrome`'s own server-side read (`getCartSummaryForRequest`) -
  * "na bieżąco" here means "correct on every real navigation", the same
  * honest live-enough guarantee the header's own login state already relies
  * on (a Server Action's `redirect()` re-renders this layout), not a
@@ -221,7 +221,7 @@ body {
 }
 
 /*
- * Navbar dropdowns ("Produkty", account) — native `<details>`/`<summary>`,
+ * Navbar dropdowns ("Produkty", account) - native `<details>`/`<summary>`,
  * zero client JS (2026-08-29, real navbar restructure). `<summary>` gets
  * the default disclosure triangle suppressed via `list-style: none` on the
  * element itself (inline, `SiteHeader.tsx`); this block only styles the
@@ -233,7 +233,7 @@ body {
 .nav-dropdown summary::-webkit-details-marker {
   display: none;
 }
-/* Chevron flips to point up while the panel is open — `ExpandMoreIcon`, rotated, not a second icon. */
+/* Chevron flips to point up while the panel is open - `ExpandMoreIcon`, rotated, not a second icon. */
 .nav-dropdown-chevron {
   transition: transform 0.15s ease;
 }
@@ -322,7 +322,7 @@ body {
   color: var(--mui-palette-secondary-main);
 }
 
-/* Card badges — the category-icon chip (top-left) and the personalization
+/* Card badges - the category-icon chip (top-left) and the personalization
    pill (top-right), added 2026-08-25 alongside the noise texture above, in
    response to the owner wanting the cards "beautified" with icons/badges. */
 .card-icon-badge {
@@ -357,7 +357,7 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
-/* A small neutral pill for a product card's material fact — distinct from
+/* A small neutral pill for a product card's material fact - distinct from
    `.card-personalization-badge` (which overlays the image) since this one
    sits inline in the text block, alongside the production-time/size facts
    added 2026-08-25. */
@@ -372,7 +372,7 @@ body {
   font: var(--mui-font-caption);
 }
 
-/* Scoped to the homepage hero only — not a sitewide texture, just enough
+/* Scoped to the homepage hero only - not a sitewide texture, just enough
    depth behind the headline that the top of the page doesn't read as a
    flat rectangle. */
 .hero-surface {
@@ -383,11 +383,11 @@ body {
   );
 }
 
-/* Sitewide scrollbar styling, 2026-08-26 — the default OS scrollbar (flat
+/* Sitewide scrollbar styling, 2026-08-26 - the default OS scrollbar (flat
    grey) sat visually outside this warm cream/brown palette. Firefox reads
    `scrollbar-color`/`scrollbar-width` on `html`; every Chromium/WebKit
    browser (including mobile Safari, this project's tested browser) reads
-   the `::-webkit-scrollbar*` pseudo-elements instead — both are declared
+   the `::-webkit-scrollbar*` pseudo-elements instead - both are declared
    so the thumb/track match the theme everywhere. */
 html {
   scrollbar-color: var(--mui-palette-secondary-main) var(--mui-palette-background-default);
@@ -410,12 +410,12 @@ html {
 }
 
 /*
- * A global, visible keyboard focus ring — 2026-08-30 accessibility pass
+ * A global, visible keyboard focus ring - 2026-08-30 accessibility pass
  * (`docs/AUDIT-2026-08-30.md` §11). The storefront chrome is deliberately
  * MUI-free (see this file's own header), which also means it never
- * inherited MUI's focus styling: several real controls — the site-wide
+ * inherited MUI's focus styling: several real controls - the site-wide
  * search field and button, the order-lookup form's inputs, the category
- * filter's own controls — were relying on whatever the browser happened to
+ * filter's own controls - were relying on whatever the browser happened to
  * draw, and Chrome draws nothing at all on an `<input>` styled with a
  * custom border. A keyboard user genuinely could not tell where they were.
  *
@@ -430,21 +430,21 @@ html {
 }
 
 /*
- * Real form controls for the storefront's zero-JS surfaces — 2026-08-30
+ * Real form controls for the storefront's zero-JS surfaces - 2026-08-30
  * (`docs/AUDIT-2026-08-30.md` P2-10, and the owner's own "default selects,
  * raw buttons, browser-default controls" complaint).
  *
  * These exist INSTEAD of converting `CategoryFilterForm` and the consent
  * banner to MUI, not as a poor substitute for it. Both render on the hot
- * path — the filter on every category page, the banner on a first-time
- * visitor's very first page — and this file's own header records the real
+ * path - the filter on every category page, the banner on a first-time
+ * visitor's very first page - and this file's own header records the real
  * Lighthouse finding that mounting a client theme provider there cost 3.8s
  * LCP for components that only ever needed CSS. Styling the native controls
  * gets the polish at zero JS; converting them would trade a measured
  * performance property for a cosmetic one.
  *
  * `accent-color` is what makes a native radio/checkbox adopt the brand
- * colour without replacing it with a div — the control stays a real
+ * colour without replacing it with a div - the control stays a real
  * `<input>`, so keyboard behaviour, form semantics and screen-reader
  * announcements are the browser's, not a reimplementation's.
  */
@@ -498,7 +498,7 @@ html {
 
 .form-button {
   font: var(--mui-font-button);
-  /* The `font` shorthand does not carry tracking — same reason `Heading`
+  /* The `font` shorthand does not carry tracking - same reason `Heading`
      applies it separately. Without this the styled native buttons sit at
      default spacing while every MUI button on the site carries the theme's. */
   letter-spacing: var(--mui-letter-spacing-button);

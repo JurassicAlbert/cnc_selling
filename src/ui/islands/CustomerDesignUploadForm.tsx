@@ -1,13 +1,13 @@
 'use client';
 
 /**
- * P9 phase 2 — the standalone upload form for `/moje-konto/wzory`, the new
+ * P9 phase 2 - the standalone upload form for `/moje-konto/wzory`, the new
  * real home for uploading a custom design (previously only reachable
  * inline inside the `CUSTOM` product's own configurator step). Reuses
- * `uploadCustomDesign` unchanged — the exact same validation/inspection/
+ * `uploadCustomDesign` unchanged - the exact same validation/inspection/
  * consent pipeline as the configurator's own upload, just with a `titlePl`
  * field added (the Server Action already accepts it, optional, so the
- * configurator's own inline upload — which sends no title — keeps working
+ * configurator's own inline upload - which sends no title - keeps working
  * exactly as before). On success, calls `router.refresh()` so the list
  * above this form picks up the new row from the Server Component parent,
  * the same "Server Actions + router boundary" shape every mutation in
@@ -59,7 +59,7 @@ export function CustomerDesignUploadForm() {
     }
 
     // Same "the framework can reject before the Server Action ever runs"
-    // case `Configurator.tsx`'s own upload step already found and fixed —
+    // case `Configurator.tsx`'s own upload step already found and fixed -
     // a file just over `next.config`'s body-size buffer throws instead of
     // resolving `{ok: false}`.
     let result: UploadCustomDesignResult;

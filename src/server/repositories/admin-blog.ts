@@ -1,4 +1,4 @@
-/** Admin blog-post queries — unscoped by `isActive`/`publishedAt`, unlike `blog.ts`'s public `listPublishedBlogPosts`. Every caller here MUST go through `requireStaffSession()` first. */
+/** Admin blog-post queries - unscoped by `isActive`/`publishedAt`, unlike `blog.ts`'s public `listPublishedBlogPosts`. Every caller here MUST go through `requireStaffSession()` first. */
 
 import { prisma } from '@/server/db/client';
 

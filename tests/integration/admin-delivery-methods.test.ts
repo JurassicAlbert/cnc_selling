@@ -128,17 +128,17 @@ describe('applySetDeliveryMethodActive', () => {
 
 /**
  * `docs/AUDIT-2026-08-30.md` §20 (admin CRUD consistency). `DeliveryWeightTier`
- * is what actually decides what a customer is charged for a tiered carrier —
+ * is what actually decides what a customer is charged for a tiered carrier -
  * `DeliveryMethod.priceGrosze` is only the fallback for a method with no
  * tiers at all. Yet the panel had no way to see or edit tiers: an admin could
  * change "Cena" on an InPost or DPD method and nothing about the real charge
- * would move. Not a cosmetic gap — an actively misleading one.
+ * would move. Not a cosmetic gap - an actively misleading one.
  */
-describe('delivery weight tiers — admin CRUD', () => {
+describe('delivery weight tiers - admin CRUD', () => {
   async function seedMethod() {
     const staff = staffActor();
     const created = await applyCreateDeliveryMethod(staff, formData());
-    if (!created.ok) throw new Error('setup failed — could not create a delivery method');
+    if (!created.ok) throw new Error('setup failed - could not create a delivery method');
     return { staff, id: created.id };
   }
 
@@ -171,7 +171,7 @@ describe('delivery weight tiers — admin CRUD', () => {
     expect(resolved.find((m) => m.id === id)).toMatchObject({ feasible: true, priceGrosze: 1_599 });
   });
 
-  it('rejects a tier with a non-positive weight — a 0 g bracket would match everything', async () => {
+  it('rejects a tier with a non-positive weight - a 0 g bracket would match everything', async () => {
     const { staff, id } = await seedMethod();
     expect((await applyAddDeliveryWeightTier(staff, id, tierInput({ maxWeightGrams: 0 }))).ok).toBe(false);
     expect((await findDeliveryMethodForAdmin(id))?.weightTiers).toHaveLength(0);
@@ -196,7 +196,7 @@ describe('delivery weight tiers — admin CRUD', () => {
     await applyAddDeliveryWeightTier(staff, id, tierInput());
     const withTier = await findDeliveryMethodForAdmin(id);
     const tierId = withTier?.weightTiers[0]?.id;
-    if (tierId === undefined) throw new Error('setup failed — no tier to remove');
+    if (tierId === undefined) throw new Error('setup failed - no tier to remove');
 
     await applyRemoveDeliveryWeightTier(staff, id, tierId);
 

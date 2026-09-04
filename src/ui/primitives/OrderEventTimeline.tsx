@@ -3,7 +3,7 @@ import { List, ListItem, ListItemText } from '@mui/material';
 import { adminOrderStatusLabel } from '@/content/pl/admin';
 import type { AdminOrderEventView } from '@/server/repositories/admin-orders';
 
-/** Plain rendering of `OrderEvent` rows, oldest first — §16A.1's "order event timeline." */
+/** Plain rendering of `OrderEvent` rows, oldest first - §16A.1's "order event timeline." */
 export function OrderEventTimeline({ events }: { readonly events: readonly AdminOrderEventView[] }) {
   return (
     <List dense disablePadding>
@@ -18,7 +18,7 @@ export function OrderEventTimeline({ events }: { readonly events: readonly Admin
             }
             secondary={
               <>
-                {event.createdAt.toLocaleString('pl-PL')} — {event.actorType}
+                {event.createdAt.toLocaleString('pl-PL')} - {event.actorType}
                 {event.actorEmail !== null ? ` (${event.actorEmail})` : ''}
                 {event.notePl !== null && event.notePl.length > 0 && (
                   <span style={{ display: 'block' }}>{event.notePl}</span>

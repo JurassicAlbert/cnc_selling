@@ -6,24 +6,24 @@
  *    and therefore cannot come from `next.config.ts`'s static `headers()`.
  *
  * Next.js 16 renamed `middleware.ts` to `proxy.ts` (`node_modules/next/dist/
- * docs/01-app/03-api-reference/03-file-conventions/proxy.md` — `middleware.ts`
+ * docs/01-app/03-api-reference/03-file-conventions/proxy.md` - `middleware.ts`
  * is dead, not just deprecated-but-working). Proxy now defaults to the
  * Node.js runtime (v16.0.0), but the auth half still only does the cheap,
- * edge-safe check — `getSessionCookie` reads the cookie's presence, never
+ * edge-safe check - `getSessionCookie` reads the cookie's presence, never
  * verifies it against the database. The real role check (`STAFF`/`ADMIN` vs
- * `CUSTOMER` — a real DB read) belongs in `src/app/(admin)/panel/layout.tsx`,
+ * `CUSTOMER` - a real DB read) belongs in `src/app/(admin)/panel/layout.tsx`,
  * a Server Component, not here: proxy's own docs warn a matcher change can
  * silently drop coverage, so authorization must never live ONLY in proxy.
  *
  * That warning is exactly why the matcher below is split in two rather than
  * widened in place. The CSP entry skips prefetches (Next's CSP guide
- * recommends it — a prefetch returns an RSC payload, not a document), and
+ * recommends it - a prefetch returns an RSC payload, not a document), and
  * applying that same `missing:` clause to `/panel` would have quietly meant
  * a prefetched panel URL no longer hit the redirect. The `/panel` entry
  * therefore keeps matching everything, unconditionally, as it did before.
  *
- * The policy itself lives in `src/server/security/headers.ts` — pure and
- * unit-tested — because a policy string assembled inline in a proxy is a
+ * The policy itself lives in `src/server/security/headers.ts` - pure and
+ * unit-tested - because a policy string assembled inline in a proxy is a
  * policy nobody can test without booting a server.
  */
 
@@ -55,7 +55,7 @@ export function proxy(request: NextRequest): NextResponse {
   // On the REQUEST, so Next can read the nonce back out at render time and
   // stamp it onto its own script tags (`node_modules/next/dist/server/
   // app-render/app-render.js:209-210` reads either the enforcing or the
-  // report-only header — which is what makes a report-only rollout show
+  // report-only header - which is what makes a report-only rollout show
   // real violations instead of a flood of false ones from the framework's
   // own scripts). `x-nonce` is the documented way for a `<Script>` component
   // to pick it up; nothing reads it yet, and a third-party script added
@@ -76,7 +76,7 @@ function redirectToLogin(request: NextRequest): NextResponse {
 
 export const config = {
   matcher: [
-    // Unconditional, including prefetches — see the header comment.
+    // Unconditional, including prefetches - see the header comment.
     '/panel/:path*',
     {
       // Everything else that renders a document. `_next/static` and

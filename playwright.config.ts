@@ -1,20 +1,20 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Desktop + mobile, per ARCHITECTURE.md §21.1/§21.4 — every critical journey
+ * Desktop + mobile, per ARCHITECTURE.md §21.1/§21.4 - every critical journey
  * gets both. `webServer` builds and starts the app itself, so `npm run e2e`
  * is a single command with no manual dev-server step.
  *
  * Runs against a production build (`next build && next start`), not `next
- * dev` — found the hard way, 2026-08-24: once `/[category]` started reading
+ * dev` - found the hard way, 2026-08-24: once `/[category]` started reading
  * `searchParams` (the filter/sort redesign work) and became a dynamically-
  * rendered route, client-side navigation AWAY from it intermittently never
- * completed under `next dev` — the RSC fetch for the destination returned
+ * completed under `next dev` - the RSC fetch for the destination returned
  * 200, but the router never committed the URL change, with zero console
  * errors either side. Reproduced repeatedly under dev, never once under a
  * production build (confirmed by hand: `npm run build && npm run start`,
  * clicked the same link ten times). This is a Turbopack dev-mode first-
- * compile race on the newly-dynamic route, not an application bug — and not
+ * compile race on the newly-dynamic route, not an application bug - and not
  * something a real visitor (who only ever sees the production build) would
  * hit. Testing dev mode was catching a flake that doesn't reflect what
  * ships; testing the actual build does.
@@ -27,15 +27,15 @@ export default defineConfig({
   /**
    * Serial in CI, parallel locally. Added 2026-08-31 with the CI workflow
    * (ARCH-01). `docs/REVIEW-TEST-COVERAGE.md` records a reproducible
-   * parallel-contention flake — `fillReliably` login timeouts and
-   * "destination stream closed early" — where every affected spec passes in
+   * parallel-contention flake - `fillReliably` login timeouts and
+   * "destination stream closed early" - where every affected spec passes in
    * isolation. Every worker shares one database and one dev server, which is
    * the obvious cause, and a first CI run that is red for that reason
    * teaches a team to ignore CI.
    *
    * **Provisional.** This is the documented diagnosis applied, not a
    * measured fix: it has not been observed on a real CI run. If the suite is
-   * stable after a few green runs, try raising it — CI minutes are the only
+   * stable after a few green runs, try raising it - CI minutes are the only
    * thing it costs. The real repair is ARCH-03 (point e2e at
    * `TEST_DATABASE_URL` instead of the development database).
    */

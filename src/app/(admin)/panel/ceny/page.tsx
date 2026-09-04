@@ -48,10 +48,10 @@ export default async function AdminPricingPage() {
               <TableCell>{statusChip(v)}</TableCell>
               <TableCell>
                 {v.publishedAt === null
-                  ? '—'
-                  : `${v.publishedAt.toLocaleDateString('pl-PL')} (${v.publishedByEmail ?? '—'})`}
+                  ? '-'
+                  : `${v.publishedAt.toLocaleDateString('pl-PL')} (${v.publishedByEmail ?? '-'})`}
               </TableCell>
-              <TableCell>{v.notePl ?? '—'}</TableCell>
+              <TableCell>{v.notePl ?? '-'}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -60,7 +60,7 @@ export default async function AdminPricingPage() {
       {active !== null && (
         <>
           <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>
-            {ADMIN.pricingActiveVersionLabelPl}: #{active.version} — {ADMIN.pricingFieldMachineRateCncPl} {formatPln(active.machineRateCncGrosze)}
+            {ADMIN.pricingActiveVersionLabelPl}: #{active.version} - {ADMIN.pricingFieldMachineRateCncPl} {formatPln(active.machineRateCncGrosze)}
           </Typography>
 
           <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>

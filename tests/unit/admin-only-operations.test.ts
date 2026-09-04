@@ -4,14 +4,14 @@
  * `tests/integration/admin-authorization.test.ts` drives `refuseUnlessAdmin`
  * through the real `apply*` functions against real Postgres. It cannot touch
  * the `xxx()` wrapper, because `requireAdminSession()` reads `next/headers`,
- * which throws outside a request scope — and the wrapper is the gate an
+ * which throws outside a request scope - and the wrapper is the gate an
  * actual HTTP request meets. So the wrapper is asserted mechanically here,
  * the same way `server-action-boundary.test.ts` asserts the `actions/` ↔
  * `operations/` split rather than trusting convention.
  *
  * What this catches: someone "simplifying" one of these back to
  * `requireStaffSession()` to match its 22 neighbours. The integration test
- * would stay green — the `apply` check still refuses a `STAFF` actor — while
+ * would stay green - the `apply` check still refuses a `STAFF` actor - while
  * the panel had quietly reopened the screen to every staff account.
  *
  * Asserted per **function**, not per file: `admin-pricing.ts` correctly
@@ -58,7 +58,7 @@ function bodyOf(fileName: string, functionName: string): string {
 }
 
 describe('mutating operations that §16.3 assigns to ADMIN', () => {
-  it.each(ADMIN_ONLY_WRAPPERS)('%s → %s() gates on requireAdminSession — it %s', (file, fn, _why) => {
+  it.each(ADMIN_ONLY_WRAPPERS)('%s → %s() gates on requireAdminSession - it %s', (file, fn, _why) => {
     const body = bodyOf(file, fn);
 
     expect(body).toMatch(/requireAdminSession\s*\(/);
@@ -71,7 +71,7 @@ describe('mutating operations that §16.3 assigns to ADMIN', () => {
 describe('the three SEC-04 operations also assert the role inside the apply', () => {
   // Belt and braces, and the thing that makes the integration test possible
   // at all. Listed separately because the three older admin-only operations
-  // predate this convention and are not being retrofitted here — that would
+  // predate this convention and are not being retrofitted here - that would
   // be scope creep on a security fix, which is how security fixes get
   // delayed.
   const SEC_04 = [

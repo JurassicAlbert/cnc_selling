@@ -25,13 +25,13 @@ import type { Owner } from '@/server/session/ownership';
  * Two tabs.
  *
  * These run against the real cart operations rather than the Server Actions
- * that wrap them — the wrappers call `cookies()`, which throws outside a
+ * that wrap them - the wrappers call `cookies()`, which throws outside a
  * request scope, and separating the two is exactly what made this testable
  * (see `src/server/operations/cart.ts`'s header). The ownership rules the
  * wrappers enforce are the same `Owner` value passed in here.
  *
  * Uses the real seeded catalogue, because `applyAddToCart` re-prices
- * server-side and refuses anything that does not genuinely price — a
+ * server-side and refuses anything that does not genuinely price - a
  * hand-built fake product would simply be rejected, and every test below
  * would pass without exercising anything.
  */
@@ -45,14 +45,14 @@ function uid(): string {
 
 let cachedSelections: Selections | null = null;
 
-/** The first option combination of the real seeded product that genuinely prices — never a hardcoded id or size, both of which rot when the seed changes. */
+/** The first option combination of the real seeded product that genuinely prices - never a hardcoded id or size, both of which rot when the seed changes. */
 async function priceableSelections(): Promise<Selections> {
   if (cachedSelections !== null) {
     return cachedSelections;
   }
   const data = await getConfiguratorProductData(PRODUCT_SLUG);
   if (data === null) {
-    throw new Error(`No "${PRODUCT_SLUG}" in this database — seed it first (npm run db:seed against TEST_DATABASE_URL)`);
+    throw new Error(`No "${PRODUCT_SLUG}" in this database - seed it first (npm run db:seed against TEST_DATABASE_URL)`);
   }
   const sizes = [0.5, 0.75, 0.35, 1].map((fraction) => ({
     widthMm: Math.round(data.product.minWidthMm + (data.product.maxWidthMm - data.product.minWidthMm) * fraction),
@@ -61,10 +61,10 @@ async function priceableSelections(): Promise<Selections> {
   // Iterate what a customer can actually PICK, not every row that happens
   // to be joined to the product. `designsById`/`materialsById` are
   // deliberately unfiltered (they exist to resolve an id, not to offer
-  // one), so they still contain retired rows — since 2026-08-31 that
+  // one), so they still contain retired rows - since 2026-08-31 that
   // includes the deactivated `wzor-podstawowy` placeholder. Walking those
   // meant ~48 pointless round trips, each correctly refused with
-  // `OPTION_UNAVAILABLE`, before reaching a sellable design — enough to
+  // `OPTION_UNAVAILABLE`, before reaching a sellable design - enough to
   // blow this test's timeout under parallel load.
   const offered = resolveOptions(data.options, EMPTY_SELECTIONS);
   for (const designId of offered.designIds) {
@@ -92,7 +92,7 @@ async function priceableSelections(): Promise<Selections> {
       }
     }
   }
-  throw new Error(`No priceable option combination for "${PRODUCT_SLUG}" — the seeded catalogue changed`);
+  throw new Error(`No priceable option combination for "${PRODUCT_SLUG}" - the seeded catalogue changed`);
 }
 
 function guestOwner(sessionToken: string): Owner {
@@ -110,7 +110,7 @@ afterEach(async () => {
   await prisma.analyticsEvent.deleteMany({ where: { sessionToken: { startsWith: PREFIX } } });
 });
 
-describe('addToCart — line identity (audit P1-4)', () => {
+describe('addToCart - line identity (audit P1-4)', () => {
   it('adding the identical configuration twice bumps the quantity instead of creating a second row', async () => {
     const sessionToken = uid();
     const selections = await priceableSelections();
@@ -123,7 +123,7 @@ describe('addToCart — line identity (audit P1-4)', () => {
     expect(cart.items[0]?.quantity).toBe(2);
   });
 
-  it('a double-clicked "add to cart" — two genuinely concurrent requests — still leaves one row', async () => {
+  it('a double-clicked "add to cart" - two genuinely concurrent requests - still leaves one row', async () => {
     const sessionToken = uid();
     const selections = await priceableSelections();
 
@@ -140,7 +140,7 @@ describe('addToCart — line identity (audit P1-4)', () => {
     const sessionToken = uid();
     const selections = await priceableSelections();
     const wider: Selections = { ...selections, widthMm: (selections.widthMm ?? 700) - 10 };
-    // Only meaningful if the variant also prices — otherwise this would
+    // Only meaningful if the variant also prices - otherwise this would
     // assert "one row" for the boring reason that the second add failed.
     const variantPrices = (await priceAndValidateSelections(PRODUCT_SLUG, wider)).ok;
 
@@ -166,8 +166,8 @@ describe('addToCart — line identity (audit P1-4)', () => {
   });
 
   /**
-   * This assertion used to be the exact opposite — "duplicating a line still
-   * produces a second independent row, never a quantity bump" — and the
+   * This assertion used to be the exact opposite - "duplicating a line still
+   * produces a second independent row, never a quantity bump" - and the
    * `CartItem` schema comment said the same. The owner reversed it on
    * 2026-08-30: "duplicate the same product in basket like separate product
    * since its the same only the quantity should change." Recorded here
@@ -181,7 +181,7 @@ describe('addToCart — line identity (audit P1-4)', () => {
     await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 1);
     const before = await readCart(sessionToken);
     const cartItemId = before.items[0]?.cartItemId;
-    if (cartItemId === undefined) throw new Error('setup failed — nothing in the cart to duplicate');
+    if (cartItemId === undefined) throw new Error('setup failed - nothing in the cart to duplicate');
 
     await applyDuplicateCartItem(guestOwner(sessionToken), cartItemId);
 
@@ -202,17 +202,17 @@ describe('addToCart — line identity (audit P1-4)', () => {
   });
 });
 
-describe('adjustCartItemQuantity — concurrency (audit P0-3)', () => {
+describe('adjustCartItemQuantity - concurrency (audit P0-3)', () => {
   async function seedOneItem(sessionToken: string): Promise<string> {
     const selections = await priceableSelections();
     await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 1);
     const cart = await readCart(sessionToken);
     const cartItemId = cart.items[0]?.cartItemId;
-    if (cartItemId === undefined) throw new Error('setup failed — nothing in the cart');
+    if (cartItemId === undefined) throw new Error('setup failed - nothing in the cart');
     return cartItemId;
   }
 
-  it('two concurrent increments both land — neither is silently lost', async () => {
+  it('two concurrent increments both land - neither is silently lost', async () => {
     const sessionToken = uid();
     const cartItemId = await seedOneItem(sessionToken);
 
@@ -257,7 +257,7 @@ describe('adjustCartItemQuantity — concurrency (audit P0-3)', () => {
     await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], MAX_CART_ITEM_QUANTITY);
     const cart = await readCart(sessionToken);
     const cartItemId = cart.items[0]?.cartItemId;
-    if (cartItemId === undefined) throw new Error('setup failed — nothing in the cart');
+    if (cartItemId === undefined) throw new Error('setup failed - nothing in the cart');
 
     await Promise.all(
       Array.from({ length: 5 }, () => applyAdjustCartItemQuantity(guestOwner(sessionToken), cartItemId, 1)),
@@ -278,7 +278,7 @@ describe('adjustCartItemQuantity — concurrency (audit P0-3)', () => {
   });
 });
 
-describe('cart ownership (audit — §16.1 re-derives the actor, never trusts an id)', () => {
+describe('cart ownership (audit - §16.1 re-derives the actor, never trusts an id)', () => {
   it('one guest cannot adjust another guest’s cart item', async () => {
     const mine = uid();
     const theirs = uid();
@@ -320,7 +320,7 @@ describe('cart ownership (audit — §16.1 re-derives the actor, never trusts an
     expect((await readCart(theirs)).items).toHaveLength(1);
   });
 
-  it('removing the same item twice is not an error — a double-clicked bin icon must not 500', async () => {
+  it('removing the same item twice is not an error - a double-clicked bin icon must not 500', async () => {
     const sessionToken = uid();
     const selections = await priceableSelections();
     await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 1);
@@ -345,7 +345,7 @@ describe('cart ownership (audit — §16.1 re-derives the actor, never trusts an
  * customer then has to clean up by hand:
  *
  *   1. Removing a line and re-adding the same thing created a SECOND
- *      identical `Configuration`, which `/moje-konto/projekty` lists — the
+ *      identical `Configuration`, which `/moje-konto/projekty` lists - the
  *      "saved the same project twice" case, and the one with no UI to
  *      resolve it.
  *   2. "Duplikuj" deliberately created a second identical line.
@@ -357,7 +357,7 @@ describe('no two identical lines, by any path (owner request, 2026-08-30)', () =
     await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 1);
     const cart = await readCart(sessionToken);
     const item = cart.items[0];
-    if (item === undefined) throw new Error('setup failed — nothing in the cart');
+    if (item === undefined) throw new Error('setup failed - nothing in the cart');
     return { selections, item };
   }
 
@@ -368,7 +368,7 @@ describe('no two identical lines, by any path (owner request, 2026-08-30)', () =
     await applyRemoveCartItem(guestOwner(sessionToken), item.cartItemId);
     await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 1);
 
-    // One line in the cart, and — the actual bug — exactly ONE Configuration
+    // One line in the cart, and - the actual bug - exactly ONE Configuration
     // row, not two. `/moje-konto/projekty` lists these directly.
     expect((await readCart(sessionToken)).items).toHaveLength(1);
     expect(await prisma.configuration.count({ where: { sessionToken } })).toBe(1);
@@ -401,16 +401,16 @@ describe('no two identical lines, by any path (owner request, 2026-08-30)', () =
   });
 
   /**
-   * T-07 — `docs/REVIEW-DETAILED.md` BUG-05. The test above is sequential
+   * T-07 - `docs/REVIEW-DETAILED.md` BUG-05. The test above is sequential
    * and passed both before and after the fix, which is exactly why this one
    * exists: `applyDuplicateCartItem` read the quantity and wrote it back,
    * the same lost-update shape `docs/AUDIT-2026-08-30.md` P0-3 had already
    * found and fixed in `applyAdjustCartItemQuantity` **in the same commit**.
    * "Duplikuj" is a zero-JS `<form action>` with nothing disabling it, so two
-   * rapid clicks both read 1 and both wrote 2 — the customer clicked twice
+   * rapid clicks both read 1 and both wrote 2 - the customer clicked twice
    * and got one increment.
    */
-  it('two concurrent duplicates both land — neither is silently lost', async () => {
+  it('two concurrent duplicates both land - neither is silently lost', async () => {
     const sessionToken = uid();
     const { item } = await seedOneLine(sessionToken);
 
@@ -439,8 +439,8 @@ describe('no two identical lines, by any path (owner request, 2026-08-30)', () =
 
   it('concurrent duplicates at the boundary stop at the maximum, not past it', async () => {
     // The clamp has to live in the WHERE clause for this to hold: applied
-    // after a read, two racing calls could each read 24 and each write 25 —
-    // right answer by luck — or, one short of the cap, both write 26.
+    // after a read, two racing calls could each read 24 and each write 25 -
+    // right answer by luck - or, one short of the cap, both write 26.
     const sessionToken = uid();
     const selections = await priceableSelections();
     await applyAddToCart(
@@ -487,7 +487,7 @@ describe('no two identical lines, by any path (owner request, 2026-08-30)', () =
     const before = await readCart(sessionToken);
     expect(before.items).toHaveLength(2);
     const variantLine = before.items.find((line) => line.personalizationText === 'Anna');
-    if (variantLine === undefined) throw new Error('setup failed — no variant line');
+    if (variantLine === undefined) throw new Error('setup failed - no variant line');
 
     // Edit the variant back into the plain configuration the other line is.
     await applyUpdateCartItemConfiguration(
@@ -508,7 +508,7 @@ describe('no two identical lines, by any path (owner request, 2026-08-30)', () =
 /**
  * 2026-08-30 sweep, adjacent to the duplicate work: a customer could
  * accumulate saved projects but never remove one. That is why duplicates
- * felt permanent — there was no remedy for the ones already there, only a
+ * felt permanent - there was no remedy for the ones already there, only a
  * fix for new ones.
  *
  * Safe to delete outright, unlike an uploaded design: nothing historical
@@ -526,7 +526,7 @@ describe('deleting a saved project', () => {
     const cartItemId = cart.items[0]?.cartItemId;
     const configurationId = cart.items[0]?.configurationId;
     if (cartItemId === undefined || configurationId === undefined) throw new Error('setup failed');
-    // Take it out of the cart first — a project still in the cart is a
+    // Take it out of the cart first - a project still in the cart is a
     // different case, covered below.
     await applyRemoveCartItem(guestOwner(sessionToken), cartItemId);
 

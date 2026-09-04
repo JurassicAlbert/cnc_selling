@@ -63,14 +63,14 @@ export function feasibilityMessage(finding: FeasibilityFinding): string {
     case 'DESIGN_TOO_DETAILED':
       return `Wybrany wzór jest bardzo szczegółowy. Dla tego rozmiaru zalecamy format od ${cm(Number(finding.params.recommendedMinWidthMm))} szerokości.`;
     case 'MODULAR_BUILD':
-      return `Ten produkt zostanie wykonany z kilku precyzyjnie łączonych elementów — ${countPl(Number(finding.params.moduleCount), NOUNS.module)}. Ułatwia to transport i montaż, a gotowy wzór tworzy jedną całość.`;
+      return `Ten produkt zostanie wykonany z kilku precyzyjnie łączonych elementów - ${countPl(Number(finding.params.moduleCount), NOUNS.module)}. Ułatwia to transport i montaż, a gotowy wzór tworzy jedną całość.`;
     case 'NATURAL_VARIATION':
-      return 'To drewno naturalne. Rysunek słojów, odcień i sęki różnią się w każdym egzemplarzu — Twój produkt będzie jedyny w swoim rodzaju.';
+      return 'To drewno naturalne. Rysunek słojów, odcień i sęki różnią się w każdym egzemplarzu - Twój produkt będzie jedyny w swoim rodzaju.';
     case 'FLOOR_MATCH_NOT_GUARANTEED':
       return 'Dokładne dopasowanie odcienia do istniejącej podłogi może nie być możliwe. Drewno naturalne różni się partiami, a kolor zmienia się z czasem.';
     case 'THICKNESS_EXCEEDS_MACHINE':
-      return `Wybrana grubość (${mm(Number(finding.params.thicknessMm))}) przekracza możliwości naszej maszyny — maksymalnie ${mm(Number(finding.params.maxThicknessMm))}. Wybierz mniejszą grubość.`;
-    // Prepared but disabled — see src/domain/joinery/yato-yane.ts. Nothing
+      return `Wybrana grubość (${mm(Number(finding.params.thicknessMm))}) przekracza możliwości naszej maszyny - maksymalnie ${mm(Number(finding.params.maxThicknessMm))}. Wybierz mniejszą grubość.`;
+    // Prepared but disabled - see src/domain/joinery/yato-yane.ts. Nothing
     // in evaluateFeasibility produces this code today; this case exists
     // only so the switch stays exhaustive over FeasibilityCode.
     case 'JOINED_PANEL_YATO_YANE':
@@ -104,7 +104,7 @@ export function uploadWarningMessage(warning: UploadWarning): string {
     case 'VERY_LOW_RESOLUTION':
       return `Rozdzielczość przesłanego pliku jest wyraźnie za niska (${warning.params.effectiveDpi} DPI zamiast ${warning.params.thresholdDpi} DPI). Zalecamy przesłanie pliku w wyższej rozdzielczości.`;
     case 'ASPECT_MISMATCH':
-      return 'Proporcje przesłanego pliku różnią się od proporcji wybranego produktu. Plik zostanie dopasowany/przycięty — sprawdź podgląd przed złożeniem zamówienia.';
+      return 'Proporcje przesłanego pliku różnią się od proporcji wybranego produktu. Plik zostanie dopasowany/przycięty - sprawdź podgląd przed złożeniem zamówienia.';
   }
 }
 
@@ -112,7 +112,7 @@ export function uploadWarningMessage(warning: UploadWarning): string {
  * Covers every failure code either `uploadCustomDesign`
  * (`server/actions/upload.ts`) or `reuploadCustomDesign`
  * (`server/actions/design-review.ts`) can return. A plain string union
- * here rather than importing each action's own error-code type —
+ * here rather than importing each action's own error-code type -
  * `messages.ts` otherwise only imports from `domain/*` (plus one
  * existing exception, `UnavailabilityReason` from
  * `server/configurator/resolve-options`); duplicating this short,
@@ -155,7 +155,7 @@ export function uploadErrorMessage(code: UploadErrorCode, params?: Record<string
       return 'Nieobsługiwany format pliku. Akceptujemy JPG, PNG, SVG i PDF.';
     case 'FILE_TOO_LARGE':
       return params?.actualBytes !== undefined && params.maxBytes !== undefined
-        ? `Plik ma ${megabytes(params.actualBytes)} — maksymalny dopuszczalny rozmiar to ${megabytes(params.maxBytes)}. Zmniejsz plik i spróbuj ponownie.`
+        ? `Plik ma ${megabytes(params.actualBytes)} - maksymalny dopuszczalny rozmiar to ${megabytes(params.maxBytes)}. Zmniejsz plik i spróbuj ponownie.`
         : 'Plik jest za duży.';
     case 'CORRUPTED_FILE':
       return 'Nie udało się odczytać pliku. Sprawdź, czy nie jest uszkodzony, i spróbuj ponownie.';
@@ -178,11 +178,11 @@ export function configurationErrorMessage(code: ConfigurationErrorCode): string 
 }
 
 /**
- * Why one configurator option is shown disabled instead of hidden —
+ * Why one configurator option is shown disabled instead of hidden -
  * ARCHITECTURE.md §7.2: "a disabled option with a reason teaches the
- * customer the rule." Not a P1 domain code — it comes from
+ * customer the rule." Not a P1 domain code - it comes from
  * `server/configurator/resolve-options.ts`, which combines the already
- * domain-tested compatibility rules with real product rows — but it is
+ * domain-tested compatibility rules with real product rows - but it is
  * exactly the kind of customer-visible code this file exists to translate.
  */
 export function unavailabilityReasonMessage(reason: UnavailabilityReason): string {
@@ -219,7 +219,7 @@ export type CheckoutFieldIssueCode =
   | 'WITHDRAWAL_NOT_ACKNOWLEDGED';
 
 /**
- * Checkout field validation — not a P1 domain code (`validateNip`/
+ * Checkout field validation - not a P1 domain code (`validateNip`/
  * `validatePostalCode`/`validatePhone` in `domain/checkout/validate.ts`
  * return plain booleans, correctly, since a checksum either holds or it
  * doesn't), but exactly the kind of customer-visible translation this file
@@ -283,7 +283,7 @@ export function orderStatusMessage(status: OrderStatus): string {
   }
 }
 
-/** P9 phase 7 — customer-facing shipment status labels. Manually set by staff; never implies a live carrier feed. */
+/** P9 phase 7 - customer-facing shipment status labels. Manually set by staff; never implies a live carrier feed. */
 export function shipmentStatusMessage(status: ShipmentStatus): string {
   switch (status) {
     case 'PREPARING':
@@ -301,7 +301,7 @@ export function shipmentStatusMessage(status: ShipmentStatus): string {
   }
 }
 
-/** P9 continuation, 2026-08-28 — customer-facing support-request status labels, for `/moje-konto`. Same 4 statuses `adminSupportRequestStatusLabel` (`admin.ts`) uses staff-side, translated separately since this file is the customer-visible one. */
+/** P9 continuation, 2026-08-28 - customer-facing support-request status labels, for `/moje-konto`. Same 4 statuses `adminSupportRequestStatusLabel` (`admin.ts`) uses staff-side, translated separately since this file is the customer-visible one. */
 export function supportRequestStatusMessage(status: SupportRequestStatus): string {
   switch (status) {
     case 'NEW':
@@ -315,7 +315,7 @@ export function supportRequestStatusMessage(status: SupportRequestStatus): strin
   }
 }
 
-/** Same 4 statuses as `COPY.designStatus*`, as a real function rather than a code-to-string lookup scattered at each call site — P9 phase 2's "moje wzory" library and the configurator's reuse picker both need this. */
+/** Same 4 statuses as `COPY.designStatus*`, as a real function rather than a code-to-string lookup scattered at each call site - P9 phase 2's "moje wzory" library and the configurator's reuse picker both need this. */
 export function customerDesignStatusMessage(status: DesignReviewStatus): string {
   switch (status) {
     case 'PENDING_REVIEW':
@@ -358,7 +358,7 @@ export type AuthFormErrorCode =
   | 'INVALID_CREDENTIALS'
   | 'EMAIL_ALREADY_EXISTS'
   | 'OTP_INVALID'
-  /** `docs/REVIEW-DETAILED.md` SEC-01 — `server/rate-limit/auth-throttle.ts` refused this attempt. */
+  /** `docs/REVIEW-DETAILED.md` SEC-01 - `server/rate-limit/auth-throttle.ts` refused this attempt. */
   | 'RATE_LIMITED'
   | 'UNKNOWN';
 
@@ -366,7 +366,7 @@ export type AuthFormErrorCode =
  * `retryAfterSeconds` is only meaningful for `RATE_LIMITED`, and is
  * optional so existing call sites keep compiling. Naming the actual wait
  * rather than "try again later" follows §16A.5's "validation that names the
- * fix, not the rule" — someone told it is four minutes waits; someone told
+ * fix, not the rule" - someone told it is four minutes waits; someone told
  * "later" keeps refreshing, which is the behaviour the limit exists to stop.
  */
 export function authFormErrorMessage(code: AuthFormErrorCode, retryAfterSeconds?: number | null): string {
@@ -386,7 +386,7 @@ export function authFormErrorMessage(code: AuthFormErrorCode, retryAfterSeconds?
 
 /**
  * Deliberately says nothing about whether the account exists, whether the
- * password was close, or how many attempts remain — each of which would
+ * password was close, or how many attempts remain - each of which would
  * turn the refusal itself into an oracle for the attacker it exists to stop.
  */
 function authRateLimitMessage(retryAfterSeconds: number | null): string {

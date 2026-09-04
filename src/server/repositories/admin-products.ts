@@ -1,5 +1,5 @@
 /**
- * Admin product queries — unscoped by `isActive`, unlike
+ * Admin product queries - unscoped by `isActive`, unlike
  * `repositories/products.ts`'s storefront-facing reads. Every caller here
  * MUST go through `requireStaffSession()` first.
  */
@@ -10,7 +10,7 @@ import type { InstallationVariantCode, JoineryTechniqueCode, ProductTypeCode } f
 export type AdminProductListFilters = {
   readonly categoryId?: string;
   readonly typeCode?: ProductTypeCode;
-  /** Matches `namePl`, case-insensitive — new, optional, added for global search. Every existing caller omits it and is unaffected. */
+  /** Matches `namePl`, case-insensitive - new, optional, added for global search. Every existing caller omits it and is unaffected. */
   readonly search?: string;
 };
 

@@ -1,10 +1,10 @@
 /**
- * The customer's half of the design-review workflow (§13.3) — re-upload
+ * The customer's half of the design-review workflow (§13.3) - re-upload
  * after `NEEDS_CHANGES`. The staff half (approve/request-changes/reject)
  * is deliberately not built here: it needs a real, authenticated STAFF
  * actor, and that role model doesn't exist yet (P6/P7, not started).
  * `domain/design-review/transitions.ts`'s `checkDesignReviewTransition`
- * already models those edges and is unit-tested directly — P7's admin
+ * already models those edges and is unit-tested directly - P7's admin
  * panel wires a UI to it later; this file only calls the one edge a
  * customer can actually trigger themselves right now.
  */
@@ -92,7 +92,7 @@ export async function reuploadCustomDesign(
   const originalName = sanitizeFilenameForDisplay(file.name);
 
   // A re-upload is a genuinely new UploadedFile (its own storage key,
-  // its own inspection result) linked to the SAME CustomerDesign — the
+  // its own inspection result) linked to the SAME CustomerDesign - the
   // review restarts on the new file, but its id (and any customer-facing
   // link/order reference to it) stays stable.
   await prisma.$transaction(async (tx) => {
@@ -127,7 +127,7 @@ export async function reuploadCustomDesign(
 
 /**
  * The other half of the "dyskusje" the owner's 2026-08-28 feedback asked
- * for — `DesignReviewComment.authorType` has always been `"staff" |
+ * for - `DesignReviewComment.authorType` has always been `"staff" |
  * "customer"` (schema comment, since P7's admin design-review work), and
  * `admin.ts`'s own `designReviewCommentLabelPl` already promised staff
  * comments are "widoczny dla klienta" (visible to the customer), but no
@@ -168,7 +168,7 @@ export async function applyPostCustomerDesignComment(
     select: { id: true },
   });
   if (justPosted !== null) {
-    // Success from the customer's side — the message is in the thread.
+    // Success from the customer's side - the message is in the thread.
     return { ok: true };
   }
 

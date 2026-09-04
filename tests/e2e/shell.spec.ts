@@ -3,8 +3,8 @@ import { expect, test } from '@playwright/test';
 /**
  * The P0 shell was proven with a throwaway theme-showcase page and a
  * dedicated MUI button; both are gone now that real catalogue pages exist
- * (2026-08-23). This test verifies the same underlying facts — `lang="pl"`,
- * the theme's exact palette, no uppercase buttons — against the real
+ * (2026-08-23). This test verifies the same underlying facts - `lang="pl"`,
+ * the theme's exact palette, no uppercase buttons - against the real
  * homepage instead. There is no MUI client island on the homepage today
  * (nothing on it is interactive yet); the first real one arrives with P3's
  * configurator, and that is where a fresh island-composition test belongs.
@@ -14,7 +14,7 @@ import { expect, test } from '@playwright/test';
  * 'Loft' })` would match twice and fail Playwright's strict-mode check.
  * `exact: true` on 'Loft' specifically because the homepage's product grid
  * (added in the 2026-08-24 redesign) includes "Stołek loftowy z grawerem",
- * which contains "loft" as a case-insensitive substring — Playwright's
+ * which contains "loft" as a case-insensitive substring - Playwright's
  * default (non-exact) name matching would match that too.
  */
 test('renders the real homepage in Polish with the theme applied', async ({ page }) => {
@@ -25,9 +25,9 @@ test('renders the real homepage in Polish with the theme applied', async ({ page
   const backgroundColor = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   expect(backgroundColor).toBe('rgb(250, 248, 245)'); // #FAF8F5
 
-  // The category grid, seeded from the real catalogue — proves the page is
+  // The category grid, seeded from the real catalogue - proves the page is
   // actually server-rendering DB content, not a static shell. "Gres" used
-  // to be the second category checked here — deactivated (2026-08-28,
+  // to be the second category checked here - deactivated (2026-08-28,
   // owner request, see prisma/seed.ts's CATEGORY_SEEDS comment), so it no
   // longer appears in this nav at all; "Amulety i bransoletki" is still
   // real and active.

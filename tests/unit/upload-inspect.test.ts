@@ -19,11 +19,11 @@ describe('maxUploadSizeBytes', () => {
     expect(maxUploadSizeBytes('application/pdf')).toBe(25 * 1024 * 1024);
   });
 
-  it('caps SVG at 5MB — the smaller cap for a text-based, sanitization-sensitive format', () => {
+  it('caps SVG at 5MB - the smaller cap for a text-based, sanitization-sensitive format', () => {
     expect(maxUploadSizeBytes('image/svg+xml')).toBe(5 * 1024 * 1024);
   });
 
-  it('rejects any other MIME type outright — null means "not accepted"', () => {
+  it('rejects any other MIME type outright - null means "not accepted"', () => {
     expect(maxUploadSizeBytes('image/gif')).toBeNull();
     expect(maxUploadSizeBytes('application/octet-stream')).toBeNull();
     expect(maxUploadSizeBytes('text/html')).toBeNull();
@@ -59,7 +59,7 @@ describe('evaluateResolution', () => {
     expect(codesOf(warnings)).toEqual(['VERY_LOW_RESOLUTION']);
   });
 
-  it('the 100 DPI boundary itself is not VERY_LOW — only strictly below', () => {
+  it('the 100 DPI boundary itself is not VERY_LOW - only strictly below', () => {
     // 254mm = 10in exactly, so 1000px / 10in = exactly 100 DPI with no
     // float round-trip error (unlike effectiveDpiToWidthPx against 300mm).
     const warnings = evaluateResolution(1000, 254);

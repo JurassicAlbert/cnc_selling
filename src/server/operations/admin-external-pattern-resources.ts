@@ -1,4 +1,4 @@
-/** Staff external-pattern-resource mutations. Same `applyXxx(staff, ...)` / `xxx(...)` split as every other admin action file — `revalidatePath` only in the wrapper. No delete — `isActive` toggle only, consistent with every other panel entity. */
+/** Staff external-pattern-resource mutations. Same `applyXxx(staff, ...)` / `xxx(...)` split as every other admin action file - `revalidatePath` only in the wrapper. No delete - `isActive` toggle only, consistent with every other panel entity. */
 
 import { revalidatePath } from 'next/cache';
 
@@ -17,7 +17,7 @@ export type ExternalPatternResourceFormInput = {
 
 export type ExternalPatternResourceMutationResult = { readonly ok: true; readonly id: string } | { readonly ok: false; readonly detail: string };
 
-/** Only ever rendered as a real `<a href>` — reject anything that isn't an actual http(s) link, e.g. a `javascript:` URI. */
+/** Only ever rendered as a real `<a href>` - reject anything that isn't an actual http(s) link, e.g. a `javascript:` URI. */
 function isPlausibleHttpUrl(value: string): boolean {
   try {
     const parsed = new URL(value);

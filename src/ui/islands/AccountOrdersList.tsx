@@ -1,5 +1,5 @@
 /**
- * P9 continuation, 2026-08-28 — owner feedback: "zarządzanie zamówieniami
+ * P9 continuation, 2026-08-28 - owner feedback: "zarządzanie zamówieniami
  * itp itd dalej jest zbyt biednie" (order management is still too poor).
  * The old `/moje-konto/zamowienia` page was a bare `<Link>` list of plain
  * divs. Real MUI cards with status/shipment `Chip`s, matching the exact
@@ -8,7 +8,7 @@
  * instead of the dashboard's 3-item preview.
  *
  * No `'use client'`: nothing here is interactive, same reasoning as
- * `AccountDashboard.tsx` — lives under `src/ui/islands` only because it
+ * `AccountDashboard.tsx` - lives under `src/ui/islands` only because it
  * needs `@mui/material`, which `src/app/(shop)` server components cannot
  * import directly (ARCHITECTURE.md §2.1).
  */

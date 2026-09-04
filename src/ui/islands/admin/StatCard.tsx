@@ -1,5 +1,5 @@
 /**
- * The bento-grid KPI tile — Materio's signature dashboard card: a soft
+ * The bento-grid KPI tile - Materio's signature dashboard card: a soft
  * colour-tinted rounded icon badge, a big value, a label, and an optional
  * secondary line. Server-renderable (no client state), so the Dashboard
  * page can render nine of these directly without shipping any extra JS.
@@ -33,7 +33,7 @@ export function StatCard({
     return card;
   }
 
-  // A plain wrapping `<Link>`, not MUI's polymorphic `component={Link}` —
+  // A plain wrapping `<Link>`, not MUI's polymorphic `component={Link}` -
   // same reasoning as `AdminSidebarNav`: keeps the typing simple and
   // avoids relying on MUI's `OverridableComponent` prop-forwarding.
   return (
@@ -71,7 +71,7 @@ function StatCardBody({
               // Dot-path strings, not `(theme) => ...` callbacks: `StatCard`
               // is a Server Component, and a function-valued `sx` prop
               // crosses into `Stack` (a Client Component internally) as a
-              // prop — Next.js crashes ("Functions cannot be passed
+              // prop - Next.js crashes ("Functions cannot be passed
               // directly to Client Components"), confirmed live. MUI's `sx`
               // resolves these plain strings against the theme itself, no
               // callback needed.

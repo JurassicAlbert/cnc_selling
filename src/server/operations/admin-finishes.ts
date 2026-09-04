@@ -1,4 +1,4 @@
-/** Staff finish mutations. Same shape as `admin-materials.ts` — `Finish.imageUrl` is also required, so create/update take `FormData`. No delete — `Finish` is a real FK target (`MaterialFinish`, live `Configuration.finishId`); `isAvailable` toggle only. */
+/** Staff finish mutations. Same shape as `admin-materials.ts` - `Finish.imageUrl` is also required, so create/update take `FormData`. No delete - `Finish` is a real FK target (`MaterialFinish`, live `Configuration.finishId`); `isAvailable` toggle only. */
 
 import { revalidatePath } from 'next/cache';
 
@@ -188,7 +188,7 @@ export async function setFinishAvailable(id: string, isAvailable: boolean): Prom
   revalidatePath(`/panel/wykonczenia/${id}`);
 }
 
-/** Bulk activate/deactivate from the grid's selection toolbar (P7c) — see `admin-categories.ts`'s `bulkSetCategoryActive` for the pattern. */
+/** Bulk activate/deactivate from the grid's selection toolbar (P7c) - see `admin-categories.ts`'s `bulkSetCategoryActive` for the pattern. */
 export async function applyBulkSetFinishAvailable(staff: CurrentSession, ids: readonly string[], isAvailable: boolean): Promise<void> {
   for (const id of ids) {
     await applySetFinishAvailable(staff, id, isAvailable);

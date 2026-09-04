@@ -1,4 +1,4 @@
-/** Admin review queries — every status, not just `APPROVED`. Every caller here MUST go through `requireStaffSession()` first. */
+/** Admin review queries - every status, not just `APPROVED`. Every caller here MUST go through `requireStaffSession()` first. */
 
 import { prisma } from '@/server/db/client';
 import type { ReviewStatus } from '@/generated/prisma/enums';

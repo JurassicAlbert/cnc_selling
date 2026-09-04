@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * Real, structurally-correct content (P6 Part E) — see `content/pl/legal.ts`'s
+ * Real, structurally-correct content (P6 Part E) - see `content/pl/legal.ts`'s
  * header for what's real vs. still a marked placeholder (business identity
  * fields only; the legal structure itself is real).
  */

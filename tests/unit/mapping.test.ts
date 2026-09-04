@@ -32,7 +32,7 @@ import type {
  * These tests guard the seam between the database and the domain layer.
  *
  * The domain is already covered by its own suite; what is untested elsewhere is
- * the conversion — micrometres to millimetres, basis points to ratios, a
+ * the conversion - micrometres to millimetres, basis points to ratios, a
  * nullable finish to a zero-cost finish. A silent mistake here does not throw:
  * it produces a plausible, wrong price. So the assertions below are on exact
  * values, not on shapes.
@@ -176,7 +176,7 @@ describe('toSplitLimits', () => {
 });
 
 describe('toMachineConstraints', () => {
-  it('carries the Z-axis limit through unchanged — it is already integer mm', () => {
+  it('carries the Z-axis limit through unchanged - it is already integer mm', () => {
     expect(toMachineConstraints(machine).maxWorkpieceThicknessMm).toBe(100);
   });
 
@@ -190,7 +190,7 @@ describe('toMachineConstraints', () => {
 describe('toDesignConstraints and toMaterialConstraints', () => {
   it('converts micrometres to the millimetres the domain compares in', () => {
     // toDesignConstraints returns null only for a CUSTOM product's
-    // absent catalog design (P4) — this fixture always supplies one.
+    // absent catalog design (P4) - this fixture always supplies one.
     const constraints = toDesignConstraints(design);
     if (constraints === null) throw new Error('expected non-null constraints for a real design row');
     expect(constraints.minLineWidthMm).toBe(1.5);
@@ -208,7 +208,7 @@ describe('toDesignConstraints and toMaterialConstraints', () => {
     expect(constraints.minRecommendedWidthMm).toBe(300);
   });
 
-  it('returns null for a null design row — CUSTOM products with no catalog design', () => {
+  it('returns null for a null design row - CUSTOM products with no catalog design', () => {
     expect(toDesignConstraints(null)).toBeNull();
   });
 
@@ -220,7 +220,7 @@ describe('toDesignConstraints and toMaterialConstraints', () => {
 
   it('feeds a feasibility verdict that matches the underlying rows', () => {
     // A design declaring 1.5 mm lines at 600 mm, produced at 300 mm, has
-    // 0.75 mm lines — below the material's 1.2 mm minimum.
+    // 0.75 mm lines - below the material's 1.2 mm minimum.
     const findings = evaluateFeasibility({
       widthMm: 300,
       design: toDesignConstraints(design),
@@ -243,7 +243,7 @@ describe('toPersonalizationSpec', () => {
     isEnabled: true,
     maxCharacters: 40,
     maxLines: 2,
-    minTextHeightUm: 5000, // 5 mm — the product is willing to go smaller
+    minTextHeightUm: 5000, // 5 mm - the product is willing to go smaller
     flatFeeGrosze: 1_500,
     pricePerCharGrosze: 100,
   };
@@ -368,7 +368,7 @@ describe('toPricingInput', () => {
     expect(input.material.priceFactorBp).toBe(11_500);
     expect(input.thicknessFactorBp).toBe(10_000);
     // null only when the caller passes rows.design/productDesign: null
-    // (CUSTOM, P4) — pricingRows() always supplies both.
+    // (CUSTOM, P4) - pricingRows() always supplies both.
     if (input.design === null) throw new Error('expected non-null design for a real design row');
     expect(input.design.machiningMilliMinutesPerM2).toBe(2500);
     expect(input.design.surchargeGrosze).toBe(3_000);
@@ -382,7 +382,7 @@ describe('toPricingInput', () => {
     expect(input.quantity).toBe(1);
   });
 
-  it('maps a null design/productDesign through as null — CUSTOM, P4', () => {
+  it('maps a null design/productDesign through as null - CUSTOM, P4', () => {
     const input = toPricingInput(pricingRows({ design: null, productDesign: null }));
     expect(input.design).toBeNull();
   });
@@ -472,7 +472,7 @@ describe('toPricingInput', () => {
 describe('the mapped input priced end to end', () => {
   /**
    * The drift alarm. If a column is renamed, retyped or silently reinterpreted,
-   * this number moves — and a moved number here means every price on the site
+   * this number moves - and a moved number here means every price on the site
    * moved. Derivation, in grosze:
    *
    *   area              0.24 m² (400 x 600 mm)

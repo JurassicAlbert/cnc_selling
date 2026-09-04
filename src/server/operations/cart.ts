@@ -1,8 +1,8 @@
 /**
- * Cart mutations — the real logic, as plain functions taking an explicit
+ * Cart mutations - the real logic, as plain functions taking an explicit
  * `Owner` (`src/server/actions/cart.ts` is the thin `'use server'` half that
  * derives that owner from the real session and never trusts one from the
- * request). Same split as every other `operations/` module — see
+ * request). Same split as every other `operations/` module - see
  * `docs/AUDIT-2026-08-30.md` P0-1 for why the two halves must not share a
  * module, and note that these functions are *not* exported from a
  * `'use server'` file, so an `Owner` passed in here can only ever have come
@@ -22,7 +22,7 @@
  *
  *   - P0-3: `applyAdjustCartItemQuantity` no longer reads a quantity and
  *     writes it back. Two rapid `+` clicks used to both read 1 and both
- *     write 2 — one increment silently lost.
+ *     write 2 - one increment silently lost.
  *   - P1-4: `applyAddToCart` merges into an existing line when the
  *     configuration is byte-identical, instead of creating a second
  *     identical row.
@@ -46,7 +46,7 @@ import { hasNoOwner, ownerOrClauses } from '@/server/session/ownership';
  * Prisma's JSON input type isn't structurally compatible with the plain
  * `readonly`-heavy domain types (`ModuleLayout`, `PriceBreakdown`,
  * `FeasibilityFinding[]`) even though every value is genuinely
- * JSON-serializable — this makes that intentional double-cast a single,
+ * JSON-serializable - this makes that intentional double-cast a single,
  * named, auditable spot instead of an unchecked `as never` scattered
  * through the file (which would silently accept ANY type, JSON-safe or
  * not).
@@ -57,11 +57,11 @@ function toJsonInput<T>(value: T): Prisma.InputJsonValue {
 
 /**
  * `selections.customUploadId` names a `CustomerDesign` row the client
- * chose to attach — per §16.1, an id from the request is never trusted
+ * chose to attach - per §16.1, an id from the request is never trusted
  * on its own, so this re-derives ownership the same way
  * `requireOwnedCartItem`/`requireOwnedConfiguration` do: the row must
  * actually belong to the caller's own owner, or this rejects the whole
- * submission. `null` (no custom design attached) always passes — there's
+ * submission. `null` (no custom design attached) always passes - there's
  * nothing to own.
  */
 async function verifyOwnedCustomDesign(customDesignId: string | null, owner: Owner): Promise<boolean> {
@@ -84,7 +84,7 @@ export type AddToCartResult =
 
 /**
  * A Prisma `where` matching a `Configuration` that IS this exact set of
- * selections — the query form of `cartItemSignature`, which is a string and
+ * selections - the query form of `cartItemSignature`, which is a string and
  * cannot be queried against rows that predate the column.
  *
  * Every field the signature covers is listed, and that is the point: miss
@@ -118,7 +118,7 @@ function isUniqueConstraintViolation(error: unknown): boolean {
 /**
  * This visitor's cart, created if they don't have one yet.
  *
- * `Cart.userId` is `@unique` — a logged-in customer's cart is keyed by
+ * `Cart.userId` is `@unique` - a logged-in customer's cart is keyed by
  * that, never re-touching `sessionToken` (already retired onto this cart by
  * `mergeGuestCartIntoUser` at login, if there was one to merge).
  *
@@ -126,7 +126,7 @@ function isUniqueConstraintViolation(error: unknown): boolean {
  * reads, finds nothing, and inserts, so two simultaneous first-additions
  * both try to create the same cart and the loser gets a unique-constraint
  * error. A real 500 for a customer whose very first action on the site was
- * double-clicking "Dodaj do koszyka" — found by
+ * double-clicking "Dodaj do koszyka" - found by
  * `tests/integration/cart-operations.test.ts`, not by anyone clicking
  * carefully once. The retry resolves it: by then the winner's row exists,
  * so the second attempt reads it instead of inserting.
@@ -168,7 +168,7 @@ export async function applyAddToCart(
   if (!validated.ok) {
     return validated;
   }
-  // The PARSED selections from here on, never the caller's — see
+  // The PARSED selections from here on, never the caller's - see
   // `ValidatedPricing.selections`.
   const { data, pricing, selections } = validated;
 
@@ -182,7 +182,7 @@ export async function applyAddToCart(
 
   const addOrMerge = () =>
     prisma.$transaction(async (tx) => {
-      // The identical line already in this cart, if there is one — adding
+      // The identical line already in this cart, if there is one - adding
       // the same thing again is a quantity change, not a second line
       // (`docs/AUDIT-2026-08-30.md` P1-4). Two DIFFERENT configurations
       // produce two different signatures and stay two rows, unchanged.
@@ -200,7 +200,7 @@ export async function applyAddToCart(
 
       // A line whose signature predates this column (`legacy:` backfill) or
       // was written by "Duplikuj" (`copy:`) can still BE this exact
-      // configuration — it just cannot be found by signature. Matching on
+      // configuration - it just cannot be found by signature. Matching on
       // the configuration's own fields catches it, merges into it, and
       // upgrades its signature so the fast path above handles it next time.
       // Without this, a cart carrying a pre-existing row would keep growing
@@ -224,13 +224,13 @@ export async function applyAddToCart(
         return;
       }
 
-      // An identical configuration this owner already saved — from a line
+      // An identical configuration this owner already saved - from a line
       // they removed, or one that became an order. Reusing it is the whole
       // point: `/moje-konto/projekty` lists `Configuration` rows directly,
       // so creating a second identical one is exactly "saving the same
       // project twice" (owner, 2026-08-30). Nothing else references a
-      // `Configuration` — `OrderItem` holds an immutable snapshot, never a
-      // join — so reuse can never disturb a past order.
+      // `Configuration` - `OrderItem` holds an immutable snapshot, never a
+      // join - so reuse can never disturb a past order.
       const alreadySaved = await tx.configuration.findFirst({
         where: { ...selectionMatch(data.productId, selections), OR: ownerOrClauses(owner) },
         select: { id: true },
@@ -293,7 +293,7 @@ export async function applyAddToCart(
   } catch (error) {
     // Two genuinely concurrent additions of the same configuration: both
     // found no existing line, both tried to insert it, and the unique index
-    // rejected the loser. Retrying is enough — the winner's row is now
+    // rejected the loser. Retrying is enough - the winner's row is now
     // committed, so the second pass takes the merge branch above. Exactly
     // one retry: a second failure would mean something other than this race.
     if (!isUniqueConstraintViolation(error)) {
@@ -341,7 +341,7 @@ export async function applyUpdateCartItemQuantity(owner: Owner, cartItemId: stri
 /**
  * The cart page's +/- stepper. `docs/AUDIT-2026-08-30.md` P0-3: this used
  * to read the current quantity and write back `current + delta`, so two
- * rapid clicks both read 1 and both wrote 2 — the customer clicked twice
+ * rapid clicks both read 1 and both wrote 2 - the customer clicked twice
  * and got one increment.
  *
  * The bound lives in the WHERE clause rather than in a clamp applied
@@ -349,7 +349,7 @@ export async function applyUpdateCartItemQuantity(owner: Owner, cartItemId: stri
  * (`UPDATE … SET quantity = quantity + 1 WHERE id = … AND quantity < 25`):
  * concurrent adjustments compose instead of overwriting each other, and
  * neither can push past the real limit. An update matching no row means the
- * item is already at the boundary — a no-op, not an error, exactly as the
+ * item is already at the boundary - a no-op, not an error, exactly as the
  * disabled button in the UI implies.
  */
 export async function applyAdjustCartItemQuantity(owner: Owner, cartItemId: string, delta: 1 | -1): Promise<void> {
@@ -383,7 +383,7 @@ export async function applyRemoveCartItem(owner: Owner, cartItemId: string): Pro
 }
 
 /**
- * "Duplikuj" — now a quantity change, not a second line.
+ * "Duplikuj" - now a quantity change, not a second line.
  *
  * This used to deep-copy the `Configuration` and create an independent row,
  * and both this comment and `CartItem`'s schema comment said so deliberately.
@@ -395,7 +395,7 @@ export async function applyRemoveCartItem(owner: Owner, cartItemId: string): Pro
  * lines the customer had to remove one at a time, AND a second identical
  * `Configuration` row, which `/moje-konto/projekty` then listed as a second
  * saved project. Copying the row only paid for itself if the copy was then
- * edited — and the cart offers no way to edit a line without leaving the
+ * edited - and the cart offers no way to edit a line without leaving the
  * page anyway.
  *
  * Bounded by the same `clampCartQuantity` as every other path, so a
@@ -408,7 +408,7 @@ export async function applyDuplicateCartItem(owner: Owner, cartItemId: string): 
   }
   // Byte-for-byte `applyAdjustCartItemQuantity`'s `+` branch, and for the
   // same reason. `docs/REVIEW-DETAILED.md` BUG-05: when "Duplikuj" became a
-  // quantity bump (2026-08-30) it was written as read-then-write — the exact
+  // quantity bump (2026-08-30) it was written as read-then-write - the exact
   // lost-update shape P0-3 had found and fixed in the sibling two functions
   // above, in that same commit. The control is a zero-JS `<form action>`
   // with nothing disabling it, so two rapid clicks both read 1 and both
@@ -419,7 +419,7 @@ export async function applyDuplicateCartItem(owner: Owner, cartItemId: string): 
   // (`UPDATE … SET quantity = quantity + 1 WHERE id = … AND quantity < 25`),
   // so concurrent duplicates compose instead of overwriting each other and
   // none can push past the limit. Matching no row means the line is already
-  // at the maximum — a no-op, not an error.
+  // at the maximum - a no-op, not an error.
   //
   // The `findUnique` this replaced was redundant as well as racy:
   // `findOwnedCartItem` above has already proved the row exists and is
@@ -433,7 +433,7 @@ export async function applyDuplicateCartItem(owner: Owner, cartItemId: string): 
 /**
  * `Configuration` carries its own `userId`/`sessionToken` (§16.1:
  * "`Configuration`... access requires `userId` match or matching guest
- * `sessionToken`") — checked directly, not via a `CartItem` join. The
+ * `sessionToken`") - checked directly, not via a `CartItem` join. The
  * "Edytuj" link on the cart page encodes the `Configuration` id, not the
  * `CartItem` id, precisely so this can be verified this way.
  */
@@ -499,7 +499,7 @@ export async function applyUpdateCartItemConfiguration(
     },
   });
 
-  // The line's identity moved with it — and editing a line into exactly
+  // The line's identity moved with it - and editing a line into exactly
   // what a DIFFERENT line in the same cart already is has to MERGE the two,
   // not leave both.
   //
@@ -518,7 +518,7 @@ export async function applyUpdateCartItemConfiguration(
     });
     if (edited === null) {
       // A saved configuration edited from `/moje-konto/projekty` with no
-      // cart line behind it — nothing to re-key or merge.
+      // cart line behind it - nothing to re-key or merge.
       return;
     }
     const twin = await tx.cartItem.findUnique({
@@ -547,7 +547,7 @@ export async function applyUpdateCartItemConfiguration(
  * fix stops new ones, but without this there is no remedy for the ones
  * already there.
  *
- * Deleting a `Configuration` outright is safe — unlike a `CustomerDesign`,
+ * Deleting a `Configuration` outright is safe - unlike a `CustomerDesign`,
  * which `OrderItem` references and which therefore needs a soft delete to
  * respect §16A.2. Nothing historical points at a `Configuration`:
  * `OrderItem` carries an immutable snapshot and never joins back to it, so
@@ -559,8 +559,8 @@ export async function applyUpdateCartItemConfiguration(
  * being told to remove it from the cart first.
  *
  * Returns whether anything was deleted, so the caller can say which
- * happened. `false` covers all three "no" cases — not owned, doesn't exist,
- * still in the cart — deliberately without distinguishing them to a
+ * happened. `false` covers all three "no" cases - not owned, doesn't exist,
+ * still in the cart - deliberately without distinguishing them to a
  * caller who might not own the row (§16.2's "don't reveal existence").
  */
 export async function applyDeleteConfiguration(owner: Owner, configurationId: string): Promise<boolean> {
@@ -572,7 +572,7 @@ export async function applyDeleteConfiguration(owner: Owner, configurationId: st
     return false;
   }
   // `deleteMany`, not `delete`: a double-clicked "Usuń" must not throw
-  // "record not found" for an outcome the customer already got — the same
+  // "record not found" for an outcome the customer already got - the same
   // reasoning as `applyRemoveCartItem`.
   const deleted = await prisma.configuration.deleteMany({ where: { id: configurationId } });
   return deleted.count > 0;

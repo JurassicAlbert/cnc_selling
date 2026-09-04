@@ -7,7 +7,7 @@ import type { CartWeightItem } from '@/domain/shipping/weight';
 const SMALL_ITEM: CartWeightItem = { widthMm: 200, heightMm: 150, thicknessMm: 10, materialDensityKgPerM3: 750, quantity: 1 };
 const OVERSIZED_ITEM: CartWeightItem = { widthMm: 700, heightMm: 500, thicknessMm: 12, materialDensityKgPerM3: 750, quantity: 1 };
 
-describe('evaluateDeliveryMethod — free-shipping threshold', () => {
+describe('evaluateDeliveryMethod - free-shipping threshold', () => {
   const method: DeliveryPriceInfo = { priceGrosze: 1_500, freeShippingThresholdGrosze: 30_000, weightTiers: [] };
 
   it('charges the flat rate below the threshold', () => {
@@ -18,7 +18,7 @@ describe('evaluateDeliveryMethod — free-shipping threshold', () => {
     });
   });
 
-  it('is free once the subtotal meets the threshold — wins over any weight tier', () => {
+  it('is free once the subtotal meets the threshold - wins over any weight tier', () => {
     const withTiers: DeliveryPriceInfo = {
       ...method,
       weightTiers: [{ labelPl: 'ciężka', maxWeightGrams: 1, priceGrosze: 99_999, maxWidthMm: null, maxHeightMm: null, maxDepthMm: null }],
@@ -31,7 +31,7 @@ describe('evaluateDeliveryMethod — free-shipping threshold', () => {
   });
 });
 
-describe('evaluateDeliveryMethod — no weight tiers (flat-rate fallback, e.g. Odbiór osobisty)', () => {
+describe('evaluateDeliveryMethod - no weight tiers (flat-rate fallback, e.g. Odbiór osobisty)', () => {
   it('always returns the flat price, regardless of cart weight', () => {
     const method: DeliveryPriceInfo = { priceGrosze: 0, freeShippingThresholdGrosze: null, weightTiers: [] };
     expect(evaluateDeliveryMethod(method, { subtotalGrossGrosze: 1_000, items: [OVERSIZED_ITEM] })).toEqual({
@@ -42,7 +42,7 @@ describe('evaluateDeliveryMethod — no weight tiers (flat-rate fallback, e.g. O
   });
 });
 
-describe('evaluateDeliveryMethod — real weight tiers', () => {
+describe('evaluateDeliveryMethod - real weight tiers', () => {
   const method: DeliveryPriceInfo = {
     priceGrosze: 1_500,
     freeShippingThresholdGrosze: null,
@@ -65,14 +65,14 @@ describe('evaluateDeliveryMethod — real weight tiers', () => {
     expect(result).toEqual({ feasible: true, priceGrosze: 1_849, matchedTierLabelPl: 'do 5 kg' });
   });
 
-  it('is infeasible (TOO_HEAVY) once the cart exceeds every tier — never silently charges the heaviest tier’s price', () => {
+  it('is infeasible (TOO_HEAVY) once the cart exceeds every tier - never silently charges the heaviest tier’s price', () => {
     const veryHeavyItem: CartWeightItem = { widthMm: 300, heightMm: 300, thicknessMm: 400, materialDensityKgPerM3: 750, quantity: 1 }; // 27kg
     const result = evaluateDeliveryMethod(method, { subtotalGrossGrosze: 10_000, items: [veryHeavyItem] });
     expect(result).toEqual({ feasible: false, reason: 'TOO_HEAVY' });
   });
 });
 
-describe('evaluateDeliveryMethod — real locker dimension fit (InPost Paczkomat)', () => {
+describe('evaluateDeliveryMethod - real locker dimension fit (InPost Paczkomat)', () => {
   const method: DeliveryPriceInfo = {
     priceGrosze: 1_500,
     freeShippingThresholdGrosze: null,
@@ -87,7 +87,7 @@ describe('evaluateDeliveryMethod — real locker dimension fit (InPost Paczkomat
     expect(result.feasible).toBe(true);
   });
 
-  it('is infeasible (ITEM_TOO_LARGE) for a real oversized wall-art panel — never silently ships it anyway', () => {
+  it('is infeasible (ITEM_TOO_LARGE) for a real oversized wall-art panel - never silently ships it anyway', () => {
     const result = evaluateDeliveryMethod(method, { subtotalGrossGrosze: 10_000, items: [OVERSIZED_ITEM] });
     expect(result).toEqual({ feasible: false, reason: 'ITEM_TOO_LARGE' });
   });

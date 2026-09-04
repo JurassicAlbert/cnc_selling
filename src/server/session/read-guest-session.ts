@@ -1,8 +1,8 @@
 /**
- * Read-only half of the guest session — safe to call from Server
+ * Read-only half of the guest session - safe to call from Server
  * Components (the cart page), which are only ever allowed to READ cookies.
  * Minting/writing a new session token only happens in a Server Action
- * (`ensureGuestSessionToken` in `src/server/actions/cart.ts`), never here —
+ * (`ensureGuestSessionToken` in `src/server/actions/cart.ts`), never here -
  * `next/headers`'s `cookies().set()` is illegal outside a Server Function
  * or Route Handler.
  */

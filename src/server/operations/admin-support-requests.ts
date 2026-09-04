@@ -1,7 +1,7 @@
 /**
- * Staff `SupportRequest` mutations — status + internal notes only. Same
+ * Staff `SupportRequest` mutations - status + internal notes only. Same
  * `applyXxx(staff, ...)` / `xxx(...)` split as every other admin action
- * file. No delete — a real record of a real customer contact.
+ * file. No delete - a real record of a real customer contact.
  */
 
 import { revalidatePath } from 'next/cache';

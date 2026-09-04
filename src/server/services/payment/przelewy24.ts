@@ -1,12 +1,12 @@
 /**
- * Real Przelewy24 REST API v1 integration — 2026-08-29, owner request:
+ * Real Przelewy24 REST API v1 integration - 2026-08-29, owner request:
  * "dodaj łączenie z przelewy24 ... oraz przejście do przelewy24 z podaną
  * ceną" (add a connection with Przelewy24 ... and a transition to
  * Przelewy24 with the given price), explicitly "nie musi jeszcze działać
  * e2e" (doesn't need to actually work end-to-end yet).
  *
  * This is real, spec-accurate code against P24's actual `/transaction/
- * register` endpoint and their actual SHA384 signature algorithm — not a
+ * register` endpoint and their actual SHA384 signature algorithm - not a
  * simulation. What makes it honestly "not yet connected" (§9/§15's "no
  * fake payment" rule, and `PaymentMethodConfig`'s own schema comment: "Only
  * ever set `true` by real code once a real provider exists") is that
@@ -14,7 +14,7 @@
  * reads `P24_MERCHANT_ID`/`P24_POS_ID`/`P24_API_KEY`/`P24_CRC` from the
  * environment, all currently unset, so `registerPayment` always short-
  * circuits before any network call. The moment a real merchant account
- * exists, setting those four env vars is the ENTIRE remaining step — no
+ * exists, setting those four env vars is the ENTIRE remaining step - no
  * code here needs to change, and `listActivePaymentMethods()` gaining this
  * provider is then just the seed's `isConnected` flag flipping to `true`
  * once someone has actually verified it against P24's real sandbox.
@@ -22,7 +22,7 @@
  * Registration flow (P24's own documented contract):
  *  1. POST the transaction fields + a SHA384 `sign` to `/api/v1/transaction/register`.
  *  2. P24 returns `{ data: { token } }`.
- *  3. The customer's browser is sent to `{baseUrl}/trnRequest/{token}` — that's the "transition to Przelewy24 with the given price."
+ *  3. The customer's browser is sent to `{baseUrl}/trnRequest/{token}` - that's the "transition to Przelewy24 with the given price."
  */
 
 import { createHash } from 'node:crypto';
@@ -59,7 +59,7 @@ function baseUrl(sandbox: boolean): string {
 
 /**
  * P24's documented `sign` field: SHA384 of a JSON string with EXACTLY
- * these five keys, in this order — order and key set both matter, this
+ * these five keys, in this order - order and key set both matter, this
  * isn't "any JSON containing these values." Pure and exported so it's
  * unit-testable without a live account or a network call.
  */
@@ -95,7 +95,7 @@ export type Przelewy24RegisterPayload = {
   readonly sign: string;
 };
 
-/** Pure payload builder — separated from `registerPayment` so its shape can be asserted in a unit test without mocking `fetch`. */
+/** Pure payload builder - separated from `registerPayment` so its shape can be asserted in a unit test without mocking `fetch`. */
 export function buildRegisterPayload(config: Przelewy24Config, input: RegisterPaymentInput): Przelewy24RegisterPayload {
   const sessionId = input.orderNumber;
   return {
@@ -120,7 +120,7 @@ export function buildRegisterPayload(config: Przelewy24Config, input: RegisterPa
   };
 }
 
-/** `{ data: { token: string } }` — P24's real response shape, narrowed without an `as` cast. */
+/** `{ data: { token: string } }` - P24's real response shape, narrowed without an `as` cast. */
 function extractToken(body: unknown): string | null {
   if (body === null || typeof body !== 'object' || !('data' in body)) {
     return null;

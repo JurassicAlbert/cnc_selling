@@ -3,7 +3,7 @@
 /**
  * Global search (Ctrl/⌘+K), mounted once in `panel/layout.tsx` so it's
  * live on every `/panel/*` page. A small inline debounce (`setTimeout`/
- * `clearTimeout`, no dependency — matches `mailer.ts`'s own "no SDK for
+ * `clearTimeout`, no dependency - matches `mailer.ts`'s own "no SDK for
  * one small thing" discipline) calls the real `searchGlobal` Server
  * Action as the user types; only groups with real results render, never
  * an empty heading (the same discipline the homepage's reviews/FAQ

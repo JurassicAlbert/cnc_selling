@@ -1,11 +1,11 @@
 /**
- * Staff product mutations — core record only. Nested sub-resources
+ * Staff product mutations - core record only. Nested sub-resources
  * (preset sizes, thicknesses, material/design compatibility, installation
  * variants, images) live in `admin-product-catalogue.ts`/
  * `admin-product-images.ts`. Same `applyXxx(staff, ...)`/`xxx(...)` split
  * as `admin-categories.ts`.
  *
- * No delete action — `Product` is a real FK target (`Configuration.
+ * No delete action - `Product` is a real FK target (`Configuration.
  * productId`, `ProductImage.productId`, etc.); §16A.2's soft-delete
  * invariant means `setProductActive` is the only way to retire one.
  */
@@ -162,7 +162,7 @@ export async function setProductActive(id: string, isActive: boolean): Promise<v
   revalidatePath(`/panel/produkty/${id}`);
 }
 
-/** Bulk activate/deactivate from the grid's selection toolbar (P7c) — see `admin-categories.ts`'s `bulkSetCategoryActive` for the pattern. */
+/** Bulk activate/deactivate from the grid's selection toolbar (P7c) - see `admin-categories.ts`'s `bulkSetCategoryActive` for the pattern. */
 export async function applyBulkSetProductActive(staff: CurrentSession, ids: readonly string[], isActive: boolean): Promise<void> {
   for (const id of ids) {
     await applySetProductActive(staff, id, isActive);
@@ -201,7 +201,7 @@ export async function setProductSortOrder(id: string, sortOrder: number): Promis
 }
 
 /**
- * Copies the core scalar record only — not preset sizes, thicknesses,
+ * Copies the core scalar record only - not preset sizes, thicknesses,
  * material/design compatibility, install variants, or images, all of
  * which live on other tables and are frequently product-specific enough
  * that copying them silently would be more misleading than helpful.
@@ -266,7 +266,7 @@ export async function duplicateProduct(id: string): Promise<ProductMutationResul
   return result;
 }
 
-/** Bound directly to `DuplicateButton`'s zero-JS form — real failure is not
+/** Bound directly to `DuplicateButton`'s zero-JS form - real failure is not
  * reachable from that button (the id always comes from a record already
  * loaded on the page), so a plain redirect-on-success is enough; matches
  * `ActiveToggleButton`'s own `() => Promise<void>` shape. */
@@ -283,11 +283,11 @@ export async function duplicateProductAndGo(id: string): Promise<void> {
 // longDescPl,careInstructionsPl,installationInfoPl,materialNotesPl,
 // seoTitlePl,seoDescPl,basePriceGrosze,minPriceGrosze,productionDaysMin,
 // productionDaysMax,minWidthMm,maxWidthMm,minHeightMm,maxHeightMm,
-// allowsCustomSize,requiresExactSize,sortOrder — same pattern as
+// allowsCustomSize,requiresExactSize,sortOrder - same pattern as
 // `admin-categories.ts`'s `applyImportCategoriesFromCsv`, with one addition:
 // `Product` has no image of its own (images are the separate nested
 // `ProductImage` editor, out of scope for a flat CSV row), but it does have
-// a required `categoryId` foreign key — the CSV carries the human-readable
+// a required `categoryId` foreign key - the CSV carries the human-readable
 // `categorySlug` instead and this resolves it to an id per row, reporting a
 // per-row failure (not aborting the batch) when the slug doesn't exist.
 // Numeric/boolean columns are parsed defensively: an invalid or missing

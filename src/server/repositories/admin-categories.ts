@@ -1,5 +1,5 @@
 /**
- * Admin category queries — unlike `repositories/categories.ts`'s
+ * Admin category queries - unlike `repositories/categories.ts`'s
  * `listActiveCategories`/`getActiveCategoryBySlug`, these are unscoped by
  * `isActive` (staff needs to see and re-activate a deactivated category
  * too). Every caller here MUST go through `requireStaffSession()` first.

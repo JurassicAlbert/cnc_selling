@@ -2,7 +2,7 @@
  * Splitting a product too large for the machine into aligned modules.
  *
  * This is presented to the customer as a feature (transport, installation,
- * replaceable elements), never as a limitation — but the arithmetic has to be
+ * replaceable elements), never as a limitation - but the arithmetic has to be
  * exactly right, because the module count drives both the price and the
  * production plan. The off-by-one at `width === usableWidth` is the classic
  * failure: it must produce ONE module, not two.
@@ -146,7 +146,7 @@ export function splitIntoModules(
  * How many parts one axis needs.
  *
  * `Math.ceil(total / usable)` gives the minimum count. It is then reduced while
- * the resulting parts would fall below the minimum module size — better three
+ * the resulting parts would fall below the minimum module size - better three
  * equal modules than four where one is a sliver. The count never drops below 1,
  * so a product smaller than the minimum module size is simply a single piece.
  */

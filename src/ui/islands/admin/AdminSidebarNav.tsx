@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Grouped, icon-led sidebar nav — replaces the old flat text-link list.
+ * Grouped, icon-led sidebar nav - replaces the old flat text-link list.
  * Needs `usePathname()` for active-route highlighting, which is the only
  * reason this is a client component; everything else in `panel/layout.tsx`
  * stays server-rendered.
@@ -47,7 +47,7 @@ type NavItem = {
    * and `/panel/ustawienia/personel` were already ADMIN-gated pages that this
    * nav offered to every STAFF account, so clicking them produced a 404.
    *
-   * This is presentation only — every one of these routes and their
+   * This is presentation only - every one of these routes and their
    * operations enforce the gate themselves. Hiding a link is not a security
    * control; it is what stops the panel offering a STAFF something the
    * system will then refuse.

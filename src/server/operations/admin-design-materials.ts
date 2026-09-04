@@ -1,4 +1,4 @@
-/** Design↔material compatibility — a plain toggle, no extra fields on `DesignMaterial` (same shape as slice 2's `admin-material-finishes.ts`). Schema's own comment: "no rows means every material the product allows." */
+/** Design↔material compatibility - a plain toggle, no extra fields on `DesignMaterial` (same shape as slice 2's `admin-material-finishes.ts`). Schema's own comment: "no rows means every material the product allows." */
 
 import { revalidatePath } from 'next/cache';
 

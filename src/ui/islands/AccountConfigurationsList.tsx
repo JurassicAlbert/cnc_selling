@@ -1,15 +1,15 @@
 /**
- * P9 continuation, 2026-08-28 — owner feedback: the account panel's
+ * P9 continuation, 2026-08-28 - owner feedback: the account panel's
  * remaining sub-pages were still bare `<div>`/`<Link>`/`<button>` rows.
  * Real MUI cards for the saved-configuration ("zapisane projekty") list,
  * same visual language as `AccountOrdersList`/`AccountDashboard`.
  *
  * The "Dodaj do koszyka" button stays a real `<form action={...}>` bound
  * to a Server Action (zero client JS, matching `AccountNav.tsx`'s own
- * logout-button precedent) — `<Button type="submit">` needs no `component`
+ * logout-button precedent) - `<Button type="submit">` needs no `component`
  * override to render as a native `<button>`, so no function-reference prop
  * crosses the Server→Client boundary (unlike `component={Link}`, which
- * this session found crashes when the caller has no `'use client'` —
+ * this session found crashes when the caller has no `'use client'` -
  * `PatternsGallery.tsx`'s header comment). The "Edytuj" link is a plain
  * `next/link` used as JSX composition (children), not passed as a prop, for
  * the same reason.
@@ -88,7 +88,7 @@ export function AccountConfigurationsList({ configurations }: { readonly configu
                     </form>
                   )}
                   {/*
-                   * 2026-08-30: saved projects could only ever accumulate —
+                   * 2026-08-30: saved projects could only ever accumulate -
                    * there was no way to remove one, which is part of why
                    * duplicates felt permanent. A project currently in the
                    * cart is refused server-side rather than cascaded, so

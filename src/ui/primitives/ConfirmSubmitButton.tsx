@@ -19,13 +19,13 @@ type BaseProps = {
 type ConfirmSubmitButtonProps = BaseProps &
   (
     | {
-        /** The `id` of the `<form action={...}>` this button's dialog submits. Use this mode for a real Server Action form — the dialog's confirm button is a plain `type="submit" form={formId}` (MUI's `Dialog` portals to `document.body`, so it's never a DOM descendant of the form it submits; `form={id}` is the standard HTML mechanism for that). */
+        /** The `id` of the `<form action={...}>` this button's dialog submits. Use this mode for a real Server Action form - the dialog's confirm button is a plain `type="submit" form={formId}` (MUI's `Dialog` portals to `document.body`, so it's never a DOM descendant of the form it submits; `form={id}` is the standard HTML mechanism for that). */
         readonly formId: string;
         readonly onConfirm?: never;
         readonly pending?: never;
       }
     | {
-        /** For an action that isn't a plain form submission (e.g. one that also drives client-side state) — called when the user confirms; the caller owns its own pending state. */
+        /** For an action that isn't a plain form submission (e.g. one that also drives client-side state) - called when the user confirms; the caller owns its own pending state. */
         readonly onConfirm: () => void;
         readonly pending: boolean;
         readonly formId?: never;
@@ -33,11 +33,11 @@ type ConfirmSubmitButtonProps = BaseProps &
   );
 
 /**
- * A real MUI confirmation dialog for irreversible actions — `docs/CHECKLIST.md`
+ * A real MUI confirmation dialog for irreversible actions - `docs/CHECKLIST.md`
  * / `ARCHITECTURE.md` §16A.5: "Confirmation dialogs only for irreversible
  * actions." Before this, the one call site that needed one (publishing a
  * pricing version) used a bare `window.confirm()` as an honestly-documented
- * placeholder, and two others (customer anonymization, order cancellation —
+ * placeholder, and two others (customer anonymization, order cancellation -
  * both genuinely terminal, no domain path back) had no confirmation step
  * at all.
  *

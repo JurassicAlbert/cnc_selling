@@ -14,31 +14,31 @@ import { expect, test } from '@playwright/test';
 
 /**
  * `LoginForm`/`RegisterForm`/`CheckoutForm` are uncontrolled inputs
- * (`defaultValue`, no `value` — `CheckoutForm.tsx`'s own header explains
+ * (`defaultValue`, no `value` - `CheckoutForm.tsx`'s own header explains
  * why: `useActionState` needs a real DOM remount to show echoed server
  * state, which a controlled input would fight). React reasserts an
  * uncontrolled input's SSR'd `defaultValue` once hydration finishes, which
- * silently discards anything typed into it BEFORE that finishes —
+ * silently discards anything typed into it BEFORE that finishes -
  * reproduced directly: `.fill()` immediately after `page.goto()` on
  * `/rejestracja` left the field empty, and the same race hit the checkout
  * form on mobile-safari (a fresh client-component mount, not a full page
- * navigation, is enough to trigger it there — WebKit's slower JS start
+ * navigation, is enough to trigger it there - WebKit's slower JS start
  * gives the race a wider window). Real visitors never hit this (hydration
  * is milliseconds on any real connection; a human doesn't start typing
  * before the page has visually settled).
  *
  * A fixed `waitForTimeout` before filling was tried first and was NOT
- * reliable — it passed locally but still flaked once under
+ * reliable - it passed locally but still flaked once under
  * `--repeat-each` on mobile-safari. `fillReliably` is the actually
  * deterministic fix: fill, read the value back, and retry the whole
- * fill-and-verify step until it genuinely sticks — no timing guess, and it
+ * fill-and-verify step until it genuinely sticks - no timing guess, and it
  * self-heals regardless of how long hydration happens to take on a given
  * run/machine/browser.
  */
 async function fillReliably(locator: Locator, value: string): Promise<void> {
   await expect(async () => {
     // Real key-by-key typing (dispatches genuine keyboard events over
-    // time), not `.fill()` (an instant CDP value-set) — confirmed directly
+    // time), not `.fill()` (an instant CDP value-set) - confirmed directly
     // that `.fill()` right after a fresh mount loses the race to React
     // reasserting the field's SSR'd `defaultValue`, while `pressSequentially`
     // at the same point does not, on every browser tried including
@@ -50,7 +50,7 @@ async function fillReliably(locator: Locator, value: string): Promise<void> {
   }).toPass({ timeout: 10_000 });
 }
 
-/** Same race as `fillReliably`, for a checkbox — verify-and-retry instead of a single `.check()`. */
+/** Same race as `fillReliably`, for a checkbox - verify-and-retry instead of a single `.check()`. */
 async function checkReliably(locator: Locator): Promise<void> {
   await expect(async () => {
     await locator.check();
@@ -70,7 +70,7 @@ async function register(page: Page, params: { readonly name: string; readonly em
 async function login(page: Page, params: { readonly email: string; readonly password: string }) {
   await page.goto('/logowanie');
   // `/logowanie` has TWO "Adres e-mail" fields (password login + the OTP
-  // request form below it) — scoped to the form that also has "Hasło",
+  // request form below it) - scoped to the form that also has "Hasło",
   // which only the password-login form does.
   const passwordForm = page.locator('form').filter({ has: page.getByLabel('Hasło') });
   await fillReliably(passwordForm.getByLabel('Adres e-mail'), params.email);
@@ -80,15 +80,15 @@ async function login(page: Page, params: { readonly email: string; readonly pass
 }
 
 // 2026-08-28: the configurator no longer gates one step at a time behind
-// "Dalej" (owner feedback — every section is a real, always-visible
-// swatch/field picker) — every swatch/field below is clicked/filled
+// "Dalej" (owner feedback - every section is a real, always-visible
+// swatch/field picker) - every swatch/field below is clicked/filled
 // directly, no "Dalej" clicks between them.
 //
 // 2026-08-29, owner feedback: "The price for the product should be clear,
-// no waiting for configure — we have price". DESIGN/MATERIAL/WYKOŃCZENIE/
+// no waiting for configure - we have price". DESIGN/MATERIAL/WYKOŃCZENIE/
 // WYMIARY now default to a real, already-feasible selection (the product's
 // own first design/material/finish and its middle `ProductPresetSize`) the
-// instant the page loads — this test needs nothing beyond that default, so
+// instant the page loads - this test needs nothing beyond that default, so
 // it goes straight to "Dodaj do koszyka". No crumb click needed at all.
 async function addSampleConfigurationToCart(page: Page): Promise<void> {
   await page.goto('/produkt/obraz-drewniany-z-grawerem');
@@ -99,7 +99,7 @@ async function addSampleConfigurationToCart(page: Page): Promise<void> {
   await expect(page).toHaveURL('/koszyk');
 }
 
-test('guest cart survives registration — no duplicate, no loss', async ({ page }) => {
+test('guest cart survives registration - no duplicate, no loss', async ({ page }) => {
   const email = `e2e-accounts-${Date.now()}@example.test`;
 
   await addSampleConfigurationToCart(page);
@@ -107,13 +107,13 @@ test('guest cart survives registration — no duplicate, no loss', async ({ page
 
   await register(page, { name: 'E2E Accounts', email, password: 'correcthorse123' });
 
-  // The guest cart's item must show up under the now-logged-in user — the
-  // whole point of the merge — with exactly one row, not duplicated.
+  // The guest cart's item must show up under the now-logged-in user - the
+  // whole point of the merge - with exactly one row, not duplicated.
   await page.goto('/koszyk');
   await expect(page.getByText('Obraz drewniany z grawerem')).toBeVisible();
   await expect(page.getByText('Obraz drewniany z grawerem')).toHaveCount(1);
 
-  // Logging out and back in must not lose it either — it's the user's
+  // Logging out and back in must not lose it either - it's the user's
   // cart now, not tied to the guest cookie any more.
   await page.goto('/moje-konto');
   await page.getByRole('button', { name: 'Wyloguj się' }).click();

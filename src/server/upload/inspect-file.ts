@@ -11,7 +11,7 @@ import type { UploadWarning } from '@/domain/upload/inspect';
 
 /**
  * The real, I/O-heavy half of `ARCHITECTURE.md` §13.1's validation
- * pipeline — magic-byte sniffing, SVG sanitization, PDF inspection,
+ * pipeline - magic-byte sniffing, SVG sanitization, PDF inspection,
  * `sharp` raster inspection/EXIF-stripped preview generation. The pure
  * math (DPI/aspect thresholds) lives in `domain/upload/inspect.ts` and is
  * called from here once real pixel dimensions are known; this file owns
@@ -19,7 +19,7 @@ import type { UploadWarning } from '@/domain/upload/inspect';
  *
  * **PDF preview gap, documented rather than silent:** this pipeline
  * gets a PDF's page count and rejects anything that looks like it embeds
- * JavaScript, but does NOT rasterize a preview image for PDFs — that
+ * JavaScript, but does NOT rasterize a preview image for PDFs - that
  * needs a PDF *rendering* engine (`pdf-lib` only reads/writes PDF
  * structure, it doesn't rasterize), which is a materially bigger
  * dependency than this pass takes on. A PDF upload's `previewKey` stays
@@ -66,7 +66,7 @@ export type InspectFileResult =
       readonly widthPx: number | null;
       readonly heightPx: number | null;
       readonly pageCount: number | null;
-      /** The bytes to actually store — sanitized for SVG, unchanged otherwise. */
+      /** The bytes to actually store - sanitized for SVG, unchanged otherwise. */
       readonly storedBytes: Buffer;
       /** EXIF-stripped, max 1600px on the long edge. `null` for PDF (see file header) and for anything `sharp` couldn't rasterize. */
       readonly previewBytes: Buffer | null;
@@ -75,13 +75,13 @@ export type InspectFileResult =
   | {
       readonly ok: false;
       readonly code: InspectFileErrorCode;
-      /** Real numbers behind the failure, e.g. `FILE_TOO_LARGE`'s `{actualBytes, maxBytes}` — `messages.ts` names the actual fix from these instead of a generic "file too large." Absent when the code carries nothing worth naming. */
+      /** Real numbers behind the failure, e.g. `FILE_TOO_LARGE`'s `{actualBytes, maxBytes}` - `messages.ts` names the actual fix from these instead of a generic "file too large." Absent when the code carries nothing worth naming. */
       readonly params?: Record<string, number>;
     };
 
 export type InspectFileInput = {
   readonly bytes: Buffer;
-  /** The target product's real size, for the DPI/aspect checks (§13.1.6–7). `null` skips both — used when no size is known yet. */
+  /** The target product's real size, for the DPI/aspect checks (§13.1.6–7). `null` skips both - used when no size is known yet. */
   readonly target: { readonly widthMm: number; readonly heightMm: number } | null;
 };
 
@@ -117,11 +117,11 @@ export async function inspectUploadedFile(input: InspectFileInput): Promise<Insp
 
 /**
  * The client's declared `type`/filename extension is never trusted for
- * any security decision (§13.1.2) — `file-type` reads the actual magic
+ * any security decision (§13.1.2) - `file-type` reads the actual magic
  * bytes. SVG is the one accepted format `file-type` cannot sniff (it's
  * plain XML text with no fixed byte signature), so it's detected
  * separately by checking the content actually parses as an `<svg>` root
- * element — still real content inspection, not the declared MIME type.
+ * element - still real content inspection, not the declared MIME type.
  */
 async function sniffMimeType(bytes: Buffer): Promise<string | null> {
   const sniffed = await fileTypeFromBuffer(bytes);
@@ -180,7 +180,7 @@ async function inspectRaster(
 }
 
 /**
- * `sharp` strips EXIF (including GPS) by default on re-encode — this
+ * `sharp` strips EXIF (including GPS) by default on re-encode - this
  * only avoids the metadata-preserving `.withMetadata()` call, it doesn't
  * need to do anything extra to achieve "stripped of EXIF including GPS"
  * (§13.1.9).
@@ -231,7 +231,7 @@ const purify = createDOMPurify(purifyWindow as any);
 purify.addHook('afterSanitizeAttributes', (node) => {
   // §13.1.3: strip xlink:href/href to anything other than a same-document
   // fragment reference (e.g. `<use href="#local-id">`, which is
-  // legitimate and harmless) — this is what actually blocks a reference
+  // legitimate and harmless) - this is what actually blocks a reference
   // to an external or `data:` URL, since DOMPurify's own SVG profile
   // allows href/xlink:href to exist at all (it's valid SVG).
   for (const attr of ['href', 'xlink:href']) {
@@ -251,7 +251,7 @@ purify.addHook('afterSanitizeAttributes', (node) => {
  * the profile's defaults. External XML entity expansion (XXE) is not
  * separately guarded here because DOMPurify parses its input with an
  * HTML parser (via jsdom), and HTML parsing has no DTD/entity-expansion
- * step at all — the class of attack doesn't apply to this parsing path,
+ * step at all - the class of attack doesn't apply to this parsing path,
  * unlike a full XML parser that resolves `<!ENTITY>` declarations.
  *
  * Verified against a real hostile SVG (`<script>`, an `onclick` handler,
@@ -259,8 +259,8 @@ purify.addHook('afterSanitizeAttributes', (node) => {
  * every one of those is stripped. One side effect worth knowing about,
  * not a bug: DOMPurify's default SVG profile doesn't include `<use>` at
  * all (it's simply absent from the library's own tag allowlist), so an
- * uploaded SVG using `<use href="#local-id">` — a legitimate icon-sprite
- * pattern — loses that element entirely rather than keeping it. Left
+ * uploaded SVG using `<use href="#local-id">` - a legitimate icon-sprite
+ * pattern - loses that element entirely rather than keeping it. Left
  * as-is: customer engraving artwork essentially never uses `<use>`, and
  * widening the allowlist for it would trade away margin on a rare case.
  */

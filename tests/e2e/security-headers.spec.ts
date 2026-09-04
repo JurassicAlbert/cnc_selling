@@ -8,13 +8,13 @@ import { expect, test } from '@playwright/test';
  * - the headers survive the round trip at all (a `headers()` block that
  *   never matches, or a proxy matcher that never fires, is silent);
  * - Next actually applies the nonce it read out of our request header to
- *   its own script tags — the failure this whole approach hinges on, and
+ *   its own script tags - the failure this whole approach hinges on, and
  *   one that produces a completely blank page rather than a warning;
  * - nothing on a real page violates the policy.
  *
  * Deliberately asserts only what holds in BOTH environments. `npm run e2e`
  * builds and starts a production server, but `reuseExistingServer` means a
- * developer with `next dev` already on :3000 runs these against dev — where
+ * developer with `next dev` already on :3000 runs these against dev - where
  * `'unsafe-eval'` is present and HSTS is not, both correctly. Those two
  * branches are covered by the unit tests instead of being asserted here
  * against whichever server happened to answer.
@@ -36,7 +36,7 @@ test('sends the four environment-independent security headers', async ({ page })
   expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
   expect(headers['x-frame-options']).toBe('DENY');
   expect(headers['permissions-policy']).toBe('camera=(), microphone=(), geolocation=()');
-  // `poweredByHeader: false` — Next sends `X-Powered-By: Next.js` otherwise.
+  // `poweredByHeader: false` - Next sends `X-Powered-By: Next.js` otherwise.
   expect(headers['x-powered-by']).toBeUndefined();
 });
 
@@ -44,7 +44,7 @@ test('sends a nonce-based CSP that never allows inline script', async ({ page })
   const response = await page.goto('/');
   const csp = response?.headers()['content-security-policy'];
 
-  expect(csp, 'no CSP header — check CSP_MODE and the proxy matcher').toBeDefined();
+  expect(csp, 'no CSP header - check CSP_MODE and the proxy matcher').toBeDefined();
 
   const scriptSrc = String(csp)
     .split(';')
@@ -75,8 +75,8 @@ test('issues a different nonce for every request', async ({ page }) => {
 test('Next applies the header’s nonce to its own script tags', async ({ page }) => {
   // The load-bearing integration. Next re-reads the CSP off the *request*
   // headers the proxy rewrote and stamps that nonce onto every script it
-  // emits. If the two ever disagree — a malformed nonce, a matcher that
-  // stops rewriting the request — the page silently loads zero JavaScript.
+  // emits. If the two ever disagree - a malformed nonce, a matcher that
+  // stops rewriting the request - the page silently loads zero JavaScript.
   const response = await page.goto('/');
   const nonce = /'nonce-([A-Za-z0-9+/_-]+={0,2})'/.exec(
     response?.headers()['content-security-policy'] ?? '',

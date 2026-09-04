@@ -1,12 +1,12 @@
 'use server';
 
 /**
- * The global-search Server Action — unlike every other read in this
+ * The global-search Server Action - unlike every other read in this
  * codebase (a repository function called directly from an already-gated
  * Server Component), this one is invoked via `fetch`-as-you-type from a
  * client island. A Server Action is a directly-POSTable endpoint once its
  * id is known, independent of which page's `requireStaffSession()` gate a
- * client happened to load it from — so this wrapper re-derives the session
+ * client happened to load it from - so this wrapper re-derives the session
  * itself, the same discipline every mutating action already applies, now
  * extended to the first read that needed it.
  */

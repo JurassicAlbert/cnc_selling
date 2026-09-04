@@ -1,8 +1,8 @@
 /**
  * Cart reads. `Configuration`'s computed fields (`priceBreakdown`,
  * `priceGrossGrosze`, `moduleLayout`, `warnings`) are read directly off the
- * row — per the schema's own comment on that model, "Server-computed,
- * cached for display. The client never derives these" — so viewing the
+ * row - per the schema's own comment on that model, "Server-computed,
+ * cached for display. The client never derives these" - so viewing the
  * cart never re-runs pricing. Checkout is the one place that re-prices and
  * compares (`src/server/orders/create-order.ts`), because that's the one
  * moment staleness actually matters.
@@ -29,7 +29,7 @@ export type CartItemView = {
   readonly widthMm: number | null;
   readonly heightMm: number | null;
   readonly thicknessMm: number | null;
-  /** The chosen material's real density — `domain/shipping/weight.ts` computes real shipping weight from this, not a fabricated per-product number. `null` only for a configuration with no material at all. */
+  /** The chosen material's real density - `domain/shipping/weight.ts` computes real shipping weight from this, not a fabricated per-product number. `null` only for a configuration with no material at all. */
   readonly materialDensityKgPerM3: number | null;
   readonly personalizationText: string | null;
   readonly isComplete: boolean;
@@ -38,7 +38,7 @@ export type CartItemView = {
   readonly moduleLayout: ModuleLayout | null;
   readonly warnings: readonly FeasibilityFinding[];
   readonly acknowledgedWarnings: readonly string[];
-  /** The raw ids behind the display names above — rebuilds the configurator's own URL-encoded state for the "Edytuj" link, never re-derived by hand. */
+  /** The raw ids behind the display names above - rebuilds the configurator's own URL-encoded state for the "Edytuj" link, never re-derived by hand. */
   readonly selections: Selections;
   /** The `Design.code` (§6.8's order snapshot wants a stable code, not just a display name that can be edited later). */
   readonly designCode: string | null;
@@ -68,7 +68,7 @@ export type SavedConfigurationView = {
   readonly acknowledgedWarnings: readonly string[];
 };
 
-/** Saved configurations (P6 Part C) — every `Configuration` a logged-in user has ever priced, not just ones currently in a cart. */
+/** Saved configurations (P6 Part C) - every `Configuration` a logged-in user has ever priced, not just ones currently in a cart. */
 export async function listConfigurationsForUser(userId: string): Promise<readonly SavedConfigurationView[]> {
   const configurations = await prisma.configuration.findMany({
     where: { userId },
@@ -97,7 +97,7 @@ export async function listConfigurationsForUser(userId: string): Promise<readonl
   // "client should not be able to save the same project twice").
   //
   // `applyAddToCart` now reuses a matching `Configuration` instead of
-  // creating a second one, which stops NEW duplicates — but it cannot undo
+  // creating a second one, which stops NEW duplicates - but it cannot undo
   // the ones already in the database from before that, and this page lists
   // these rows directly. Nothing is deleted: the newest row of each
   // identical set is shown and the older twins are simply not listed, so a
@@ -155,7 +155,7 @@ export type CartSummary = {
 const EMPTY_CART_SUMMARY: CartSummary = { itemCount: 0, totalGrossGrosze: 0 };
 
 /**
- * A lightweight read for `SiteHeader`'s cart badge — item count (summed
+ * A lightweight read for `SiteHeader`'s cart badge - item count (summed
  * quantity, not row count) and running total, without `findCartForRequest`'s
  * full per-item catalogue joins. Called from `StorefrontChrome` on every
  * page render, so it stays a single narrow `select`.

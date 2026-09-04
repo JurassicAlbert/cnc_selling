@@ -1,9 +1,9 @@
 /**
- * T-09 — `docs/REVIEW-DETAILED.md` SEC-04. `ARCHITECTURE.md` §16.3 gives
+ * T-09 - `docs/REVIEW-DETAILED.md` SEC-04. `ARCHITECTURE.md` §16.3 gives
  * `STAFF` "customers (**read**)" and assigns settings to `ADMIN`. Three
  * operations did not honour that:
  *
- * 1. `applyUpdateStoreSettings` writes `StoreSettings.bankAccountNumber` —
+ * 1. `applyUpdateStoreSettings` writes `StoreSettings.bankAccountNumber` -
  *    the account number every bank-transfer customer is told to pay into.
  * 2. `applyAnonymizeCustomer` irreversibly scrubs a user's identity and
  *    deletes their `Session`/`Account` rows.
@@ -12,7 +12,7 @@
  *
  * **Why the check has to live in the `apply` half, and is tested there.**
  * The `xxx()` wrapper's `requireAdminSession()` is the gate a real request
- * meets, and it is the right place for it — but it calls `next/headers`,
+ * meets, and it is the right place for it - but it calls `next/headers`,
  * which throws outside a request scope, so no test in this suite can reach
  * it (`tests/integration/authz.test.ts`'s header records the same
  * constraint). A rule that only exists somewhere untestable is exactly the
@@ -29,16 +29,16 @@
  *
  * **Every read-and-restore is scoped to a single test**, deliberately, and
  * not hoisted into `beforeAll`/`afterAll`. Two of the rows here are
- * singletons the whole application shares — `StoreSettings` row 1 and the
- * `verification-otp` `EmailTemplate` — and `admin-store-settings.test.ts` /
+ * singletons the whole application shares - `StoreSettings` row 1 and the
+ * `verification-otp` `EmailTemplate` - and `admin-store-settings.test.ts` /
  * `admin-email-templates.test.ts` legitimately write the same two rows.
  * Vitest runs files in parallel, so a snapshot taken once at the top of this
  * file can be **another file's in-flight test value**, and comparing against
  * it later fails for a reason that has nothing to do with the code under
  * test. (That was not hypothetical: this file flaked exactly that way on the
  * first full-suite run after it was added.) Reading immediately before the
- * call and comparing immediately after asserts the thing actually meant —
- * *this call changed nothing* — and is true regardless of what any other
+ * call and comparing immediately after asserts the thing actually meant -
+ * *this call changed nothing* - and is true regardless of what any other
  * file is doing.
  */
 
@@ -106,7 +106,7 @@ async function auditRowsByTestActors(): Promise<number> {
   return prisma.auditLog.count({ where: { actorEmail: { startsWith: PREFIX } } });
 }
 
-describe('applyUpdateStoreSettings — the bank account every customer is told to pay into', () => {
+describe('applyUpdateStoreSettings - the bank account every customer is told to pay into', () => {
   const INPUT = {
     bankAccountNumber: 'PL61109010140000071219812874',
     bankAccountHolderPl: 'Test SEC-04',
@@ -141,14 +141,14 @@ describe('applyUpdateStoreSettings — the bank account every customer is told t
       expect(after.updatedByEmail).toBe(ADMIN.email);
     } finally {
       // Restored here rather than in an `afterAll`, so the row is out of its
-      // test value for as short a window as possible — see this file's
+      // test value for as short a window as possible - see this file's
       // header on why that matters with parallel files.
       await prisma.storeSettings.update({ where: { id: 1 }, data: before });
     }
   });
 });
 
-describe('applyAnonymizeCustomer — irreversible, and §16.3 gives STAFF read only', () => {
+describe('applyAnonymizeCustomer - irreversible, and §16.3 gives STAFF read only', () => {
   async function seedCustomer(): Promise<{ id: string; email: string }> {
     return prisma.user.create({
       data: { name: 'Jan Testowy', email: `${PREFIX}${crypto.randomUUID()}@example.test`, role: 'CUSTOMER' },
@@ -183,7 +183,7 @@ describe('applyAnonymizeCustomer — irreversible, and §16.3 gives STAFF read o
   });
 });
 
-describe('applyUpdateEmailTemplate — rewrites the body of customer-facing email', () => {
+describe('applyUpdateEmailTemplate - rewrites the body of customer-facing email', () => {
   const INPUT = { subjectPl: 'Temat testowy SEC-04', bodyPl: 'Treść testowa SEC-04' };
 
   it.each(REFUSED)('refuses a %s actor and leaves the template untouched', async (_role, who) => {

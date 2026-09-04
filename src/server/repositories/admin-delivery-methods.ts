@@ -1,4 +1,4 @@
-/** Admin `DeliveryMethod` queries — unscoped by `isActive`. Every caller here MUST go through `requireStaffSession()` first. */
+/** Admin `DeliveryMethod` queries - unscoped by `isActive`. Every caller here MUST go through `requireStaffSession()` first. */
 
 import { prisma } from '@/server/db/client';
 
@@ -17,7 +17,7 @@ export async function listDeliveryMethodsForAdmin(): Promise<readonly AdminDeliv
   });
 }
 
-/** One real published price bracket of a carrier's own rate card — see `DeliveryWeightTier`'s schema comment. */
+/** One real published price bracket of a carrier's own rate card - see `DeliveryWeightTier`'s schema comment. */
 export type AdminDeliveryWeightTier = {
   readonly id: string;
   readonly labelPl: string;
@@ -43,7 +43,7 @@ export type AdminDeliveryMethodDetail = {
   readonly isActive: boolean;
   /**
    * 2026-08-30 (`docs/AUDIT-2026-08-30.md` §20): these were invisible in the
-   * panel, which made the detail page actively misleading — it offered an
+   * panel, which made the detail page actively misleading - it offered an
    * editable "Cena" while, for any method that has tiers, that field is
    * only the fallback and is never what a customer is charged.
    */

@@ -6,7 +6,7 @@ const INPOST = 'InPost Paczkomaty';
 const DPD = 'DPD Pickup';
 
 describe('searchPickupPoints', () => {
-  it('returns every point for the given carrier on an empty query — the initial "browse all" state', () => {
+  it('returns every point for the given carrier on an empty query - the initial "browse all" state', () => {
     const all = searchPickupPoints(INPOST, '');
     expect(all.length).toBeGreaterThan(0);
     for (const point of all) {
@@ -14,7 +14,7 @@ describe('searchPickupPoints', () => {
     }
   });
 
-  it('never mixes carriers — a DPD search never returns an InPost point and vice versa', () => {
+  it('never mixes carriers - a DPD search never returns an InPost point and vice versa', () => {
     expect(searchPickupPoints(DPD, '').every((point) => point.carrier === DPD)).toBe(true);
     expect(searchPickupPoints(INPOST, '').every((point) => point.carrier === INPOST)).toBe(true);
   });
@@ -61,7 +61,7 @@ describe('findPickupPointById', () => {
     expect(findPickupPointById(DPD, inpostPoint.id)).toBeNull();
   });
 
-  it('returns null for an id that does not exist — checkout never trusts a client-supplied id on its own', () => {
+  it('returns null for an id that does not exist - checkout never trusts a client-supplied id on its own', () => {
     expect(findPickupPointById(INPOST, 'not-a-real-point')).toBeNull();
   });
 });

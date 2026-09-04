@@ -1,7 +1,7 @@
 /**
- * Global search (Ctrl/⌘+K) — `docs/ARCHITECTURE.md` §16A.5: "jump to order
+ * Global search (Ctrl/⌘+K) - `docs/ARCHITECTURE.md` §16A.5: "jump to order
  * 2026/08/0042 by typing it, from anywhere." Reuses the four entities' own
- * existing admin list queries rather than duplicating search logic —
+ * existing admin list queries rather than duplicating search logic -
  * `listOrdersForAdmin`/`listCustomersForAdmin` already had a `search`
  * filter with the right semantics; `listDesignsForAdmin`/
  * `listProductsForAdmin` gained one (optional, backward-compatible) for

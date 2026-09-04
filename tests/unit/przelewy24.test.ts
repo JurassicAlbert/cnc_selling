@@ -20,10 +20,10 @@ afterEach(() => {
 
 /**
  * 2026-08-29, owner request: real Przelewy24 code, honestly gated by
- * missing merchant credentials — see `przelewy24.ts`'s own header comment
+ * missing merchant credentials - see `przelewy24.ts`'s own header comment
  * for why `isConfigured()` is the whole story of "not yet connected" here.
  * These tests never make a real network call (no credentials are ever set
- * to anything a real sandbox would accept) — they assert the gating logic
+ * to anything a real sandbox would accept) - they assert the gating logic
  * and the exact request shape P24's real API expects.
  */
 describe('Przelewy24Provider.isConfigured', () => {
@@ -51,7 +51,7 @@ describe('Przelewy24Provider.isConfigured', () => {
   });
 });
 
-describe('Przelewy24Provider.registerPayment — not configured', () => {
+describe('Przelewy24Provider.registerPayment - not configured', () => {
   it('short-circuits with a clear reason and makes no network call', async () => {
     delete process.env.P24_MERCHANT_ID;
     delete process.env.P24_POS_ID;
@@ -76,12 +76,12 @@ describe('Przelewy24Provider.registerPayment — not configured', () => {
 });
 
 describe('buildRegisterSign', () => {
-  it('is deterministic — the same input always produces the same signature', () => {
+  it('is deterministic - the same input always produces the same signature', () => {
     const params = { sessionId: '2026/08/0001', merchantId: '12345', amountGrosze: 12_345, currency: 'PLN', crc: 'test-crc' };
     expect(buildRegisterSign(params)).toBe(buildRegisterSign(params));
   });
 
-  it('changes when the amount changes — a tampered price never signs the same', () => {
+  it('changes when the amount changes - a tampered price never signs the same', () => {
     const base = { sessionId: '2026/08/0001', merchantId: '12345', currency: 'PLN', crc: 'test-crc' };
     const signA = buildRegisterSign({ ...base, amountGrosze: 12_345 });
     const signB = buildRegisterSign({ ...base, amountGrosze: 99_999 });

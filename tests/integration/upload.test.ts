@@ -9,10 +9,10 @@ import { inspectUploadedFile } from '@/server/upload/inspect-file';
 
 /**
  * The real file-inspection pipeline (`src/server/upload/inspect-file.ts`)
- * against real bytes — `ARCHITECTURE.md` §21.3's "file upload validation"
+ * against real bytes - `ARCHITECTURE.md` §21.3's "file upload validation"
  * and "file type/size restrictions" rows: wrong magic bytes, oversize,
  * corrupted, zero-byte, SVG with script, PDF with JS, each allowed type,
- * exact boundary sizes. No DB or `next/headers` involved — this is the
+ * exact boundary sizes. No DB or `next/headers` involved - this is the
  * highest-severity part of the whole feature (§13.1.3: "an unsanitized
  * customer SVG rendered in a preview is stored XSS"), and it's testable
  * in complete isolation.
@@ -45,7 +45,7 @@ const hostileSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="
   <foreignObject><div xmlns="http://www.w3.org/1999/xhtml">html</div></foreignObject>
 </svg>`;
 
-describe('accepted types — each real file is inspected correctly', () => {
+describe('accepted types - each real file is inspected correctly', () => {
   it('a real JPEG', async () => {
     const result = await inspectUploadedFile({ bytes: await realJpegBytes(), target: null });
     expect(result.ok).toBe(true);
@@ -82,12 +82,12 @@ describe('accepted types — each real file is inspected correctly', () => {
     if (result.ok) {
       expect(result.mimeType).toBe('application/pdf');
       expect(result.pageCount).toBe(1);
-      expect(result.previewBytes).toBeNull(); // documented gap — see inspect-file.ts's header
+      expect(result.previewBytes).toBeNull(); // documented gap - see inspect-file.ts's header
     }
   });
 });
 
-describe('SVG sanitization — the highest-severity check in the pipeline', () => {
+describe('SVG sanitization - the highest-severity check in the pipeline', () => {
   it('accepts a hostile SVG but strips every dangerous construct rather than rejecting outright', async () => {
     const result = await inspectUploadedFile({ bytes: Buffer.from(hostileSvg), target: null });
     expect(result.ok).toBe(true);
@@ -110,7 +110,7 @@ describe('wrong magic bytes / unsupported type', () => {
     expect(result).toEqual({ ok: false, code: 'UNSUPPORTED_TYPE' });
   });
 
-  it('rejects a GIF — a real image format, just not one this pipeline accepts', async () => {
+  it('rejects a GIF - a real image format, just not one this pipeline accepts', async () => {
     // GIF87a header, enough for file-type to sniff it correctly.
     const gifBytes = Buffer.from([0x47, 0x49, 0x46, 0x38, 0x37, 0x61, 0x00, 0x00]);
     const result = await inspectUploadedFile({ bytes: gifBytes, target: null });
@@ -198,7 +198,7 @@ describe('DPI / aspect-mismatch warnings, when a target size is known', () => {
     }
   });
 
-  it('produces no warnings when target is null — the real CUSTOM_UPLOAD flow (upload precedes SIZE)', async () => {
+  it('produces no warnings when target is null - the real CUSTOM_UPLOAD flow (upload precedes SIZE)', async () => {
     const result = await inspectUploadedFile({ bytes: await realPngBytes(), target: null });
     expect(result.ok).toBe(true);
     if (result.ok) {

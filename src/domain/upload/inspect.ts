@@ -1,14 +1,14 @@
 /**
  * Pure upload-inspection math. Everything here is `ARCHITECTURE.md`
  * §13.1's numeric rules, extracted so they're testable without touching
- * a file, `sharp`, or the network — the actual I/O (magic-byte sniffing,
+ * a file, `sharp`, or the network - the actual I/O (magic-byte sniffing,
  * SVG sanitization, PDF inspection, `sharp` calls) lives in
  * `src/server/upload/inspect-file.ts` and calls into this module for the
  * DPI/aspect decisions once it has real pixel dimensions.
  *
  * `UploadWarning` copies `domain/feasibility`'s `FeasibilityFinding`
  * shape exactly (`code`, `severity`, `requiresAcknowledgement`,
- * `params`) — `CustomerDesign.autoWarnings`'s schema comment already
+ * `params`) - `CustomerDesign.autoWarnings`'s schema comment already
  * describes it as "UploadWarning[] from the upload inspector," the same
  * pattern, not a new one.
  */
@@ -24,7 +24,7 @@ export type UploadWarning = {
   readonly params: Readonly<Record<string, number | string>>;
 };
 
-/** §13.1.1's size caps, keyed by the magic-byte-sniffed MIME type — never the client's declared type or the file extension. `null` means this MIME type is not accepted at all. */
+/** §13.1.1's size caps, keyed by the magic-byte-sniffed MIME type - never the client's declared type or the file extension. `null` means this MIME type is not accepted at all. */
 export function maxUploadSizeBytes(mimeType: string): number | null {
   switch (mimeType) {
     case 'image/jpeg':
@@ -46,7 +46,7 @@ export function effectiveDpi(widthPx: number, targetWidthMm: number): number {
 const LOW_DPI_THRESHOLD = 150;
 const VERY_LOW_DPI_THRESHOLD = 100;
 
-/** §13.1.6: warn below 150 DPI, warn harder below 100 — neither blocks the upload, both need the customer's acknowledgement before continuing. */
+/** §13.1.6: warn below 150 DPI, warn harder below 100 - neither blocks the upload, both need the customer's acknowledgement before continuing. */
 export function evaluateResolution(widthPx: number, targetWidthMm: number): UploadWarning[] {
   const dpi = effectiveDpi(widthPx, targetWidthMm);
 
@@ -80,7 +80,7 @@ export function evaluateResolution(widthPx: number, targetWidthMm: number): Uplo
  * proportions → warning with a crop preview." The crop preview itself is
  * a server/UI concern; this only decides whether the mismatch is real
  * enough to warn about. A 5% relative tolerance on the aspect ratio is
- * this project's own threshold (not specified further) — small enough
+ * this project's own threshold (not specified further) - small enough
  * that ordinary photo/scan variance doesn't trigger it, large enough
  * that a genuinely different shape (e.g. square art on an oblong panel)
  * does.
@@ -127,11 +127,11 @@ const DELETE_CODE_POINT = 127;
  * §13.1.8: "filename sanitization for display; the storage key is a
  * generated opaque id and never derived from user input." This is purely
  * about what's safe to *show* the customer/staff later (strip path
- * separators and control characters, cap length) — it plays no role in
+ * separators and control characters, cap length) - it plays no role in
  * where the file is actually written, which always uses a
  * `crypto.randomUUID()` storage key regardless of what this returns.
  * Filtered by character code rather than a regex control-character
- * class deliberately — those classes are easy to get subtly wrong.
+ * class deliberately - those classes are easy to get subtly wrong.
  */
 export function sanitizeFilenameForDisplay(rawName: string): string {
   const withoutPath = rawName.replace(/^.*[/\\]/, '');

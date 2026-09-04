@@ -22,10 +22,10 @@ function toDateInputValue(date: Date | null | undefined): string {
 }
 
 /**
- * P9 phase 7 — one order, one `Shipment`, always upserted, never a
+ * P9 phase 7 - one order, one `Shipment`, always upserted, never a
  * separate create/edit page: this IS the create form the first time (no
  * `shipment` prop), and becomes the edit form once one exists. Manual
- * only — every field here is exactly what a staff member typed, no
+ * only - every field here is exactly what a staff member typed, no
  * carrier API anywhere behind it (§9/§15).
  */
 export function ShipmentEditor({

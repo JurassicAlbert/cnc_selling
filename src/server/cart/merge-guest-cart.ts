@@ -1,11 +1,11 @@
 /**
- * Guest-cart-merge-on-login — P6 Part B, `docs/HANDOVER.md`'s P5 checklist
+ * Guest-cart-merge-on-login - P6 Part B, `docs/HANDOVER.md`'s P5 checklist
  * item this was blocked on until real accounts existed. Called once, right
  * after a successful login/register/OTP sign-in, with the just-authenticated
  * `userId` and whatever guest `sessionToken` cookie (if any) was active for
  * this visit.
  *
- * `Cart.userId` is `@unique` — a user can only ever have one cart — so the
+ * `Cart.userId` is `@unique` - a user can only ever have one cart - so the
  * two cases are genuinely different operations, not one code path:
  *   - user has no cart yet: the guest cart's row is simply reassigned
  *     (`sessionToken: null, userId`), same row, same `CartItem`s, cheapest.
@@ -17,7 +17,7 @@
  * cart.
  *
  * `Configuration` rows created as a guest deliberately keep their original
- * `sessionToken` — `CartItem` -> `Configuration` ownership already flows
+ * `sessionToken` - `CartItem` -> `Configuration` ownership already flows
  * through the cart itself once merged, and `create-order.ts` already accepts
  * `userId: string | null` untouched, so nothing downstream needs every
  * `Configuration` retroactively stamped with `userId`.
@@ -48,13 +48,13 @@ export async function mergeGuestCartIntoUser(userId: string, guestSessionToken: 
     }
 
     // Line by line, not one `updateMany`, because the two carts can hold
-    // the SAME configuration — a customer who added a product logged-out
+    // the SAME configuration - a customer who added a product logged-out
     // and had already added it logged-in.
     //
     // That case used to produce two identical lines in the merged cart.
     // Once `@@unique([cartId, configurationSignature])` existed to stop
     // identical lines (2026-08-30), the bulk move started violating it
-    // instead — and because this runs inside the login transaction, the
+    // instead - and because this runs inside the login transaction, the
     // customer who had it could no longer log in at all. Both problems have
     // the same fix: fold the quantities together.
     const guestItems = await tx.cartItem.findMany({

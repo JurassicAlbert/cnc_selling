@@ -5,7 +5,7 @@ import { comparePl, foldPl, matchesPl, sortByPl } from '@/domain/text/collation'
 describe('comparePl / sortByPl', () => {
   it('sorts Polish diacritics in alphabetical order, not code-point order', () => {
     // Plain JS `.sort()` (code-point order) would put every accented
-    // letter after 'z': ['Zebra', 'Łoś', 'Ćma'] — this must not.
+    // letter after 'z': ['Zebra', 'Łoś', 'Ćma'] - this must not.
     const names = ['Zebra', 'Ćma', 'Łoś'];
     expect([...names].sort(comparePl)).toEqual(['Ćma', 'Łoś', 'Zebra']);
   });
@@ -40,7 +40,7 @@ describe('foldPl / matchesPl', () => {
     expect(matchesPl('Dąb', 'DAB')).toBe(true);
   });
 
-  it('matchesPl returns true for an empty/whitespace query — "no filter" reads as a match', () => {
+  it('matchesPl returns true for an empty/whitespace query - "no filter" reads as a match', () => {
     expect(matchesPl('Dąb', '')).toBe(true);
     expect(matchesPl('Dąb', '   ')).toBe(true);
   });

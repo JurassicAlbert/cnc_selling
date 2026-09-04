@@ -46,11 +46,11 @@ describe('fitsLockerOpening', () => {
   });
 
   it('fits an item that only clears the opening when rotated', () => {
-    // 600mm wide, 300mm tall — doesn't fit width<=380 directly, but rotates to fit height<=640/width<=380
+    // 600mm wide, 300mm tall - doesn't fit width<=380 directly, but rotates to fit height<=640/width<=380
     expect(fitsLockerOpening({ widthMm: 600, heightMm: 300, thicknessMm: 50 }, inpostSizeC)).toBe(true);
   });
 
-  it('rejects a real oversized wall-art panel — the actual case this check exists for', () => {
+  it('rejects a real oversized wall-art panel - the actual case this check exists for', () => {
     // A real seeded product size (700×500mm) genuinely does not fit any InPost locker opening (max 380×640mm)
     expect(fitsLockerOpening({ widthMm: 700, heightMm: 500, thicknessMm: 12 }, inpostSizeC)).toBe(false);
   });

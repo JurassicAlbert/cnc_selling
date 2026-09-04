@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * `@mui/x-charts` rendering for the Dashboard — a client component by
+ * `@mui/x-charts` rendering for the Dashboard - a client component by
  * necessity (interactive SVG charts), fed plain pre-fetched data from the
  * Server Component page (`panel/page.tsx`), same RSC-fetches/client-renders
  * split every other admin data grid in this panel already uses.

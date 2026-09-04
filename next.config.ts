@@ -3,18 +3,18 @@ import type { NextConfig } from 'next';
 import { baseSecurityHeaders } from './src/server/security/headers';
 
 /**
- * Deliberately minimal. No `images.domains` — every image (including the
+ * Deliberately minimal. No `images.domains` - every image (including the
  * sourced stock photos added 2026-08-24, see `prisma/seed.ts`'s header)
  * lives under `public/`, and `next/image` needs no domain config for local
  * files. No redirects, no rewrites: nothing to redirect from yet. Add
  * config here as the reasons for it actually exist, not in advance of them.
  *
  * `experimental.serverActions.bodySizeLimit`, added 2026-08-26 for P4:
- * Next's own default is 1MB — well under `domain/upload/inspect.ts`'s
+ * Next's own default is 1MB - well under `domain/upload/inspect.ts`'s
  * real 25MB JPG/PNG/PDF caps (`ARCHITECTURE.md` §13.1.1). Without this,
  * Next's own framework-level body parser would reject any upload over
  * 1MB with a generic error *before* `uploadCustomDesign` ever runs,
- * making those caps unreachable for most real photos — a genuine gap
+ * making those caps unreachable for most real photos - a genuine gap
  * this project's own manual testing almost missed (every test upload
  * used happened to be under 1MB). Set a little above the largest real
  * cap to leave room for multipart/form overhead around the raw file
@@ -22,7 +22,7 @@ import { baseSecurityHeaders } from './src/server/security/headers';
  *
  * `headers()`, added 2026-08-31 for `docs/REVIEW-DETAILED.md` SEC-05
  * (ARCHITECTURE.md §16.1). Only the headers with no per-request component
- * live here — they then cover static assets, the image optimizer and API
+ * live here - they then cover static assets, the image optimizer and API
  * routes, none of which the proxy matcher touches. The Content-Security-
  * Policy is set in `src/proxy.ts` instead, because its nonce must be fresh
  * per request; `src/server/security/headers.ts` holds both and explains the

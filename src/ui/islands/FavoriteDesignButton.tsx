@@ -1,18 +1,18 @@
 'use client';
 
 /**
- * P9 continuation, 2026-08-28 — the heart toggle on the design cards.
+ * P9 continuation, 2026-08-28 - the heart toggle on the design cards.
  * Optimistic: flips immediately, rolls back only if the action comes back
- * `ok: false` (e.g. the session expired between page load and click) — a
+ * `ok: false` (e.g. the session expired between page load and click) - a
  * network round trip on every click would make a favourite toggle feel
  * broken for something this low-stakes. `loggedIn === false` renders a
  * disabled-looking heart pointing at `/logowanie` rather than hiding the
- * control — the same "always show the real state, degrade gracefully"
+ * control - the same "always show the real state, degrade gracefully"
  * precedent as `checkoutNoPaymentMethodsPl`.
  *
  * 2026-08-30: real MUI `IconButton` instead of a hand-styled `<button>` and
  * `<a>`. Both call sites already have `ThemeRegistry` above them, so this
- * costs no additional client runtime — it just stops this one control
+ * costs no additional client runtime - it just stops this one control
  * missing the focus ring, hover state, disabled treatment and 40px touch
  * target every other button on the site gets for free. `component={Link}`
  * keeps the logged-out variant a real link (right-click, middle-click,

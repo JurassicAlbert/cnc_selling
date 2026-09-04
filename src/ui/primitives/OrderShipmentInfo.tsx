@@ -7,13 +7,13 @@ import type { OrderShipmentView } from '@/server/repositories/orders';
 const dateFormatter = new Intl.DateTimeFormat('pl-PL', { dateStyle: 'long' });
 
 /**
- * Customer-facing shipment status — P9 phase 7. Deliberately, explicitly
+ * Customer-facing shipment status - P9 phase 7. Deliberately, explicitly
  * honest about being manually updated: no live carrier polling exists
  * anywhere in this project (§9/§15), and this component says so directly
  * rather than presenting a status that looks automatically fresh.
  *
  * 2026-08-29 rewrite, owner feedback: real MUI, not raw HTML (no
- * `'use client'` needed — see `OrderSummary.tsx`'s own header comment for
+ * `'use client'` needed - see `OrderSummary.tsx`'s own header comment for
  * why that's safe here).
  */
 export function OrderShipmentInfo({ shipment }: { readonly shipment: OrderShipmentView | null }) {

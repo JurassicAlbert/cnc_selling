@@ -12,7 +12,7 @@ import type { RateLimitRule } from '@/server/rate-limit/rate-limit';
  * in-memory stand-in.
  *
  * `now` is an explicit parameter throughout, which is what makes window
- * expiry testable without `setTimeout` — a sleeping test is a slow test and
+ * expiry testable without `setTimeout` - a sleeping test is a slow test and
  * eventually a flaky one.
  *
  * These run against the real database rather than `withTestTransaction`
@@ -33,7 +33,7 @@ afterEach(async () => {
   await prisma.rateLimit.deleteMany({ where: { key: { startsWith: PREFIX } } });
 });
 
-describe('consumeRateLimit — the window', () => {
+describe('consumeRateLimit - the window', () => {
   it('allows exactly `limit` attempts and refuses the next one', async () => {
     const k = key();
 
@@ -56,7 +56,7 @@ describe('consumeRateLimit — the window', () => {
     const tenMinutesLater = await consumeRateLimit(k, RULE, new Date(start.getTime() + 600_000));
 
     if (immediately.allowed || tenMinutesLater.allowed) {
-      throw new Error('both should have been refused — the window is 15 minutes');
+      throw new Error('both should have been refused - the window is 15 minutes');
     }
     expect(immediately.retryAfterSeconds).toBe(900);
     expect(tenMinutesLater.retryAfterSeconds).toBe(300);
@@ -86,14 +86,14 @@ describe('consumeRateLimit — the window', () => {
   });
 });
 
-describe('consumeRateLimit — concurrency', () => {
+describe('consumeRateLimit - concurrency', () => {
   /**
    * The reason this is one SQL statement and not read-then-write. A limiter
    * that loses updates under load is worse than none: it reports protection
    * it does not provide, and the load an attacker generates is exactly the
    * condition that makes a read-then-write race likely.
    */
-  it('counts every one of many simultaneous attempts — none is lost', async () => {
+  it('counts every one of many simultaneous attempts - none is lost', async () => {
     const k = key();
     const rule: RateLimitRule = { limit: 5, windowSeconds: 900 };
 

@@ -9,13 +9,13 @@ import { prisma } from '@/server/db/client';
  *
  * 1. **No hard-delete action exists for any of the 6 core catalogue
  *    entities** (Category/Product/Material/Finish/Design/DesignCollection)
- *    — confirmed by `grep -rn "prisma\.(category|product|material|finish|
+ *    - confirmed by `grep -rn "prisma\.(category|product|material|finish|
  *    design|designCollection)\.delete\b" src/` returning zero matches
  *    outside Prisma's own generated JSDoc example comments. Every one of
  *    those entities' own action files documents this explicitly (e.g.
  *    `admin-categories.ts`: "No delete action exists here on purpose").
  *
- * 2. **Even if one somehow disappeared, no existing order would break** —
+ * 2. **Even if one somehow disappeared, no existing order would break** -
  *    `OrderItem` (`prisma/schema.prisma`) has NO live foreign key to
  *    Product/Material/Design/Finish at all, only `orderId`/
  *    `customerDesignId`; everything catalogue-related is the immutable
@@ -23,7 +23,7 @@ import { prisma } from '@/server/db/client';
  *    order NEVER joins to a live catalogue row." This test proves that
  *    architecturally-implied claim at the DB level, directly: hard-delete
  *    a `Material` row a real order's snapshot references (bypassing the
- *    app entirely, since the app itself has no path to do this — a
+ *    app entirely, since the app itself has no path to do this - a
  *    stronger check than "the button doesn't exist"), and confirm the
  *    order's stored data is completely untouched.
  */
@@ -100,7 +100,7 @@ describe('soft-delete invariant (§16A.2 #2)', () => {
     });
 
     // The real invariant: no FK from OrderItem to Material means this
-    // succeeds with no constraint error — proving there is nothing left
+    // succeeds with no constraint error - proving there is nothing left
     // to "cascade break" even in the hypothetical worst case.
     await prisma.material.delete({ where: { id: material.id } });
     expect(await prisma.material.findUnique({ where: { id: material.id } })).toBeNull();

@@ -20,8 +20,8 @@ describe('validateNip', () => {
     expect(validateNip('')).toBe(false);
   });
 
-  it('rejects a NIP whose weighted sum is 10 mod 11 — defined invalid, not wrapped', () => {
-    // 1111111111: sum = 1*(6+5+7+2+3+4+5+6+7) = 1*45 = 45; 45 % 11 = 1 — not
+  it('rejects a NIP whose weighted sum is 10 mod 11 - defined invalid, not wrapped', () => {
+    // 1111111111: sum = 1*(6+5+7+2+3+4+5+6+7) = 1*45 = 45; 45 % 11 = 1 - not
     // the case we want. Construct one whose control digit would be 10:
     // digits 1-9 = 000000004 -> sum = 4*7 = 28, 28 % 11 = 6, not 10 either.
     // Simplest reliable case: use the known-valid NIP's first 9 digits but

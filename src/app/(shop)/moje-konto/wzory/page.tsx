@@ -20,11 +20,11 @@ export const metadata: Metadata = {
 const dateFormatter = new Intl.DateTimeFormat('pl-PL', { dateStyle: 'long' });
 
 /**
- * P9 phase 2 — the standalone "moje wzory" library. Previously, uploading
+ * P9 phase 2 - the standalone "moje wzory" library. Previously, uploading
  * a custom design only existed inline inside the `CUSTOM` product's own
  * configurator step; this page is its real, reusable home. The upload
  * form (the one genuinely interactive part) is a client island wrapped in
- * `ThemeRegistry`; the list itself is plain Server Component markup —
+ * `ThemeRegistry`; the list itself is plain Server Component markup -
  * same "wrap only the interactive part" precedent as `/faq`.
  */
 export default async function AccountDesignsPage() {
@@ -39,8 +39,8 @@ export default async function AccountDesignsPage() {
      * the upload form alone (2026-08-30). The favourites grid below renders
      * FavoriteDesignButton, now a real MUI IconButton, which needs the brand
      * theme above it or it falls back to stock Material colours. Hoisting
-     * the existing provider costs nothing — this page already loaded MUI for
-     * the upload form — and a second provider on one page would mean two
+     * the existing provider costs nothing - this page already loaded MUI for
+     * the upload form - and a second provider on one page would mean two
      * Emotion caches under the same key.
      */
     <ThemeRegistry>

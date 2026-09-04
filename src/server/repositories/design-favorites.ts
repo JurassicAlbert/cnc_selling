@@ -1,5 +1,5 @@
 /**
- * P9 continuation, 2026-08-28 — "wzory, które dodał do ulubionych" (owner
+ * P9 continuation, 2026-08-28 - "wzory, które dodał do ulubionych" (owner
  * feedback). Login-only: `DesignFavorite` has no guest `sessionToken` half
  * (see `schema.prisma`'s own comment on the model), so every function here
  * takes a `userId` directly rather than the `Owner` shape `customer-
@@ -33,7 +33,7 @@ export async function listMyFavoriteDesigns(): Promise<readonly FavoriteDesignLi
   return listFavoriteDesigns(session.userId);
 }
 
-/** For `/wzory`'s card-level heart toggle — which of the given design ids the logged-in user has already favourited. Empty set for a guest, never an error. */
+/** For `/wzory`'s card-level heart toggle - which of the given design ids the logged-in user has already favourited. Empty set for a guest, never an error. */
 export async function listFavoritedDesignIds(userId: string | null, designIds: readonly string[]): Promise<ReadonlySet<string>> {
   if (userId === null || designIds.length === 0) {
     return new Set();

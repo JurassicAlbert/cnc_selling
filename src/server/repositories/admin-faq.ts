@@ -1,4 +1,4 @@
-/** Admin FAQ queries — unscoped by `isActive`, unlike the real public `/faq` read. Every caller here MUST go through `requireStaffSession()` first. */
+/** Admin FAQ queries - unscoped by `isActive`, unlike the real public `/faq` read. Every caller here MUST go through `requireStaffSession()` first. */
 
 import { prisma } from '@/server/db/client';
 

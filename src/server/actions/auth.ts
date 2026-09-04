@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * Login/register/OTP/logout Server Actions — follows `checkout.ts`'s
+ * Login/register/OTP/logout Server Actions - follows `checkout.ts`'s
  * `submitCheckout`/`useActionState` shape exactly (see that file's header
  * comment for why: real server-validated submission with inline field
  * errors, echoed values, for the cost of one small client island).
@@ -11,7 +11,7 @@
  * (`mergeGuestCartIntoUser`, Part B) into the now-authenticated user's cart,
  * then redirect. `nextCookies()` in `auth.ts`'s plugin list is what makes
  * `auth.api.signInEmail`/`signUpEmail`/`signInEmailOTP` actually set the
- * session cookie when called from here — a Server Action is exactly the
+ * session cookie when called from here - a Server Action is exactly the
  * request scope that plugin's `after` hook needs.
  */
 
@@ -42,14 +42,14 @@ function field(formData: FormData, name: string): string {
 
 /**
  * Maps a caught `APIError` to the ONE code its call site actually expects
- * (`expectedCode`, Better Auth's own string — e.g.
- * `'INVALID_EMAIL_OR_PASSWORD'`) — anything else is a genuinely
+ * (`expectedCode`, Better Auth's own string - e.g.
+ * `'INVALID_EMAIL_OR_PASSWORD'`) - anything else is a genuinely
  * unanticipated failure (a misconfigured origin, a DB error surfaced as an
  * APIError, etc.), logged rather than silently relabelled as the expected
  * one. An earlier version of this file mapped every `APIError` straight to
  * the expected code regardless of `error.body?.code`, which meant a
  * config-level failure during registration displayed as "an account with
- * this email already exists" — plausible-looking, and wrong. Found live in
+ * this email already exists" - plausible-looking, and wrong. Found live in
  * the browser, not by code review.
  */
 function mapAuthError(
@@ -68,16 +68,16 @@ function mapAuthError(
  * Not extracted into a `redirect()`-ending helper: `redirect()`'s `never`
  * return type only lets TypeScript treat the rest of a function as
  * unreachable when the call is the caller's OWN last statement, not when
- * it happens inside an awaited helper one level down — confirmed by trying
+ * it happens inside an awaited helper one level down - confirmed by trying
  * exactly that and getting "Function lacks ending return statement" at each
  * of the three call sites below. `checkout.ts`'s `submitCheckout` ends with
  * a bare `redirect(...)` for the same reason.
  *
- * `STAFF`/`ADMIN` land on `/panel` directly, not `/moje-konto` — found live
+ * `STAFF`/`ADMIN` land on `/panel` directly, not `/moje-konto` - found live
  * (2026-08-27): the owner signed in with a real staff OTP and landed on the
  * plain customer account page with no indication the admin panel was a
  * separate destination, genuinely confusing. A small extra `role` lookup,
- * not read off Better Auth's own result — `signInEmailOTP`'s returned
+ * not read off Better Auth's own result - `signInEmailOTP`'s returned
  * `user` doesn't carry the custom `role` field (confirmed by `tsc`:
  * `signInEmail`/`signUpEmail`'s results do, `signInEmailOTP`'s doesn't),
  * so this queries it directly rather than relying on an inconsistent shape
@@ -92,7 +92,7 @@ async function mergeAndGetRedirectTarget(userId: string): Promise<string> {
 
 /**
  * Only meaningful alongside `formError: 'RATE_LIMITED'`
- * (`docs/REVIEW-DETAILED.md` SEC-01) — `authFormErrorMessage` turns it into
+ * (`docs/REVIEW-DETAILED.md` SEC-01) - `authFormErrorMessage` turns it into
  * a real "spróbuj ponownie za N minut" rather than a vague "later".
  */
 type RetryAfter = { readonly retryAfterSeconds: number | null };
@@ -125,7 +125,7 @@ export async function submitLogin(_prevState: LoginFormState, formData: FormData
   }
 
   // Counted BEFORE the credentials are checked, and counted whether or not
-  // they turn out to be right — a limiter that only counts failures still
+  // they turn out to be right - a limiter that only counts failures still
   // lets an attacker learn "this one was different" from the timing of the
   // check they skipped. Cleared on success below, so a customer who
   // mistypes twice and then gets it right carries nothing forward.

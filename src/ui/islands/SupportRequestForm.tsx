@@ -1,10 +1,10 @@
 'use client';
 
 /**
- * Shared support/contact form — same "page binds the right Server Action,
+ * Shared support/contact form - same "page binds the right Server Action,
  * this component never knows which context it's in" shape as
  * `ReviewForm.tsx`, but built in real MUI from the start (this is a brand
- * new form, not an existing raw one — no reason to add another form
+ * new form, not an existing raw one - no reason to add another form
  * Phase 9's sitewide audit would just have to convert later).
  * `ThemeRegistry` is mounted by each page that renders this, same
  * "mount around just the real interactive island" precedent as checkout/

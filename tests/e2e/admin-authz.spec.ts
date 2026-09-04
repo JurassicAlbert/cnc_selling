@@ -1,5 +1,5 @@
 // Unlike `webServer`'s own `next build && next start` (Next.js loads `.env`
-// itself), the Playwright test-runner process does not — needed here only
+// itself), the Playwright test-runner process does not - needed here only
 // because this file is the first e2e spec to talk to Postgres directly.
 import 'dotenv/config';
 
@@ -9,23 +9,23 @@ import { expect, test } from '@playwright/test';
 import { prisma } from '../../src/server/db/client';
 
 /**
- * `docs/CHECKLIST.md`'s "Authorization matrix fully tested" — the real gap
+ * `docs/CHECKLIST.md`'s "Authorization matrix fully tested" - the real gap
  * this file closes. `requireStaffSession()`/`requireAdminSession()`
  * (`src/server/auth/session.ts`) are the actual gate for every `/panel/*`
  * page and every `admin-*.ts` Server Action: `CUSTOMER` → `notFound()`,
  * `STAFF` on an `ADMIN`-only screen → `notFound()`, unauthenticated →
- * `redirect('/logowanie')` — "don't reveal existence," same rule already
+ * `redirect('/logowanie')` - "don't reveal existence," same rule already
  * applied to owned-resource lookups (`authz.test.ts`). Both functions call
- * `next/headers`, so they can only be exercised inside a real request —
- * confirmed repeatedly this project (`docs/HANDOVER.md` §9) — which rules
+ * `next/headers`, so they can only be exercised inside a real request -
+ * confirmed repeatedly this project (`docs/HANDOVER.md` §9) - which rules
  * out a plain Vitest unit/integration test and makes this a genuine
  * Playwright job, not a redundant one: a stale comment in
  * `admin-orders.test.ts` claimed this coverage already existed in a
  * `tests/e2e/admin.spec.ts` file that, checked directly, has never once
- * existed in this repository's git history — this file is what that
+ * existed in this repository's git history - this file is what that
  * comment should have pointed at all along.
  *
- * Imports `prisma` directly — the one thing no UI path can do without
+ * Imports `prisma` directly - the one thing no UI path can do without
  * already being signed in as an `ADMIN` first is promote a fresh account to
  * `STAFF`/`ADMIN` (the real invite flow, already covered elsewhere, needs
  * exactly that). Same "real database, explicit real data" convention this
@@ -57,7 +57,7 @@ async function registerAndPromote(
   await prisma.user.update({ where: { email: params.email }, data: { role: params.role } });
 
   // The just-created session's own role claim is now stale (Better Auth
-  // read it at sign-up, before the promotion above) — sign out and back in
+  // read it at sign-up, before the promotion above) - sign out and back in
   // so the next request carries a session reflecting the real, current role.
   await page.getByRole('button', { name: 'Wyloguj się' }).click();
   await page.goto('/logowanie');
@@ -65,7 +65,7 @@ async function registerAndPromote(
   await fillReliably(passwordForm.getByLabel('Adres e-mail'), params.email);
   await fillReliably(passwordForm.getByLabel('Hasło'), params.password);
   await passwordForm.getByRole('button', { name: 'Zaloguj się' }).click();
-  // STAFF/ADMIN sign-in lands on /panel directly, not /moje-konto — the
+  // STAFF/ADMIN sign-in lands on /panel directly, not /moje-konto - the
   // real redirect logic §9z17 fixed, incidentally re-proven here by a
   // completely different test than the one that originally verified it.
   await expect(page).toHaveURL('/panel');
@@ -88,7 +88,7 @@ test('a CUSTOMER gets a real 404 on /panel, not a redirect or a 403', async ({ p
 
   const response = await page.goto('/panel');
   expect(response?.status()).toBe(404);
-  // Still on /panel's own URL — a 404 renders in place, unlike the
+  // Still on /panel's own URL - a 404 renders in place, unlike the
   // unauthenticated case above which actually navigates to /logowanie.
   await expect(page).toHaveURL('/panel');
 });

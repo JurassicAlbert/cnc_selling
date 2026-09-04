@@ -18,11 +18,11 @@ export const metadata: Metadata = {
 const dateFormatter = new Intl.DateTimeFormat('pl-PL', { dateStyle: 'long' });
 
 /**
- * P9 continuation, 2026-08-28 — "informacje kontaktowe i pomoc do firmy"
+ * P9 continuation, 2026-08-28 - "informacje kontaktowe i pomoc do firmy"
  * (owner feedback). `submitSupportRequest`/`SupportRequestForm` already
- * existed (`/kontakt`); this page is the missing other half — a customer
+ * existed (`/kontakt`); this page is the missing other half - a customer
  * could file a request but never see it again. `adminNotesPl` stays
- * staff-only (schema's own comment) — only `status` is shown, matching
+ * staff-only (schema's own comment) - only `status` is shown, matching
  * `listSupportRequestsForUser`'s deliberately narrow select.
  */
 export default async function AccountHelpPage() {

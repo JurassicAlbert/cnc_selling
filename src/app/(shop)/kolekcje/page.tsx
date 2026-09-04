@@ -16,12 +16,12 @@ export const metadata: Metadata = {
 };
 
 /**
- * P9 phase 4: `ProductCollection` — curated, ready-made groupings of
+ * P9 phase 4: `ProductCollection` - curated, ready-made groupings of
  * independently-created products. Deliberately distinct from `Category`
  * (every product still belongs to exactly one category regardless of
  * collection membership) and from the unrelated, pattern-grouping
  * `DesignCollection`. Framed honestly in copy as ready-made, not
- * customer-request-driven — matching §14's business-rules distinction.
+ * customer-request-driven - matching §14's business-rules distinction.
  */
 export default async function CollectionsIndexPage() {
   const collections = await listActiveCollections();
@@ -42,8 +42,8 @@ export default async function CollectionsIndexPage() {
           <>
             {/* 2026-08-29, owner request: the same simple, small
                 breadcrumb-style category selection `/wzory` used for its
-                pattern categories — a real quick-jump row, not just the
-                image cards below. Plain RSC-safe pill links (no MUI —
+                pattern categories - a real quick-jump row, not just the
+                image cards below. Plain RSC-safe pill links (no MUI -
                 ARCHITECTURE.md §2.1, `(shop)` server components can't
                 import it directly), same badge/pill styling this file
                 already uses for `collectionsBadgePl` below. */}

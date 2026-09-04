@@ -1,21 +1,21 @@
 /**
- * Static site chrome — copy that isn't a translation of a domain code (that
+ * Static site chrome - copy that isn't a translation of a domain code (that
  * is `messages.ts`'s job) but also isn't a component-local string literal,
  * which the lint rule in `scripts/check-polish-literals.mjs` forbids
  * everywhere under `src/app` and `src/ui`.
  *
  * `catalogue*` entries are real, functional UI chrome for the category/
- * product pages built on the seeded catalogue — labels and structure, not
+ * product pages built on the seeded catalogue - labels and structure, not
  * the product descriptions themselves (those come from the database, seeded
- * in `prisma/seed.ts`, and are their own kind of placeholder — see that
- * file's header comment). `home*` is the homepage's own SEO metadata —
+ * in `prisma/seed.ts`, and are their own kind of placeholder - see that
+ * file's header comment). `home*` is the homepage's own SEO metadata -
  * technical copy, not the hero/craftsmanship/reviews/FAQ narrative content
  * ARCHITECTURE.md §22 describes, which is still unbuilt (see
  * `src/app/(marketing)/page.tsx`'s header comment for why).
  */
 
 export const SITE = {
-  homeSeoTitlePl: 'RYT — meble i akcesoria z grawerem',
+  homeSeoTitlePl: 'RYT - meble i akcesoria z grawerem',
   homeSeoDescPl:
     'Meble, biżuteria i wykończenia wnętrz z drewna i gresu, z personalizowanym grawerem.',
 
@@ -23,7 +23,7 @@ export const SITE = {
   catalogueStartingPricePrefixPl: 'od',
   /**
    * Shown instead of a price when `Product.startingPriceGrossGrosze` is
-   * null — a product whose cost genuinely cannot be known before the
+   * null - a product whose cost genuinely cannot be known before the
    * customer's own artwork exists. Never a zero, never a fallback to the
    * internal net clamp (`docs/REVIEW-DETAILED.md` BUG-02).
    */
@@ -37,11 +37,11 @@ export const SITE = {
   catalogueInstallationVariantsLabelPl: 'Warianty montażu',
   catalogueMaterialNotesLabelPl: 'Ważne informacje',
   catalogueAvailableDesignsLabelPl: 'Dostępne wzory',
-  // Empty states get a way forward, not just a statement of absence — a
+  // Empty states get a way forward, not just a statement of absence - a
   // customer who lands here should not have to reach for the back button to
   // find out what to do next (2026-08-30 copy pass).
   catalogueEmptyCategoryPl:
-    'W tej kategorii nie ma jeszcze produktów. Zajrzyj do pozostałych kategorii albo napisz do nas — wykonujemy też projekty na indywidualne zamówienie.',
+    'W tej kategorii nie ma jeszcze produktów. Zajrzyj do pozostałych kategorii albo napisz do nas - wykonujemy też projekty na indywidualne zamówienie.',
   catalogueCategoryNotFoundPl: 'Nie znaleziono takiej kategorii.',
   catalogueProductNotFoundPl: 'Nie znaleziono takiego produktu.',
   catalogueViewProductPl: 'Zobacz produkt',
@@ -69,16 +69,16 @@ export const SITE = {
     'Ten produkt nie oferuje jeszcze personalizacji tekstem. Ten krok można pominąć.',
   configuratorPersonalizationLabelPl: 'Tekst do wygrawerowania',
   // 2026-08-29, owner feedback: personalization becomes a very small,
-  // disabled-for-now stub — the real character limit still shown, so it
+  // disabled-for-now stub - the real character limit still shown, so it
   // never overpromises what the product will actually allow once enabled.
   configuratorPersonalizationComingSoonPl: (maxCharacters: number) =>
-    `Wkrótce dostępne — do ${maxCharacters} znaków`,
+    `Wkrótce dostępne - do ${maxCharacters} znaków`,
   configuratorFontLabelPl: 'Krój pisma',
   configuratorFontRequiredPl: 'Wybierz krój pisma, aby sprawdzić, czy wpisany tekst może zostać wykonany.',
   configuratorPreviewHeadingPl: 'Podgląd',
   configuratorPreviewEmptyPl: 'Wybierz materiał, aby zobaczyć podgląd.',
   configuratorPreviewCaptionPl:
-    'Wizualizacja poglądowa złożona z rzeczywistych zdjęć materiału i wzoru zastępczego — ostateczny wygląd produktu może się różnić.',
+    'Wizualizacja poglądowa złożona z rzeczywistych zdjęć materiału i wzoru zastępczego - ostateczny wygląd produktu może się różnić.',
   configuratorPriceLabelPl: 'Cena',
   configuratorPriceCalculatingPl: 'Obliczanie ceny…',
   configuratorPriceUnavailablePl: 'Podaj wymiary, aby zobaczyć cenę.',
@@ -92,12 +92,12 @@ export const SITE = {
     'Nie udało się dodać do koszyka. Sprawdź wybory powyżej i spróbuj ponownie.',
   /**
    * `docs/REVIEW-DETAILED.md` SEC-03. Reached when a link, a saved project
-   * or a bookmark still names something we have since withdrawn — our
+   * or a bookmark still names something we have since withdrawn - our
    * change, not the customer's error, so the copy neither blames them nor
    * leaves them guessing which of six choices is the problem.
    */
   configuratorOptionUnavailablePl:
-    'Wybrany wzór, materiał lub wykończenie nie jest już dostępny — prawdopodobnie wycofaliśmy go od czasu zapisania tej konfiguracji. Wybierz inny wariant powyżej.',
+    'Wybrany wzór, materiał lub wykończenie nie jest już dostępny - prawdopodobnie wycofaliśmy go od czasu zapisania tej konfiguracji. Wybierz inny wariant powyżej.',
   configuratorProductionDaysLabelPl: 'Czas realizacji',
   configuratorClearedFinishPl:
     'Wybrane wykończenie zostało wyczyszczone, ponieważ nie jest dostępne dla nowo wybranego materiału.',
@@ -108,7 +108,7 @@ export const SITE = {
   configuratorUploadSubmittingPl: 'Przesyłanie…',
   configuratorUploadSuccessPl: 'Projekt został przesłany.',
   // Short form for the CUSTOM_UPLOAD accordion band's collapsed-header
-  // summary — the full sentence above already appears once inside the
+  // summary - the full sentence above already appears once inside the
   // band's own success `Alert`; repeating it verbatim in the header too
   // made `getByText('Projekt został przesłany.')` match twice in the e2e
   // suite (a real ambiguity, not just a test artifact) once the header
@@ -117,7 +117,7 @@ export const SITE = {
   configuratorUploadDoneLabelPl: 'Plik przesłany',
   configuratorUploadIpConsentLabelPl: 'Akceptuję powyższe oświadczenie',
   configuratorUploadReplacePl: 'Prześlij inny plik',
-  // P9 phase 2 — reusing an already-uploaded design from "Moje wzory" instead of uploading fresh.
+  // P9 phase 2 - reusing an already-uploaded design from "Moje wzory" instead of uploading fresh.
   configuratorUploadReuseHeadingPl: 'Masz już zapisany wzór? Możesz go użyć zamiast przesyłać nowy plik.',
   configuratorUploadReuseSelectLabelPl: 'Zapisane wzory',
   configuratorUploadReuseButtonPl: 'Użyj tego wzoru',
@@ -126,12 +126,12 @@ export const SITE = {
   configuratorCustomPriceEstimatePl:
     'Podana cena to wstępny szacunek (materiał, wykończenie, cena bazowa). Ostateczna wycena, uwzględniająca złożoność Twojego projektu, zostanie potwierdzona podczas weryfikacji projektu.',
 
-  // Homepage hero — real claims about how this business actually operates,
+  // Homepage hero - real claims about how this business actually operates,
   // not generic retail trust-badge copy. No "free shipping"/"money-back
   // guarantee" claims: nothing has confirmed either exists yet.
   heroHeadlinePl: 'Meble i dodatki z grawerem, wykonane na wymiar',
   heroSubcopyPl:
-    'Projektujemy i wykonujemy unikalne przedmioty z drewna i gresu — od stołków loftowych po biżuterię — z precyzyjnym grawerem CNC i laserowym.',
+    'Projektujemy i wykonujemy unikalne przedmioty z drewna i gresu - od stołków loftowych po biżuterię - z precyzyjnym grawerem CNC i laserowym.',
   heroCtaPl: 'Zobacz kategorie',
 
   trustMadeToOrderTitlePl: 'Wykonanie na zamówienie',
@@ -161,7 +161,7 @@ export const SITE = {
     'Nic nie pasuje do tej frazy. Spróbuj krótszego hasła albo przejrzyj kategorie w menu.',
   // A bare 'type something' tells a customer nothing about what this search
   // actually indexes. Real examples do.
-  searchEmptyQueryPl: 'Wpisz, czego szukasz — np. „obraz”, „dąb” albo „bransoletka”.',
+  searchEmptyQueryPl: 'Wpisz, czego szukasz - np. „obraz”, „dąb” albo „bransoletka”.',
 
   cartHeadingPl: 'Koszyk',
   cartEmptyPl: 'Twój koszyk jest pusty.',
@@ -171,16 +171,16 @@ export const SITE = {
   cartRemovePl: 'Usuń',
   cartDuplicatePl: 'Duplikuj',
   cartEditPl: 'Edytuj',
-  // 2026-08-29, cart UI/UX pass — real MUI stepper + a hard per-line cap
+  // 2026-08-29, cart UI/UX pass - real MUI stepper + a hard per-line cap
   // ("żeby nie było sytuacji w której klient kupuje 10000 sztuk produktu").
   cartQuantityDecreasePl: 'Zmniejsz ilość',
   cartQuantityIncreasePl: 'Zwiększ ilość',
-  cartQuantityMaxNoticePl: (max: number) => `Maksymalnie ${max} szt. na jedną pozycję. Większe zamówienia — napisz do nas.`,
+  cartQuantityMaxNoticePl: (max: number) => `Maksymalnie ${max} szt. na jedną pozycję. Większe zamówienia - napisz do nas.`,
   cartItemsCountPl: (count: number) => `${count} ${count === 1 ? 'produkt' : count < 5 ? 'produkty' : 'produktów'} w koszyku`,
   cartSubtotalLabelPl: 'Suma',
   cartCheckoutCtaPl: 'Przejdź do zamówienia',
   cartIncompleteNoticePl:
-    'Ta konfiguracja nie może już zostać wykonana w tej formie — edytuj ją przed złożeniem zamówienia.',
+    'Ta konfiguracja nie może już zostać wykonana w tej formie - edytuj ją przed złożeniem zamówienia.',
 
   checkoutHeadingPl: 'Zamówienie',
   checkoutBuyerSectionHeadingPl: 'Dane zamawiającego',
@@ -199,40 +199,40 @@ export const SITE = {
   checkoutNoDeliveryMethodsPl: 'Obecnie żadna metoda dostawy nie jest dostępna. Skontaktuj się z nami, aby dokończyć zamówienie.',
   checkoutDeliveryEstimateLabelPl: 'Przewidywany czas dostawy:',
   checkoutDeliveryEstimateUnitPl: 'dni roboczych',
-  checkoutDeliveryMethodInvalidPl: 'Wybrana metoda dostawy jest już niedostępna — wybierz inną i spróbuj ponownie.',
+  checkoutDeliveryMethodInvalidPl: 'Wybrana metoda dostawy jest już niedostępna - wybierz inną i spróbuj ponownie.',
   checkoutPickupPointLabelPl: 'Wybierz paczkomat lub punkt odbioru',
   checkoutPickupPointSearchPl: 'Wpisz miasto lub kod pocztowy',
-  checkoutPickupPointNoneFoundPl: 'Brak punktów dla podanej frazy — spróbuj innego miasta.',
-  checkoutPickupPointInvalidPl: 'Wybierz punkt odbioru z listy, aby kontynuować — wybrany punkt jest nieprawidłowy lub nie został jeszcze wybrany.',
+  checkoutPickupPointNoneFoundPl: 'Brak punktów dla podanej frazy - spróbuj innego miasta.',
+  checkoutPickupPointInvalidPl: 'Wybierz punkt odbioru z listy, aby kontynuować - wybrany punkt jest nieprawidłowy lub nie został jeszcze wybrany.',
   checkoutPickupPointRequiredHintPl: 'Wybierz punkt odbioru powyżej, aby złożyć zamówienie.',
   /** §16.1's per-IP order-creation limit. Says plainly that nothing was charged, because that is a customer's first worry here. */
   checkoutRateLimitedPl:
-    'Zbyt wiele prób złożenia zamówienia w krótkim czasie. Nic nie zostało obciążone — odczekaj chwilę i spróbuj ponownie. Jeśli to pomyłka, napisz do nas.',
+    'Zbyt wiele prób złożenia zamówienia w krótkim czasie. Nic nie zostało obciążone - odczekaj chwilę i spróbuj ponownie. Jeśli to pomyłka, napisz do nas.',
   /**
    * `docs/REVIEW-DETAILED.md` SEC-03. Deliberately not the generic
    * "nieprawidłowa konfiguracja": the overwhelmingly likely cause is that
    * we withdrew something after this cart was filled, which is our doing,
-   * not the customer's mistake — so the copy says so and names the fix.
+   * not the customer's mistake - so the copy says so and names the fix.
    */
   checkoutOptionUnavailablePl:
     'Jedna z pozycji w koszyku zawiera wzór, materiał lub wykończenie, którego już nie oferujemy. Otwórz koszyk i zmień tę pozycję („Edytuj"), aby dokończyć zamówienie.',
   checkoutPickupPointSampleNoticePl:
-    'Lista jest wstępna, nie w pełni aktualna — jeśli nie widzisz Twojego miasta lub konkretnego punktu, napisz do nas po złożeniu zamówienia, a ustalimy to indywidualnie.',
+    'Lista jest wstępna, nie w pełni aktualna - jeśli nie widzisz Twojego miasta lub konkretnego punktu, napisz do nas po złożeniu zamówienia, a ustalimy to indywidualnie.',
   checkoutDeliveryInfeasibleTagPl: 'Niedostępne dla Twojego koszyka',
   checkoutDeliveryMatchedTierPl: (label: string) => `Rozmiar/waga: ${label}`,
-  checkoutFreeShippingAppliedPl: 'Darmowa dostawa — Twoje zamówienie kwalifikuje się do darmowej wysyłki tą metodą.',
+  checkoutFreeShippingAppliedPl: 'Darmowa dostawa - Twoje zamówienie kwalifikuje się do darmowej wysyłki tą metodą.',
   checkoutCourierNoteLabelPl: 'Uwagi dla kuriera (opcjonalnie)',
-  // The closing mark here was a straight `"` against an opening `„` — the
+  // The closing mark here was a straight `"` against an opening `„` - the
   // Polish pair is „…”, and a mismatched one is visible to any Polish
   // reader (2026-08-30 typography pass).
-  checkoutCourierNoteHelperPl: 'Np. kod do bramy, piętro, „zostawić u sąsiada” — trafi na etykietę przesyłki.',
+  checkoutCourierNoteHelperPl: 'Np. kod do bramy, piętro, „zostawić u sąsiada” - trafi na etykietę przesyłki.',
   checkoutInternalNoteLabelPl: 'Uwagi dla nas (opcjonalnie)',
-  checkoutInternalNoteHelperPl: 'Coś, co powinniśmy wiedzieć o wysyłce — widoczne tylko dla naszego zespołu.',
+  checkoutInternalNoteHelperPl: 'Coś, co powinniśmy wiedzieć o wysyłce - widoczne tylko dla naszego zespołu.',
   checkoutOrderSummaryHeadingPl: 'Podsumowanie zamówienia',
   orderAwaitingPaymentNoticePl:
-    'Czekamy na Twoją wpłatę — dane do przelewu znajdziesz poniżej. Możesz wrócić na tę stronę w dowolnym momencie, aby je sprawdzić.',
+    'Czekamy na Twoją wpłatę - dane do przelewu znajdziesz poniżej. Możesz wrócić na tę stronę w dowolnym momencie, aby je sprawdzić.',
   orderCancelledNoticePl: 'To zamówienie zostało anulowane. Jeśli masz pytania, napisz do nas przez formularz poniżej.',
-  checkoutPaymentMethodInvalidPl: 'Wybrana metoda płatności jest już niedostępna — wybierz inną i spróbuj ponownie.',
+  checkoutPaymentMethodInvalidPl: 'Wybrana metoda płatności jest już niedostępna - wybierz inną i spróbuj ponownie.',
   checkoutNoPaymentMethodsPl: 'Obecnie żadna metoda płatności nie jest dostępna. Skontaktuj się z nami, aby dokończyć zamówienie.',
   checkoutPaymentSectionHeadingPl: 'Płatność',
   checkoutPaymentBankTransferPl: 'Przelew bankowy',
@@ -247,11 +247,11 @@ export const SITE = {
    * Shown when a second, parallel checkout of the same cart won the race
    * (`docs/AUDIT-2026-08-30.md` P0-2). The reassurance is the important
    * part: nothing was charged twice, and the order that DID go through is
-   * findable — so this must never read like a generic failure.
+   * findable - so this must never read like a generic failure.
    */
   checkoutCartChangedPl:
-    'To zamówienie zostało już złożone w innym oknie lub na innej karcie. Nic nie zostało policzone dwa razy — sprawdź swoje zamówienia lub wiadomość e-mail z potwierdzeniem.',
-  checkoutEmptyCartRedirectPl: 'Twój koszyk jest pusty — wróć do koszyka, aby dodać produkty.',
+    'To zamówienie zostało już złożone w innym oknie lub na innej karcie. Nic nie zostało policzone dwa razy - sprawdź swoje zamówienia lub wiadomość e-mail z potwierdzeniem.',
+  checkoutEmptyCartRedirectPl: 'Twój koszyk jest pusty - wróć do koszyka, aby dodać produkty.',
   checkoutGenericErrorPl: 'Nie udało się złożyć zamówienia. Sprawdź dane powyżej i spróbuj ponownie.',
 
   orderConfirmationHeadingPl: 'Zamówienie przyjęte',
@@ -266,7 +266,7 @@ export const SITE = {
   // no one says out loud; a customer reading it while trying to pay has to
   // parse it twice.
   orderBankTransferAccountPendingPl:
-    'Numer konta prześlemy osobno — e-mailem lub przy kontakcie z Tobą. Nie ma go w tym potwierdzeniu.',
+    'Numer konta prześlemy osobno - e-mailem lub przy kontakcie z Tobą. Nie ma go w tym potwierdzeniu.',
   orderContactArrangedNoticePl: 'Skontaktujemy się, aby ustalić szczegóły zamówienia.',
   orderShipmentHeadingPl: 'Wysyłka',
   orderShipmentStatusLabelPl: 'Status',
@@ -277,7 +277,7 @@ export const SITE = {
   orderShipmentDeliveredAtLabelPl: 'Data dostarczenia',
   orderShipmentIssueLabelPl: 'Zgłoszony problem',
   orderShipmentManualNoticePl:
-    'Status przesyłki jest aktualizowany ręcznie przez nasz zespół, a nie pobierany automatycznie od przewoźnika — może nie odzwierciedlać zmian z ostatnich godzin.',
+    'Status przesyłki jest aktualizowany ręcznie przez nasz zespół, a nie pobierany automatycznie od przewoźnika - może nie odzwierciedlać zmian z ostatnich godzin.',
   orderShipmentNotYetPreparedPl: 'Paczka nie została jeszcze przygotowana do wysyłki.',
   orderEmailFollowUpNoticePl: 'Potwierdzenie zamówienia zostanie przesłane e-mailem.',
   orderNotFoundPl: 'Nie znaleziono takiego zamówienia.',
@@ -286,7 +286,7 @@ export const SITE = {
   orderLookupTokenLabelPl: 'Kod dostępu',
   orderLookupSubmitPl: 'Sprawdź',
   orderLookupIntroPl: 'Podaj numer zamówienia i kod dostępu z e-maila z potwierdzeniem, aby zobaczyć jego status.',
-  orderLookupOrderNumberHelperPl: 'W formacie 2026/08/0042 — znajdziesz go w e-mailu z potwierdzeniem.',
+  orderLookupOrderNumberHelperPl: 'W formacie 2026/08/0042 - znajdziesz go w e-mailu z potwierdzeniem.',
   orderLookupTokenHelperPl: 'Długi ciąg znaków z linku w e-mailu z potwierdzeniem zamówienia.',
   orderLookupAccountAlternativePl: 'Masz konto? Sprawdź w swoich zamówieniach',
 
@@ -308,7 +308,7 @@ export const SITE = {
   headerAccountLinkPl: 'Moje konto',
   headerLoginLinkPl: 'Zaloguj się',
   headerLogoutPl: 'Wyloguj się',
-  // 2026-08-29, owner request — real navbar restructure: a "Produkty"
+  // 2026-08-29, owner request - real navbar restructure: a "Produkty"
   // dropdown (every category) plus real "O nas"/"FAQ" entries.
   headerProductsMenuPl: 'Produkty',
   headerFaqLinkPl: 'FAQ',
@@ -355,7 +355,7 @@ export const SITE = {
   accountOverviewHelpSummaryNonePl: 'Brak zgłoszeń.',
   accountOverviewShipmentLabelPl: 'Wysyłka',
 
-  // P9 phase 2 — the standalone "moje wzory" upload/reuse library, moved
+  // P9 phase 2 - the standalone "moje wzory" upload/reuse library, moved
   // out of being tied to any one product's configurator flow.
   accountDesignsHeadingPl: 'Moje wzory',
   accountDesignsIntroPl:
@@ -373,7 +373,7 @@ export const SITE = {
   accountConfigurationAddToCartPl: 'Dodaj do koszyka',
   accountConfigurationDeletePl: 'Usuń',
 
-  // P9 continuation, 2026-08-28 — the customer-visible half of the design
+  // P9 continuation, 2026-08-28 - the customer-visible half of the design
   // review "dyskusja" (`DesignReviewComment.authorType` has always been
   // "staff" | "customer", but no page ever showed it to the customer).
   designDetailBackToListPl: 'Wróć do listy wzorów',
@@ -387,10 +387,10 @@ export const SITE = {
   designDetailReplyEmptyErrorPl: 'Wpisz treść wiadomości.',
   designDetailReplyErrorPl: 'Nie udało się wysłać wiadomości. Spróbuj ponownie.',
   designDetailNotFoundPl: 'Nie znaleziono takiego wzoru.',
-  designDetailNeedsChangesNoticePl: 'Ten projekt wymaga poprawy — sprawdź komentarze poniżej i prześlij poprawiony plik.',
+  designDetailNeedsChangesNoticePl: 'Ten projekt wymaga poprawy - sprawdź komentarze poniżej i prześlij poprawiony plik.',
 
   consentBannerTextPl:
-    'Używamy niezbędnych plików cookie do działania koszyka i logowania oraz — za Twoją zgodą — plików analitycznych, które pomagają nam ulepszać sklep.',
+    'Używamy niezbędnych plików cookie do działania koszyka i logowania oraz - za Twoją zgodą - plików analitycznych, które pomagają nam ulepszać sklep.',
   consentBannerAcceptPl: 'Akceptuję',
   consentBannerDeclinePl: 'Tylko niezbędne',
 
@@ -400,20 +400,20 @@ export const SITE = {
   /**
    * Deliberately does NOT restate the heading. The error panels previously
    * paired `errorPageHeadingPl` ("Coś poszło nie tak") with
-   * `COPY.genericServerError`, which opens with the same four words — so
+   * `COPY.genericServerError`, which opens with the same four words - so
    * the page read "Coś poszło nie tak / Coś poszło nie tak. Spróbuj…".
    * Caught by looking at a rendered error page, not at the strings
    * (2026-08-30). `COPY.genericServerError` stays as-is: it is still right
    * where it appears alone, without a heading above it.
    */
   errorPageBodyPl:
-    'Wystąpił nieoczekiwany błąd po naszej stronie — nie po Twojej. Spróbuj ponownie za chwilę, a jeśli problem się powtarza, napisz do nas.',
+    'Wystąpił nieoczekiwany błąd po naszej stronie - nie po Twojej. Spróbuj ponownie za chwilę, a jeśli problem się powtarza, napisz do nas.',
   errorPageRetryPl: 'Spróbuj ponownie',
   errorPageCorrelationIdLabelPl: 'Numer błędu',
-  errorPageCorrelationIdHelpPl: 'Podaj ten numer, jeśli napiszesz do nas o tym błędzie — pozwoli nam szybko znaleźć, co się stało.',
+  errorPageCorrelationIdHelpPl: 'Podaj ten numer, jeśli napiszesz do nas o tym błędzie - pozwoli nam szybko znaleźć, co się stało.',
   /**
    * The catch-all 404 (`src/app/not-found.tsx`). Deliberately offers real
-   * ways onward rather than only announcing the failure — an error page
+   * ways onward rather than only announcing the failure - an error page
    * with no exit is a dead end (`docs/AUDIT-2026-08-30.md` P2-10).
    */
   notFoundHeadingPl: 'Nie znaleziono takiej strony',
@@ -423,7 +423,7 @@ export const SITE = {
   notFoundContactCtaPl: 'Napisz do nas',
 
   blogHeadingPl: 'Blog',
-  blogSeoTitlePl: 'Blog — RYT',
+  blogSeoTitlePl: 'Blog - RYT',
   blogSeoDescPl: 'Artykuły o rzemiośle, materiałach i personalizacji grawerem.',
   blogEmptyStatePl: 'Wpisy pojawią się tutaj wkrótce.',
   blogPublishedLabelPl: 'Opublikowano',
@@ -433,10 +433,10 @@ export const SITE = {
   blogViewAllPl: 'Zobacz wszystkie posty',
 
   patternsHeadingPl: 'Wzory',
-  patternsSeoTitlePl: 'Wzory — RYT',
+  patternsSeoTitlePl: 'Wzory - RYT',
   patternsSeoDescPl: 'Przeglądaj nasze gotowe wzory do grawerowania CNC, a także zewnętrzne, darmowe źródła wzorów.',
   patternsIntroPl:
-    'Poniżej znajdziesz wzory z naszej oferty, które można wybrać przy konfiguracji wybranych produktów. Możesz też przesłać własny projekt — zapisane wzory znajdziesz na koncie w sekcji „Moje wzory”.',
+    'Poniżej znajdziesz wzory z naszej oferty, które można wybrać przy konfiguracji wybranych produktów. Możesz też przesłać własny projekt - zapisane wzory znajdziesz na koncie w sekcji „Moje wzory”.',
   patternsEmptyPl: 'Wzory pojawią się tutaj wkrótce.',
   patternsAvailableOnLabelPl: 'Dostępny w:',
   patternsNotAssignedPl: 'Obecnie niedostępny w żadnym zamawianym produkcie.',
@@ -445,25 +445,25 @@ export const SITE = {
   patternsFavoriteLoginRequiredPl: 'Zaloguj się, aby dodać do ulubionych',
   patternsExternalHeadingPl: 'Zewnętrzne źródła wzorów',
   patternsExternalIntroPl:
-    'To linki do niezależnych, zewnętrznych serwisów z darmowymi wzorami do grawerowania i cięcia CNC. Nie są to nasze materiały — każdy link prowadzi do strony innego dostawcy, gdzie obowiązują jego własne zasady korzystania i licencje.',
+    'To linki do niezależnych, zewnętrznych serwisów z darmowymi wzorami do grawerowania i cięcia CNC. Nie są to nasze materiały - każdy link prowadzi do strony innego dostawcy, gdzie obowiązują jego własne zasady korzystania i licencje.',
   patternsExternalBadgePl: 'zasób zewnętrzny',
   patternsFeaturedBadgePl: 'Wyróżniony',
-  // 2026-08-29: real category-filter chips above the grid — DesignCollection groupings, seeded in prisma/seed.ts's DESIGN_COLLECTION_SEEDS.
+  // 2026-08-29: real category-filter chips above the grid - DesignCollection groupings, seeded in prisma/seed.ts's DESIGN_COLLECTION_SEEDS.
   patternsAllCategoriesPl: 'Wszystkie',
   patternsExternalEmptyPl: 'Obecnie nie mamy poleconych zewnętrznych źródeł wzorów.',
 
   collectionsHeadingPl: 'Kolekcje',
-  collectionsSeoTitlePl: 'Kolekcje — RYT',
-  collectionsSeoDescPl: 'Gotowe, samodzielnie zaprojektowane kolekcje produktów z grawerem — dostępne od ręki, bez konieczności konfiguracji.',
+  collectionsSeoTitlePl: 'Kolekcje - RYT',
+  collectionsSeoDescPl: 'Gotowe, samodzielnie zaprojektowane kolekcje produktów z grawerem - dostępne od ręki, bez konieczności konfiguracji.',
   collectionsIntroPl:
-    'To gotowe, samodzielnie zaprojektowane przez nas zestawienia produktów — nie są tworzone na indywidualne zamówienie klienta. Możesz je po prostu przeglądać i zamawiać, tak jak każdy inny produkt w sklepie.',
+    'To gotowe, samodzielnie zaprojektowane przez nas zestawienia produktów - nie są tworzone na indywidualne zamówienie klienta. Możesz je po prostu przeglądać i zamawiać, tak jak każdy inny produkt w sklepie.',
   collectionsEmptyPl: 'Kolekcje pojawią się tutaj wkrótce.',
   collectionsBadgePl: 'gotowa kolekcja',
   collectionNotFoundPl: 'Nie znaleziono takiej kolekcji.',
   collectionEmptyProductsPl: 'W tej kolekcji nie ma jeszcze żadnych produktów.',
 
   faqHeadingPl: 'Najczęściej zadawane pytania',
-  faqSeoTitlePl: 'Najczęściej zadawane pytania — RYT',
+  faqSeoTitlePl: 'Najczęściej zadawane pytania - RYT',
   faqSeoDescPl: 'Odpowiedzi na najczęstsze pytania o zamówienia, personalizację i realizację.',
   faqEmptyStatePl: 'Pytania pojawią się tutaj wkrótce.',
   homeFaqHeadingPl: 'Najczęściej zadawane pytania',
@@ -481,29 +481,29 @@ export const SITE = {
   reviewAlreadySubmittedPl: 'Opinia dla tego zamówienia została już przesłana.',
   reviewLinkPl: 'Zostaw opinię o tym zamówieniu',
 
-  // 2026-08-29, owner request — a real "O nas" (About us) page for the new
+  // 2026-08-29, owner request - a real "O nas" (About us) page for the new
   // navbar. Written from facts already established elsewhere in this
   // project (RYT, CNC/laser precision + real craftsmanship, wood + gres,
-  // real 4-axis CNC, personalization) — nothing invented.
+  // real 4-axis CNC, personalization) - nothing invented.
   aboutHeadingPl: 'O nas',
-  aboutSeoTitlePl: 'O nas — RYT',
-  aboutSeoDescPl: 'Poznaj RYT — pracownię łączącą precyzję CNC z rzemiosłem w drewnie i gresie.',
+  aboutSeoTitlePl: 'O nas - RYT',
+  aboutSeoDescPl: 'Poznaj RYT - pracownię łączącą precyzję CNC z rzemiosłem w drewnie i gresie.',
   aboutIntroPl:
-    'RYT to pracownia łącząca precyzję maszyn CNC z rzemieślniczym wykończeniem. Każdy grawer, każdy detal i każdy element powstaje na realnym sprzęcie — 4-osiowym centrum CNC — nie jest to grafika generowana ani prefabrykat z katalogu.',
+    'RYT to pracownia łącząca precyzję maszyn CNC z rzemieślniczym wykończeniem. Każdy grawer, każdy detal i każdy element powstaje na realnym sprzęcie - 4-osiowym centrum CNC - nie jest to grafika generowana ani prefabrykat z katalogu.',
   aboutCraftHeadingPl: 'Jak pracujemy',
   aboutCraftBodyPl:
-    'Pracujemy w drewnie (dąb, świerk, modrzew, sosna) i gresie, łącząc grawer laserowy i frezowanie CNC. 4-osiowe centrum pozwala nam wychodzić poza płaski grawer — w stronę reliefu, ryflowania i form przestrzennych, które dopiero zaczynamy wprowadzać do oferty.',
+    'Pracujemy w drewnie (dąb, świerk, modrzew, sosna) i gresie, łącząc grawer laserowy i frezowanie CNC. 4-osiowe centrum pozwala nam wychodzić poza płaski grawer - w stronę reliefu, ryflowania i form przestrzennych, które dopiero zaczynamy wprowadzać do oferty.',
   aboutMaterialsHeadingPl: 'Materiał ma znaczenie',
   aboutMaterialsBodyPl:
-    'Drewno naturalne — usłojenie, odcień i sęki różnią się w każdym egzemplarzu, dlatego każdy gotowy produkt jest w pewnym sensie niepowtarzalny. Gres wybieramy tam, gdzie liczy się odporność na wilgoć i jednolita powierzchnia.',
+    'Drewno naturalne - usłojenie, odcień i sęki różnią się w każdym egzemplarzu, dlatego każdy gotowy produkt jest w pewnym sensie niepowtarzalny. Gres wybieramy tam, gdzie liczy się odporność na wilgoć i jednolita powierzchnia.',
   aboutPersonalizationHeadingPl: 'Personalizacja',
   aboutPersonalizationBodyPl:
     'Wiele naszych produktów można personalizować grawerowanym tekstem. Każde zamówienie na indywidualne zlecenie sprawdzamy pod kątem wykonalności, zanim trafi do produkcji.',
 
   contactHeadingPl: 'Kontakt',
-  contactSeoTitlePl: 'Kontakt — RYT',
+  contactSeoTitlePl: 'Kontakt - RYT',
   contactSeoDescPl: 'Masz pytanie dotyczące zamówienia, dostawy lub oferty? Napisz do nas.',
-  contactIntroPl: 'Masz pytanie? Napisz do nas — odpowiadamy najszybciej, jak to możliwe, na podany adres e-mail.',
+  contactIntroPl: 'Masz pytanie? Napisz do nas - odpowiadamy najszybciej, jak to możliwe, na podany adres e-mail.',
   contactFormEmailLabelPl: 'E-mail',
   contactFormNameLabelPl: 'Imię i nazwisko (opcjonalnie)',
   contactFormSubjectLabelPl: 'Temat',
@@ -511,9 +511,9 @@ export const SITE = {
   contactFormSubmitPl: 'Wyślij wiadomość',
   contactFormThankYouPl: 'Dziękujemy za wiadomość. Odpowiemy najszybciej, jak to możliwe, na podany adres e-mail.',
   contactOrderContextHeadingPl: 'Masz pytanie o to zamówienie?',
-  contactOrderContextIntroPl: 'Napisz do nas w sprawie tego konkretnego zamówienia — Twoja wiadomość zostanie od razu z nim powiązana.',
+  contactOrderContextIntroPl: 'Napisz do nas w sprawie tego konkretnego zamówienia - Twoja wiadomość zostanie od razu z nim powiązana.',
 
-  // P9 continuation, 2026-08-28 — "informacje kontaktowe i pomoc do firmy"
+  // P9 continuation, 2026-08-28 - "informacje kontaktowe i pomoc do firmy"
   // (owner feedback): a real account-section home for the customer's own
   // past support requests, not just a blind submission form.
   accountNavHelpPl: 'Pomoc',
