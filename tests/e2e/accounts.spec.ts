@@ -2,6 +2,7 @@ import type { Locator, Page } from '@playwright/test';
 // Not `@playwright/test`: this spec registers accounts, and SEC-01 allows
 // one IP ten per day - fewer than a full suite run needs. See fixtures.ts.
 import { expect, test } from './fixtures';
+import { clearLoopbackRateLimits } from './rate-limit-reset';
 
 /**
  * P6's real point, per the guest-cart-merge plan: adding to cart as a
@@ -61,6 +62,13 @@ async function checkReliably(locator: Locator): Promise<void> {
 }
 
 async function register(page: Page, params: { readonly name: string; readonly email: string; readonly password: string }) {
+  // Immediately before the submit, not merely once per test. Clearing per
+  // test leaves a real race under parallel workers: the counter is shared
+  // across all of them, so several tests can each register after the same
+  // clear and blow through SEC-01's ten-per-IP together. Seen on 2026-09-04,
+  // as a registration that silently stayed on `/rejestracja`. Clearing here
+  // shrinks the window to the milliseconds between this call and the click.
+  await clearLoopbackRateLimits();
   await page.goto('/rejestracja');
   await fillReliably(page.getByLabel('Imię i nazwisko'), params.name);
   await fillReliably(page.getByLabel('Adres e-mail'), params.email);
@@ -104,16 +112,24 @@ async function addSampleConfigurationToCart(page: Page): Promise<void> {
 test('guest cart survives registration - no duplicate, no loss', async ({ page }) => {
   const email = `e2e-accounts-${Date.now()}@example.test`;
 
+  // The cart row's own heading, not any text on the page. A bare
+  // `getByText` also matched Next's route announcer
+  // (`__next-route-announcer__`), which carries the page title „Obraz
+  // drewniany z grawerem - dąb" for a moment after each navigation - a
+  // strict-mode violation that only fires when the assertion lands inside
+  // that window, which is why it read as a WebKit flake (2026-09-04).
+  const cartRow = page.getByRole('heading', { name: 'Obraz drewniany z grawerem' });
+
   await addSampleConfigurationToCart(page);
-  await expect(page.getByText('Obraz drewniany z grawerem')).toBeVisible();
+  await expect(cartRow).toBeVisible();
 
   await register(page, { name: 'E2E Accounts', email, password: 'correcthorse123' });
 
   // The guest cart's item must show up under the now-logged-in user - the
   // whole point of the merge - with exactly one row, not duplicated.
   await page.goto('/koszyk');
-  await expect(page.getByText('Obraz drewniany z grawerem')).toBeVisible();
-  await expect(page.getByText('Obraz drewniany z grawerem')).toHaveCount(1);
+  await expect(cartRow).toBeVisible();
+  await expect(cartRow).toHaveCount(1);
 
   // Logging out and back in must not lose it either - it's the user's
   // cart now, not tied to the guest cookie any more.
@@ -122,7 +138,7 @@ test('guest cart survives registration - no duplicate, no loss', async ({ page }
   await login(page, { email, password: 'correcthorse123' });
 
   await page.goto('/koszyk');
-  await expect(page.getByText('Obraz drewniany z grawerem')).toBeVisible();
+  await expect(cartRow).toBeVisible();
 });
 
 test('an order placed while logged in shows up in order history', async ({ page }) => {

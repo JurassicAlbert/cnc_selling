@@ -4,6 +4,7 @@ import type { Locator, Page } from '@playwright/test';
 // Not `@playwright/test`: this spec registers accounts, and SEC-01 allows
 // one IP ten per day - fewer than a full suite run needs. See fixtures.ts.
 import { expect, test } from './fixtures';
+import { clearLoopbackRateLimits } from './rate-limit-reset';
 
 import { prisma } from '../../src/server/db/client';
 
@@ -34,6 +35,10 @@ async function fillReliably(locator: Locator, value: string): Promise<void> {
 
 async function signInAsAdmin(page: Page, email: string): Promise<void> {
   const password = 'correcthorse123';
+  // Immediately before the submit - see `rate-limit-reset.ts`. Clearing once
+  // per test leaves a race under parallel workers, because the counter is
+  // shared across all of them.
+  await clearLoopbackRateLimits();
   await page.goto('/rejestracja');
   await fillReliably(page.getByLabel('Imię i nazwisko'), 'E2E Warehouse Admin');
   await fillReliably(page.getByLabel('Adres e-mail'), email);
@@ -116,6 +121,10 @@ test('a staff member can read the warehouse but not write to it', async ({ page 
   const email = `e2e-warehouse-staff-${stamp}@example.test`;
   const password = 'correcthorse123';
 
+  // Immediately before the submit - see `rate-limit-reset.ts`. Clearing once
+  // per test leaves a race under parallel workers, because the counter is
+  // shared across all of them.
+  await clearLoopbackRateLimits();
   await page.goto('/rejestracja');
   await fillReliably(page.getByLabel('Imię i nazwisko'), 'E2E Warehouse Staff');
   await fillReliably(page.getByLabel('Adres e-mail'), email);

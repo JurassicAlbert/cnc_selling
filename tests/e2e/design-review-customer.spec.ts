@@ -10,6 +10,7 @@ import type { Locator, Page } from '@playwright/test';
 // Not `@playwright/test`: this spec registers accounts, and SEC-01 allows
 // one IP ten per day - fewer than a full suite run needs. See fixtures.ts.
 import { expect, test } from './fixtures';
+import { clearLoopbackRateLimits } from './rate-limit-reset';
 
 import { prisma } from '../../src/server/db/client';
 
@@ -45,6 +46,13 @@ async function fillReliably(locator: Locator, value: string): Promise<void> {
 }
 
 async function register(page: Page, params: { readonly name: string; readonly email: string; readonly password: string }) {
+  // Immediately before the submit, not merely once per test. Clearing per
+  // test leaves a real race under parallel workers: the counter is shared
+  // across all of them, so several tests can each register after the same
+  // clear and blow through SEC-01's ten-per-IP together. Seen on 2026-09-04,
+  // as a registration that silently stayed on `/rejestracja`. Clearing here
+  // shrinks the window to the milliseconds between this call and the click.
+  await clearLoopbackRateLimits();
   await page.goto('/rejestracja');
   await fillReliably(page.getByLabel('Imię i nazwisko'), params.name);
   await fillReliably(page.getByLabel('Adres e-mail'), params.email);

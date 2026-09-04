@@ -44,7 +44,12 @@ test('adds a configuration to the cart and completes checkout as a guest', async
 
   await expect(page).toHaveURL('/koszyk');
   await expect(page.getByRole('heading', { name: 'Koszyk' })).toBeVisible();
-  await expect(page.getByText('Obraz drewniany z grawerem')).toBeVisible();
+  // The cart row's own heading, not any text on the page: a bare `getByText`
+  // also matches Next's route announcer (`__next-route-announcer__`), which
+  // holds the page title for a moment after each navigation. A strict-mode
+  // violation that only fires inside that window, so it reads as a browser
+  // flake (2026-09-04).
+  await expect(page.getByRole('heading', { name: 'Obraz drewniany z grawerem' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Przejdź do zamówienia' }).click();
   await expect(page).toHaveURL('/koszyk/zamowienie');
