@@ -159,20 +159,66 @@ export async function listAllActiveProducts(): Promise<ProductCardData[]> {
   }));
 }
 
+export type ProductSearchRequest = {
+  readonly query: string;
+  /**
+   * The category the customer picked from the selector attached to the
+   * search field (UX-23), or `undefined` for "wszystkie kategorie".
+   *
+   * A slug rather than an id, because it comes straight off the query
+   * string and has to survive being bookmarked and shared.
+   */
+  readonly categorySlug?: string;
+};
+
 /**
  * A real search, not decoration: diacritic-insensitive matching
  * (`matchesPl`, already built in P1) against name and short description.
  * Filtered in memory rather than a DB `LIKE` - reasonable at today's scale
  * (a handful of products); revisit if the catalogue ever grows enough for
  * that to matter.
+ *
+ * **The category argument arrived with UX-23**, which attached a category
+ * selector to the search field. It narrows for real: a control that appears
+ * to filter and does not is the same class of thing as a price we will not
+ * honour, and this repository is where "only what is genuinely on sale" is
+ * decided (`listAllActiveProducts` already excludes retired products and
+ * deactivated categories, and both filters below inherit that).
+ *
+ * Two request shapes are both legitimate, and they are not the same:
+ *
+ * - a phrase, with or without a category - an ordinary search;
+ * - a category with **no** phrase - "show me what is in here", which is
+ *   exactly what someone does after choosing from the selector and pressing
+ *   the button. Answering that with nothing would make the selector a dead
+ *   end, so it lists the category.
+ *
+ * The one empty request is neither: no phrase and no category returns
+ * nothing rather than the whole catalogue, because that is not a search
+ * result and the page has honest copy for it.
+ *
+ * A category slug that is unknown, or names a category the shop has
+ * deactivated, returns nothing rather than silently widening the search to
+ * everything - the same refusal UX-21 applies to a stale configuration link,
+ * and for the same reason: a stale bookmark should not quietly become a
+ * different request.
  */
-export async function searchActiveProducts(query: string): Promise<ProductCardData[]> {
-  const trimmed = query.trim();
-  if (trimmed.length === 0) {
+export async function searchActiveProducts(request: ProductSearchRequest): Promise<ProductCardData[]> {
+  const trimmed = request.query.trim();
+  const categorySlug = request.categorySlug?.trim();
+  const hasCategory = categorySlug !== undefined && categorySlug.length > 0;
+
+  if (trimmed.length === 0 && !hasCategory) {
     return [];
   }
+
   const all = await listAllActiveProducts();
-  return all.filter(
+  const inScope = hasCategory ? all.filter((product) => product.categorySlug === categorySlug) : all;
+
+  if (trimmed.length === 0) {
+    return inScope;
+  }
+  return inScope.filter(
     (product) => matchesPl(product.namePl, trimmed) || matchesPl(product.shortDescPl, trimmed),
   );
 }
