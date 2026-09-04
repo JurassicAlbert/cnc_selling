@@ -1087,3 +1087,66 @@ what was then implemented, in the order it was done.
       means an admin edit silently taking minutes to reach the shop, which is
       not a thing to guess about. It waits for the `cacheComponents` decision
       that replaces the API anyway (`docs/REVIEW-PERFORMANCE.md` Finding 1).
+
+### Post-P9, round 16 - warehouse tool (2026-09-04)
+
+Owner: "add sub-page tool to admin panel, so we can save materials what we
+have on magazine, have link with pages for each material, so we can tell how
+much we need to pay for material (also base on how much we take)... so when we
+put what desk we have, z jakimi wymiarami, to pokazuje nam ikonki przedmiotów
+z kategorii i kolekcji jakie możemy zrobić."
+
+Four clarifications shaped it, all from the owner: stock is tracked as boards
+rather than square metres; the cost question is really "what is the minimum
+price we can sell at, and what must we buy, at what price, from whom"; the
+grid shows the shop's own product photographs at 64 or 96 px, not icons; and
+those images come from the existing shop items.
+
+- [x] **`domain/stock/board.ts`** - the arithmetic, pure and parameterised
+      like `domain/pricing`, in the same integer grosze and millimetres so a
+      cost from here composes with a price from `calculatePrice` without a
+      conversion step where a rounding error could hide. 23 unit tests.
+      `howManyFitOnBoard` is deliberately a row-by-row grid count and not a
+      nesting solver: an optimal 2D packing is NP-hard and, worse, would
+      report a yield the machine cannot deliver. Under-reporting is the
+      honest direction to be wrong in when the number feeds a minimum price.
+- [x] **`MaterialStock`** - one row per batch of identically sized boards,
+      because that is how they are bought and how a delivery note reads.
+      Records the net price of ONE board, so consuming three of five does not
+      change what each cost. CHECK constraints on positive dimensions and
+      non-negative quantity and price, enforced in the database rather than
+      trusted to the operations layer.
+- [x] **The first record of what the shop PAID.** Until now it only knew what
+      it charges (`Material.pricePerM2Grosze`). The two together are what make
+      "are we selling this at a loss" answerable at all, and the margin column
+      on `/panel/magazyn` is the reason the screen exists.
+- [x] **`/panel/magazyn` and `/panel/magazyn/[materialId]`** - reads are
+      STAFF, because an operator needs to know what is on the shelf; writes
+      are ADMIN, because that is where purchase prices and suppliers live.
+      §16.3 does not settle this, so the split is recorded rather than
+      assumed, and pinned by an e2e test. Writes use SEC-04's doubled gate and
+      BUG-05's atomic `updateMany`.
+- [x] **The yield grid** - the shop's own product photos at 96 px, with how
+      many come off the board, the size that yields the most, what the
+      material for one piece really cost, and the shop price beside it.
+      Products too large for the board are listed rather than dropped: "this
+      board is too small for X" is the answer the operator came for just as
+      often as the positive one. Only genuinely orderable products appear
+      (active, active category, offers this material, thickness matches),
+      reusing the catalogue's own rules rather than a parallel set.
+- [x] **Found while testing: SEC-01 was blocking the e2e suite.** Several
+      specs register an account, `registerPerIp` allows ten a day, and every
+      local run shares one IP, so after a few runs registration silently
+      stopped submitting and two specs failed with no clue why. CI never sees
+      it, because it starts from an empty database, which is exactly what
+      makes it a trap. A Playwright `globalSetup` now clears the loopback
+      counters and nothing else.
+- [x] **Deliberately not built:** consuming stock when a piece is actually
+      cut. `applyAdjustStockQuantity` exists and nothing calls it, because
+      deciding which batch an order drew from is a real business rule the
+      owner has not been asked. Tracked as WAREHOUSE-01 rather than guessed.
+- [x] Verified end to end in a browser on a production build: a 2000 x 1250 x
+      18 oak sheet at 320 zl shows 128,00 zl/m2, and the grid offers the
+      bracelet at 4150 per sheet (0,08 zl of material), the wall art at 60
+      (5,12 zl) and the chessboard at 24 (11,52 zl). 1031 to **1064 tests**,
+      typecheck, lint and build clean.

@@ -288,7 +288,56 @@ model Material {
   designs        DesignMaterial[]
   configurations Configuration[]
 
+  stock MaterialStock[]
+
   @@index([isAvailable, sortOrder])
+}
+
+/// A batch of physical boards actually held in the workshop - the owner's
+/// 2026-09-04 request to "save materials what we have on magazine".
+///
+/// This is the first place the shop records what it PAID, as opposed to what
+/// it charges (`Material.pricePerM2Grosze`, which drives `domain/pricing`).
+/// The two together are what make a minimum viable price computable at all;
+/// see `src/domain/stock/board.ts`.
+///
+/// One row is one batch of identically sized boards, not one board, because
+/// that is how they are bought and how a delivery note reads. `quantity` is
+/// the count still on the shelf.
+model MaterialStock {
+  id         String   @id @default(cuid())
+  materialId String
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  /// The board as delivered. Integer millimetres, like every other dimension
+  /// in this schema.
+  widthMm     Int
+  heightMm    Int
+  thicknessMm Int
+
+  /// How many boards of this exact size are still held.
+  quantity Int @default(0)
+
+  /// Net price for ONE board of these dimensions, in grosze. Per board rather
+  /// than per batch so the figure survives partial use: consuming three of
+  /// five boards must not change what each one cost.
+  purchasePriceGrosze Int
+
+  /// Where it came from, so a restock does not start with a search. Free text
+  /// rather than a Supplier table: there is no second use for a supplier
+  /// record yet, and inventing one now would be a model without a caller.
+  supplierNamePl String?
+  supplierUrl    String?
+
+  /// Delivery note number, shelf, batch quirks. Staff-facing only.
+  notePl String? @db.Text
+
+  purchasedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([materialId])
+  @@index([purchasedAt])
 }
 
 /// Compatibility: which materials are offered for which product, and the

@@ -21,6 +21,13 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests/e2e',
+  /**
+   * Clears the loopback rate-limit counters. Several specs register an
+   * account, SEC-01 allows ten registrations per IP per day, and every local
+   * run shares one IP - so after a few runs the form silently stops
+   * submitting. See `tests/e2e/global-setup.ts`.
+   */
+  globalSetup: './tests/e2e/global-setup.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

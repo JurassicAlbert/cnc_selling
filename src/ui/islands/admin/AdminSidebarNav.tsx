@@ -102,6 +102,7 @@ const NAV_GROUPS: readonly NavGroup[] = [
       { href: '/panel/ustawienia', label: ADMIN.navSettingsPl, icon: <SettingsOutlinedIcon fontSize="small" />, adminOnly: true },
       { href: '/panel/dostawa', label: ADMIN.navDeliveryMethodsPl, icon: <LocalShippingOutlinedIcon fontSize="small" /> },
       { href: '/panel/platnosci', label: ADMIN.navPaymentMethodsPl, icon: <PaymentsOutlinedIcon fontSize="small" /> },
+      { href: '/panel/magazyn', label: ADMIN.navWarehousePl, icon: <Inventory2OutlinedIcon fontSize="small" /> },
       { href: '/panel/ceny', label: ADMIN.navPricingPl, icon: <SellOutlinedIcon fontSize="small" />, adminOnly: true },
       { href: '/panel/dziennik-zdarzen', label: ADMIN.navAuditLogPl, icon: <HistoryOutlinedIcon fontSize="small" /> },
     ],

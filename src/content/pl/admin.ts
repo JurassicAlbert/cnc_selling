@@ -48,6 +48,7 @@ export const ADMIN = {
   navReviewsPl: 'Opinie',
   navSettingsPl: 'Ustawienia',
   navPricingPl: 'Cennik',
+  navWarehousePl: 'Magazyn',
   navAuditLogPl: 'Dziennik zdarzeń',
   logoutPl: 'Wyloguj się',
 
@@ -914,6 +915,55 @@ export function csvImportSuccessMessage(created: number): string {
   return `Zaimportowano ${countPl(created, { one: 'wiersz', few: 'wiersze', many: 'wierszy' })}.`;
 }
 
+/**
+ * Warehouse screens, added 2026-09-04. The vocabulary is deliberately the
+ * workshop's, not the shop's: a batch is a delivery of identical boards, a
+ * board is one sheet, and the price recorded is what was PAID rather than
+ * what is charged.
+ */
+export const WAREHOUSE = {
+  headingPl: 'Magazyn materiałów',
+  introPl:
+    'Płyty, które faktycznie masz na stanie, i ile za nie zapłacono. Na tej podstawie liczona jest minimalna cena, poniżej której produkt sprzedawany jest ze stratą.',
+  columnMaterialPl: 'Materiał',
+  columnBoardsPl: 'Płyty na stanie',
+  columnStockValuePl: 'Wartość zakupu',
+  columnCostPerM2Pl: 'Koszt za m²',
+  columnChargedPerM2Pl: 'Cena katalogowa za m²',
+  columnMarginPl: 'Marża',
+  noStockPl: 'Brak płyt na stanie',
+  marginUnknownPl: 'Nie wiadomo',
+  marginNegativeNotePl: 'Poniżej kosztu zakupu',
+
+  detailHeadingPl: 'Magazyn:',
+  batchesHeadingPl: 'Partie na stanie',
+  batchDimensionsPl: 'Wymiary płyty',
+  batchQuantityPl: 'Liczba płyt',
+  batchPricePl: 'Cena za płytę',
+  batchSupplierPl: 'Dostawca',
+  batchPurchasedAtPl: 'Data zakupu',
+  batchNotePl: 'Notatka',
+  batchEmptyPl: 'Nie zapisano jeszcze żadnej partii dla tego materiału.',
+
+  addBatchHeadingPl: 'Dodaj partię',
+  fieldWidthPl: 'Szerokość (mm)',
+  fieldHeightPl: 'Wysokość (mm)',
+  fieldThicknessPl: 'Grubość (mm)',
+  fieldQuantityPl: 'Liczba płyt',
+  fieldPricePl: 'Cena netto za jedną płytę (zł)',
+  fieldSupplierNamePl: 'Dostawca',
+  fieldSupplierUrlPl: 'Link do dostawcy',
+  fieldNotePl: 'Notatka (nr dostawy, półka)',
+
+  canMakeHeadingPl: 'Co możesz z tego zrobić',
+  canMakeIntroPl: 'Produkty z katalogu, które zmieszczą się na tej płycie. Liczba mówi, ile sztuk wychodzi z jednej płyty przy cięciu w rzędach.',
+  canMakeNonePl: 'Z tej płyty nie wychodzi żaden produkt z katalogu.',
+  canMakeTooLargeHeadingPl: 'Za duże na tę płytę',
+  perBoardPl: 'szt. z płyty',
+  materialCostPl: 'Koszt materiału na sztukę',
+  cataloguePricePl: 'Cena w sklepie od',
+  noCataloguePricePl: 'Wycena indywidualna',
+} as const;
 /** "Zaznaczono 1 wiersz / 3 wiersze / 12 wierszy" - the bulk-actions selection toolbar's count. */
 export function bulkSelectionCountMessage(count: number): string {
   return `Zaznaczono ${countPl(count, { one: 'wiersz', few: 'wiersze', many: 'wierszy' })}`;
