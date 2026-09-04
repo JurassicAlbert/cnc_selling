@@ -628,3 +628,261 @@ html {
     min-height: 44px;
   }
 }
+
+/*
+ * UX-23 - the search band, and the slim topbar above the navigation.
+ *
+ * Owner request, 2026-09-04: take the *arrangement* from
+ * `template.getbazaar.io` - a slim strip above the main nav, and a search
+ * field that owns the centre of the header with a category selector attached
+ * to it. Not its CSS, assets, typography or colour: every value below is one
+ * of this project's own tokens, so the band inherits the shop's identity
+ * rather than the template's.
+ *
+ * Plain CSS in this file rather than MUI, for the same measured reason the
+ * rest of the storefront chrome is: it renders on every page, and mounting a
+ * client theme provider for it cost 3.8s LCP the last time it was tried
+ * (ARCHITECTURE.md §2.1, and this file's own header).
+ */
+
+.search-form {
+  padding-block: var(--space-3);
+}
+
+/* One bordered group, so the selector, the field and the button read as a
+   single control. The border is on the wrapper, not on each child, which is
+   what stops every seam between them rendering as a doubled 2px line. */
+.search-group {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  border: 1px solid var(--mui-palette-divider);
+  border-radius: var(--radius-card);
+  background-color: var(--mui-palette-background-paper);
+  overflow: hidden;
+}
+.search-group:focus-within {
+  border-color: var(--mui-palette-secondary-main);
+  box-shadow: var(--shadow-sm);
+}
+
+/* The label is for assistive technology only. The selector's own selected
+   option is the visible label, exactly as it is in the reference layout, and
+   a second visible "Kategoria" caption beside it would be noise. */
+.search-category-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.search-category {
+  flex: 0 0 auto;
+  max-width: 45%;
+  padding: 10px 14px;
+  border: none;
+  border-inline-end: 1px solid var(--mui-palette-divider);
+  background-color: var(--mui-palette-action-hover, rgba(0, 0, 0, 0.03));
+  color: var(--mui-palette-text-primary);
+  font: var(--mui-font-body2);
+  cursor: pointer;
+}
+.search-category:focus-visible {
+  outline: 3px solid var(--mui-palette-secondary-main);
+  outline-offset: -3px;
+}
+
+.search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px 14px;
+  border: none;
+  background-color: transparent;
+  color: var(--mui-palette-text-primary);
+  font: var(--mui-font-body1);
+}
+.search-input:focus-visible {
+  outline: 3px solid var(--mui-palette-secondary-main);
+  outline-offset: -3px;
+}
+
+.search-submit {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  /* 44px so the button is a comfortable touch target even when the label is
+     hidden on a narrow screen. */
+  min-height: 44px;
+  padding-inline: 18px;
+  border: none;
+  background-color: var(--mui-palette-primary-main);
+  color: var(--mui-palette-background-paper);
+  font: var(--mui-font-button);
+  letter-spacing: var(--mui-letter-spacing-button);
+  cursor: pointer;
+}
+.search-submit:hover {
+  background-color: var(--mui-palette-primary-dark, var(--mui-palette-primary-main));
+}
+
+@media (max-width: 599px) {
+  /* The selector takes its own full-width line above the field rather than
+     shrinking three controls into one cramped row. Every one of them stays
+     full size and tappable. */
+  .search-group {
+    flex-wrap: wrap;
+  }
+  .search-category {
+    flex: 1 1 100%;
+    max-width: none;
+    border-inline-end: none;
+    border-block-end: 1px solid var(--mui-palette-divider);
+  }
+  /* The icon alone. The button keeps its `aria-label`, so it is still
+     announced as "Szukaj" - the text is what goes, not the name. */
+  .search-submit-text {
+    display: none;
+  }
+  .search-submit {
+    padding-inline: 14px;
+  }
+}
+
+/*
+ * The topbar: one slim strip above the main navigation.
+ *
+ * Its content is deliberately not a promotional claim. The reference layout
+ * puts a shipping offer here; this shop has no such offer, and inventing one
+ * would be exactly the "fake production behaviour" the project rules forbid.
+ * What it carries instead is true and already stated elsewhere on the site -
+ * that everything is made to order and can be engraved - plus the two links
+ * a customer most often wants from any page.
+ */
+.site-topbar {
+  background-color: var(--mui-palette-primary-main);
+  color: var(--mui-palette-background-paper);
+}
+.site-topbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: 36px;
+  padding-block: var(--space-1);
+  font: var(--mui-font-caption);
+}
+.site-topbar-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.site-topbar-links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex: 0 0 auto;
+}
+.site-topbar-link {
+  color: inherit;
+  text-decoration: none;
+  opacity: 0.9;
+}
+.site-topbar-link:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+.site-topbar-link:focus-visible {
+  outline: 3px solid var(--mui-palette-secondary-main);
+  outline-offset: 2px;
+}
+
+@media (max-width: 599px) {
+  /* The note goes, the links stay. On a phone the strip is worth keeping only
+     for the things a customer taps. */
+  .site-topbar-note {
+    display: none;
+  }
+  .site-topbar-row {
+    justify-content: center;
+  }
+}
+
+/* UX-23: the navigation takes the centre of the header row, with the cart
+   and account controls held to the end. Only above the breakpoint - below
+   it the panel is a dropped-down column and an auto margin would fight the
+   `left: 0; right: 0` that positions it. */
+@media (min-width: 900px) {
+  .nav-burger-panel--centred {
+    margin-inline: auto;
+  }
+}
+
+/* UX-23's category rail, shown on the cart view. One line at any width: it
+   scrolls rather than wrapping, so a long catalogue never pushes the summary
+   panel down the page. */
+.category-rail {
+  margin-block-start: var(--space-7);
+  padding-block: var(--space-5);
+  border-top: 1px solid var(--mui-palette-divider);
+}
+.category-rail-track {
+  display: flex;
+  gap: var(--space-3);
+  margin-block-start: var(--space-3);
+  overflow-x: auto;
+  /* Room for the focus ring, which would otherwise be clipped by the
+     scroll container on the first and last item. */
+  padding-block: 4px;
+  padding-inline: 4px;
+  margin-inline: -4px;
+}
+.category-rail-item {
+  flex: 0 0 auto;
+  padding: 10px 18px;
+  border: 1px solid var(--mui-palette-divider);
+  border-radius: 999px;
+  background-color: var(--mui-palette-background-paper);
+  color: var(--mui-palette-text-primary);
+  font: var(--mui-font-body2);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.category-rail-item:hover {
+  border-color: var(--mui-palette-secondary-main);
+  background-color: var(--mui-palette-action-hover, rgba(0, 0, 0, 0.04));
+}
+.category-rail-item:focus-visible {
+  outline: 3px solid var(--mui-palette-secondary-main);
+  outline-offset: 2px;
+}
+
+/* UX-23. Below 600px the logo, the burger, the cart and the account menu do
+   not fit on one line with their labels, and the header row wrapped onto
+   two. The icons and the cart's count badge stay; the words go.
+ *
+ * Visually hidden, NOT `display: none`. That was the first attempt and it
+ * was a real regression: `display: none` takes the text out of the
+ * accessibility tree as well as off the screen, so the cart link's entire
+ * accessible name became the count badge - a link announced as "1". Checked
+ * with `.cart-link`'s own `innerText`, which is what caught it. Clipped to
+ * 1px instead, the label is gone from the layout and still read out. */
+@media (max-width: 599px) {
+  .header-label-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  /* The gaps were sized for a row of text links. With only icons left, that
+     much space between them reads as a mistake. */
+  .site-header-nav {
+    gap: var(--space-3);
+  }
+}

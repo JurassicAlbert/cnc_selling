@@ -54,47 +54,105 @@ import { Text } from '@/ui/primitives/Text';
  * control needs client-side state.
  */
 export function CartContents({ cart }: { readonly cart: CartView }) {
+  const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+
   return (
-    <Stack spacing={2} sx={{ marginBlockStart: 4, maxWidth: 900 }}>
-      <Typography variant="body2" color="text.secondary">
-        {SITE.cartItemsCountPl(cart.items.reduce((sum, item) => sum + item.quantity, 0))}
-      </Typography>
+    /*
+      UX-23, owner request 2026-09-04: the line cards on the left, the
+      summary beside them on the right rather than stacked underneath.
+      Arrangement taken from `template.getbazaar.io`; none of its styling.
 
-      {cart.items.map((item) => (
-        <CartRow key={item.cartItemId} item={item} />
-      ))}
+      One column below `md`, where a 320px sidebar would leave the cards too
+      narrow to read. `alignItems: 'start'` so the summary keeps its own
+      height instead of stretching to match a long list of items - which is
+      also what lets it stick.
+    */
+    <Box
+      sx={{
+        marginBlockStart: 4,
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 320px' },
+        gap: 3,
+        alignItems: 'start',
+      }}
+    >
+      <Stack spacing={2}>
+        <Typography variant="body2" color="text.secondary">
+          {SITE.cartItemsCountPl(itemCount)}
+        </Typography>
 
-      <Paper
-        variant="outlined"
-        sx={{
-          p: 3,
-          borderRadius: 3,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 2,
-          flexWrap: 'wrap',
-          bgcolor: 'action.hover',
-        }}
-      >
+        {cart.items.map((item) => (
+          <CartRow key={item.cartItemId} item={item} />
+        ))}
+      </Stack>
+
+      <CartSummary subtotalGrossGrosze={cart.subtotalGrossGrosze} />
+    </Box>
+  );
+}
+
+/**
+ * The summary panel. Sticky on desktop so the total and the checkout button
+ * stay reachable however long the list of items gets - the same reason the
+ * configurator has a price bar, applied to the page where the number is
+ * actually about to be paid.
+ *
+ * It holds only what this page genuinely knows. The reference layout also
+ * carries a voucher field and a shipping estimator; there is no voucher
+ * system in this shop, and shipping is chosen and priced at checkout, so
+ * both would be controls that do nothing. „Suma czesciowa" stays the honest
+ * label: it is the items, before delivery.
+ *
+ * It does not repeat the item count. That line already sits above the list,
+ * and having it twice on one screen is redundant to a reader and ambiguous
+ * to anything looking for it - `cart.spec.ts` hit the second half of that
+ * immediately ("strict mode violation ... resolved to 2 elements"), which is
+ * a fair complaint about the page rather than about the test.
+ */
+function CartSummary({ subtotalGrossGrosze }: { readonly subtotalGrossGrosze: number }) {
+  return (
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 3,
+        borderRadius: 3,
+        bgcolor: 'action.hover',
+        position: { md: 'sticky' },
+        top: { md: 16 },
+      }}
+    >
+      <Stack spacing={2}>
         <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
           <Box sx={{ width: 40, height: 40, borderRadius: '50%', bgcolor: 'secondary.main', color: 'background.paper', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <CartIcon size={20} />
           </Box>
-          <Stack>
+          <Stack sx={{ minWidth: 0 }}>
             <Typography variant="caption" color="text.secondary">
               {SITE.cartSubtotalLabelPl}
             </Typography>
             <Typography variant="h5" sx={{ fontWeight: 700 }}>
-              {formatPln(cart.subtotalGrossGrosze)}
+              {formatPln(subtotalGrossGrosze)}
             </Typography>
           </Stack>
         </Stack>
-        <Button component={Link} href="/koszyk/zamowienie" variant="contained" size="large">
+
+        <Divider />
+
+        {/* Said here rather than discovered at the next step: the number
+            above is not the number they will pay. */}
+        <Typography variant="caption" color="text.secondary">
+          {SITE.cartShippingAtCheckoutPl}
+        </Typography>
+
+        <Button component={Link} href="/koszyk/zamowienie" variant="contained" size="large" fullWidth>
           {SITE.cartCheckoutCtaPl}
         </Button>
-      </Paper>
-    </Stack>
+
+        <Button component={Link} href="/" variant="text" size="small" fullWidth>
+          {SITE.cartContinueShoppingPl}
+        </Button>
+      </Stack>
+    </Paper>
   );
 }
 

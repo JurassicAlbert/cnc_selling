@@ -88,6 +88,7 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
     >
       <Container>
         <nav
+          className="site-header-nav"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -146,7 +147,19 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
             <MenuIcon size={22} className="nav-burger-open-icon" />
             <CloseIcon size={22} className="nav-burger-close-icon" />
           </label>
-          <div className="nav-burger-panel">
+          {/*
+            UX-23: the navigation sits in the centre of the row, with the
+            cart and the account menu held to the end. `margin-inline: auto`
+            on this panel is what does it - the auto margin used to live on
+            the cart link, which pushed the nav hard against the logo and
+            left the middle of the header empty.
+
+            The rule is in `theme-vars.css` beside the rest of the burger's
+            CSS, not inline here, because under the breakpoint the panel
+            becomes a dropped-down column and the centring has to come off
+            with it.
+          */}
+          <div className="nav-burger-panel nav-burger-panel--centred">
             <details className="nav-dropdown">
               <summary className="nav-link" style={{ font: 'var(--mui-font-body2)', cursor: 'pointer', listStyle: 'none' }}>
                 <GridViewIcon size={18} />
@@ -190,19 +203,30 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
             </details>
           </div>
 
-          <Link
-            href="/koszyk"
-            className="cart-link"
-            style={{ font: 'var(--mui-font-body2)', marginInlineStart: 'auto' }}
-          >
+          {/*
+            The word and the running total are wrapped so they can be dropped
+            on a narrow screen (`theme-vars.css`). Below 600px the logo, the
+            burger, the cart and the account menu do not fit on one line
+            together, and the row wrapped onto two - the icon and the count
+            badge are what a shopper needs at that width; the label and the
+            figure are on the cart page itself, one tap away.
+
+            The label is clipped rather than `display: none`, so it stays in
+            the accessibility tree: hiding it the first way left this link
+            announced as „1", its count badge and nothing else.
+          */}
+          <Link href="/koszyk" className="cart-link" style={{ font: 'var(--mui-font-body2)' }}>
             <CartIcon size={20} />
-            {SITE.cartHeadingPl}
+            <span className="header-label-text">{SITE.cartHeadingPl}</span>
             {cartSummary.itemCount > 0 && (
               <>
                 <span className="cart-count-badge" aria-hidden="true">
                   {cartSummary.itemCount}
                 </span>
-                <span style={{ font: 'var(--mui-font-caption)', color: 'var(--mui-palette-text-secondary)' }}>
+                <span
+                  className="header-label-text"
+                  style={{ font: 'var(--mui-font-caption)', color: 'var(--mui-palette-text-secondary)' }}
+                >
                   {formatPln(cartSummary.totalGrossGrosze)}
                 </span>
               </>
@@ -213,7 +237,7 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
             <details className="nav-dropdown">
               <summary className="nav-link" style={{ font: 'var(--mui-font-body2)', cursor: 'pointer', listStyle: 'none' }}>
                 <PersonIcon size={18} />
-                {SITE.headerAccountLinkPl}
+                <span className="header-label-text">{SITE.headerAccountLinkPl}</span>
                 <ExpandMoreIcon size={16} className="nav-dropdown-chevron" style={{ marginInlineStart: 2 }} />
               </summary>
               <div className="nav-dropdown-panel" style={{ insetInlineEnd: 0, insetInlineStart: 'auto' }}>
@@ -246,7 +270,7 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
             <details className="nav-dropdown">
               <summary className="nav-link" style={{ font: 'var(--mui-font-body2)', cursor: 'pointer', listStyle: 'none' }}>
                 <PersonIcon size={18} />
-                {SITE.headerLoginLinkPl}
+                <span className="header-label-text">{SITE.headerLoginLinkPl}</span>
                 <ExpandMoreIcon size={16} className="nav-dropdown-chevron" style={{ marginInlineStart: 2 }} />
               </summary>
               <div className="nav-dropdown-panel" style={{ insetInlineEnd: 0, insetInlineStart: 'auto' }}>

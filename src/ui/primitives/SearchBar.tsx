@@ -2,6 +2,11 @@ import { SearchIcon } from '@/ui/icons';
 import { Container } from '@/ui/primitives/Container';
 import { SITE } from '@/content/pl/site';
 
+type CategoryOption = {
+  readonly slug: string;
+  readonly namePl: string;
+};
+
 /**
  * The search form, extracted out of `SiteHeader` into its own banded
  * section (2026-08-25) - the owner's explicit feedback was that search
@@ -20,8 +25,25 @@ import { SITE } from '@/content/pl/site';
  * types - so this now carries a real `aria-label`, and a visible
  * `:focus-visible` ring (`theme-vars.css`) so keyboard users can see where
  * they are.
+ *
+ * **2026-09-04, UX-23** (owner request, arrangement taken from
+ * `template.getbazaar.io`): the category selector is attached to the left
+ * of the field so the three controls read as one, and the whole thing now
+ * owns the full width of the band rather than sitting at 480px against a
+ * lot of empty space.
+ *
+ * The selector is a plain `<select name="k">` inside the same GET form -
+ * no client JS, and it submits with everything else. It **narrows for
+ * real**: `searchActiveProducts` takes the slug and `/szukaj` resolves it
+ * against the live category list. A control that appears to filter and does
+ * not would be the same class of thing as a price we will not honour.
+ *
+ * Choosing a category and pressing the button with an empty field is a
+ * legitimate request - "show me what is in here" - and the results page
+ * answers it by listing the category, rather than treating it as a search
+ * for nothing.
  */
-export function SearchBar() {
+export function SearchBar({ categories }: { readonly categories: readonly CategoryOption[] }) {
   return (
     <div
       style={{
@@ -34,52 +56,49 @@ export function SearchBar() {
             form - same semantics for assistive technology, no ARIA needed
             (§11: don't add ARIA where an element already says it). */}
         <search>
-          <form
-            action="/szukaj"
-            method="get"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-2)',
-              paddingBlock: 'var(--space-3)',
-            }}
-          >
-            <input
-              type="search"
-              name="q"
-              aria-label={SITE.searchPlaceholderPl}
-              placeholder={SITE.searchPlaceholderPl}
-              style={{
-                font: 'var(--mui-font-body1)',
-                padding: '10px 14px',
-                border: '1px solid var(--mui-palette-divider)',
-                borderRadius: 'var(--radius-card)',
-                backgroundColor: 'var(--mui-palette-background-paper)',
-                color: 'var(--mui-palette-text-primary)',
-                width: '100%',
-                maxWidth: 480,
-              }}
-            />
-            <button
-              type="submit"
-              aria-label={SITE.searchButtonLabelPl}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 'var(--space-1)',
-                font: 'var(--mui-font-button)',
-                letterSpacing: 'var(--mui-letter-spacing-button)',
-                border: 'none',
-                borderRadius: 'var(--radius-card)',
-                backgroundColor: 'var(--mui-palette-primary-main)',
-                color: 'var(--mui-palette-background-paper)',
-                cursor: 'pointer',
-                padding: '10px 18px',
-              }}
-            >
-              <SearchIcon size={18} />
-              {SITE.searchButtonLabelPl}
-            </button>
+          <form action="/szukaj" method="get" className="search-form">
+            {/*
+              One bordered group holding the selector, the field and the
+              button, so they read as a single control the way the reference
+              layout does. The border lives on this wrapper rather than on
+              each child, which is what stops the seams between them showing
+              as doubled 2px lines.
+
+              It wraps rather than scrolls below the breakpoint: on a phone
+              the selector drops onto its own line above the field, which
+              keeps every control full-size and tappable instead of shrinking
+              three of them into one cramped row.
+            */}
+            <div className="search-group">
+              <label htmlFor="search-category" className="search-category-label">
+                {SITE.searchCategoryLabelPl}
+              </label>
+              <select id="search-category" name="k" className="search-category">
+                {/*
+                  An empty value, so an unnarrowed search does not carry a
+                  meaningless `k=` through every shared URL.
+                */}
+                <option value="">{SITE.searchAllCategoriesPl}</option>
+                {categories.map((category) => (
+                  <option key={category.slug} value={category.slug}>
+                    {category.namePl}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                type="search"
+                name="q"
+                aria-label={SITE.searchPlaceholderPl}
+                placeholder={SITE.searchPlaceholderPl}
+                className="search-input"
+              />
+
+              <button type="submit" aria-label={SITE.searchButtonLabelPl} className="search-submit">
+                <SearchIcon size={18} />
+                <span className="search-submit-text">{SITE.searchButtonLabelPl}</span>
+              </button>
+            </div>
           </form>
         </search>
       </Container>

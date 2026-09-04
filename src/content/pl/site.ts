@@ -173,10 +173,31 @@ export const SITE = {
   // A bare 'type something' tells a customer nothing about what this search
   // actually indexes. Real examples do.
   searchEmptyQueryPl: 'Wpisz, czego szukasz - np. „obraz”, „dąb” albo „bransoletka”.',
+  /*
+    UX-23's category selector, attached to the search field. „Wszystkie
+    kategorie" is a real option, not a placeholder: it is what the field
+    searches when nobody narrows it.
+  */
+  searchCategoryLabelPl: 'Kategoria',
+  searchAllCategoriesPl: 'Wszystkie kategorie',
+  // Shown when the selector was used without a phrase - a legitimate
+  // request ("show me what is in here"), so it gets its own line rather
+  // than being described as a search for nothing.
+  searchCategoryOnlyPl: 'Wszystko w kategorii',
+  searchInCategoryPl: 'w kategorii',
+  // The category in the selector no longer exists or has been deactivated -
+  // a stale bookmark. Says so, rather than silently widening the search back
+  // to the whole catalogue.
+  searchCategoryGonePl:
+    'Wybrana kategoria nie jest już dostępna. Wyszukaj ponownie we wszystkich kategoriach.',
 
   cartHeadingPl: 'Koszyk',
   cartEmptyPl: 'Twój koszyk jest pusty.',
   cartContinueShoppingPl: 'Przeglądaj produkty',
+  // UX-23's summary panel says this before checkout rather than letting the
+  // customer find out at the next step that the figure was not the total.
+  cartShippingAtCheckoutPl: 'Koszt dostawy poznasz w kolejnym kroku, po wybraniu sposobu wysyłki.',
+  cartKeepShoppingHeadingPl: 'Przeglądaj dalej',
   cartQuantityLabelPl: 'Ilość',
   cartUpdateQuantityPl: 'Aktualizuj',
   cartRemovePl: 'Usuń',
@@ -300,6 +321,17 @@ export const SITE = {
   orderLookupOrderNumberHelperPl: 'W formacie 2026/08/0042 - znajdziesz go w e-mailu z potwierdzeniem.',
   orderLookupTokenHelperPl: 'Długi ciąg znaków z linku w e-mailu z potwierdzeniem zamówienia.',
   orderLookupAccountAlternativePl: 'Masz konto? Sprawdź w swoich zamówieniach',
+
+  /*
+    UX-23's topbar. The reference layout puts a shipping promotion here; we
+    have no such offer, and inventing one would be a claim the shop cannot
+    keep. This says two things that are already true and already stated
+    elsewhere on the site (`trustMadeToOrderTitlePl`,
+    `trustEngravingTitlePl`), in one line.
+  */
+  topbarNotePl: 'Wykonujemy na zamówienie, z personalizacją grawerem.',
+  topbarContactLinkPl: 'Kontakt',
+  topbarHelpLinkPl: 'FAQ',
 
   footerCategoriesHeadingPl: 'Kategorie',
   footerInfoHeadingPl: 'Informacje',

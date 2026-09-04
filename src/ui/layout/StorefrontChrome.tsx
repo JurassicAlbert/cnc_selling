@@ -10,6 +10,7 @@ import { CookieConsentBanner } from '@/ui/islands/consent/CookieConsentBanner';
 import { Footer } from '@/ui/primitives/Footer';
 import { SearchBar } from '@/ui/primitives/SearchBar';
 import { SiteHeader } from '@/ui/primitives/SiteHeader';
+import { SiteTopBar } from '@/ui/primitives/SiteTopBar';
 
 /**
  * 2026-08-28, owner feedback: "panel admina powinien być na osobnej
@@ -47,13 +48,16 @@ export async function StorefrontChrome({ children }: { readonly children: ReactN
 
   return (
     <>
+      {/* UX-23's three header bands, in the reference layout's order: the
+          slim strip, the navigation, then search across the full width. */}
+      <SiteTopBar />
       <SiteHeader
         categories={categories}
         collections={collections}
         cartSummary={cartSummary}
         session={session === null ? null : { name: session.name }}
       />
-      <SearchBar />
+      <SearchBar categories={categories} />
       <main>{children}</main>
       <Footer categories={categories} />
       {consentChoice === null && <CookieConsentBanner />}

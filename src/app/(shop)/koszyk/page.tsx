@@ -5,7 +5,9 @@ import { SITE } from '@/content/pl/site';
 import { getSession } from '@/server/auth/session';
 import { readGuestSessionToken } from '@/server/session/read-guest-session';
 import { findCartForRequest } from '@/server/repositories/cart';
+import { listActiveCategories } from '@/server/repositories/categories';
 import { CartContents } from '@/ui/islands/cart/CartContents';
+import { CategoryRail } from '@/ui/primitives/CategoryRail';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
 import { Section } from '@/ui/primitives/Section';
@@ -35,27 +37,44 @@ export const metadata: Metadata = {
  * real `addToCart` (a Server Action, where writing is allowed).
  */
 export default async function CartPage() {
-  const [sessionToken, session] = await Promise.all([readGuestSessionToken(), getSession()]);
+  const [sessionToken, session, categories] = await Promise.all([
+    readGuestSessionToken(),
+    getSession(),
+    // UX-23's category rail. Fetched alongside the session reads rather than
+    // after them - it depends on neither, and this page is one a customer
+    // reloads repeatedly while adjusting quantities.
+    listActiveCategories(),
+  ]);
   const cart = await findCartForRequest({ userId: session?.userId ?? null, sessionToken });
 
   return (
-    <Section>
-      <Container>
-        <Heading level={1}>{SITE.cartHeadingPl}</Heading>
+    <>
+      <Section>
+        <Container>
+          <Heading level={1}>{SITE.cartHeadingPl}</Heading>
 
-        {cart.items.length === 0 ? (
-          <div style={{ marginBlockStart: 24 }}>
-            <Text muted>{SITE.cartEmptyPl}</Text>
-            <div style={{ marginBlockStart: 16 }}>
-              <Link href="/">{SITE.cartContinueShoppingPl}</Link>
+          {cart.items.length === 0 ? (
+            <div style={{ marginBlockStart: 24 }}>
+              <Text muted>{SITE.cartEmptyPl}</Text>
+              <div style={{ marginBlockStart: 16 }}>
+                <Link href="/">{SITE.cartContinueShoppingPl}</Link>
+              </div>
             </div>
-          </div>
-        ) : (
-          <ThemeRegistry>
-            <CartContents cart={cart} />
-          </ThemeRegistry>
-        )}
-      </Container>
-    </Section>
+          ) : (
+            <ThemeRegistry>
+              <CartContents cart={cart} />
+            </ThemeRegistry>
+          )}
+        </Container>
+      </Section>
+
+      {/*
+        Owner request, 2026-09-04: categories on the cart view. Outside the
+        `ThemeRegistry` and outside the empty/full branch on purpose - it is
+        plain chrome with no MUI, and it is worth *more* on an empty cart,
+        where the alternative is a dead end.
+      */}
+      <CategoryRail categories={categories} headingPl={SITE.cartKeepShoppingHeadingPl} />
+    </>
   );
 }
