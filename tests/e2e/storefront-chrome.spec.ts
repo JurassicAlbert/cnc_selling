@@ -17,8 +17,8 @@ import { prisma } from '../../src/server/db/client';
  * behaviour that a layout change can silently break, and this one broke two
  * things on the way in:
  *
- * - the category selector has to actually narrow the search, or it is a
- *   control that pretends to work;
+ * - the category menu has to actually take you to the category, and the
+ *   search form must not smuggle a category nobody chose into its URL;
  * - the strip above the navigation must show a social profile only when one
  *   is configured, or it links customers to accounts nobody has claimed;
  * - hiding the header labels to fit a phone took the cart link's accessible
@@ -94,25 +94,46 @@ test('the cart link keeps its accessible name when its label is hidden to fit', 
   await expect(page.getByRole('link', { name: /Koszyk/ })).toHaveAttribute('href', '/koszyk');
 });
 
-test('the category selector narrows the search for real', async ({ page }) => {
+/**
+ * Rewritten 2026-09-04. The category list used to be a `<select name="k">`
+ * inside the search form, and this test proved it really narrowed the
+ * results - a control that appears to filter and does not being the same
+ * class of thing as a price we will not honour.
+ *
+ * The owner then took that job away from it: "nie potrzebujemy listy
+ * rozwijanej kategorii jako opcji wyszukiwania - wyszukiwanie dobrze sobie
+ * radzi bez tego, za to możemy tą listę rozwijaną kategorii traktować jako
+ * quick access". So the rule under test changed with it: the menu must take
+ * you to the category, and the search form must no longer carry a category
+ * at all.
+ *
+ * The second half is the one worth having. A leftover `k=` on a form that no
+ * longer offers the choice would put a filter in every shared search URL
+ * that nobody selected.
+ */
+test('the category menu is quick access to a category, and the search carries no category', async ({ page }) => {
   await page.goto('/');
 
-  // „Obrazy" holds the wall-art products; „Amulety i bransoletki" holds the
-  // jewellery. A search for „obraz" scoped to the jewellery category must
-  // come back empty, which no amount of decoration could fake.
-  await page.getByLabel('Kategoria').selectOption({ label: 'Amulety i bransoletki' });
+  // Opened the way a customer opens it. The menu is a `<details>` - zero
+  // client JS - so its links genuinely are not in reach until the summary is
+  // pressed, and a test that reached past that would be proving nothing
+  // about what a visitor can actually do.
+  const menu = page.getByRole('navigation', { name: 'Kategorie' });
+  await menu.getByText('Kategorie', { exact: true }).click();
+  await menu.getByRole('link', { name: 'Obrazy', exact: true }).click();
+
+  await expect(page).toHaveURL('/obrazy-drewniane');
+  await expect(page.getByRole('heading', { name: 'Obrazy', exact: true })).toBeVisible();
+
+  await page.goto('/');
   await page.getByRole('searchbox').fill('obraz');
   await page.getByRole('button', { name: 'Szukaj' }).click();
 
   await expect(page).toHaveURL(/\/szukaj\?/);
-  await expect(page).toHaveURL(/k=amulety-i-bransoletki/);
-  await expect(page.getByText('Nic nie pasuje do tej frazy', { exact: false })).toBeVisible();
-
-  // The same phrase in the category that does hold it finds something, so
-  // the assertion above is about the filter rather than about the search
-  // being broken.
-  await page.goto('/szukaj?q=obraz&k=obrazy-drewniane');
-  await expect(page.getByRole('link', { name: /Obraz drewniany z grawerem/ })).toBeVisible();
+  // The phrase, and nothing else. `searchActiveProducts` still accepts a
+  // category and `/szukaj?k=…` remains a working deep link - what changed is
+  // that no control here sends one.
+  await expect(page).not.toHaveURL(/[?&]k=/);
 });
 
 test('choosing a category with no phrase lists that category', async ({ page }) => {

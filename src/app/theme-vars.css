@@ -645,67 +645,109 @@ html {
  * (ARCHITECTURE.md §2.1, and this file's own header).
  */
 
-.search-form {
+/*
+  The search band: a category menu, a gap, then the search form.
+
+  Owner, 2026-09-04: the category list is no longer a search filter but quick
+  access to a category page, it needs real space between it and the field
+  ("powinien być margines między listą kategorii a paskiem wyszukiwania"),
+  and both should sit closer to the reference layout's softness. So the group
+  is a rounded pill on paper with no hard 1px outline, and the menu beside it
+  matches it exactly - same height, same radius, same border - so the two
+  read as a pair rather than as one control cut in half.
+*/
+.search-band {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   padding-block: var(--space-3);
 }
+.search-band-form {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.search-form {
+  width: 100%;
+}
 
-/* One bordered group, so the selector, the field and the button read as a
-   single control. The border is on the wrapper, not on each child, which is
-   what stops every seam between them rendering as a doubled 2px line. */
+.search-quick-access {
+  flex: 0 0 auto;
+}
+.search-quick-access .nav-dropdown {
+  position: relative;
+}
+.search-quick-access-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  /* Matches `.search-group` exactly - see the note above. */
+  min-height: 46px;
+  padding-inline: 18px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  background-color: var(--mui-palette-background-paper);
+  color: var(--mui-palette-text-secondary);
+  font: var(--mui-font-body2);
+  white-space: nowrap;
+  cursor: pointer;
+  /* The UA marker would sit in front of the icon; the chevron is the marker. */
+  list-style: none;
+}
+.search-quick-access-summary::-webkit-details-marker {
+  display: none;
+}
+.search-quick-access-summary:hover {
+  color: var(--mui-palette-text-primary);
+  border-color: rgba(0, 0, 0, 0.16);
+}
+.search-quick-access-summary:focus-visible {
+  outline: 3px solid var(--mui-palette-secondary-main);
+  outline-offset: 2px;
+}
+
+/*
+  One rounded group holding the field and the button, so they read as a
+  single control. The border is on the wrapper, not on each child, which is
+  what stops the seam between them rendering as a doubled 2px line.
+
+  Softer than it was: a fully rounded pill and a hairline instead of a
+  divider-weight outline and a card radius. The reference's field is the
+  lightest thing on its page, and this band renders on every page of ours.
+*/
 .search-group {
   display: flex;
   align-items: stretch;
   width: 100%;
-  border: 1px solid var(--mui-palette-divider);
-  border-radius: var(--radius-card);
+  min-height: 46px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
   background-color: var(--mui-palette-background-paper);
   overflow: hidden;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.search-group:hover {
+  border-color: rgba(0, 0, 0, 0.16);
 }
 .search-group:focus-within {
   border-color: var(--mui-palette-secondary-main);
   box-shadow: var(--shadow-sm);
 }
 
-/* The label is for assistive technology only. The selector's own selected
-   option is the visible label, exactly as it is in the reference layout, and
-   a second visible "Kategoria" caption beside it would be noise. */
-.search-category-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.search-category {
-  flex: 0 0 auto;
-  max-width: 45%;
-  padding: 10px 14px;
-  border: none;
-  border-inline-end: 1px solid var(--mui-palette-divider);
-  background-color: transparent;
-  color: var(--mui-palette-text-secondary);
-  font: var(--mui-font-body2);
-  cursor: pointer;
-}
-.search-category:focus-visible {
-  outline: 3px solid var(--mui-palette-secondary-main);
-  outline-offset: -3px;
-}
-
 .search-input {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 10px 14px;
+  padding: 10px 20px;
   border: none;
   background-color: transparent;
   color: var(--mui-palette-text-primary);
   font: var(--mui-font-body1);
 }
 .search-input:focus-visible {
+  /* Inset by the pill's own radius, so the ring follows the curve rather
+     than cutting a square corner through it. */
   outline: 3px solid var(--mui-palette-secondary-main);
   outline-offset: -3px;
+  border-radius: 999px;
 }
 
 /*
@@ -740,6 +782,7 @@ html {
 .search-submit:focus-visible {
   outline: 3px solid var(--mui-palette-secondary-main);
   outline-offset: -3px;
+  border-radius: 999px;
 }
 /* The label goes at every width, not only on a phone: the icon carries it,
    and the `aria-label` carries the name. */
@@ -748,17 +791,16 @@ html {
 }
 
 @media (max-width: 599px) {
-  /* The selector takes its own full-width line above the field rather than
-     shrinking three controls into one cramped row. Every one of them stays
-     full size and tappable. */
-  .search-group {
-    flex-wrap: wrap;
+  /* The category menu takes its own full-width line above the field rather
+     than squeezing two controls into one cramped row. Both stay full size
+     and tappable, and the gap between them becomes vertical. */
+  .search-band {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
   }
-  .search-category {
-    flex: 1 1 100%;
-    max-width: none;
-    border-inline-end: none;
-    border-block-end: 1px solid var(--mui-palette-divider);
+  .search-quick-access-summary {
+    justify-content: center;
   }
   .search-submit {
     padding-inline: 12px;

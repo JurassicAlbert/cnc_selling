@@ -178,8 +178,12 @@ export const SITE = {
     kategorie" is a real option, not a placeholder: it is what the field
     searches when nobody narrows it.
   */
-  searchCategoryLabelPl: 'Kategoria',
-  searchAllCategoriesPl: 'Wszystkie kategorie',
+  /*
+    2026-09-04: the category list stopped being a search filter and became
+    quick access to a category page - owner request, "wyszukiwanie dobrze
+    sobie radzi bez tego". So it is named for what it does now.
+  */
+  searchCategoryMenuPl: 'Kategorie',
   // Shown when the selector was used without a phrase - a legitimate
   // request ("show me what is in here"), so it gets its own line rather
   // than being described as a search for nothing.
@@ -216,29 +220,6 @@ export const SITE = {
   // customer find out at the next step that the figure was not the total.
   cartShippingAtCheckoutPl: 'Koszt dostawy poznasz w kolejnym kroku, po wybraniu sposobu wysyłki.',
   cartKeepShoppingHeadingPl: 'Przeglądaj dalej',
-  /*
-    The delivery details and note a customer can fill in on the cart page -
-    owner request, 2026-09-04. It is a draft: it pre-fills the order form on
-    the next page, and nothing here is binding until that form is submitted.
-    The copy says so, because a form that silently does nothing yet is worse
-    than no form.
-  */
-  cartDeliveryHeadingPl: 'Dane do wysyłki',
-  cartDeliveryIntroPl:
-    'Możesz je uzupełnić już teraz - przeniesiemy je do formularza zamówienia. Nic tu nie jest jeszcze wiążące.',
-  cartDeliveryEmailPl: 'E-mail',
-  cartDeliveryPhonePl: 'Telefon',
-  cartDeliveryFirstNamePl: 'Imię',
-  cartDeliveryLastNamePl: 'Nazwisko',
-  cartDeliveryStreetPl: 'Ulica i numer',
-  cartDeliveryPostalCodePl: 'Kod pocztowy',
-  cartDeliveryCityPl: 'Miejscowość',
-  cartDeliveryNotePl: 'Uwagi dla kuriera',
-  cartDeliveryNoteHelperPl: 'Na przykład kod do bramy, piętro albo prośba o zostawienie u sąsiada.',
-  cartDeliverySavePl: 'Zapisz dane',
-  cartDeliverySavedPl: 'Zapisaliśmy dane. Uzupełnimy nimi formularz zamówienia.',
-  cartDeliveryErrorPl: 'Nie udało się zapisać danych. Spróbuj ponownie.',
-  cartDeliveryTooLongPl: 'Któreś z pól jest zbyt długie. Skróć je i spróbuj ponownie.',
   cartQuantityLabelPl: 'Ilość',
   cartUpdateQuantityPl: 'Aktualizuj',
   cartRemovePl: 'Usuń',
@@ -256,6 +237,28 @@ export const SITE = {
     'Ta konfiguracja nie może już zostać wykonana w tej formie - edytuj ją przed złożeniem zamówienia.',
 
   checkoutHeadingPl: 'Zamówienie',
+  /*
+    Owner request, 2026-09-04: the order form should offer to fill itself
+    from the account when someone is signed in, and point a guest at
+    registration rather than making them type everything by hand.
+
+    The copy is careful about what is actually on offer. There is no address
+    on a `User` - the account holds a name, an email and an optional phone -
+    so the address half comes from the customer's own last order, and the
+    button says so. „Twój zapisany adres" would be describing a feature this
+    shop does not have.
+  */
+  checkoutPrefillButtonPl: 'Uzupełnij moimi danymi',
+  checkoutPrefillWithAddressPl:
+    'Wpiszemy dane z Twojego konta oraz adres z ostatniego zamówienia. Wszystko możesz poprawić przed wysłaniem.',
+  checkoutPrefillNoAddressPl:
+    'Wpiszemy imię, nazwisko i e-mail z Twojego konta. Adresu jeszcze u nas nie masz - podasz go poniżej, a przy kolejnym zamówieniu podpowiemy go sami.',
+  checkoutPrefillDonePl: 'Uzupełniliśmy formularz. Sprawdź dane i popraw, jeśli coś się zmieniło.',
+  checkoutGuestHeadingPl: 'Masz już konto?',
+  checkoutGuestBodyPl:
+    'Zaloguj się, a wpiszemy Twoje dane za Ciebie. Możesz też złożyć zamówienie bez konta - wystarczy wypełnić formularz poniżej.',
+  checkoutGuestLoginPl: 'Zaloguj się',
+  checkoutGuestRegisterPl: 'Załóż konto',
   checkoutBuyerSectionHeadingPl: 'Dane zamawiającego',
   checkoutEmailLabelPl: 'E-mail',
   checkoutPhoneLabelPl: 'Telefon',

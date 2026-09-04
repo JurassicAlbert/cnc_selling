@@ -37,7 +37,6 @@ import { MAX_CART_ITEM_QUANTITY } from '@/domain/cart/quantity';
 import { SITE } from '@/content/pl/site';
 import type { CartItemView, CartView } from '@/server/repositories/cart';
 import { adjustCartItemQuantity, removeCartItem } from '@/server/actions/cart';
-import { CartDeliveryDraftForm } from '@/ui/islands/cart/CartDeliveryDraftForm';
 import { AddIcon, DeleteIcon, RemoveIcon } from '@/ui/icons';
 import { Text } from '@/ui/primitives/Text';
 
@@ -104,12 +103,6 @@ export function CartContents({ cart }: { readonly cart: CartView }) {
         {cart.items.map((item) => (
           <CartRow key={item.cartItemId} item={item} />
         ))}
-
-        {/* Owner request, 2026-09-04: the address and a note, on this page.
-            Below the items rather than in the summary column, because on a
-            phone the summary is what a customer scrolls to in order to check
-            out and an eight-field form in front of it is in the way. */}
-        <CartDeliveryDraftForm draft={cart.deliveryDraft} />
       </Stack>
 
       <CartSummary subtotalGrossGrosze={cart.subtotalGrossGrosze} />

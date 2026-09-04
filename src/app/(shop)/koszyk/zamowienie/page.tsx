@@ -10,6 +10,7 @@ import { findCartForRequest } from '@/server/repositories/cart';
 import { recordAnalyticsEvent } from '@/server/analytics/record-event';
 import { resolveDeliveryMethodsForCart } from '@/server/repositories/delivery-methods';
 import { listActivePaymentMethods } from '@/server/repositories/payment-methods';
+import { getCheckoutPrefill } from '@/server/repositories/checkout-prefill';
 import { CheckoutSteps } from '@/ui/primitives/CheckoutSteps';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
@@ -46,9 +47,14 @@ export default async function CheckoutPage() {
     redirect('/koszyk');
   }
 
-  const [deliveryMethods, paymentMethods] = await Promise.all([
+  const [deliveryMethods, paymentMethods, prefill] = await Promise.all([
     resolveDeliveryMethodsForCart(cart),
     listActivePaymentMethods(),
+    // The buyer details we can honestly offer to fill in, or null for a
+    // guest. Read here rather than in the island: it touches the account and
+    // the customer's most recent order, neither of which belongs in a client
+    // bundle. See `getCheckoutPrefill` for where each field really comes from.
+    session === null ? Promise.resolve(null) : getCheckoutPrefill(session.userId),
   ]);
 
   void recordAnalyticsEvent({ name: 'checkout_started', sessionToken, userId: session?.userId ?? null });
@@ -75,6 +81,7 @@ export default async function CheckoutPage() {
                */}
               <CheckoutForm
                 cart={cart}
+                prefill={prefill}
                 deliveryMethods={deliveryMethods}
                 paymentMethods={paymentMethods}
                 idempotencyKey={randomUUID()}

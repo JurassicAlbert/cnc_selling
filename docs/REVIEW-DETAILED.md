@@ -2259,3 +2259,66 @@ grep -c '^\[WebServer\]' <log>     # 0 means nothing was built
 Second time this has cost a debugging session - the first was during the
 warehouse work, where a stale server on port 3000 served an older build and
 produced a 500 that did not exist in the code.
+
+---
+
+## UX-26 - The cart's third pass: one form, a category menu, and an honest prefill
+
+- **Status:** **RESOLVED 2026-09-05**
+- **Severity:** P2
+- **Area:** UX / UI
+- **Files:** [src/ui/primitives/SearchBar.tsx](src/ui/primitives/SearchBar.tsx), [src/server/repositories/checkout-prefill.ts](src/server/repositories/checkout-prefill.ts), [src/ui/islands/checkout/CheckoutForm.tsx](src/ui/islands/checkout/CheckoutForm.tsx)
+
+Owner review of UX-25, in four parts.
+
+**The address form belongs only on step two.** UX-25 had put it on the cart
+*and* pre-filled the order form from it; seen side by side that reads as
+being asked the same thing twice. The reversal was taken properly rather than
+by hiding a component: the form, its Server Action, its operation, its
+integration test and the eight `Cart` draft columns are gone, with a
+migration dropping them. Unused columns and a `'use server'` export with no
+caller are debris, not caution - and this file already carried a note about
+two other actions left in that state, which is the reason to not add more.
+
+**The category list stopped being a search filter.** "Wyszukiwanie dobrze
+sobie radzi bez tego, za to możemy tą listę rozwijaną kategorii traktować
+jako quick access." It is now a `<details>` menu of category links beside the
+form rather than a `<select>` inside it - still zero client JS - wrapped in a
+labelled `<nav>`, because a bare `<summary>` comes back from the
+accessibility tree as a `generic` with no name at all: nothing announced what
+the control opened, and no role-based locator could reach it.
+
+`searchActiveProducts` keeps its category parameter and `/szukaj?k=…` remains
+a working deep link. Removing a tested server capability because one control
+stopped sending it would be throwing away more than was asked for. What is
+pinned instead is that the form no longer smuggles a `k=` nobody chose into
+every shared search URL.
+
+**„Uzupełnij moimi danymi", and the part worth being careful about.** There
+is **no address on a `User`**: the account holds a name, an email and an
+optional phone. So the address half comes from the customer's own most recent
+order, and the copy says exactly that rather than calling it a saved address.
+A customer who has never ordered is told the address is not there yet and
+that we will remember it next time - which is true, because their order
+captures it - instead of being shown three boxes filled with empty strings
+under a label claiming otherwise.
+
+An anonymised account offers nothing at all. RODO deletion overwrites the
+name and email in place and keeps the order rows for accounting; re-offering
+that scrubbed data as a convenience would quietly undo the erasure.
+
+**A guest is offered an account, not gated by one.** Login and registration
+links carry `next=/koszyk/zamowienie`, so signing in does not drop someone on
+an account page holding a full cart with no way forward. Checkout without an
+account stays a first-class path.
+
+**Evidence.** `checkout-prefill.test.ts` (6, written first) covers a customer
+who has ordered, one who has not, the phone fallback, the one-field name
+split, and the anonymised account. `checkout-prefill.spec.ts` proves in a
+browser that the button actually fills the boxes - the part that is easy to
+get silently wrong, since every field is uncontrolled and a prefill only
+lands if the form remounts, so "the click worked" would pass against a button
+that does nothing. One real race fixed on the way: the configurator's
+`router.replace` interrupted a `page.goto` in
+`stale-configuration-link.spec.ts` under WebKit, now waited out by the
+appearance of the rewritten query rather than by a timeout.

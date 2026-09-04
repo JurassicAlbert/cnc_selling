@@ -794,35 +794,6 @@ model Cart {
   sessionToken String?    @unique
   items        CartItem[]
 
-  // The delivery details a customer typed on the cart page, before there is
-  // an order to attach them to. Owner request, 2026-09-04: the cart should
-  // let someone give their full address and a note there, the way the
-  // reference layout's cart does.
-  //
-  // A DRAFT, and nothing more. Deliberately not validated on write - it is
-  // saved while somebody is still typing, and refusing a half-finished
-  // postcode would make the form unusable. `createOrder` is where the
-  // binding validation lives, and it runs on what is submitted at checkout,
-  // not on this.
-  //
-  // Separate nullable columns rather than one JSON blob, so the shapes here
-  // and on `Order` stay visibly the same thing and a rename cannot silently
-  // half-apply. Null means "not filled in", the same contract
-  // `StoreSettings`'s optional fields use.
-  //
-  // Nothing here is snapshotted into the order: `Order` captures its own
-  // copy of the buyer's details at checkout, because a customer who moves
-  // house must not retroactively change where an old order went. This only
-  // ever pre-fills the form.
-  draftEmail         String?
-  draftPhone         String?
-  draftFirstName     String?
-  draftLastName      String?
-  draftStreet        String?
-  draftPostalCode    String?
-  draftCity          String?
-  draftCourierNotePl String? @db.Text
-
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 }

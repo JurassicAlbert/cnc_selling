@@ -79,6 +79,14 @@ test('a link naming a retired pattern shows no price and cannot be added to the 
   await expect(addToCart).toBeEnabled();
   await expect(page.getByText(/^Cena: /)).toBeVisible();
 
+  // The configurator writes its resolved selections back into the URL with
+  // `router.replace` once its first snapshot lands, and that rewrite raced
+  // the navigation below - WebKit failed the run with "interrupted by
+  // another navigation". The link carries only `d=`, so the appearance of a
+  // finish is proof the rewrite has already happened rather than a guess
+  // that it has had time to.
+  await page.waitForURL(/[?&]f=/, { timeout: 15_000 });
+
   await page.goto(link(retired?.designId ?? ''));
 
   // The alert comes first for the same reason, in reverse: "no price" and a

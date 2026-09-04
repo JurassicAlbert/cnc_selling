@@ -38,6 +38,7 @@
  */
 
 import Image from 'next/image';
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
@@ -69,7 +70,8 @@ import { formatPln } from '@/domain/money/money';
 import { formatMmAsCentimetres } from '@/domain/text/numeric-input';
 import { submitCheckout } from '@/server/actions/checkout';
 import type { CheckoutFormState } from '@/server/actions/checkout';
-import type { CartDeliveryDraft, CartView } from '@/server/repositories/cart';
+import type { CartView } from '@/server/repositories/cart';
+import type { CheckoutPrefill } from '@/server/repositories/checkout-prefill';
 import type { ActiveDeliveryMethod } from '@/server/repositories/delivery-methods';
 import type { ActivePaymentMethod } from '@/server/repositories/payment-methods';
 // A plain-data module (no `prisma`/Node-only imports) - safe to import as a
@@ -79,47 +81,55 @@ import { findPickupPointById, searchPickupPoints } from '@/server/delivery/picku
 
 // Not exported from checkout.ts itself: a 'use server' file may only
 // export async functions, never a plain data constant.
+const INITIAL_CHECKOUT_STATE: CheckoutFormState = { fieldErrors: {}, formError: null, values: {} };
+
 /**
- * The form starts pre-filled from whatever the customer already typed on the
- * cart page (owner request, 2026-09-04). Without this the cart's address
- * form would be theatre: it would look like progress and produce none,
- * because the very next page would ask for all of it again.
+ * The values a field should start with.
  *
- * Only ever a starting value. Everything here is uncontrolled
- * (`defaultValue`), so the draft seeds the first render and the customer
- * owns the fields from then on; and a failed submission's own values take
- * precedence, because those are more recent than the draft.
+ * Three sources, in this order. A failed submission's own values win,
+ * because they are the most recent thing the customer typed and losing them
+ * to a prefill would be worse than not offering one. Then whatever
+ * „Uzupełnij moimi danymi" put there. Then nothing.
+ *
+ * Every field here is uncontrolled (`defaultValue`), so this only ever seeds
+ * a render - which is why applying the prefill bumps `renderKey` and remounts
+ * the form rather than trying to write into the inputs.
  */
-function initialCheckoutState(draft: CartDeliveryDraft): CheckoutFormState {
-  return {
-    fieldErrors: {},
-    formError: null,
-    values: {
-      email: draft.email ?? undefined,
-      phone: draft.phone ?? undefined,
-      firstName: draft.firstName ?? undefined,
-      lastName: draft.lastName ?? undefined,
-      street: draft.street ?? undefined,
-      postalCode: draft.postalCode ?? undefined,
-      city: draft.city ?? undefined,
-      courierNotePl: draft.courierNotePl ?? undefined,
-    },
-  };
+function fieldValue(
+  state: CheckoutFormState,
+  prefill: CheckoutPrefill | null,
+  field: keyof CheckoutPrefill,
+): string | undefined {
+  const submitted = state.values[field as keyof CheckoutFormState['values']];
+  if (typeof submitted === 'string' && submitted.length > 0) {
+    return submitted;
+  }
+  const offered = prefill === null ? '' : String(prefill[field] ?? '');
+  return offered.length > 0 ? offered : undefined;
 }
 
 export function CheckoutForm({
   cart,
+  prefill,
   deliveryMethods,
   paymentMethods,
   idempotencyKey,
 }: {
   readonly cart: CartView;
+  /**
+   * The buyer details this shop can honestly offer to fill in, or `null` for
+   * a guest. Resolved server-side (`getCheckoutPrefill`) rather than here:
+   * it reads the account and the customer's most recent order, and neither
+   * belongs in a client bundle.
+   */
+  readonly prefill: CheckoutPrefill | null;
   readonly deliveryMethods: readonly ActiveDeliveryMethod[];
   readonly paymentMethods: readonly ActivePaymentMethod[];
   /** This form's own submission id, minted once per page render - see the page's own comment and `docs/AUDIT-2026-08-30.md` P0-2. */
   readonly idempotencyKey: string;
 }) {
-  const [state, formAction] = useActionState(submitCheckout, initialCheckoutState(cart.deliveryDraft));
+  const [state, formAction] = useActionState(submitCheckout, INITIAL_CHECKOUT_STATE);
+  const [prefillApplied, setPrefillApplied] = useState(false);
   const [renderKey, setRenderKey] = useState(0);
   const isFirstRender = useRef(true);
   // biome-ignore lint/correctness/useExhaustiveDependencies: deliberately keyed on state's reference identity (any new object from useActionState), not its contents
@@ -131,7 +141,28 @@ export function CheckoutForm({
     setRenderKey((key) => key + 1);
   }, [state]);
 
-  const v = state.values;
+  // `v` was `state.values` directly. It now folds in the prefill, so one
+  // helper answers "what should this box start with" for every field.
+  const applied = prefillApplied ? prefill : null;
+  const v = {
+    email: fieldValue(state, applied, 'email'),
+    phone: fieldValue(state, applied, 'phone'),
+    firstName: fieldValue(state, applied, 'firstName'),
+    lastName: fieldValue(state, applied, 'lastName'),
+    companyName: fieldValue(state, applied, 'companyName'),
+    nip: fieldValue(state, applied, 'nip'),
+    street: fieldValue(state, applied, 'street'),
+    postalCode: fieldValue(state, applied, 'postalCode'),
+    city: fieldValue(state, applied, 'city'),
+    // Not part of the prefill: a courier note is about this delivery, not
+    // about the customer, and carrying the last one forward would put a
+    // stale instruction on a new parcel.
+    courierNotePl: state.values.courierNotePl,
+    internalShipmentNotePl: state.values.internalShipmentNotePl,
+    deliveryMethodId: state.values.deliveryMethodId,
+    paymentMethodConfigId: state.values.paymentMethodConfigId,
+    pickupPointId: state.values.pickupPointId,
+  };
   const firstFeasibleId = deliveryMethods.find((m) => m.feasible)?.id ?? deliveryMethods[0]?.id ?? '';
   const defaultDeliveryMethodId = v.deliveryMethodId ?? firstFeasibleId;
   const [selectedDeliveryId, setSelectedDeliveryId] = useState(defaultDeliveryMethodId);
@@ -170,6 +201,32 @@ export function CheckoutForm({
             {state.formError === 'RATE_LIMITED' && <Alert severity="warning">{SITE.checkoutRateLimitedPl}</Alert>}
             {state.formError === 'OPTION_UNAVAILABLE' && (
               <Alert severity="warning">{SITE.checkoutOptionUnavailablePl}</Alert>
+            )}
+
+            {/*
+              Owner request, 2026-09-04: offer to fill this in from the
+              account when someone is signed in, and point a guest at
+              registration rather than making them type everything by hand.
+
+              Above the fields rather than beside them, because it is only
+              useful before anyone starts typing - and it never overwrites
+              what they have already entered (`fieldValue` puts a submitted
+              value ahead of the prefill).
+            */}
+            {prefill !== null ? (
+              <PrefillPanel
+                prefill={prefill}
+                applied={prefillApplied}
+                onApply={() => {
+                  setPrefillApplied(true);
+                  // Every field is uncontrolled, so a new default only takes
+                  // effect on a fresh mount. This is the same `renderKey` the
+                  // form already uses after a failed submission.
+                  setRenderKey((key) => key + 1);
+                }}
+              />
+            ) : (
+              <GuestAccountPanel />
             )}
 
             <SectionCard heading={SITE.checkoutBuyerSectionHeadingPl}>
@@ -546,5 +603,74 @@ function SubmitButton({ disabledReason }: { readonly disabledReason: 'pickup' | 
         </Typography>
       )}
     </Stack>
+  );
+}
+
+/**
+ * „Uzupełnij moimi danymi", for a signed-in customer.
+ *
+ * The description is doing real work. There is no address on a `User` - the
+ * account holds a name, an email and an optional phone - so the address half
+ * comes from this customer's own most recent order, and the copy says so
+ * rather than calling it a saved address. Someone who has never ordered is
+ * told plainly that the address is not there yet and that we will remember
+ * it next time, which is true: their order captures it.
+ */
+function PrefillPanel({
+  prefill,
+  applied,
+  onApply,
+}: {
+  readonly prefill: CheckoutPrefill;
+  readonly applied: boolean;
+  readonly onApply: () => void;
+}) {
+  return (
+    <Paper elevation={0} sx={{ p: 2.5, borderRadius: 3, bgcolor: 'action.hover' }}>
+      <Stack spacing={1.5} sx={{ alignItems: 'flex-start' }}>
+        <Typography variant="body2" color="text.secondary">
+          {prefill.hasPreviousAddress ? SITE.checkoutPrefillWithAddressPl : SITE.checkoutPrefillNoAddressPl}
+        </Typography>
+        {applied ? (
+          <Alert severity="success" sx={{ width: '100%' }}>
+            {SITE.checkoutPrefillDonePl}
+          </Alert>
+        ) : (
+          <Button type="button" variant="outlined" size="small" onClick={onApply}>
+            {SITE.checkoutPrefillButtonPl}
+          </Button>
+        )}
+      </Stack>
+    </Paper>
+  );
+}
+
+/**
+ * The same offer from the other side, for a guest.
+ *
+ * It offers, and does not gate. Checkout without an account stays a
+ * first-class path - the form below works exactly as it always did - because
+ * requiring registration to buy something is a real conversion cost and
+ * nobody asked for it. `next=` brings them back here rather than dropping
+ * them on an account page with a full cart and no way forward.
+ */
+function GuestAccountPanel() {
+  return (
+    <Paper elevation={0} sx={{ p: 2.5, borderRadius: 3, bgcolor: 'action.hover' }}>
+      <Stack spacing={1.5}>
+        <Typography variant="subtitle2">{SITE.checkoutGuestHeadingPl}</Typography>
+        <Typography variant="body2" color="text.secondary">
+          {SITE.checkoutGuestBodyPl}
+        </Typography>
+        <Stack direction="row" spacing={1}>
+          <Button component={Link} href="/logowanie?next=/koszyk/zamowienie" variant="outlined" size="small">
+            {SITE.checkoutGuestLoginPl}
+          </Button>
+          <Button component={Link} href="/rejestracja?next=/koszyk/zamowienie" variant="text" size="small">
+            {SITE.checkoutGuestRegisterPl}
+          </Button>
+        </Stack>
+      </Stack>
+    </Paper>
   );
 }
