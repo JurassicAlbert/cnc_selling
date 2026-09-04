@@ -7,7 +7,9 @@ import path from 'node:path';
 import 'dotenv/config';
 
 import type { Locator, Page } from '@playwright/test';
-import { expect, test } from '@playwright/test';
+// Not `@playwright/test`: this spec registers accounts, and SEC-01 allows
+// one IP ten per day - fewer than a full suite run needs. See fixtures.ts.
+import { expect, test } from './fixtures';
 
 import { prisma } from '../../src/server/db/client';
 
@@ -72,6 +74,13 @@ async function logout(page: Page): Promise<void> {
 }
 
 test('customer uploads, staff requests changes, customer sees the notice and reuploads', async ({ page }) => {
+  // Two registrations, three logins, two file uploads and a staff review in
+  // one journey - it is genuinely slow, and the 30s default was being spent
+  // on real work rather than on anything hanging. `slow()` triples it. The
+  // alternative, splitting this into separate tests, would lose the point:
+  // the thing under test is the whole hand-off between two people.
+  test.slow();
+
   const stamp = Date.now();
   const customerEmail = `e2e-design-review-customer-${stamp}@example.test`;
   const staffEmail = `e2e-design-review-staff-${stamp}@example.test`;
@@ -127,15 +136,32 @@ test('customer uploads, staff requests changes, customer sees the notice and reu
   // picks up - the parent Server Component re-renders with
   // `status !== 'NEEDS_CHANGES'`, unmounting this whole form (local success
   // state included), sometimes before an assertion on it ever observes it.
-  // `reuploadCustomDesign` is a real async Server Action call, not a page
-  // navigation - `waitForLoadState('networkidle')` is what actually waits
-  // for that request (and the refresh's own RSC fetch) to finish, rather
-  // than racing `page.reload()` against a still-in-flight mutation.
-  await page.waitForLoadState('networkidle');
+  //
+  // That unmounting is itself the signal to wait for. `reuploadCustomDesign`
+  // is a real async Server Action, not a navigation, so something has to
+  // wait for it before `page.reload()` races the still-in-flight mutation -
+  // and the form disappearing is the direct, observable consequence of the
+  // status having changed.
+  //
+  // This was `waitForLoadState('networkidle')` until 2026-09-04, which is a
+  // guess about traffic rather than a fact about the page: it waits for a
+  // quiet half-second and gives up at the test timeout if the app keeps any
+  // request open. It was the only spec still failing once the WebKit and
+  // rate-limit problems were fixed, and it failed on both browsers - the
+  // busier the suite got, the less reliable the guess became.
+  //
+  // Waiting for the *form* to disappear was the obvious replacement and is
+  // wrong: `toHaveCount(0)` cannot tell "unmounted because the status
+  // changed" from "not rendered yet", so it passed instantly during a
+  // re-render and the reload below then raced the same in-flight action it
+  // was meant to wait for - the failure just moved down two lines. The wait
+  // has to be on something appearing, and the new status is the thing that
+  // only appears once the action has actually landed.
+  await expect(accountMain.getByText('Status: Projekt oczekuje na weryfikację.')).toBeVisible();
 
-  // Real proof the transition actually happened, not just a client-side
-  // optimistic flip: reload and confirm the reupload form (NEEDS_CHANGES
-  // only) is gone, and the status line now reads the post-reupload state.
+  // And the reload still earns its place: the assertion above is satisfied by
+  // a client-side re-render, this one proves the status is what the database
+  // will hand the next visitor.
   await page.reload();
   await expect(accountMain.getByText('Status: Projekt oczekuje na weryfikację.')).toBeVisible();
   await expect(accountMain.getByText('Ten projekt wymaga poprawy', { exact: false })).not.toBeVisible();

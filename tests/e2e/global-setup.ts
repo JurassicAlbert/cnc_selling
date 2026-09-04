@@ -1,37 +1,18 @@
-import 'dotenv/config';
-
+import { clearLoopbackRateLimits } from './rate-limit-reset';
 import { prisma } from '../../src/server/db/client';
 
 /**
- * Clear the loopback address's rate-limit counters before the suite runs.
+ * Clears whatever the *previous* run left behind, before any worker starts.
  *
- * Found the hard way on 2026-09-04: several specs register a fresh account
- * (promoting one is the single thing no UI path can do for itself), and
- * SEC-01's `registerPerIp` rule allows ten per day. Every spec run shares one
- * IP, so after a few local runs registration starts refusing and the failure
- * looks like nothing at all - the form simply stays on `/rejestracja` with no
- * clue why. Two specs died that way before the `RateLimit` table was checked.
- *
- * CI never sees this, because it starts from an empty database, which is
- * exactly what makes it a trap: it only bites the person running the suite
- * repeatedly on their own machine.
- *
- * Scoped to the loopback keys on purpose. It resets the throttle for the
- * machine running the tests and touches nothing else, so a spec that
- * deliberately exercises rate limiting still can.
+ * The per-test reset in `fixtures.ts` handles everything inside a run; this
+ * covers the counters already sitting in the database when the run begins,
+ * and gives the one-line report that made the original problem findable.
+ * See `rate-limit-reset.ts` for the full story.
  */
 async function globalSetup(): Promise<void> {
-  const cleared = await prisma.rateLimit.deleteMany({
-    where: {
-      OR: [
-        { key: { endsWith: ':::1' } },
-        { key: { endsWith: ':127.0.0.1' } },
-        { key: { endsWith: ':unknown' } },
-      ],
-    },
-  });
-  if (cleared.count > 0) {
-    console.log(`e2e global setup: cleared ${cleared.count} loopback rate-limit counter(s)`);
+  const cleared = await clearLoopbackRateLimits();
+  if (cleared > 0) {
+    console.log(`e2e global setup: cleared ${cleared} loopback rate-limit counter(s)`);
   }
   await prisma.$disconnect();
 }

@@ -49,7 +49,14 @@ test('uploads a custom design, completes checkout, and lands in DESIGN_REVIEW', 
   await fileInput.setInputFiles(path.resolve(process.cwd(), 'public/images/photos/gres.jpg'));
   await main.getByLabel('Akceptuję powyższe oświadczenie').check();
   await main.getByRole('button', { name: 'Prześlij projekt' }).click();
-  await expect(main.getByText('Projekt został przesłany.')).toBeVisible();
+  // The band's collapsed-header label, not the "Projekt został przesłany."
+  // alert inside it. A successful upload sets `selections.customUploadId`,
+  // which advances the accordion - so the alert is rendered and then hidden
+  // by the very success it announces, and asserting on it is a race the
+  // suite lost on 2026-09-04 ("locator resolved to ... unexpected value
+  // hidden"). This label is the durable consequence: it is on screen for as
+  // long as a file is attached.
+  await expect(main.getByText('Plik przesłany')).toBeVisible();
 
   // Materiał/Wykończenie/Wymiary - already defaulted on load.
 

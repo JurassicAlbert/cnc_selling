@@ -1,7 +1,9 @@
 import 'dotenv/config';
 
 import type { Locator, Page } from '@playwright/test';
-import { expect, test } from '@playwright/test';
+// Not `@playwright/test`: this spec registers accounts, and SEC-01 allows
+// one IP ten per day - fewer than a full suite run needs. See fixtures.ts.
+import { expect, test } from './fixtures';
 
 import { prisma } from '../../src/server/db/client';
 
