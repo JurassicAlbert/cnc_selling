@@ -1,4 +1,8 @@
+import 'dotenv/config';
+
 import { expect, test } from '@playwright/test';
+
+import { prisma } from '../../src/server/db/client';
 
 /**
  * UX-23's header and cart-view chrome, in a real browser.
@@ -15,6 +19,8 @@ import { expect, test } from '@playwright/test';
  *
  * - the category selector has to actually narrow the search, or it is a
  *   control that pretends to work;
+ * - the strip above the navigation must show a social profile only when one
+ *   is configured, or it links customers to accounts nobody has claimed;
  * - hiding the header labels to fit a phone took the cart link's accessible
  *   name with them. `display: none` removes text from the accessibility
  *   tree, so the link was announced as „1" - its count badge and nothing
@@ -25,12 +31,58 @@ import { expect, test } from '@playwright/test';
  * the mobile project is the one that exercises the interesting branch.
  */
 
-test('the topbar carries the two links it promises, on every page', async ({ page }) => {
-  await page.goto('/');
+/**
+ * Rewritten 2026-09-04. The topbar used to carry links to our own FAQ and
+ * contact pages, and this test held them there. The owner corrected what the
+ * strip is for - "navbar nad navbarem dotyczy mediów fb insta itd nie
+ * podstron" - so it now carries the shop's social profiles instead.
+ *
+ * Which changes what is worth pinning. The links are `StoreSettings` fields
+ * the owner fills in, because hard-coding a profile URL would be inventing
+ * an account that may not exist. So the rule under test is the one that
+ * makes that safe: **nothing is shown for a profile nobody configured.** A
+ * social icon linking nowhere is worse than no icon.
+ *
+ * Driven through the real setting rather than asserted against whatever the
+ * database happens to hold, and restored afterwards - `StoreSettings` is a
+ * singleton every other spec in this run shares.
+ */
+test('the topbar shows a social profile only when one is actually configured', async ({ page }) => {
+  const before = await prisma.storeSettings.findUniqueOrThrow({ where: { id: 1 } });
 
-  const topbar = page.getByRole('navigation', { name: 'FAQ' });
-  await expect(topbar.getByRole('link', { name: 'FAQ' })).toBeVisible();
-  await expect(topbar.getByRole('link', { name: 'Kontakt' })).toBeVisible();
+  try {
+    await prisma.storeSettings.update({
+      where: { id: 1 },
+      data: { facebookUrl: null, instagramUrl: null, tiktokUrl: null, youtubeUrl: null },
+    });
+    await page.goto('/');
+    await expect(page.getByRole('navigation', { name: /mediach społecznościowych/ })).toHaveCount(0);
+
+    await prisma.storeSettings.update({
+      where: { id: 1 },
+      data: { facebookUrl: 'https://www.facebook.com/rytpl' },
+    });
+    await page.goto('/');
+
+    const social = page.getByRole('navigation', { name: /mediach społecznościowych/ });
+    const facebook = social.getByRole('link', { name: 'Facebook' });
+    await expect(facebook).toHaveAttribute('href', 'https://www.facebook.com/rytpl');
+    // It leaves our site: without `noopener` the opened page gets a handle on
+    // ours through `window.opener`.
+    await expect(facebook).toHaveAttribute('rel', /noopener/);
+    // And only the one that was configured.
+    await expect(social.getByRole('link')).toHaveCount(1);
+  } finally {
+    await prisma.storeSettings.update({
+      where: { id: 1 },
+      data: {
+        facebookUrl: before.facebookUrl,
+        instagramUrl: before.instagramUrl,
+        tiktokUrl: before.tiktokUrl,
+        youtubeUrl: before.youtubeUrl,
+      },
+    });
+  }
 });
 
 test('the cart link keeps its accessible name when its label is hidden to fit', async ({ page }) => {

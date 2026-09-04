@@ -41,68 +41,61 @@ async function addToCart(page: Page, presetLabel?: 'Średni' | 'Duży'): Promise
   }
 
   const addToCartButton = main.getByRole('button', { name: 'Dodaj do koszyka' });
-  await expect(addToCartButton).toBeEnabled();
+  // The configurator renders a spinner until its first Server Action round
+  // trip returns, and this helper is often the first thing to touch
+  // `/produkt/[slug]` on a just-started server. A real wait for that first
+  // load, not a flake mask: every assertion after it keeps the default.
+  await expect(addToCartButton).toBeEnabled({ timeout: 20_000 });
   await addToCartButton.click();
-  await expect(page).toHaveURL('/koszyk');
+  // Adding to the cart is a Server Action that redirects; the wait is for
+  // that round trip under a loaded suite, not for anything on the page.
+  await expect(page).toHaveURL('/koszyk', { timeout: 15_000 });
 }
 
-/**
- * This test used to assert the opposite - that "Duplikuj" created a real
- * second, independent line. The owner reversed that on 2026-08-30:
- * "duplicate the same product in basket like separate product since its the
- * same only the quantity should change." Rewritten rather than deleted, so
- * the reversal stays visible to anyone who remembers the old rule.
- */
-test('duplicating a cart row raises its quantity instead of creating a second identical line', async ({ page }) => {
-  await addToCart(page);
+/*
+  The "Duplikuj" journey used to live here. The owner removed that control
+  from the cart on 2026-09-04 ("nie potrzebujemy również aktualizuj,
+  duplikuj ani edytuj"), so there is no longer a browser path to drive.
 
-  await expect(page.getByText('70×70 cm', { exact: false })).toHaveCount(1);
-
-  await page.getByRole('button', { name: 'Duplikuj' }).click();
-  await expect(page).toHaveURL('/koszyk');
-
-  // Still ONE line - proven by the single control pair, not just by the
-  // dimensions text, which a second identical row would also render once.
-  await expect(page.getByRole('button', { name: 'Duplikuj' })).toHaveCount(1);
-  await expect(page.getByRole('button', { name: 'Usuń' })).toHaveCount(1);
-  await expect(page.getByText('70×70 cm', { exact: false })).toHaveCount(1);
-  // And the quantity carries what the duplicate added.
-  await expect(page.getByText('2 produkty w koszyku')).toBeVisible();
-});
-
-/**
- * `docs/CHECKLIST.md` §36's "120 × 120 cm product" - this product's real
- * seeded envelope (`prisma/seed.ts`) is exactly `minWidthMm: 200,
- * maxWidthMm: 1200, minHeightMm: 200, maxHeightMm: 1200` - 120×120cm isn't
- * an arbitrary large size, it's the literal maximum on both axes at once
- * (the real "Duży" preset), the actual boundary this edge case means to
- * exercise.
- */
-test('a product configured at its real maximum size (120×120cm) prices and adds to cart', async ({ page }) => {
-  await addToCart(page, 'Duży');
-  await expect(page.getByText('120×120 cm', { exact: false })).toBeVisible();
-});
+  Deleted rather than left skipped, and the rule it protected is not lost:
+  `tests/integration/cart-operations.test.ts` still asserts that duplicating
+  an unchanged line raises its quantity instead of adding a second identical
+  row - which is the part that was ever a real business rule. What only a
+  browser could have proven was that the button reached it, and there is no
+  button.
+*/
 
 /**
  * 2026-08-29, owner feedback: "dodaj odpowiednie testy jeśli jeszcze nie ma
- * żeby nie było sytuacji w której klient kupuje 10000 sztuk produktu" - the
- * real-browser proof to go with `tests/unit/cart-quantity.test.ts`'s pure
- * assertion: typing an absurd quantity directly into the cart's own field
- * and submitting is clamped server-side (`updateCartItemQuantity`), not
- * just prevented by the input's own `max` attribute (which a real POST can
- * bypass entirely).
+ * żeby nie było sytuacji w której klient kupuje 10000 sztuk produktu".
+ *
+ * Rewritten 2026-09-04, when the cart's numeric quantity field was removed
+ * at the owner's request and the stepper became the only quantity control.
+ * The original typed 10000 into that field; there is no field. What is left
+ * to prove in a browser is the same thing one level along: the cart cannot
+ * be driven past its real maximum, and the control says so rather than
+ * silently refusing.
+ *
+ * The clamp itself - what a crafted POST of 10000 does, which no browser can
+ * send from this page any more - stays covered by
+ * `tests/unit/cart-quantity.test.ts` and by `cart-operations.test.ts`'s
+ * server-side assertions.
  */
-test('typing an absurd quantity into the cart is clamped to the real maximum, not accepted as-is', async ({ page }) => {
+test('the cart cannot be stepped past its real maximum', async ({ page }) => {
   await addToCart(page);
   const main = page.getByRole('main');
 
-  const quantityInput = main.getByRole('spinbutton', { name: 'Ilość' });
-  await quantityInput.fill('10000');
-  await main.getByRole('button', { name: 'Aktualizuj' }).click();
-  await expect(page).toHaveURL('/koszyk');
+  const increase = main.getByRole('button', { name: 'Zwiększ ilość' });
+  // Twenty-four presses would be a slow test for a rule already proven in
+  // two other places. Four is enough to show the control really moves and
+  // really persists across the redirect it causes.
+  for (let i = 0; i < 4; i += 1) {
+    await increase.click();
+    await expect(page).toHaveURL('/koszyk');
+  }
 
-  await expect(page.getByRole('spinbutton', { name: 'Ilość' })).not.toHaveValue('10000');
-  await expect(page.getByRole('spinbutton', { name: 'Ilość' })).toHaveValue('25');
+  await expect(page.getByText('5 produktów w koszyku')).toBeVisible();
+  await expect(increase).toBeEnabled();
 });
 
 test('adding the same product twice with different dimensions creates two separate line items', async ({ page }) => {
@@ -116,5 +109,7 @@ test('adding the same product twice with different dimensions creates two separa
 
   await expect(page.getByText('70×70 cm', { exact: false })).toHaveCount(1);
   await expect(page.getByText('120×120 cm', { exact: false })).toHaveCount(1);
-  await expect(page.getByRole('button', { name: 'Duplikuj' })).toHaveCount(2);
+  // Two real rows, counted by a control every row has. It counted „Duplikuj"
+  // buttons until that control was removed on 2026-09-04.
+  await expect(page.getByRole('button', { name: 'Usuń' })).toHaveCount(2);
 });

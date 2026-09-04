@@ -191,6 +191,24 @@ export const SITE = {
   searchCategoryGonePl:
     'Wybrana kategoria nie jest już dostępna. Wyszukaj ponownie we wszystkich kategoriach.',
 
+  /*
+    The checkout step rail - owner request 2026-09-04, arrangement from
+    `template.getbazaar.io`, which shows „1. Cart / 2. Details / 3. Payment /
+    4. Review".
+
+    Three here rather than four, and the second one named for what actually
+    happens on it. The shop has three pages in this flow; the payment method
+    is chosen on the order form and the transfer is made in the customer's
+    own bank, because no payment provider is integrated (`OPEN_ITEMS.md` §1).
+    A „Płatność" step would be pointing at a page that does not exist.
+  */
+  checkoutStepCartPl: 'Koszyk',
+  checkoutStepDetailsPl: 'Dane i płatność',
+  checkoutStepConfirmationPl: 'Potwierdzenie',
+  checkoutStepsLabelPl: 'Etapy zamówienia',
+  checkoutStepDonePl: 'ukończony',
+  checkoutStepCurrentPl: 'bieżący',
+
   cartHeadingPl: 'Koszyk',
   cartEmptyPl: 'Twój koszyk jest pusty.',
   cartContinueShoppingPl: 'Przeglądaj produkty',
@@ -198,6 +216,29 @@ export const SITE = {
   // customer find out at the next step that the figure was not the total.
   cartShippingAtCheckoutPl: 'Koszt dostawy poznasz w kolejnym kroku, po wybraniu sposobu wysyłki.',
   cartKeepShoppingHeadingPl: 'Przeglądaj dalej',
+  /*
+    The delivery details and note a customer can fill in on the cart page -
+    owner request, 2026-09-04. It is a draft: it pre-fills the order form on
+    the next page, and nothing here is binding until that form is submitted.
+    The copy says so, because a form that silently does nothing yet is worse
+    than no form.
+  */
+  cartDeliveryHeadingPl: 'Dane do wysyłki',
+  cartDeliveryIntroPl:
+    'Możesz je uzupełnić już teraz - przeniesiemy je do formularza zamówienia. Nic tu nie jest jeszcze wiążące.',
+  cartDeliveryEmailPl: 'E-mail',
+  cartDeliveryPhonePl: 'Telefon',
+  cartDeliveryFirstNamePl: 'Imię',
+  cartDeliveryLastNamePl: 'Nazwisko',
+  cartDeliveryStreetPl: 'Ulica i numer',
+  cartDeliveryPostalCodePl: 'Kod pocztowy',
+  cartDeliveryCityPl: 'Miejscowość',
+  cartDeliveryNotePl: 'Uwagi dla kuriera',
+  cartDeliveryNoteHelperPl: 'Na przykład kod do bramy, piętro albo prośba o zostawienie u sąsiada.',
+  cartDeliverySavePl: 'Zapisz dane',
+  cartDeliverySavedPl: 'Zapisaliśmy dane. Uzupełnimy nimi formularz zamówienia.',
+  cartDeliveryErrorPl: 'Nie udało się zapisać danych. Spróbuj ponownie.',
+  cartDeliveryTooLongPl: 'Któreś z pól jest zbyt długie. Skróć je i spróbuj ponownie.',
   cartQuantityLabelPl: 'Ilość',
   cartUpdateQuantityPl: 'Aktualizuj',
   cartRemovePl: 'Usuń',
@@ -330,8 +371,20 @@ export const SITE = {
     `trustEngravingTitlePl`), in one line.
   */
   topbarNotePl: 'Wykonujemy na zamówienie, z personalizacją grawerem.',
-  topbarContactLinkPl: 'Kontakt',
-  topbarHelpLinkPl: 'FAQ',
+  /*
+    The strip's links, corrected 2026-09-04 on owner feedback: "navbar nad
+    navbarem dotyczy mediów fb insta itd nie podstron". It used to carry FAQ
+    and Kontakt, which is what the main navigation and the footer are for.
+
+    Each one renders only when the owner has configured that profile in
+    `/panel/ustawienia`. These are the accessible names for the icons, which
+    are `aria-hidden` and would otherwise leave the links unnamed.
+  */
+  socialNavLabelPl: 'Nasze profile w mediach społecznościowych',
+  socialFacebookPl: 'Facebook',
+  socialInstagramPl: 'Instagram',
+  socialTiktokPl: 'TikTok',
+  socialYoutubePl: 'YouTube',
 
   footerCategoriesHeadingPl: 'Kategorie',
   footerInfoHeadingPl: 'Informacje',

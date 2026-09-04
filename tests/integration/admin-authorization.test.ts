@@ -111,6 +111,12 @@ describe('applyUpdateStoreSettings - the bank account every customer is told to 
     bankAccountNumber: 'PL61109010140000071219812874',
     bankAccountHolderPl: 'Test SEC-04',
     shippingFlatRateGrosze: 1234,
+    // Blank: what this test is about is the authorization gate, not the
+    // social-profile fields added on 2026-09-04.
+    facebookUrl: '',
+    instagramUrl: '',
+    tiktokUrl: '',
+    youtubeUrl: '',
   };
 
   it.each(REFUSED)('refuses a %s actor and changes nothing', async (_role, who) => {

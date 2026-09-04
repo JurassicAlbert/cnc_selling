@@ -13,6 +13,15 @@ export type StoreSettingsView = {
   readonly bankAccountNumber: string | null;
   readonly bankAccountHolderPl: string | null;
   readonly shippingFlatRateGrosze: number;
+  /**
+   * The shop's own social profiles, for the strip above the navigation.
+   * `null` for any the owner has not configured - the strip renders nothing
+   * for those, rather than an icon linking to a profile nobody has claimed.
+   */
+  readonly facebookUrl: string | null;
+  readonly instagramUrl: string | null;
+  readonly tiktokUrl: string | null;
+  readonly youtubeUrl: string | null;
 };
 
 export async function getStoreSettings(): Promise<StoreSettingsView> {
@@ -21,5 +30,9 @@ export async function getStoreSettings(): Promise<StoreSettingsView> {
     bankAccountNumber: settings.bankAccountNumber,
     bankAccountHolderPl: settings.bankAccountHolderPl,
     shippingFlatRateGrosze: settings.shippingFlatRateGrosze,
+    facebookUrl: settings.facebookUrl,
+    instagramUrl: settings.instagramUrl,
+    tiktokUrl: settings.tiktokUrl,
+    youtubeUrl: settings.youtubeUrl,
   };
 }

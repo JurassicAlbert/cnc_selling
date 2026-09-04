@@ -793,6 +793,36 @@ model Cart {
   user         User?      @relation(fields: [userId], references: [id])
   sessionToken String?    @unique
   items        CartItem[]
+
+  // The delivery details a customer typed on the cart page, before there is
+  // an order to attach them to. Owner request, 2026-09-04: the cart should
+  // let someone give their full address and a note there, the way the
+  // reference layout's cart does.
+  //
+  // A DRAFT, and nothing more. Deliberately not validated on write - it is
+  // saved while somebody is still typing, and refusing a half-finished
+  // postcode would make the form unusable. `createOrder` is where the
+  // binding validation lives, and it runs on what is submitted at checkout,
+  // not on this.
+  //
+  // Separate nullable columns rather than one JSON blob, so the shapes here
+  // and on `Order` stay visibly the same thing and a rename cannot silently
+  // half-apply. Null means "not filled in", the same contract
+  // `StoreSettings`'s optional fields use.
+  //
+  // Nothing here is snapshotted into the order: `Order` captures its own
+  // copy of the buyer's details at checkout, because a customer who moves
+  // house must not retroactively change where an old order went. This only
+  // ever pre-fills the form.
+  draftEmail         String?
+  draftPhone         String?
+  draftFirstName     String?
+  draftLastName      String?
+  draftStreet        String?
+  draftPostalCode    String?
+  draftCity          String?
+  draftCourierNotePl String? @db.Text
+
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 }
@@ -1556,6 +1586,24 @@ model StoreSettings {
   bankAccountNumber      String?
   bankAccountHolderPl    String?
   shippingFlatRateGrosze Int
+  /// The shop's own social profiles, shown in the strip above the navigation
+  /// (owner request, 2026-09-04: that strip is for "fb insta itd", not for
+  /// links to our own subpages).
+  ///
+  /// Settings rather than constants because a hard-coded profile URL would
+  /// be a guess about an account that may not exist, and a social icon
+  /// linking nowhere is worse than no icon. `null` means "not configured",
+  /// and the strip renders nothing for it - the same nullable-means-unset
+  /// contract the bank fields above already use.
+  ///
+  /// Validated as absolute https URLs on write (`applyUpdateStoreSettings`):
+  /// these end up as an `href` on every page of the storefront, so anything
+  /// looser is a stored-XSS vector in the most widely rendered place there
+  /// is.
+  facebookUrl            String?
+  instagramUrl           String?
+  tiktokUrl              String?
+  youtubeUrl             String?
   updatedAt              DateTime @updatedAt
   updatedByEmail         String?
 }

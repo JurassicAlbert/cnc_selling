@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { Alert, Button, Stack, TextField } from '@mui/material';
+import { Alert, Button, Stack, TextField, Typography } from '@mui/material';
 
 import { ADMIN } from '@/content/pl/admin';
 import { updateStoreSettings } from '@/server/actions/admin-store-settings';
@@ -25,6 +25,10 @@ export function StoreSettingsForm({ settings }: { readonly settings: StoreSettin
       bankAccountNumber: String(formData.get('bankAccountNumber') ?? ''),
       bankAccountHolderPl: String(formData.get('bankAccountHolderPl') ?? ''),
       shippingFlatRateGrosze: grosze(formData, 'shippingFlatRatePln'),
+      facebookUrl: String(formData.get('facebookUrl') ?? ''),
+      instagramUrl: String(formData.get('instagramUrl') ?? ''),
+      tiktokUrl: String(formData.get('tiktokUrl') ?? ''),
+      youtubeUrl: String(formData.get('youtubeUrl') ?? ''),
     });
     setSaved(result.ok);
     return result;
@@ -57,6 +61,57 @@ export function StoreSettingsForm({ settings }: { readonly settings: StoreSettin
           size="small"
           sx={{ maxWidth: 320 }}
           helperText={ADMIN.settingsFieldShippingRateHelperPl}
+        />
+
+        {/*
+          The shop's social profiles, shown in the strip above the storefront
+          navigation (owner request, 2026-09-04). Empty by design until
+          somebody fills them in: a hard-coded profile URL would be a guess
+          about an account that may not exist, and the strip renders nothing
+          for a field left blank rather than an icon linking nowhere.
+
+          `type="url"` for the keyboard it brings up, not for validation -
+          the real check is server-side in `applyUpdateStoreSettings`
+          (absolute https only, because these become an `href` on every page
+          of the storefront).
+        */}
+        <Typography variant="subtitle2" sx={{ pt: 1 }}>
+          {ADMIN.settingsSocialHeadingPl}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          {ADMIN.settingsSocialHelperPl}
+        </Typography>
+        <TextField
+          label={ADMIN.settingsFieldFacebookPl}
+          name="facebookUrl"
+          type="url"
+          placeholder="https://www.facebook.com/..."
+          defaultValue={fieldValue('facebookUrl', settings.facebookUrl ?? '')}
+          size="small"
+        />
+        <TextField
+          label={ADMIN.settingsFieldInstagramPl}
+          name="instagramUrl"
+          type="url"
+          placeholder="https://www.instagram.com/..."
+          defaultValue={fieldValue('instagramUrl', settings.instagramUrl ?? '')}
+          size="small"
+        />
+        <TextField
+          label={ADMIN.settingsFieldTiktokPl}
+          name="tiktokUrl"
+          type="url"
+          placeholder="https://www.tiktok.com/@..."
+          defaultValue={fieldValue('tiktokUrl', settings.tiktokUrl ?? '')}
+          size="small"
+        />
+        <TextField
+          label={ADMIN.settingsFieldYoutubePl}
+          name="youtubeUrl"
+          type="url"
+          placeholder="https://www.youtube.com/@..."
+          defaultValue={fieldValue('youtubeUrl', settings.youtubeUrl ?? '')}
+          size="small"
         />
 
         <SubmitButton />

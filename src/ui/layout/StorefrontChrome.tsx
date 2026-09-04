@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { listActiveCategories } from '@/server/repositories/categories';
 import { listActiveCollections } from '@/server/repositories/collections';
 import { getCartSummaryForRequest } from '@/server/repositories/cart';
+import { getStoreSettings } from '@/server/repositories/store-settings';
 import { getSession } from '@/server/auth/session';
 import { readGuestSessionToken } from '@/server/session/read-guest-session';
 import { readConsentChoice } from '@/server/session/consent';
@@ -34,12 +35,16 @@ import { SiteTopBar } from '@/ui/primitives/SiteTopBar';
  * the lower-risk, equally-correct way to the same result.
  */
 export async function StorefrontChrome({ children }: { readonly children: ReactNode }) {
-  const [categories, collections, session, consentChoice, sessionToken] = await Promise.all([
+  const [categories, collections, session, consentChoice, sessionToken, storeSettings] = await Promise.all([
     listActiveCategories(),
     listActiveCollections(),
     getSession(),
     readConsentChoice(),
     readGuestSessionToken(),
+    // The social profiles for the strip above the navigation. Read here with
+    // the rest of the chrome's data rather than inside `SiteTopBar`, so it
+    // stays one round trip for the whole header.
+    getStoreSettings(),
   ]);
   // Cart summary depends on `session`/`sessionToken` above, so it's a
   // second read rather than folded into the first `Promise.all` - both
@@ -50,7 +55,14 @@ export async function StorefrontChrome({ children }: { readonly children: ReactN
     <>
       {/* UX-23's three header bands, in the reference layout's order: the
           slim strip, the navigation, then search across the full width. */}
-      <SiteTopBar />
+      <SiteTopBar
+        social={{
+          facebookUrl: storeSettings.facebookUrl,
+          instagramUrl: storeSettings.instagramUrl,
+          tiktokUrl: storeSettings.tiktokUrl,
+          youtubeUrl: storeSettings.youtubeUrl,
+        }}
+      />
       <SiteHeader
         categories={categories}
         collections={collections}

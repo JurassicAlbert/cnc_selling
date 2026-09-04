@@ -684,8 +684,8 @@ html {
   padding: 10px 14px;
   border: none;
   border-inline-end: 1px solid var(--mui-palette-divider);
-  background-color: var(--mui-palette-action-hover, rgba(0, 0, 0, 0.03));
-  color: var(--mui-palette-text-primary);
+  background-color: transparent;
+  color: var(--mui-palette-text-secondary);
   font: var(--mui-font-body2);
   cursor: pointer;
 }
@@ -708,24 +708,43 @@ html {
   outline-offset: -3px;
 }
 
+/*
+  Owner, 2026-09-04: "pasek jest za mocny - powinien być bardziej light jak z
+  linku". It was a filled dark block the width of its label, which made the
+  search band the heaviest thing on every page - heavier than the hero, and
+  heavier than the primary action on whatever page you were actually on.
+
+  The reference ends the field with a quiet magnifier instead, and it is
+  right: search is available everywhere, so it should be findable everywhere
+  and shout nowhere. The button keeps a real 44px target and a real focus
+  ring; only its weight is gone.
+*/
 .search-submit {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  /* 44px so the button is a comfortable touch target even when the label is
-     hidden on a narrow screen. */
   min-height: 44px;
-  padding-inline: 18px;
+  padding-inline: 16px;
   border: none;
-  background-color: var(--mui-palette-primary-main);
-  color: var(--mui-palette-background-paper);
+  background-color: transparent;
+  color: var(--mui-palette-text-secondary);
   font: var(--mui-font-button);
   letter-spacing: var(--mui-letter-spacing-button);
   cursor: pointer;
 }
 .search-submit:hover {
-  background-color: var(--mui-palette-primary-dark, var(--mui-palette-primary-main));
+  background-color: var(--mui-palette-action-hover, rgba(0, 0, 0, 0.04));
+  color: var(--mui-palette-text-primary);
+}
+.search-submit:focus-visible {
+  outline: 3px solid var(--mui-palette-secondary-main);
+  outline-offset: -3px;
+}
+/* The label goes at every width, not only on a phone: the icon carries it,
+   and the `aria-label` carries the name. */
+.search-submit-text {
+  display: none;
 }
 
 @media (max-width: 599px) {
@@ -741,13 +760,8 @@ html {
     border-inline-end: none;
     border-block-end: 1px solid var(--mui-palette-divider);
   }
-  /* The icon alone. The button keeps its `aria-label`, so it is still
-     announced as "Szukaj" - the text is what goes, not the name. */
-  .search-submit-text {
-    display: none;
-  }
   .search-submit {
-    padding-inline: 14px;
+    padding-inline: 12px;
   }
 }
 
@@ -808,6 +822,15 @@ html {
   }
   .site-topbar-row {
     justify-content: center;
+  }
+  /*
+    ...and with no profiles configured there is nothing left to tap, so the
+    strip goes too. Without this, a shop that has not filled in its social
+    links gets a bar of solid colour at the top of every page on a phone,
+    containing nothing at all. Found on the browser check, 2026-09-04.
+  */
+  .site-topbar--note-only {
+    display: none;
   }
 }
 
@@ -884,5 +907,144 @@ html {
      much space between them reads as a mistake. */
   .site-header-nav {
     gap: var(--space-3);
+  }
+}
+
+/*
+ * The checkout step rail - owner request 2026-09-04, "menu przejścia między
+ * etapami płatności", sitting between the search band and the page's own
+ * content.
+ *
+ * Three states, and none of them signalled by colour alone: the current step
+ * carries weight and a filled numeral, a completed one a check-coloured
+ * numeral and its own word („ukończony"), an upcoming one neither. Colour is
+ * the last layer, not the only one.
+ */
+.checkout-steps {
+  background-color: var(--mui-palette-background-paper);
+  border-bottom: 1px solid var(--mui-palette-divider);
+}
+.checkout-steps-track {
+  display: flex;
+  align-items: center;
+  /* Centred, as in the reference. Left-aligned it read as the first item of
+     the page's content rather than as a marker of where you are in a flow. */
+  justify-content: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  padding-block: var(--space-3);
+  list-style: none;
+  /* One line at any width. A wrapped rail stops reading as a sequence. */
+  overflow-x: auto;
+}
+.checkout-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+}
+/* The connector between steps, drawn on the item rather than between them so
+   it never appears before the first one. */
+.checkout-step + .checkout-step::before {
+  content: '';
+  display: block;
+  width: clamp(16px, 6vw, 64px);
+  height: 1px;
+  background-color: var(--mui-palette-divider);
+}
+.checkout-step-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 14px;
+  border-radius: 999px;
+  color: var(--mui-palette-text-secondary);
+  font: var(--mui-font-body2);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.checkout-step-body--link:hover {
+  background-color: var(--mui-palette-action-hover, rgba(0, 0, 0, 0.04));
+  color: var(--mui-palette-text-primary);
+}
+.checkout-step-body--link:focus-visible {
+  outline: 3px solid var(--mui-palette-secondary-main);
+  outline-offset: 2px;
+}
+/*
+  The numeral sits inline in the pill, as in the reference's "1. Cart",
+  rather than in a circle of its own. The circle was a second shape
+  competing with the pill around it, which is a lot of drawing for a
+  three-item rail.
+
+  It keeps a filled circle for the CURRENT step only, below - that one is
+  worth marking, and it is the step whose state the whole rail exists to
+  communicate.
+*/
+.checkout-step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  font: var(--mui-font-caption);
+  color: var(--mui-palette-text-secondary);
+}
+/* The state word is for assistive technology; the numeral and the weight
+   carry it on screen. */
+.checkout-step-state {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.checkout-step--current .checkout-step-body {
+  color: var(--mui-palette-background-paper);
+  background-color: var(--mui-palette-primary-main);
+  font-weight: 600;
+}
+.checkout-step--current .checkout-step-number {
+  /* Inside a filled pill the numeral needs to invert again, or it
+     disappears into the fill. */
+  background-color: rgba(255, 255, 255, 0.22);
+  color: var(--mui-palette-background-paper);
+}
+.checkout-step--current .checkout-step-number {
+  background-color: var(--mui-palette-primary-main);
+  color: var(--mui-palette-background-paper);
+}
+.checkout-step--done .checkout-step-number {
+  background-color: var(--mui-palette-secondary-main);
+  color: var(--mui-palette-background-paper);
+}
+.checkout-step--done .checkout-step-body {
+  color: var(--mui-palette-text-primary);
+}
+
+@media (max-width: 599px) {
+  /* The labels go and the numerals stay: three words plus three connectors
+     do not fit, and a rail that scrolls sideways hides the step you have not
+     reached, which is the one worth seeing. The label is still read out. */
+  .checkout-step-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .checkout-step--current .checkout-step-label {
+    position: static;
+    width: auto;
+    height: auto;
+    clip-path: none;
+  }
+  .checkout-step-body {
+    padding: 8px 10px;
   }
 }

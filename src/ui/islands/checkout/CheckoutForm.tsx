@@ -69,7 +69,7 @@ import { formatPln } from '@/domain/money/money';
 import { formatMmAsCentimetres } from '@/domain/text/numeric-input';
 import { submitCheckout } from '@/server/actions/checkout';
 import type { CheckoutFormState } from '@/server/actions/checkout';
-import type { CartView } from '@/server/repositories/cart';
+import type { CartDeliveryDraft, CartView } from '@/server/repositories/cart';
 import type { ActiveDeliveryMethod } from '@/server/repositories/delivery-methods';
 import type { ActivePaymentMethod } from '@/server/repositories/payment-methods';
 // A plain-data module (no `prisma`/Node-only imports) - safe to import as a
@@ -79,7 +79,33 @@ import { findPickupPointById, searchPickupPoints } from '@/server/delivery/picku
 
 // Not exported from checkout.ts itself: a 'use server' file may only
 // export async functions, never a plain data constant.
-const INITIAL_CHECKOUT_STATE: CheckoutFormState = { fieldErrors: {}, formError: null, values: {} };
+/**
+ * The form starts pre-filled from whatever the customer already typed on the
+ * cart page (owner request, 2026-09-04). Without this the cart's address
+ * form would be theatre: it would look like progress and produce none,
+ * because the very next page would ask for all of it again.
+ *
+ * Only ever a starting value. Everything here is uncontrolled
+ * (`defaultValue`), so the draft seeds the first render and the customer
+ * owns the fields from then on; and a failed submission's own values take
+ * precedence, because those are more recent than the draft.
+ */
+function initialCheckoutState(draft: CartDeliveryDraft): CheckoutFormState {
+  return {
+    fieldErrors: {},
+    formError: null,
+    values: {
+      email: draft.email ?? undefined,
+      phone: draft.phone ?? undefined,
+      firstName: draft.firstName ?? undefined,
+      lastName: draft.lastName ?? undefined,
+      street: draft.street ?? undefined,
+      postalCode: draft.postalCode ?? undefined,
+      city: draft.city ?? undefined,
+      courierNotePl: draft.courierNotePl ?? undefined,
+    },
+  };
+}
 
 export function CheckoutForm({
   cart,
@@ -93,7 +119,7 @@ export function CheckoutForm({
   /** This form's own submission id, minted once per page render - see the page's own comment and `docs/AUDIT-2026-08-30.md` P0-2. */
   readonly idempotencyKey: string;
 }) {
-  const [state, formAction] = useActionState(submitCheckout, INITIAL_CHECKOUT_STATE);
+  const [state, formAction] = useActionState(submitCheckout, initialCheckoutState(cart.deliveryDraft));
   const [renderKey, setRenderKey] = useState(0);
   const isFirstRender = useRef(true);
   // biome-ignore lint/correctness/useExhaustiveDependencies: deliberately keyed on state's reference identity (any new object from useActionState), not its contents

@@ -627,6 +627,22 @@ export const ADMIN = {
   settingsFieldBankAccountHolderPl: 'Odbiorca przelewu',
   settingsFieldShippingRatePl: 'Stawka wysyłki (zł) - nieużywana',
   settingsFieldShippingRateHelperPl: 'Zastąpione przez „Metody dostawy” (P9 faza 5) - ta wartość nie jest już używana przy składaniu zamówienia i pozostaje tylko dla zgodności wstecznej.',
+  /*
+    The shop's social profiles, shown in the strip above the storefront
+    navigation (owner request, 2026-09-04: "navbar nad navbarem dotyczy
+    mediów fb insta itd nie podstron").
+
+    Settings rather than constants, because a hard-coded profile URL would be
+    a guess about an account that may not exist. Anything left blank simply
+    does not appear in the strip.
+  */
+  settingsSocialHeadingPl: 'Profile w mediach społecznościowych',
+  settingsSocialHelperPl:
+    'Pokazujemy je w pasku nad menu sklepu. Pole zostawione puste nie pojawi się w ogóle - nie podajemy adresów, których nie potwierdzisz. Wymagany pełny adres zaczynający się od https://.',
+  settingsFieldFacebookPl: 'Facebook',
+  settingsFieldInstagramPl: 'Instagram',
+  settingsFieldTiktokPl: 'TikTok',
+  settingsFieldYoutubePl: 'YouTube',
   settingsSavedNoticePl: 'Zapisano.',
 
   settingsAnalyticsSectionHeadingPl: 'Dane analityczne',

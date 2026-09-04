@@ -10,6 +10,7 @@ import { findCartForRequest } from '@/server/repositories/cart';
 import { recordAnalyticsEvent } from '@/server/analytics/record-event';
 import { resolveDeliveryMethodsForCart } from '@/server/repositories/delivery-methods';
 import { listActivePaymentMethods } from '@/server/repositories/payment-methods';
+import { CheckoutSteps } from '@/ui/primitives/CheckoutSteps';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
 import { Section } from '@/ui/primitives/Section';
@@ -53,31 +54,35 @@ export default async function CheckoutPage() {
   void recordAnalyticsEvent({ name: 'checkout_started', sessionToken, userId: session?.userId ?? null });
 
   return (
-    <Section>
-      <Container>
-        <Heading level={1}>{SITE.checkoutHeadingPl}</Heading>
+    <>
+      <CheckoutSteps current="DETAILS" />
 
-        <div style={{ marginBlockStart: 32 }}>
-          <ThemeRegistry>
-            {/**
-             * One id per render of this page, carried into the form as a
-             * hidden field - `docs/AUDIT-2026-08-30.md` P0-2. Every
-             * resubmission of this same rendered form (double click,
-             * retried request, back-and-resubmit) therefore carries the
-             * SAME value, and `createOrder` returns the first attempt's
-             * order instead of creating a second one. Generated here rather
-             * than in the action for exactly that reason: the action runs
-             * once per submission, this runs once per form.
-             */}
-            <CheckoutForm
-              cart={cart}
-              deliveryMethods={deliveryMethods}
-              paymentMethods={paymentMethods}
-              idempotencyKey={randomUUID()}
-            />
-          </ThemeRegistry>
-        </div>
-      </Container>
-    </Section>
+      <Section>
+        <Container>
+          <Heading level={1}>{SITE.checkoutHeadingPl}</Heading>
+
+          <div style={{ marginBlockStart: 32 }}>
+            <ThemeRegistry>
+              {/**
+               * One id per render of this page, carried into the form as a
+               * hidden field - `docs/AUDIT-2026-08-30.md` P0-2. Every
+               * resubmission of this same rendered form (double click,
+               * retried request, back-and-resubmit) therefore carries the
+               * SAME value, and `createOrder` returns the first attempt's
+               * order instead of creating a second one. Generated here rather
+               * than in the action for exactly that reason: the action runs
+               * once per submission, this runs once per form.
+               */}
+              <CheckoutForm
+                cart={cart}
+                deliveryMethods={deliveryMethods}
+                paymentMethods={paymentMethods}
+                idempotencyKey={randomUUID()}
+              />
+            </ThemeRegistry>
+          </div>
+        </Container>
+      </Section>
+    </>
   );
 }

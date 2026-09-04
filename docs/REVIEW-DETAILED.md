@@ -2150,3 +2150,112 @@ browser projects. The one flake left visible rather than papered over is
 `accounts.spec.ts` timing out inside `checkReliably` under eight workers and
 passing in isolation - the contention `workers: 1` avoids in CI, whose real
 repair is **ARCH-03**.
+
+---
+
+## UX-25 - The cart's second pass: stages, an address, and the reference's lightness
+
+- **Status:** **RESOLVED 2026-09-04**
+- **Severity:** P2
+- **Area:** UX / UI
+- **Files:** [src/ui/primitives/checkout-steps.ts](src/ui/primitives/checkout-steps.ts), [src/ui/primitives/CheckoutSteps.tsx](src/ui/primitives/CheckoutSteps.tsx), [src/ui/islands/cart/CartContents.tsx](src/ui/islands/cart/CartContents.tsx), [src/ui/islands/cart/CartDeliveryDraftForm.tsx](src/ui/islands/cart/CartDeliveryDraftForm.tsx), [src/server/operations/cart-delivery-draft.ts](src/server/operations/cart-delivery-draft.ts), [src/ui/primitives/SiteTopBar.tsx](src/ui/primitives/SiteTopBar.tsx)
+
+Owner review of UX-23, in three messages: the cart was still "za biedny", it
+should "match the lightness and ui/ux" of `template.getbazaar.io/cart`, and
+the strip above the navigation is for social profiles rather than our own
+subpages.
+
+**The stage rail.** Three steps, not the reference's four. The shop has three
+pages in this flow; the payment method is chosen on the order form and the
+transfer is made in the customer's own bank, because no provider is
+integrated. A „Płatność" step would be pointing at a page that does not
+exist, which is the navigational form of promising a feature the shop does
+not have. Only a completed step is a link, and from the confirmation page
+nothing is: the order consumed the cart, so "back to the cart" leads to an
+empty one and "back to the order form" invites a second order for one
+purchase.
+
+**The address on the cart page.** Eight fields and a courier note, saved as a
+draft on the `Cart` and used to pre-fill the order form. The round trip is
+the entire point - a cart that collects an address and then asks for it again
+on the next page looks like progress and produces none - and it is the one
+thing only a browser could prove, because it spans two pages, a Server
+Action, a database column and an uncontrolled `defaultValue`. Deliberately
+unvalidated on write: it is saved while somebody is still typing, so refusing
+a half-finished postcode would make the form unusable. `createOrder`'s
+validation is unchanged and still binding.
+
+**The lightness.** Every panel lost `variant="outlined"` for a soft shadow on
+paper; the search band's filled dark submit button became a quiet magnifier;
+the rail is centred with the current step as a filled pill. The palette stays
+this shop's own warm ground and warm paper. What was borrowed is the weight,
+not the colour.
+
+**The item card took two attempts.** The first put all five columns on one
+row as the reference does - and the reference has three controls where this
+shop had seven, so the product name was squeezed to about forty pixels and
+wrapped one word per line. The fix was to give the reference's exact top row
+(image, name over unit price, stepper, line total, remove) and demote
+everything else to a quiet second line. The owner then removed that second
+line entirely.
+
+**The topbar.** Social profiles are `StoreSettings` fields the owner fills
+in, validated as absolute https URLs - they become an `href` on every page of
+the storefront, which makes them the widest-rendered piece of admin-editable
+content in the shop, and `javascript:` there would be stored XSS everywhere
+at once. Hard-coding a profile URL was never an option: it would be inventing
+an account that may not exist. Nothing renders for a field left blank, and on
+a phone (where the note is hidden anyway) the strip does not render at all
+rather than leaving a bar of solid colour containing nothing - found on the
+browser check.
+
+**Removed at the owner's request, and worth recording.** „Aktualizuj",
+„Duplikuj" and „Edytuj" are gone from the cart card. Re-opening a line in the
+configurator is now reached from „Moje projekty", which builds the same
+`?edit=` link; reaching the maximum of twenty-five is twenty-four presses of
+the stepper. `updateCartItemQuantity` and `duplicateCartItem` still exist and
+are still covered by `cart-operations.test.ts`, but nothing in the UI calls
+them - they are `'use server'` exports with no caller, which is a decision
+someone should make rather than a state to leave indefinitely.
+
+**Evidence.** `checkout-steps.test.ts` (7), `cart-delivery-draft.test.ts`
+(6) and three social-profile cases in `admin-store-settings.test.ts`, all
+written first and all failing for the right reason.
+`tests/e2e/cart-delivery-draft.spec.ts` drives the cart-to-checkout round
+trip in a real browser. Two migrations. Browser-verified at 1024px and 375px.
+1090 -> 1106 unit/integration; e2e 68 -> 72, all passing.
+
+---
+
+## T-25 - A stale `next start` made 31 e2e tests fail against last hour's build
+
+- **Status:** **RESOLVED 2026-09-04** (recorded; the guard is procedural)
+- **Severity:** P2
+- **Area:** tests / tooling
+
+A full suite run came back **31 failed / 37 passed**, across areas with
+nothing in common - admin authorization, the warehouse, checkout, the custom
+upload, the cart. The obvious reading was that the change under test had
+broken something fundamental.
+
+It had not. `playwright.config.ts` sets `reuseExistingServer:
+!process.env.CI`, a leftover `next start` was still listening on port 3000
+from an earlier run, and `next start` reads the build once at boot. So the
+current specs ran against a `.next` from an hour earlier.
+
+**The tell is in the log, and it is an absence.** A real run prints about 125
+`[WebServer]` lines as it builds; this one printed none. Killing the process
+and re-running gave **68 passed / 68**.
+
+Not fixed by disabling reuse: the setting exists so that iterating on a
+single spec does not pay for a full rebuild each time, which is worth real
+minutes. What was missing was any signal that it had fired. The check is one
+line against the run log:
+
+```
+grep -c '^\[WebServer\]' <log>     # 0 means nothing was built
+```
+
+Second time this has cost a debugging session - the first was during the
+warehouse work, where a stale server on port 3000 served an older build and
+produced a 500 that did not exist in the code.

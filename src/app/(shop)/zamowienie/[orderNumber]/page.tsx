@@ -8,6 +8,7 @@ import { findReviewStatusForOrder } from '@/server/repositories/reviews';
 import { getStoreSettings } from '@/server/repositories/store-settings';
 import { submitGuestReview } from '@/server/actions/reviews';
 import { submitOrderSupportRequest } from '@/server/actions/support-requests';
+import { CheckoutSteps } from '@/ui/primitives/CheckoutSteps';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
 import { OrderShipmentInfo } from '@/ui/primitives/OrderShipmentInfo';
@@ -66,9 +67,17 @@ export default async function OrderConfirmationPage({ params, searchParams }: Or
   ]);
 
   return (
-    <Section>
-      <Container>
-        <Heading level={1}>{SITE.orderConfirmationHeadingPl}</Heading>
+    <>
+      {/* The last step of the rail, so a customer who has just paid can see
+          the flow finished rather than only its middle. Nothing on it is a
+          link from here: the order consumed the cart, so "back to the cart"
+          leads to an empty one, and "back to the order form" would invite a
+          second order for one purchase. */}
+      <CheckoutSteps current="CONFIRMATION" />
+
+      <Section>
+        <Container>
+          <Heading level={1}>{SITE.orderConfirmationHeadingPl}</Heading>
 
         <div style={{ marginBlockStart: 24, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <Text>
@@ -113,7 +122,8 @@ export default async function OrderConfirmationPage({ params, searchParams }: Or
             </div>
           </ThemeRegistry>
         </div>
-      </Container>
-    </Section>
+        </Container>
+      </Section>
+    </>
   );
 }

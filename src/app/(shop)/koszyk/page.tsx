@@ -8,6 +8,7 @@ import { findCartForRequest } from '@/server/repositories/cart';
 import { listActiveCategories } from '@/server/repositories/categories';
 import { CartContents } from '@/ui/islands/cart/CartContents';
 import { CategoryRail } from '@/ui/primitives/CategoryRail';
+import { CheckoutSteps } from '@/ui/primitives/CheckoutSteps';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
 import { Section } from '@/ui/primitives/Section';
@@ -49,6 +50,12 @@ export default async function CartPage() {
 
   return (
     <>
+      {/* Owner request, 2026-09-04: a rail showing the stages of the order,
+          below the search band and above the cart itself. Outside `Section`
+          so it spans the full width, the way the rest of the storefront
+          chrome does. */}
+      <CheckoutSteps current="CART" />
+
       <Section>
         <Container>
           <Heading level={1}>{SITE.cartHeadingPl}</Heading>

@@ -48,13 +48,51 @@ export type CartItemView = {
   readonly customDesignStatus: 'PENDING_REVIEW' | 'APPROVED' | 'NEEDS_CHANGES' | 'REJECTED' | null;
 };
 
+/**
+ * The delivery details typed on the cart page, before there is an order to
+ * attach them to. Owner request, 2026-09-04. `null` for anything not filled
+ * in - which is every field, for every cart, until somebody types something.
+ *
+ * A draft that only ever pre-fills the checkout form. The order captures its
+ * own copy of the buyer's details at checkout and is never re-read from
+ * here, because a customer who moves house must not retroactively change
+ * where an old order went.
+ */
+export type CartDeliveryDraft = {
+  readonly email: string | null;
+  readonly phone: string | null;
+  readonly firstName: string | null;
+  readonly lastName: string | null;
+  readonly street: string | null;
+  readonly postalCode: string | null;
+  readonly city: string | null;
+  readonly courierNotePl: string | null;
+};
+
+export const EMPTY_DELIVERY_DRAFT: CartDeliveryDraft = {
+  email: null,
+  phone: null,
+  firstName: null,
+  lastName: null,
+  street: null,
+  postalCode: null,
+  city: null,
+  courierNotePl: null,
+};
+
 export type CartView = {
   readonly cartId: string;
   readonly items: readonly CartItemView[];
   readonly subtotalGrossGrosze: number;
+  readonly deliveryDraft: CartDeliveryDraft;
 };
 
-const EMPTY_CART: CartView = { cartId: '', items: [], subtotalGrossGrosze: 0 };
+const EMPTY_CART: CartView = {
+  cartId: '',
+  items: [],
+  subtotalGrossGrosze: 0,
+  deliveryDraft: EMPTY_DELIVERY_DRAFT,
+};
 
 export type SavedConfigurationView = {
   readonly configurationId: string;
@@ -199,6 +237,14 @@ export async function findCartForRequest(params: {
     where: userId !== null ? { userId } : { sessionToken },
     select: {
       id: true,
+      draftEmail: true,
+      draftPhone: true,
+      draftFirstName: true,
+      draftLastName: true,
+      draftStreet: true,
+      draftPostalCode: true,
+      draftCity: true,
+      draftCourierNotePl: true,
       items: {
         orderBy: { addedAt: 'asc' },
         select: {
@@ -286,5 +332,19 @@ export async function findCartForRequest(params: {
     0,
   );
 
-  return { cartId: cart.id, items, subtotalGrossGrosze };
+  return {
+    cartId: cart.id,
+    items,
+    subtotalGrossGrosze,
+    deliveryDraft: {
+      email: cart.draftEmail,
+      phone: cart.draftPhone,
+      firstName: cart.draftFirstName,
+      lastName: cart.draftLastName,
+      street: cart.draftStreet,
+      postalCode: cart.draftPostalCode,
+      city: cart.draftCity,
+      courierNotePl: cart.draftCourierNotePl,
+    },
+  };
 }
