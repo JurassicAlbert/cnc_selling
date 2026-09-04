@@ -987,12 +987,15 @@ const CATEGORY_SEEDS: readonly CategorySeed[] = [
   {
     slug: 'loft',
     namePl: 'Loft',
+    // Deactivated 2026-09-04 at the owner's request ("z kategorii wyłączyć na
+    // razie loft"). The category and its stool are intact, so re-enabling is
+    // one boolean; nothing about the product was deleted.
     descPl:
       'Stołki, półki i małe stoliki łączące metalową podstawę w stylu loft z drewnianym blatem z grawerem.',
     seoTitlePl: 'Meble loft z grawerem - stołki, półki, stoliki',
     seoDescPl: 'Drewniane blaty z grawerem na metalowej podstawie w stylu loft. Wykonanie na zamówienie.',
     sortOrder: 1,
-    isActive: true,
+    isActive: false,
   },
   {
     slug: 'amulety-i-bransoletki',
@@ -1049,11 +1052,16 @@ const CATEGORY_SEEDS: readonly CategorySeed[] = [
     imageUrl: null,
   },
   {
-    slug: 'inne',
-    namePl: 'Inne',
-    descPl: 'Projekty nietypowe, wykraczające poza pozostałe kategorie - wycena indywidualna.',
-    seoTitlePl: 'Inne realizacje z grawerem',
-    seoDescPl: 'Nietypowe zlecenia z grawerem, wykonywane na indywidualne zamówienie.',
+    // Renamed from "Inne" 2026-09-04, owner: "inne to powinno być zamówienie
+    // własne". It already held exactly one product, the CUSTOM_UPLOAD
+    // "Własny projekt z grawerem", so this makes the label describe what the
+    // category has always contained rather than changing what is in it. The
+    // slug moves with the name because nothing links to /inne yet.
+    slug: 'zamowienie-wlasne',
+    namePl: 'Zamówienie własne',
+    descPl: 'Prześlij własny projekt, a wykonamy go na wybranym materiale i w wybranym rozmiarze. Wycena indywidualna.',
+    seoTitlePl: 'Zamówienie własne z grawerem - Twój projekt',
+    seoDescPl: 'Prześlij własny wzór i zamów grawer na drewnie lub gresie. Wycena indywidualna.',
     sortOrder: 7,
     isActive: true,
   },

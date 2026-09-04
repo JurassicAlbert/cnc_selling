@@ -114,6 +114,14 @@ export const PersonIcon = makeIcon(
 /** Dropdown chevron - rotated 180° via `.nav-dropdown[open] &` in `theme-vars.css`, not a second icon. */
 export const ExpandMoreIcon = makeIcon('M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z');
 
+/** The three bars. Only ever rendered below 900px, by `SiteHeader`'s burger. */
+export const MenuIcon = makeIcon('M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z');
+
+/** Shown in place of the bars while the burger panel is open. */
+export const CloseIcon = makeIcon(
+  'M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
+);
+
 export const ContentCopyIcon = makeIcon(
   'M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2m0 16H8V7h11z',
 );

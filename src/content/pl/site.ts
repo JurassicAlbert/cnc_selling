@@ -305,6 +305,10 @@ export const SITE = {
   legalTermsHeadingPl: 'Regulamin',
   legalPrivacyHeadingPl: 'Polityka prywatności',
 
+  // The burger's accessible name. Never rendered as visible text: below
+  // 900px the control is the icon alone, so a screen reader is the only
+  // consumer of this string.
+  headerMenuTogglePl: 'Menu',
   headerAccountLinkPl: 'Moje konto',
   headerLoginLinkPl: 'Zaloguj się',
   headerLogoutPl: 'Wyloguj się',

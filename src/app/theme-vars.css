@@ -528,3 +528,103 @@ html {
   background-color: color-mix(in srgb, var(--mui-palette-secondary-main) 8%, transparent);
   border-color: var(--mui-palette-secondary-main);
 }
+
+/*
+ * Responsive navigation, added 2026-09-04 at the owner's request ("the navbar
+ * should have a burger, hidden navigation for RWD").
+ *
+ * Zero client JavaScript: a checkbox and its label carry the open state,
+ * because `SiteHeader` is a Server Component and MUI is lint-banned from this
+ * route group (ARCHITECTURE.md §2.1).
+ *
+ * Not the `<details>` the dropdowns inside it use. A closed `<details>` has
+ * its content hidden by the user agent via `::details-content`, which author
+ * CSS cannot reliably override, so the desktop row measured zero pixels wide.
+ *
+ * Everything here fails in the right direction: the panel is a plain flex row
+ * by default and is only hidden under the breakpoint, so a browser that
+ * ignores the media query, or that never loads this file, shows the whole
+ * navigation rather than none of it.
+ */
+.nav-burger-checkbox {
+  /* Off-screen rather than `display: none`, so it stays keyboard-focusable
+     and the label's focus ring below has something to react to. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.nav-burger-toggle {
+  display: none;
+}
+.nav-burger-panel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+@media (max-width: 899px) {
+  .nav-burger-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 44px is the minimum comfortable touch target, not a design flourish. */
+    min-width: 44px;
+    min-height: 44px;
+    margin-inline-start: auto;
+    border-radius: 4px;
+    color: var(--mui-palette-text-primary);
+    cursor: pointer;
+  }
+  .nav-burger-toggle:hover {
+    background-color: var(--mui-palette-action-hover, rgba(0, 0, 0, 0.04));
+  }
+  .nav-burger-checkbox:focus-visible + .nav-burger-toggle {
+    outline: 3px solid var(--mui-palette-secondary-main);
+    outline-offset: 2px;
+  }
+
+  /* One icon at a time: bars when closed, a cross when open. */
+  .nav-burger-close-icon {
+    display: none;
+  }
+  .nav-burger-checkbox:checked + .nav-burger-toggle .nav-burger-open-icon {
+    display: none;
+  }
+  .nav-burger-checkbox:checked + .nav-burger-toggle .nav-burger-close-icon {
+    display: block;
+  }
+
+  .nav-burger-panel {
+    display: none;
+  }
+  .nav-burger-checkbox:checked ~ .nav-burger-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-1);
+    padding: var(--space-3);
+    background-color: var(--mui-palette-background-paper);
+    border-top: 1px solid var(--mui-palette-divider);
+    box-shadow: var(--shadow-md);
+  }
+  /* Inside the panel the sub-dropdowns stack in flow instead of floating over
+     the page: an absolutely positioned panel inside an absolutely positioned
+     panel is unreachable on a phone. */
+  .nav-burger-checkbox:checked ~ .nav-burger-panel .nav-dropdown-panel {
+    position: static;
+    min-width: 0;
+    padding-inline-start: var(--space-4);
+    border: none;
+    box-shadow: none;
+  }
+  .nav-burger-checkbox:checked ~ .nav-burger-panel .nav-link {
+    min-height: 44px;
+  }
+}

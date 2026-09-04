@@ -3,11 +3,13 @@ import Link from 'next/link';
 import { formatPln } from '@/domain/money/money';
 import {
   CartIcon,
+  CloseIcon,
   CollectionsIcon,
   ExpandMoreIcon,
   GridViewIcon,
   HelpIcon,
   InfoIcon,
+  MenuIcon,
   PersonIcon,
   PrecisionManufacturingIcon,
 } from '@/ui/icons';
@@ -109,47 +111,84 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
             RYT
           </Link>
 
-          <details className="nav-dropdown">
-            <summary className="nav-link" style={{ font: 'var(--mui-font-body2)', cursor: 'pointer', listStyle: 'none' }}>
-              <GridViewIcon size={18} />
-              {SITE.headerProductsMenuPl}
-              <ExpandMoreIcon size={16} className="nav-dropdown-chevron" style={{ marginInlineStart: 2 }} />
-            </summary>
-            <div className="nav-dropdown-panel">
-              {categories.map((category) => (
-                <Link key={category.slug} href={`/${category.slug}`} className="nav-dropdown-item">
-                  {category.namePl}
-                </Link>
-              ))}
-            </div>
-          </details>
+          {/*
+            Below 900px these four collapse behind a burger; above it the
+            panel is styled back into a plain flex row and the toggle is
+            hidden, so desktop markup and desktop appearance are unchanged.
+            A `<details>` rather than a button because this header is a
+            Server Component with no client JS at all - the same reason the
+            dropdowns inside it are `<details>` too.
 
-          <Link href="/o-nas" className="nav-link" style={{ font: 'var(--mui-font-body2)' }}>
-            <InfoIcon size={18} />
-            {SITE.aboutHeadingPl}
-          </Link>
-          <Link href="/faq" className="nav-link" style={{ font: 'var(--mui-font-body2)' }}>
-            <HelpIcon size={18} />
-            {SITE.headerFaqLinkPl}
-          </Link>
+            The logo, the cart and the account menu stay outside: on a phone
+            the cart is the one control a shopper must never have to open a
+            menu to find.
+          */}
+          {/*
+            A checkbox and a label, not the `<details>` this file uses for its
+            dropdowns, and the difference matters. A closed `<details>` has its
+            content hidden by the user agent through `::details-content`, which
+            author CSS cannot reliably override, so the desktop row came out
+            zero pixels wide - measured, not guessed. The checkbox puts the
+            open/closed state entirely in CSS.
 
-          <details className="nav-dropdown">
-            <summary className="nav-link" style={{ font: 'var(--mui-font-body2)', cursor: 'pointer', listStyle: 'none' }}>
-              <CollectionsIcon size={18} />
-              {SITE.headerCollectionsMenuPl}
-              <ExpandMoreIcon size={16} className="nav-dropdown-chevron" style={{ marginInlineStart: 2 }} />
-            </summary>
-            <div className="nav-dropdown-panel">
-              <Link href="/kolekcje" className="nav-dropdown-item" style={{ fontWeight: 600 }}>
-                {SITE.headerAllCollectionsLinkPl}
-              </Link>
-              {collections.map((collection) => (
-                <Link key={collection.slug} href={`/kolekcje/${collection.slug}`} className="nav-dropdown-item">
-                  {collection.namePl}
+            It also fails in the right direction. The panel is visible by
+            default and only hidden under the breakpoint, so a browser that
+            ignores the media query, or loses the stylesheet altogether, shows
+            the full navigation rather than none of it.
+          */}
+          <input
+            type="checkbox"
+            id="nav-burger-toggle"
+            className="nav-burger-checkbox"
+            aria-label={SITE.headerMenuTogglePl}
+          />
+          <label htmlFor="nav-burger-toggle" className="nav-burger-toggle">
+            <MenuIcon size={22} className="nav-burger-open-icon" />
+            <CloseIcon size={22} className="nav-burger-close-icon" />
+          </label>
+          <div className="nav-burger-panel">
+            <details className="nav-dropdown">
+              <summary className="nav-link" style={{ font: 'var(--mui-font-body2)', cursor: 'pointer', listStyle: 'none' }}>
+                <GridViewIcon size={18} />
+                {SITE.headerProductsMenuPl}
+                <ExpandMoreIcon size={16} className="nav-dropdown-chevron" style={{ marginInlineStart: 2 }} />
+              </summary>
+              <div className="nav-dropdown-panel">
+                {categories.map((category) => (
+                  <Link key={category.slug} href={`/${category.slug}`} className="nav-dropdown-item">
+                    {category.namePl}
+                  </Link>
+                ))}
+              </div>
+            </details>
+
+            <Link href="/o-nas" className="nav-link" style={{ font: 'var(--mui-font-body2)' }}>
+              <InfoIcon size={18} />
+              {SITE.aboutHeadingPl}
+            </Link>
+            <Link href="/faq" className="nav-link" style={{ font: 'var(--mui-font-body2)' }}>
+              <HelpIcon size={18} />
+              {SITE.headerFaqLinkPl}
+            </Link>
+
+            <details className="nav-dropdown">
+              <summary className="nav-link" style={{ font: 'var(--mui-font-body2)', cursor: 'pointer', listStyle: 'none' }}>
+                <CollectionsIcon size={18} />
+                {SITE.headerCollectionsMenuPl}
+                <ExpandMoreIcon size={16} className="nav-dropdown-chevron" style={{ marginInlineStart: 2 }} />
+              </summary>
+              <div className="nav-dropdown-panel">
+                <Link href="/kolekcje" className="nav-dropdown-item" style={{ fontWeight: 600 }}>
+                  {SITE.headerAllCollectionsLinkPl}
                 </Link>
-              ))}
-            </div>
-          </details>
+                {collections.map((collection) => (
+                  <Link key={collection.slug} href={`/kolekcje/${collection.slug}`} className="nav-dropdown-item">
+                    {collection.namePl}
+                  </Link>
+                ))}
+              </div>
+            </details>
+          </div>
 
           <Link
             href="/koszyk"
