@@ -1878,3 +1878,176 @@ changes.
 | `CHECKLIST.md:81` - step guards "reject a THICKNESS selection on WALL_ART" | never called | BUG-06 |
 | `DeliveryMethod.freeShippingThresholdGrosze` - "(net)" | compared against gross | BUG-08 |
 | `public-images.ts` - "deployment target is a long-running Node server" | §3 names Vercel | SEC-06 |
+
+---
+
+## SEC-11 - `upgrade-insecure-requests` made the whole site fail to load in Safari over http
+
+- **Status:** **RESOLVED 2026-09-04** · CONFIRMED BUG
+- **Severity:** P1
+- **Area:** security headers / deployment
+- **Files:** [src/server/security/headers.ts](src/server/security/headers.ts), [src/proxy.ts](src/proxy.ts)
+
+**New finding**, introduced by SEC-05 on 2026-08-31 and found on 2026-09-04
+while browser-verifying UX-21.
+
+**Symptom.** Every `mobile-safari` e2e spec that needed a hydrated client
+island failed, while the identical `desktop-chromium` spec passed. The page
+rendered as unstyled server HTML with no interactivity. The console showed one
+line per asset:
+
+```
+[requestfailed] https://localhost:3000/_next/static/chunks/turbopack-*.js  SSL connect error
+```
+
+Note the scheme. The server is listening on **http**.
+
+**Cause.** SEC-05's CSP emits `upgrade-insecure-requests`, which rewrites every
+http subresource URL to https before the request leaves the browser. It was
+gated on `isDev` (`NODE_ENV === 'development'`), and the comment beside it
+said so: "under `next dev` the origin is plain http://localhost, and upgrading
+it breaks the dev server outright".
+
+That is the right hazard and the wrong condition. A **production build**
+served over plain http is routine - a staging box, a LAN preview, a container
+behind a proxy that terminates TLS elsewhere, and this repo's own e2e suite,
+which runs `next build && next start` on `http://localhost:3000`. In all of
+those `isDev` is false, the directive is emitted, and the page's own scripts,
+styles and fonts are upgraded to an origin with no TLS listener.
+
+**Why it survived a desktop suite, a browser check and a full CI design.**
+Chromium exempts loopback from the upgrade; WebKit does not. Every check run
+during SEC-05's own verification was Chromium, including
+`security-headers.spec.ts`'s "hydrates and runs a Server Action under the
+enforced policy" - which is precisely the spec written to catch this, and
+which was failing on `mobile-safari` the whole time inside a suite that was
+already red for other reasons.
+
+**Fix.** The condition is a property of the *request*, not of the build:
+`isSecureRequest({ protocol, forwardedProto })` reads
+`request.nextUrl.protocol`, falling back to `x-forwarded-proto` for TLS
+terminated at a load balancer, and `buildContentSecurityPolicy` now takes a
+required `isSecure`. Required rather than defaulted: a caller that forgets it
+is how this happened once already.
+
+`x-forwarded-proto` is forgeable by anyone who can reach the process
+directly, and that is acceptable: the worst a forged value does is add the
+directive to, or remove it from, the forger's own response. HSTS is the
+control that keeps a real visitor on https.
+
+**Evidence.** Full e2e suite, both browser projects, before and after the one
+change: **20 failed / 34 passed → 13 failed / 43 passed**, and the eight
+recovered specs are exactly the ones that need client JavaScript. Unit
+coverage in `tests/unit/security-headers.test.ts` (https, http, dev) and
+`tests/unit/proxy.test.ts` (protocol, `x-forwarded-proto`, multi-hop, http
+hop).
+
+---
+
+## T-23 - The e2e suite could never have been green
+
+- **Status:** **RESOLVED 2026-09-04** · CONFIRMED
+- **Severity:** P1 (it blocks CI, which has never yet run)
+- **Area:** tests
+- **Files:** [tests/e2e/fixtures.ts](tests/e2e/fixtures.ts), [tests/e2e/rate-limit-reset.ts](tests/e2e/rate-limit-reset.ts), [tests/e2e/shell.spec.ts](tests/e2e/shell.spec.ts), [tests/e2e/custom-upload.spec.ts](tests/e2e/custom-upload.spec.ts), [tests/e2e/design-review-customer.spec.ts](tests/e2e/design-review-customer.spec.ts)
+
+Found by fixing SEC-11: once WebKit could run JavaScript again, the suite got
+far enough to expose four independent problems that had been hidden behind it.
+
+**1. More registrations than SEC-01 allows.** Six specs register an account,
+across two browser projects: twelve registrations per run against
+`registerPerIp`'s limit of ten per day, before CI's two retries multiply it
+again. The failure is silent - the form simply stays on `/rejestracja`. The
+2026-09-04 `globalSetup` cleared the counters once per suite, which cannot
+help with a limit exceeded *within* a run.
+
+Fixed with an `auto` fixture (`tests/e2e/fixtures.ts`) that clears the
+**loopback** counters before every test; the four registering specs import
+`test` from there instead of from `@playwright/test`. Deliberately not fixed by
+raising `registerPerIp`: that limit is a real control, and moving it so a test
+suite fits is changing the product to suit the tests.
+
+**2. `shell.spec.ts` still navigated through Loft.** The owner retired that
+category on 2026-09-04 and this spec was not updated with it, so it failed
+against a homepage behaving exactly as asked. Repointed at Obrazy. Gres went
+the same way on 2026-08-28: the lesson is that this file has to move with the
+catalogue.
+
+**3. Two specs asserted on transient success messages.** `custom-upload`
+waited for „Projekt został przesłany." - an alert the successful upload itself
+hides, because it advances the accordion ("locator resolved to ... unexpected
+value hidden"). `design-review-customer` used
+`waitForLoadState('networkidle')`, a guess about traffic rather than a fact
+about the page. Both now wait on a durable consequence: the band's „Plik
+przesłany" header label, and the new status line respectively.
+
+Worth recording the intermediate mistake: waiting for the reupload *form* to
+disappear looked like the obvious fix and was wrong, because `toHaveCount(0)`
+cannot distinguish "unmounted because the status changed" from "not rendered
+yet". It passed instantly during a re-render and the failure moved two lines
+down. **Wait for something to appear, not to vanish.**
+
+**4. `design-review-customer` is genuinely slow** - two registrations, three
+logins, two uploads and a staff review in one journey - and was spending the
+30s default on real work. `test.slow()`. Not split into smaller tests: the
+thing under test is the hand-off between two people.
+
+**Evidence.** `npx playwright test` (both projects, 56 tests):
+**20 failed / 34 passed → 56 passed**. The first fully green e2e run in this
+repository. One residual flake was observed on the way and is not fixed here:
+`accounts.spec.ts` timing out inside `fillReliably` under eight parallel
+workers, passing in isolation - the contention `playwright.config.ts` already
+works around with `workers: 1` in CI, and whose real repair is **ARCH-03**.
+
+---
+
+## UX-21 - The configurator priced an option it would then refuse
+
+- **Status:** **RESOLVED 2026-09-04** · CONFIRMED
+- **Severity:** P2
+- **Area:** UX / UI
+- **Files:** [src/server/configurator/resolve-options.ts](src/server/configurator/resolve-options.ts), [src/ui/islands/configurator/Configurator.tsx](src/ui/islands/configurator/Configurator.tsx), [src/content/pl/site.ts](src/content/pl/site.ts)
+
+The last visible edge of SEC-03. That fix made the *write* path refuse a
+configuration naming a withdrawn pattern, and say so clearly - but only after
+the customer pressed „Dodaj do koszyka", and only after the panel had already
+shown them „Cena: 709,16 zł" for it. The same "showing a price you will not
+honour" shape BUG-02 existed to remove, one screen along.
+
+Not hypothetical and not staged: `wzor-podstawowy` was retired by BUG-03 and
+is still attached to `obraz-drewniany-z-grawerem`, and
+`readSelectionsFromSearch` restores a design id from the query string
+verbatim - which is exactly what §36's resumable configuration is for. Anyone
+holding a bookmark, a shared link or a saved project from before that change
+lands on this.
+
+**Fix.** `findUnavailableSelection(options, selections)` in
+`resolve-options.ts`, returning the first selection field that is not in the
+currently-offered set. Deliberately shared: `everySelectedOptionIsOffered` on
+the write path now delegates to it, so the picker's rules and the gate's rules
+are one piece of code. SEC-03 happened because they were two.
+
+It reports `designId` first. Order is not arbitrary - a retired pattern is
+overwhelmingly why a saved configuration stops being orderable, so naming it
+first gives the customer the sentence they can act on. It ignores
+`widthMm`/`heightMm`/`customUploadId`, which are bounded by the dimension
+envelope and by ownership, not by an option list.
+
+**No price at all, rather than a struck-through or greyed one.** The figure is
+real arithmetic for something the shop will not sell.
+
+**The browser check found half the fix missing.** The first version withheld
+the price in the summary panel only. The sticky price bar is a *second* price
+surface, fixed to the bottom of every screen and the more prominent of the two
+on a phone, and it carried on showing „709,16 zł" underneath a panel saying
+the variant was withdrawn. `unavailableSelection` is now computed once in the
+parent and passed to both, so they cannot disagree; the bar shows „Wariant
+niedostępny".
+
+**Evidence.** `tests/unit/unavailable-selection.test.ts` (11, written first,
+all 11 failing for the right reason). `tests/e2e/stale-configuration-link.spec.ts`,
+which opens a real link naming the retired pattern and asserts no price on
+either surface and a disabled button - verified to fail with each half of the
+fix removed independently, on both browser projects. The 22 existing
+selection-availability integration tests still pass unchanged, which is what
+proves the shared refactor changed no behaviour on the write path.
