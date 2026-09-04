@@ -283,3 +283,52 @@ export function resolveOptionAvailability(
 
   return { materials, designs, finishes, thicknesses, fonts };
 }
+
+/**
+ * The first selection naming something the shop does not currently offer, or
+ * `null` when every set field is selectable.
+ *
+ * Added 2026-09-04 for `docs/REVIEW-DETAILED.md` UX-21, and shared on purpose.
+ * The server calls it from `priceAndValidateSelections` after `resolveOptions`;
+ * the configurator calls it against the `ResolvedOptions` already in its
+ * snapshot. SEC-03 happened because the picker's rules and the write path's
+ * rules were two separate pieces of code that disagreed, and answering the
+ * same question twice in two places is how that recurs.
+ *
+ * Order is not arbitrary. A retired pattern is overwhelmingly why a saved
+ * project or a shared link stops being orderable, so the design is checked
+ * first and the customer gets the sentence they can act on rather than a
+ * technically-true one about a material they never touched.
+ *
+ * `widthMm`/`heightMm` and `customUploadId` are absent deliberately: the
+ * first two are bounded by the product's dimension envelope and the third by
+ * ownership, and neither is a question a `ResolvedOptions` can answer.
+ * Reporting them here would name the wrong thing.
+ */
+export function findUnavailableSelection(
+  options: ResolvedOptions,
+  selections: Selections,
+): keyof Selections | null {
+  const offered = <T>(selected: T | null, available: readonly T[]): boolean =>
+    selected === null || available.includes(selected);
+
+  if (!offered(selections.designId, options.designIds)) {
+    return 'designId';
+  }
+  if (!offered(selections.materialId, options.materialIds)) {
+    return 'materialId';
+  }
+  if (!offered(selections.finishId, options.finishIds)) {
+    return 'finishId';
+  }
+  if (!offered(selections.thicknessMm, options.thicknessesMm)) {
+    return 'thicknessMm';
+  }
+  if (!offered(selections.installationVariant, options.installVariantCodes)) {
+    return 'installationVariant';
+  }
+  if (!offered(selections.fontId, options.fontIds)) {
+    return 'fontId';
+  }
+  return null;
+}

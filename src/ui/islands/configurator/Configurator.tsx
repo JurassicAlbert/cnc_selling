@@ -133,7 +133,7 @@ import type {
 // Node built-ins), so it is safe to import as a real value into this client
 // island. That is what lets the default selection be filtered by exactly the
 // same rules the server enforces, rather than by a second copy of them.
-import { resolveOptions } from '@/server/configurator/resolve-options';
+import { findUnavailableSelection, resolveOptions } from '@/server/configurator/resolve-options';
 import { getConfiguratorSnapshot } from '@/server/actions/configurator';
 import type { ConfiguratorSnapshot } from '@/server/actions/configurator';
 import { addToCart, updateCartItemConfiguration } from '@/server/actions/cart';
@@ -422,6 +422,37 @@ export function Configurator({
   }, [selections, productSlug, router, isPreview]);
 
   const steps = snapshot?.steps ?? [];
+
+  /*
+    UX-21. Whether the current selection names something the shop no longer
+    offers - computed once here, for the two places that show a price.
+
+    SEC-03 made the write path refuse such a configuration, and say so
+    clearly, but only after the customer presses the button and only after
+    they have already been shown a real price for it. Someone on a stale
+    link, or holding a saved project after staff retired a pattern, saw
+    "Cena: 709,16 zl" for something unbuyable. `getConfiguratorSnapshot`
+    still prices it, deliberately: it resolves the design by map lookup and
+    consults availability separately, so the figure it returns is arithmetic
+    about a configuration nobody will be sold.
+
+    `snapshot.options` is already the resolved, currently-selectable set, so
+    the answer needs no extra request. `findUnavailableSelection` is the same
+    function the write path uses: SEC-03 happened because the picker's rules
+    and the gate's rules were two separate pieces of code that disagreed, so
+    this one deliberately is not a second implementation.
+
+    Computed in the parent rather than in `SummaryStep`, where it started.
+    That was half a fix - the sticky bar is a second price surface, pinned to
+    the bottom of every screen, and it went on showing the figure while the
+    panel above it said the variant was withdrawn. Found on the browser
+    check, 2026-09-04. One value, both surfaces, no way for them to drift.
+
+    A null snapshot means nothing has been resolved yet, so there is nothing
+    to contradict - the bar shows "Obliczanie ceny…" on its own.
+  */
+  const unavailableSelection =
+    snapshot === null ? null : findUnavailableSelection(snapshot.options, selections);
 
   // Open the first section once the real step list is known - nothing to
   // open before that (would flash the wrong band on a slow connection).
@@ -856,6 +887,7 @@ export function Configurator({
           <SummaryStep
             snapshot={snapshot}
             selections={selections}
+            unavailableSelection={unavailableSelection}
             options={options}
             materialNotesPl={materialNotesPl}
             requiresExactSize={requiresExactSize}
@@ -878,7 +910,7 @@ export function Configurator({
           />
         </div>
       </div>
-      <StickyPriceBar snapshot={snapshot} loading={loading} />
+      <StickyPriceBar snapshot={snapshot} loading={loading} unavailableSelection={unavailableSelection} />
     </>
   );
 }
@@ -1154,13 +1186,22 @@ function SizeFields({
 function StickyPriceBar({
   snapshot,
   loading,
+  unavailableSelection,
 }: {
   readonly snapshot: ConfiguratorSnapshot | null;
   readonly loading: boolean;
+  /** UX-21 - see the parent's own comment. Non-null means: show no figure. */
+  readonly unavailableSelection: keyof Selections | null;
 }) {
   let valueText: string;
   if (loading || snapshot === null) {
     valueText = SITE.configuratorPriceCalculatingPl;
+  } else if (unavailableSelection !== null) {
+    // Ahead of the `priced` branch on purpose. `snapshot.pricing` is a real,
+    // correctly-computed figure - `getConfiguratorSnapshot` prices by map
+    // lookup and does not consult availability - which is exactly why it must
+    // not be rendered. The summary panel below carries the full explanation.
+    valueText = SITE.configuratorPriceWithdrawnPl;
   } else if (snapshot.pricing.status === 'priced') {
     valueText = formatPln(snapshot.pricing.priceBreakdown.unitGrossGrosze);
   } else if (snapshot.pricing.status === 'incomplete') {
@@ -1404,6 +1445,7 @@ function CustomUploadStep({
 function SummaryStep({
   snapshot,
   selections,
+  unavailableSelection,
   options,
   materialNotesPl,
   requiresExactSize,
@@ -1419,6 +1461,8 @@ function SummaryStep({
 }: {
   readonly snapshot: ConfiguratorSnapshot | null;
   readonly selections: Selections;
+  /** UX-21 - computed by the parent so this panel and the sticky bar cannot disagree. */
+  readonly unavailableSelection: keyof Selections | null;
   readonly options: ConfiguratorOptionData;
   readonly materialNotesPl: string | null;
   readonly requiresExactSize: boolean;
@@ -1463,8 +1507,10 @@ function SummaryStep({
   const outstandingAcknowledgements = pricing.feasibility.filter(
     (finding) => finding.requiresAcknowledgement && !acknowledged.has(finding.code),
   );
+
   const canProceed =
     isComplete &&
+    unavailableSelection === null &&
     !pricing.blockingError &&
     outstandingAcknowledgements.length === 0 &&
     (!requiresExactSize || exactSizeAcknowledged);
@@ -1553,9 +1599,20 @@ function SummaryStep({
         </Alert>
       ))}
 
-      <div style={{ font: 'var(--mui-font-h4)' }}>
-        {SITE.configuratorPriceLabelPl}: {formatPln(pricing.priceBreakdown.unitGrossGrosze)}
-      </div>
+      {unavailableSelection === null ? (
+        <div style={{ font: 'var(--mui-font-h4)' }}>
+          {SITE.configuratorPriceLabelPl}: {formatPln(pricing.priceBreakdown.unitGrossGrosze)}
+        </div>
+      ) : (
+        /*
+          No price at all, rather than a struck-through or greyed one. The
+          figure is real arithmetic for a configuration the shop will not
+          sell, and showing it - in any styling - is the thing BUG-02 was
+          about: never put a number in front of a customer that you are not
+          prepared to honour.
+        */
+        <Alert severity="warning">{SITE.configuratorOptionUnavailablePl}</Alert>
+      )}
 
       {!isComplete && <Alert severity="warning">{SITE.configuratorBlockedPl}</Alert>}
 

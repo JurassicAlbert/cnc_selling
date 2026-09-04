@@ -83,6 +83,17 @@ export const SITE = {
   configuratorPriceCalculatingPl: 'Obliczanie ceny…',
   configuratorPriceUnavailablePl: 'Podaj wymiary, aby zobaczyć cenę.',
   configuratorPriceUnavailableGenericPl: 'Cena niedostępna dla tej konfiguracji.',
+  /**
+   * The sticky bar's version of `configuratorOptionUnavailablePl`. That one
+   * is a full sentence in an `Alert`; this sits in a one-line fixed bar next
+   * to the word "Cena", so it has to be short enough not to wrap on a phone.
+   *
+   * It exists because the bar is a *second* price surface. UX-21 first
+   * withheld the price only in the summary panel, and the bar - the more
+   * prominent of the two, pinned to the bottom of every screen - carried on
+   * showing the figure. Found on the browser check, 2026-09-04.
+   */
+  configuratorPriceWithdrawnPl: 'Wariant niedostępny',
   configuratorModuleCountLabelPl: 'Liczba elementów',
   configuratorAcknowledgeRequiredPl: 'Potwierdzam, że rozumiem powyższą informację.',
   configuratorBlockedPl: 'Ta konfiguracja nie może zostać wykonana. Zmień wybór powyżej.',

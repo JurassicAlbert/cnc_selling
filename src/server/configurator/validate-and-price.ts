@@ -39,7 +39,7 @@ import { parseSelections } from '@/domain/configuration/input-schema';
 import type { Selections, StepCode } from '@/domain/configuration/steps';
 import type { ConfiguratorProductData } from '@/server/repositories/configurator';
 import { getConfiguratorProductData } from '@/server/repositories/configurator';
-import { resolveOptions } from '@/server/configurator/resolve-options';
+import { findUnavailableSelection, resolveOptions } from '@/server/configurator/resolve-options';
 import { priceConfiguration } from './price-configuration';
 import type { ConfiguratorPricingResult } from './price-configuration';
 
@@ -128,8 +128,13 @@ const CONFIGURATION_INVALID = { ok: false, code: 'CONFIGURATION_INVALID' } as co
 const OPTION_UNAVAILABLE = { ok: false, code: 'OPTION_UNAVAILABLE' } as const;
 
 /**
- * Every selected id must appear in the resolved option set for the
- * selection as a whole - not merely exist in the database.
+ * Every selected id must appear in the resolved option set for the selection
+ * as a whole, not merely exist in the database.
+ *
+ * The decision itself lives in `findUnavailableSelection` and is shared with
+ * the configurator (UX-21). That sharing is the point: SEC-03 happened
+ * because the picker's rules and the write path's rules were two separate
+ * pieces of code, and they disagreed.
  *
  * Order matters in one direction only: `resolveOptions` narrows designs by
  * the chosen material and materials by the chosen design simultaneously, so
@@ -141,19 +146,7 @@ function everySelectedOptionIsOffered(
   data: NonNullable<Awaited<ReturnType<typeof getConfiguratorProductData>>>,
   selections: Selections,
 ): boolean {
-  const options = resolveOptions(data.options, selections);
-
-  const offered = <T>(selected: T | null, available: readonly T[]): boolean =>
-    selected === null || available.includes(selected);
-
-  return (
-    offered(selections.materialId, options.materialIds) &&
-    offered(selections.designId, options.designIds) &&
-    offered(selections.finishId, options.finishIds) &&
-    offered(selections.thicknessMm, options.thicknessesMm) &&
-    offered(selections.installationVariant, options.installVariantCodes) &&
-    offered(selections.fontId, options.fontIds)
-  );
+  return findUnavailableSelection(resolveOptions(data.options, selections), selections) === null;
 }
 
 export async function priceAndValidateSelections(
