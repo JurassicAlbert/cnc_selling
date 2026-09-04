@@ -1,3 +1,5 @@
+import { cache } from 'react';
+
 import { matchesPl } from '@/domain/text/collation';
 import { prisma } from '@/server/db/client';
 
@@ -272,9 +274,20 @@ async function findProductBySlug(slug: string, activeOnly: boolean): Promise<Pro
   };
 }
 
-export async function getActiveProductBySlug(slug: string): Promise<ProductDetail | null> {
-  return findProductBySlug(slug, true);
-}
+/**
+ * `cache()` from React, not a data cache — `docs/REVIEW-DETAILED.md` PERF-02.
+ * It memoizes for the duration of ONE request, nothing longer, so there is no
+ * staleness to reason about: an admin edit is visible on the very next
+ * request either way.
+ *
+ * It is here because each of the five `generateMetadata` routes calls its
+ * repository function twice — once for the metadata, once for the page body
+ * — and Next deduplicates `fetch`, not Prisma. Every one of those pages was
+ * issuing the identical query twice per render.
+ */
+export const getActiveProductBySlug = cache(
+  async (slug: string): Promise<ProductDetail | null> => findProductBySlug(slug, true),
+);
 
 /**
  * Same shape as `getActiveProductBySlug`, minus the `isActive` filter —

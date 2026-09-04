@@ -9,7 +9,7 @@ import {
   applyUpdateCategory,
 } from '@/server/operations/admin-categories';
 import type { CategoryFormInput } from '@/server/operations/admin-categories';
-import { listActiveCategories } from '@/server/repositories/categories';
+import { queryActiveCategories } from '@/server/repositories/categories';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';
 
@@ -84,17 +84,26 @@ describe('applyUpdateCategory', () => {
 });
 
 describe('applySetCategoryActive', () => {
+  /**
+   * `queryActiveCategories`, not `listActiveCategories` — changed 2026-08-31
+   * with PERF-01. The storefront's read is now `unstable_cache`-wrapped and
+   * invalidated by `revalidateTag` from the `'use server'` wrapper, which
+   * this test cannot call (it needs a real request). Asserting through the
+   * cached function would test the cache, not the deactivation rule this
+   * test is about, and would fail for the right reason in the wrong place.
+   * The invalidation half is covered by `tests/unit/cache-tags.test.ts`.
+   */
   it('deactivating removes the category from the real storefront query without deleting it', async () => {
     const staff = staffActor();
     const created = await applyCreateCategory(staff, categoryInput());
     if (!created.ok) throw new Error('setup failed');
     const slug = (await prisma.category.findUniqueOrThrow({ where: { id: created.id } })).slug;
 
-    expect((await listActiveCategories()).some((c) => c.slug === slug)).toBe(true);
+    expect((await queryActiveCategories()).some((c) => c.slug === slug)).toBe(true);
 
     await applySetCategoryActive(staff, created.id, false);
 
-    expect((await listActiveCategories()).some((c) => c.slug === slug)).toBe(false);
+    expect((await queryActiveCategories()).some((c) => c.slug === slug)).toBe(false);
     expect(await prisma.category.findUnique({ where: { id: created.id } })).not.toBeNull();
   });
 });

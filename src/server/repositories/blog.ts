@@ -1,3 +1,5 @@
+import { cache } from 'react';
+
 import { prisma } from '@/server/db/client';
 
 export type BlogPostSummary = {
@@ -24,7 +26,7 @@ export type BlogPostDetail = BlogPostSummary & {
   readonly seoDescPl: string;
 };
 
-export async function getPublishedBlogPostBySlug(slug: string): Promise<BlogPostDetail | null> {
+async function queryPublishedBlogPostBySlug(slug: string): Promise<BlogPostDetail | null> {
   const post = await prisma.blogPost.findFirst({
     where: { slug, isActive: true, publishedAt: { not: null, lte: new Date() } },
     select: {
@@ -43,6 +45,15 @@ export async function getPublishedBlogPostBySlug(slug: string): Promise<BlogPost
   }
   return { ...post, publishedAt: post.publishedAt as Date };
 }
+
+/**
+ * Request-scoped memoization — `docs/REVIEW-DETAILED.md` PERF-02. This page's
+ * `generateMetadata` and its body both call `getPublishedBlogPostBySlug`, and Next
+ * deduplicates `fetch`, not Prisma, so the identical query ran twice per
+ * render. `cache()` lasts exactly one request, so there is no staleness to
+ * reason about — an admin edit shows on the next request either way.
+ */
+export const getPublishedBlogPostBySlug = cache(queryPublishedBlogPostBySlug);
 
 /** Every published post slug, for the sitemap. */
 export async function listAllPublishedBlogPostSlugs(): Promise<string[]> {

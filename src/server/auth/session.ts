@@ -12,6 +12,7 @@
  * `next/headers`) inherits the "must be called from a request" constraint.
  */
 
+import { cache } from 'react';
 import { headers as nextHeaders } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 
@@ -42,9 +43,23 @@ export async function getSessionFromHeaders(headers: Headers): Promise<CurrentSe
   return toCurrentSession(result);
 }
 
-export async function getSession(): Promise<CurrentSession | null> {
+/**
+ * Request-scoped memoization — `docs/REVIEW-DETAILED.md` PERF-05. A single
+ * storefront render calls this at least twice (`StorefrontChrome` for the
+ * account name, the page itself for ownership), and every `require*Session`
+ * below delegates to it, so a panel page reached three or four calls. Each
+ * one was a real Better Auth session lookup — a database read.
+ *
+ * `cache()` is the correct tool rather than a data cache: the value is
+ * per-user and must never outlive the request that produced it, which is
+ * exactly React's guarantee here. `nextHeaders()` stays *inside* the cached
+ * function deliberately — it is itself request-scoped, so there is nothing to
+ * pass in, and keeping the signature argument-free means the memo key is the
+ * request itself.
+ */
+export const getSession = cache(async (): Promise<CurrentSession | null> => {
   return getSessionFromHeaders(await nextHeaders());
-}
+});
 
 export async function requireSession(): Promise<CurrentSession> {
   const session = await getSession();

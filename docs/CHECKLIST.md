@@ -1063,3 +1063,27 @@ what was then implemented, in the order it was done.
       not assumed.
 - [x] Verified: typecheck clean, lint clean, **1031/1031 tests** across two
       consecutive runs.
+- [x] **PERF-02 / PERF-05 — the same row queried twice per render.** Each of
+      the five `generateMetadata` pages called its repository function once
+      for the metadata and once for the body, and `getSession()` ran two to
+      four times per render (every `require*Session` delegates to it). Next
+      deduplicates `fetch`, not Prisma, and `React.cache` appeared nowhere in
+      the repository. All six are now wrapped in `cache()` — request-scoped,
+      so there is no staleness to reason about.
+- [x] **Measured, not estimated.** Postgres was put into
+      `log_statement='all'` and one request per route counted on a
+      production build: **`/produkt/[slug]` 36 → 26 queries**, **`/` 14 →
+      11**, **`/[category]` 14 → 11**. Note for next time: `DEBUG=prisma:query`
+      produces nothing under Prisma 7's driver adapter — the Postgres side is
+      where to look, and it needs no code change.
+- [x] **PERF-01 step 1 was attempted and deliberately backed out.**
+      `unstable_cache` + `cacheTag` + `revalidateTag` from all seven writers
+      was built, with a mechanical guard and an end-to-end test, then
+      removed. The caching half works — a category inserted straight into the
+      database stayed invisible to the storefront until the TTL elapsed — but
+      the invalidation half was never demonstrated, and Next 16 documents
+      cache tagging for `fetch` and `use cache` without mentioning
+      `unstable_cache`. A cross-request cache whose invalidation is unproven
+      means an admin edit silently taking minutes to reach the shop, which is
+      not a thing to guess about. It waits for the `cacheComponents` decision
+      that replaces the API anyway (`docs/REVIEW-PERFORMANCE.md` Finding 1).

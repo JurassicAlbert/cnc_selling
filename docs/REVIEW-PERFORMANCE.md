@@ -83,6 +83,35 @@ is an uncached round trip to Postgres.
 
 ### Recommended fix, in order of payoff
 
+> ### Step 1 attempted and backed out — 2026-09-04
+>
+> `unstable_cache` with a `cacheTag`, invalidated by `revalidateTag` from the
+> four category and three collection writers, was built in full — including
+> the shared tag module, a mechanical guard that every writer sets its tag,
+> and an end-to-end test that created a category in the panel and looked for
+> it in the storefront nav.
+>
+> It was removed again, and the reason is the useful part. The **caching**
+> half demonstrably works: a category inserted straight into the database
+> stayed invisible to the storefront until the TTL elapsed, which is exactly
+> a live cross-request cache. The **invalidation** half was never
+> demonstrated. Next 16's `revalidateTag` documentation describes tagging via
+> `fetch` and via `cacheTag()` inside `use cache`, and does not mention
+> `unstable_cache`; the two do share a tag store in the source, but that is a
+> weaker claim than a passing test, and the e2e never got far enough to
+> settle it (it kept failing earlier, on the admin form).
+>
+> A cross-request cache whose invalidation is unproven means an admin edit
+> that silently takes minutes to reach the shop. That is not a thing to guess
+> about, so step 1 waits for the same `cacheComponents` decision below — which
+> also replaces `unstable_cache` with the supported `use cache` and makes the
+> whole question moot. **What did ship is the request-scoped half** (PERF-02 /
+> PERF-05), measured at 36 → 26 queries on a product page.
+>
+> Anyone picking this up: `revalidateTag` also changed signature in Next 16 —
+> it now takes a second `profile` argument, and the one-argument form is
+> deprecated but still type-checks.
+
 **1. Cache the chrome's static halves.** `listActiveCategories()` and
 `listActiveCollections()` change when an admin edits a category — which is
 rare, and already goes through an `operations/admin-*` function that calls

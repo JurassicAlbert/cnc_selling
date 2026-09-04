@@ -1197,7 +1197,7 @@ a product page, before and after, recorded in `REVIEW-PERFORMANCE.md`.
 
 ## PERF-02 — Every `generateMetadata` page queries the same row twice
 
-- **Status:** CONFIRMED · PERFORMANCE
+- **Status:** **RESOLVED 2026-09-04** (was CONFIRMED · PERFORMANCE)
 - **Severity:** P1
 - **Area:** performance
 - **Files:** `src/app/(shop)/produkt/[slug]/page.tsx`, `src/app/(shop)/[category]/page.tsx`, `src/app/(shop)/kolekcje/[slug]/page.tsx`, `src/app/(marketing)/blog/[slug]/page.tsx`, `src/app/(marketing)/strony/[slug]/page.tsx`
@@ -1222,8 +1222,33 @@ dynamic routes. Combined with PERF-01, the product page drops from ~7
 queries per render to ~2.
 
 **Acceptance criteria.**
-- [ ] A single request to `/produkt/[slug]` issues one product query, not two.
-- [ ] The same holds for the other four routes.
+- [x] A single request to `/produkt/[slug]` issues one product query, not two.
+- [x] The same holds for the other four routes.
+
+### What was built (2026-09-04)
+
+All five repository functions are wrapped in `cache()` from React, plus
+`getSession()` (PERF-05) — which mattered more than the five: every
+`require*Session` delegates to it, so a panel render reached three or four
+real Better Auth session lookups.
+
+**Measured, not estimated.** Postgres was put into `log_statement='all'` and
+one request per route counted, on a production build, before and after:
+
+| route | before | after |
+|---|---|---|
+| `/produkt/[slug]` | **36** queries | **26** |
+| `/` | **14** | **11** |
+| `/[category]` | **14** | **11** |
+
+The method is worth recording because it is repeatable and needs no code
+change: `ALTER DATABASE cnc_selling SET log_statement='all'`, restart the
+app so the pool reconnects, then count `LOG:  execute` lines in
+`docker logs` between two timestamps. `DEBUG=prisma:query` was tried first
+and produces nothing under Prisma 7's driver adapter.
+
+On the product page specifically, `Product` went from 3 identical queries to
+2 and `Category` from 4 to 1.
 
 ---
 

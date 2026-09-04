@@ -8,7 +8,7 @@ import {
   applyUpdateProductCollection,
 } from '@/server/operations/admin-product-collections';
 import { listProductCollectionItemsForAdmin } from '@/server/repositories/admin-product-collections';
-import { listActiveCollections, listActiveProductsByCollectionSlug } from '@/server/repositories/collections';
+import { listActiveProductsByCollectionSlug, queryActiveCollections } from '@/server/repositories/collections';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';
 
@@ -109,17 +109,18 @@ describe('applyUpdateProductCollection', () => {
 });
 
 describe('applySetProductCollectionActive', () => {
+  /** `queryActiveCollections`, not the cached `listActiveCollections` — see the same note in `admin-categories.test.ts`. */
   it('deactivating removes it from the real public listing without deleting the row', async () => {
     const staff = staffActor();
     const created = await applyCreateProductCollection(staff, validInput());
     if (!created.ok) throw new Error('setup failed');
     const slug = (await prisma.productCollection.findUniqueOrThrow({ where: { id: created.id } })).slug;
 
-    expect((await listActiveCollections()).some((c) => c.slug === slug)).toBe(true);
+    expect((await queryActiveCollections()).some((c) => c.slug === slug)).toBe(true);
 
     await applySetProductCollectionActive(staff, created.id, false);
 
-    expect((await listActiveCollections()).some((c) => c.slug === slug)).toBe(false);
+    expect((await queryActiveCollections()).some((c) => c.slug === slug)).toBe(false);
     expect(await prisma.productCollection.findUnique({ where: { id: created.id } })).not.toBeNull();
   });
 });

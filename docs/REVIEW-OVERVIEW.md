@@ -262,7 +262,7 @@ verified.
 4. ~~**BUG-02** — show a gross, achievable "from" price (and fix the JSON-LD).~~ **Done 2026-08-31.**
 5. ~~**BUG-03** — stop silently attaching a placeholder design; make defaults deterministic and filtered.~~ **Done 2026-08-31.**
 6. ~~**SEC-05** — add security headers and a CSP (§16.1, never implemented, never recorded).~~ **Done 2026-08-31.**
-7. **PERF-01** — make catalogue pages cacheable again. **Steps 2-3 now need an owner decision** — see the SEC-05 conflict above.
+7. **PERF-01** — make catalogue pages cacheable again. **All three steps now need an owner decision** — steps 2-3 conflict with SEC-05's nonce, and step 1 was attempted and backed out because its invalidation could not be demonstrated (`REVIEW-PERFORMANCE.md` Finding 1). The request-scoped half shipped as PERF-02/PERF-05: 36 → 26 queries on a product page.
 8. **ADMIN-01** — real pagination for orders / customers / audit log.
 9. **BUG-04** — show shipping and VAT on the order confirmation.
 10. ~~**BUG-06 / BUG-07** — call the step guards; either use `zod` or drop it.~~ **Done 2026-08-31** — zod adopted (§2 already required it), and the step guards now run on the write path.
