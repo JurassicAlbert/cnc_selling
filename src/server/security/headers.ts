@@ -83,11 +83,47 @@ export function generateNonce(): string {
  * `next/font/google` downloads at build time and serves from this origin
  * (`src/ui/theme/fonts.ts`) - no runtime request to Google.
  */
+/**
+ * Did this page reach the *browser* over https?
+ *
+ * `request.nextUrl.protocol` answers it for a direct connection. Behind a
+ * load balancer that terminates TLS - the usual production shape - the
+ * request reaching this process is plain http, and `x-forwarded-proto` is
+ * the only record of what the browser actually used.
+ *
+ * That header is forgeable by anyone who can reach this process directly,
+ * and that is acceptable here: the worst a forged value does is add the
+ * `upgrade-insecure-requests` directive to, or remove it from, the forger's
+ * own response. Keeping a real visitor on https is HSTS's job
+ * (`baseSecurityHeaders`), not this directive's.
+ */
+export function isSecureRequest(options: {
+  readonly protocol: string;
+  readonly forwardedProto: string | null;
+}): boolean {
+  const { protocol, forwardedProto } = options;
+  if (forwardedProto !== null) {
+    // A request through several proxies carries a list, oldest first: the
+    // first entry is what the browser used.
+    return forwardedProto.split(',')[0]?.trim().toLowerCase() === 'https';
+  }
+  return protocol === 'https:';
+}
+
 export function buildContentSecurityPolicy(options: {
   readonly nonce: string;
   readonly isDev: boolean;
+  /**
+   * Whether the page reached the browser over https. Not "are we in
+   * production": a production build is routinely served over plain http (a
+   * staging box, a LAN preview, this repo's own e2e suite), and
+   * `upgrade-insecure-requests` on such a page is fatal - see the directive's
+   * own comment below. Required, with no default, because a caller that
+   * forgets it is exactly how this went wrong the first time.
+   */
+  readonly isSecure: boolean;
 }): string {
-  const { nonce, isDev } = options;
+  const { nonce, isDev, isSecure } = options;
 
   const scriptSrc = [
     "script-src 'self'",
@@ -112,9 +148,27 @@ export function buildContentSecurityPolicy(options: {
     "form-action 'self'",
     "frame-ancestors 'none'",
     "frame-src 'none'",
-    // Only in production: under `next dev` the origin is plain
-    // http://localhost, and upgrading it breaks the dev server outright.
-    ...(isDev ? [] : ['upgrade-insecure-requests']),
+    /*
+      Only for a page that arrived over https.
+
+      This directive rewrites every http subresource URL to https before the
+      request leaves the browser. On an https page that closes a real gap. On
+      a page served over http it upgrades the page's own scripts, styles and
+      fonts to an origin that is not listening for TLS, and every one of them
+      fails: the visitor gets unstyled server HTML and no client JavaScript.
+
+      It was keyed to `isDev`, which was the wrong question, and the cost was
+      hidden for four days because Chromium exempts loopback from the upgrade
+      and WebKit does not. The e2e suite runs a production build over
+      http://localhost, so every mobile-safari spec needing a hydrated island
+      was failing with "SSL connect error" on each chunk while the identical
+      desktop spec passed. Found 2026-09-04.
+
+      Still excluded under `next dev` regardless: dev serves http even when
+      `isSecure` would somehow be true, and a broken dev server is a bad
+      trade for a directive whose whole audience is production.
+    */
+    ...(isDev || !isSecure ? [] : ['upgrade-insecure-requests']),
   ];
 
   return directives.join('; ');

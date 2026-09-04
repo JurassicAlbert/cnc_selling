@@ -31,7 +31,13 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getSessionCookie } from 'better-auth/cookies';
 
-import { buildContentSecurityPolicy, cspHeaderName, generateNonce, resolveCspMode } from '@/server/security/headers';
+import {
+  buildContentSecurityPolicy,
+  cspHeaderName,
+  generateNonce,
+  isSecureRequest,
+  resolveCspMode,
+} from '@/server/security/headers';
 
 export function proxy(request: NextRequest): NextResponse {
   const mode = resolveCspMode(process.env.CSP_MODE);
@@ -43,7 +49,14 @@ export function proxy(request: NextRequest): NextResponse {
   }
 
   const nonce = generateNonce();
-  const csp = buildContentSecurityPolicy({ nonce, isDev: process.env.NODE_ENV === 'development' });
+  const csp = buildContentSecurityPolicy({
+    nonce,
+    isDev: process.env.NODE_ENV === 'development',
+    isSecure: isSecureRequest({
+      protocol: request.nextUrl.protocol,
+      forwardedProto: request.headers.get('x-forwarded-proto'),
+    }),
+  });
   const headerName = cspHeaderName(mode);
 
   if (needsRedirect) {

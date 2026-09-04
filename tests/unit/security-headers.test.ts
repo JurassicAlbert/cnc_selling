@@ -69,7 +69,7 @@ describe('generateNonce - unguessable, single-use, and readable by Next', () => 
 
   it('round-trips through Next’s extractor out of a real policy string', () => {
     const nonce = generateNonce();
-    const csp = buildContentSecurityPolicy({ nonce, isDev: false });
+    const csp = buildContentSecurityPolicy({ nonce, isDev: false, isSecure: true });
     expect(getScriptNonceFromHeader(csp)).toBe(nonce);
   });
 });
@@ -77,14 +77,17 @@ describe('generateNonce - unguessable, single-use, and readable by Next', () => 
 describe('buildContentSecurityPolicy - script execution', () => {
   it('allows scripts only by nonce, never by ‘unsafe-inline’', () => {
     for (const isDev of [true, false]) {
-      const scriptSrc = directive(buildContentSecurityPolicy({ nonce: NONCE, isDev }), 'script-src');
+      const scriptSrc = directive(
+        buildContentSecurityPolicy({ nonce: NONCE, isDev, isSecure: true }),
+        'script-src',
+      );
       expect(scriptSrc).toContain(`'nonce-${NONCE}'`);
       expect(scriptSrc).not.toContain("'unsafe-inline'");
     }
   });
 
   it("carries 'strict-dynamic' so router-injected chunks inherit the nonce’s trust", () => {
-    expect(directive(buildContentSecurityPolicy({ nonce: NONCE, isDev: false }), 'script-src')).toContain(
+    expect(directive(buildContentSecurityPolicy({ nonce: NONCE, isDev: false, isSecure: true }), 'script-src')).toContain(
       "'strict-dynamic'",
     );
   });
@@ -92,10 +95,10 @@ describe('buildContentSecurityPolicy - script execution', () => {
   it("allows 'unsafe-eval' in development only", () => {
     // React uses eval in dev to rebuild server stacks in the browser; it
     // does not in production (Next's own CSP guide says so explicitly).
-    expect(directive(buildContentSecurityPolicy({ nonce: NONCE, isDev: true }), 'script-src')).toContain(
+    expect(directive(buildContentSecurityPolicy({ nonce: NONCE, isDev: true, isSecure: true }), 'script-src')).toContain(
       "'unsafe-eval'",
     );
-    expect(directive(buildContentSecurityPolicy({ nonce: NONCE, isDev: false }), 'script-src')).not.toContain(
+    expect(directive(buildContentSecurityPolicy({ nonce: NONCE, isDev: false, isSecure: true }), 'script-src')).not.toContain(
       "'unsafe-eval'",
     );
   });
@@ -111,7 +114,7 @@ describe('buildContentSecurityPolicy - styles', () => {
    * actually lives.
    */
   it("allows inline styles, because Emotion injects them client-side", () => {
-    expect(directive(buildContentSecurityPolicy({ nonce: NONCE, isDev: false }), 'style-src')).toContain(
+    expect(directive(buildContentSecurityPolicy({ nonce: NONCE, isDev: false, isSecure: true }), 'style-src')).toContain(
       "'unsafe-inline'",
     );
   });
@@ -119,14 +122,14 @@ describe('buildContentSecurityPolicy - styles', () => {
   it('carries no nonce in style-src, which would disable that allowance', () => {
     // A nonce in style-src makes browsers ignore 'unsafe-inline' entirely
     // (CSP3) - the exact failure mode this pairing has to avoid.
-    expect(directive(buildContentSecurityPolicy({ nonce: NONCE, isDev: false }), 'style-src')).not.toContain(
+    expect(directive(buildContentSecurityPolicy({ nonce: NONCE, isDev: false, isSecure: true }), 'style-src')).not.toContain(
       'nonce-',
     );
   });
 });
 
 describe('buildContentSecurityPolicy - everything else', () => {
-  const prod = buildContentSecurityPolicy({ nonce: NONCE, isDev: false });
+  const prod = buildContentSecurityPolicy({ nonce: NONCE, isDev: false, isSecure: true });
 
   it('locks down the directives an injection would reach for', () => {
     expect(directive(prod, 'default-src')).toBe("default-src 'self'");
@@ -158,18 +161,51 @@ describe('buildContentSecurityPolicy - everything else', () => {
     expect(directive(prod, 'connect-src')).toContain("'self'");
   });
 
-  it('upgrades insecure requests in production only', () => {
-    expect(prod).toContain('upgrade-insecure-requests');
-    // Under `next dev` the origin is plain http://localhost; upgrading
-    // there would break the dev server for no security benefit.
-    expect(buildContentSecurityPolicy({ nonce: NONCE, isDev: true })).not.toContain(
+  /*
+    `upgrade-insecure-requests` rewrites every http subresource URL to https
+    before the request leaves the browser. On an https page that is what you
+    want. On a page served over plain http it upgrades the page's own assets
+    to an origin that is not listening for TLS, and every script, stylesheet
+    and font fails to load - the page renders as unstyled server HTML with no
+    client JavaScript at all.
+
+    This was keyed to `isDev` and was wrong, found 2026-09-04. The e2e suite
+    runs a production build over http://localhost, so `isDev` was false and
+    the directive was emitted; WebKit honours it on localhost (Chromium
+    exempts loopback), so every mobile-safari spec that needed a hydrated
+    island failed with "SSL connect error" on each chunk. Chromium's
+    exemption is why this survived a full desktop suite and a browser check.
+
+    The condition was never "are we in development" - it is "did this page
+    reach the browser over https", which is a property of the request, not of
+    the build.
+  */
+  it('upgrades insecure requests only when the page itself was served over https', () => {
+    expect(buildContentSecurityPolicy({ nonce: NONCE, isDev: false, isSecure: true })).toContain(
       'upgrade-insecure-requests',
     );
   });
 
+  it('does not upgrade insecure requests on a page served over http', () => {
+    // A production build on plain http: a staging box, a LAN preview, a
+    // container behind a proxy that terminates TLS elsewhere, or this
+    // repo's own e2e suite. Upgrading here breaks the page outright.
+    expect(buildContentSecurityPolicy({ nonce: NONCE, isDev: false, isSecure: false })).not.toContain(
+      'upgrade-insecure-requests',
+    );
+  });
+
+  it('does not upgrade insecure requests under next dev', () => {
+    for (const isSecure of [true, false]) {
+      expect(buildContentSecurityPolicy({ nonce: NONCE, isDev: true, isSecure })).not.toContain(
+        'upgrade-insecure-requests',
+      );
+    }
+  });
+
   it('is a single header line with no double spaces or empty directives', () => {
     for (const isDev of [true, false]) {
-      const csp = buildContentSecurityPolicy({ nonce: NONCE, isDev });
+      const csp = buildContentSecurityPolicy({ nonce: NONCE, isDev, isSecure: true });
       expect(csp).not.toMatch(/[\r\n]/);
       expect(csp).not.toMatch(/ {2}/);
       expect(csp).not.toMatch(/;\s*;/);
