@@ -2051,3 +2051,102 @@ either surface and a disabled button - verified to fail with each half of the
 fix removed independently, on both browser projects. The 22 existing
 selection-availability integration tests still pass unchanged, which is what
 proves the shared refactor changed no behaviour on the write path.
+
+---
+
+## UX-23 - The Bazaar-shaped header and cart
+
+- **Status:** **RESOLVED 2026-09-04** · owner request
+- **Severity:** P2
+- **Area:** UX / UI
+- **Files:** [src/ui/primitives/SiteTopBar.tsx](src/ui/primitives/SiteTopBar.tsx), [src/ui/primitives/SearchBar.tsx](src/ui/primitives/SearchBar.tsx), [src/ui/primitives/SiteHeader.tsx](src/ui/primitives/SiteHeader.tsx), [src/ui/primitives/CategoryRail.tsx](src/ui/primitives/CategoryRail.tsx), [src/ui/islands/cart/CartContents.tsx](src/ui/islands/cart/CartContents.tsx), [src/server/repositories/products.ts](src/server/repositories/products.ts), [src/app/(shop)/szukaj/page.tsx](src/app/(shop)/szukaj/page.tsx), [src/app/theme-vars.css](src/app/theme-vars.css)
+
+Owner request, 2026-09-04: make the cart, the navbar, the strip above it, the
+search bar and the cart view's categories resemble `template.getbazaar.io`.
+
+**What was taken, and what was not.** The arrangement: a slim strip above the
+main navigation, navigation centred between the logo and the cart/account
+controls, a search field owning the full width of its band with a category
+selector attached to it, and a cart laid out as line cards beside a sticky
+summary panel. None of the template's CSS, assets, typography or colour -
+every value is one of this project's own tokens, so the result carries the
+shop's identity rather than the template's. That is both an identity decision
+and a licensing one.
+
+**Every constraint held.** The header is still a Server Component with zero
+client JS, `@mui/material` is still lint-banned from `(marketing)`/`(shop)`,
+and the burger added earlier the same day still works and still fails in the
+"show everything" direction.
+
+**Two places where the reference could not be copied honestly.**
+
+The template's topbar carries a shipping promotion. This shop has no such
+offer - no carrier is integrated and shipping is a flat rate the owner sets -
+so a strip on every page announcing one would be the fake-functionality rule
+broken in the most visible place available. It carries a sentence that is
+already true and already said elsewhere on the site instead, plus the two
+links a customer most often wants.
+
+The template's cart summary carries a voucher field and a shipping estimator.
+There is no voucher system here, and shipping is chosen and priced at
+checkout, so both would be controls that do nothing. The panel says
+„Suma częściowa" and states plainly that delivery is priced at the next step -
+which is better than the customer discovering it there.
+
+**The category selector had to be made real.** `/szukaj` accepted only `q`,
+so an attached selector would have been decoration. `searchActiveProducts`
+now takes a category slug and narrows for real, and answers three request
+shapes: a phrase, a phrase inside a category, and a category with no phrase
+at all - the last being exactly what someone does after choosing from the
+selector and pressing the button, so it lists the category rather than
+returning nothing. A slug naming a category that no longer exists says so
+rather than silently widening the search back to everything, the same refusal
+UX-21 applies to a stale configuration link.
+
+**One real regression, caught in the browser.** Hiding the header labels to
+fit a phone was done with `display: none`, which removes text from the
+accessibility tree as well as the screen - the cart link's entire accessible
+name became its count badge, a link announced as „1". Clipped to a pixel
+instead. Pinned by `storefront-chrome.spec.ts`, whose assertion uses
+`getByRole(name)` because that is the only thing here that runs a real
+accessible-name computation; verified to fail against the `display: none`
+version.
+
+**Evidence.** `tests/integration/product-search.test.ts` (8, written first,
+all 8 failing for the right reason) and `tests/e2e/storefront-chrome.spec.ts`
+(6 per browser project, 12 total). Browser-verified at 1400px and at 375px:
+no horizontal overflow at either, the header one row at both, the burger
+hidden on desktop and working on mobile, and the search group wrapping so
+every control stays full size.
+
+---
+
+## T-24 - Three e2e tests that were asserting on the wrong thing
+
+- **Status:** **RESOLVED 2026-09-04** · CONFIRMED
+- **Severity:** P2
+- **Area:** tests
+- **Files:** [tests/e2e/accounts.spec.ts](tests/e2e/accounts.spec.ts), [tests/e2e/checkout.spec.ts](tests/e2e/checkout.spec.ts), [tests/e2e/custom-upload.spec.ts](tests/e2e/custom-upload.spec.ts), [tests/e2e/rate-limit-reset.ts](tests/e2e/rate-limit-reset.ts)
+
+Found while landing UX-23, and worth separating from it: none of these were
+caused by the layout change, they were exposed by a suite that finally ran
+long enough and busy enough to hit them.
+
+**Next's route announcer.** Three specs asserted `getByText('<product
+name>')` on the cart. `__next-route-announcer__` holds the page title for a
+moment after every navigation, and the title contains the product name, so
+the locator intermittently matched two elements and failed strict mode. It
+looked like a WebKit flake because it only fires inside that window. All
+three now use the cart row's own heading.
+
+**The rate-limit clear was still racy.** T-23 cleared SEC-01's loopback
+counters before every test, which is not enough with eight parallel workers
+sharing one counter: several tests can each register after the same clear and
+exceed ten between them. The clear now happens immediately before each
+registration submits, which shrinks the window to milliseconds.
+
+**Evidence.** Two consecutive full-suite runs at **68 passed / 68**, both
+browser projects. The one flake left visible rather than papered over is
+`accounts.spec.ts` timing out inside `checkReliably` under eight workers and
+passing in isolation - the contention `workers: 1` avoids in CI, whose real
+repair is **ARCH-03**.
