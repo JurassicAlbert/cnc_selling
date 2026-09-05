@@ -1258,7 +1258,7 @@ On the product page specifically, `Product` went from 3 identical queries to
 
 ## BUG-08 - Free-shipping threshold compares gross against a net-documented field
 
-- **Status:** CONFIRMED BUG
+- **Status:** **RESOLVED 2026-09-05** (was CONFIRMED BUG)
 - **Severity:** P2
 - **Files:** [src/domain/checkout/delivery.ts](src/domain/checkout/delivery.ts) (`evaluateDeliveryMethod`), [prisma/schema.prisma](prisma/schema.prisma) (`DeliveryMethod.freeShippingThresholdGrosze`)
 
@@ -1284,6 +1284,45 @@ Two separable things:
 
 **Acceptance criteria.** Unit test pinning which subtotal is compared;
 schema comment and admin label match it.
+
+### Resolved 2026-09-05 - the descriptions moved, not the comparison
+
+The parenthesis above ("fixing the *comment* may be the right call") turned
+out to be the whole of it, so this is worth stating plainly rather than
+leaving as an aside.
+
+**Gross is the rule, and now says so in all three places.** It is the number
+printed in the cart, the number a Polish shop states a free-delivery
+threshold against, and the only one a buyer can verify without doing
+arithmetic on VAT. Changing the *code* to net would have made the three
+agree just as well, and would have raised the real threshold by 23% on a
+live shop: every cart between 406,50 zł and 500 zł that gets free delivery
+today would silently stop getting it. That is a pricing decision belonging
+to the owner, not a correction belonging to a bug fix, and a schema comment
+is not authority enough to make it.
+
+- `prisma/schema.prisma` now documents `freeShippingThresholdGrosze` as
+  GROSS, with the reasoning rather than just the word.
+- `src/content/pl/admin.ts` helper text: „(brutto, czyli kwoty widocznej w
+  koszyku)", replacing „(netto)".
+- `src/domain/checkout/delivery.ts` carries the same reasoning immediately
+  above the comparison, so the next reader does not re-litigate it from the
+  code alone.
+
+**The observed consequence was not itself a defect.** 709,16 zł clears 500
+either way it is read, so all four methods showing „0,00 zł" was correct
+behaviour. What that observation really exposes is the business question
+below, which stays open.
+
+**Still the owner's decision:** whether a flat 500 zł threshold is right at
+all on made-to-order furniture, where it means the weight-tier machinery
+almost never fires. Unchanged.
+
+**Evidence:** four cases in `tests/unit/delivery-pricing.test.ts`, written
+before the change, pinning the comparison against gross - including the band
+between the net equivalent and the stated threshold, which is precisely
+where the two readings disagree and where a future tidy-up would flip the
+policy without anyone noticing.
 
 ---
 
@@ -1522,7 +1561,7 @@ argument for doing it now.
 
 ## BUG-20 - Marking an order paid writes no `OrderEvent`
 
-- **Status:** CONFIRMED BUG
+- **Status:** **RESOLVED 2026-09-05** (was CONFIRMED BUG)
 - **Severity:** P2
 - **Files:** [src/server/operations/admin-orders.ts](src/server/operations/admin-orders.ts) (`applyMarkOrderPaid`)
 
@@ -1533,6 +1572,30 @@ lists "payment marking" alongside "order event timeline".
 
 **Recommended:** emit an `OrderEvent` (or extend the event model with a
 non-status event type) inside the same conditional update.
+
+### Resolved 2026-09-05
+
+`applyMarkOrderPaid` now writes the update and the `OrderEvent` inside one
+`prisma.$transaction`, inheriting P1-6's atomicity: an order marked paid
+with no event recorded, or an event with no payment, is not a state the code
+can reach. The `AuditLog` entry is still written alongside it - the two
+answer different questions (who changed what, versus what happened to this
+order) and neither replaces the other.
+
+**The event carries `fromStatus === toStatus`, deliberately.** Payment moves
+`paymentStatus`; the order's `status` does not change, so there is no
+transition to record and inventing one would put a false arrow in the
+timeline. The bare event model has no non-status event type, and adding one
+would have been a schema migration for a display concern, so the equal pair
+is the honest encoding and the renderer was taught to read it:
+`OrderEventTimeline.primaryLineOf` shows the event's note („Płatność
+zaksięgowana (przelew)") when the two statuses match, instead of a „Nowe →
+Nowe" arrow that carries no information, and the secondary line stops
+repeating it.
+
+**Evidence:** three cases in `tests/integration/admin-orders.test.ts`,
+written first - the event exists, it carries the note and the equal
+statuses, and the audit entry is still written beside it.
 
 ---
 
@@ -1876,7 +1939,7 @@ changes.
 | §13.1.6-7 - DPI and aspect warnings | never run (`target: null`) | BUG-11 |
 | §6.7 - "Duplicate deep-copies the Configuration" | now increments quantity (deliberate reversal) | BUG-33 |
 | `CHECKLIST.md:81` - step guards "reject a THICKNESS selection on WALL_ART" | never called | BUG-06 |
-| `DeliveryMethod.freeShippingThresholdGrosze` - "(net)" | compared against gross | BUG-08 |
+| ~~`DeliveryMethod.freeShippingThresholdGrosze` - "(net)"~~ | ~~compared against gross~~ | ~~BUG-08~~ - resolved 2026-09-05: documented as GROSS, which is what it always compared |
 | `public-images.ts` - "deployment target is a long-running Node server" | §3 names Vercel | SEC-06 |
 
 ---
