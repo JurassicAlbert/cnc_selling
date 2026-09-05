@@ -110,6 +110,9 @@ describe('applyUpdateStoreSettings - the bank account every customer is told to 
   const INPUT = {
     bankAccountNumber: 'PL61109010140000071219812874',
     bankAccountHolderPl: 'Test SEC-04',
+    // UX-22's re-typed confirmation. Matching, because this test is about
+    // who may write the field, not about how it is validated.
+    bankAccountNumberConfirmation: 'PL61 1090 1014 0000 0712 1981 2874',
     shippingFlatRateGrosze: 1234,
     // Blank: what this test is about is the authorization gate, not the
     // social-profile fields added on 2026-09-04.

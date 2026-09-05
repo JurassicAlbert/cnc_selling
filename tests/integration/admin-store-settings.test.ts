@@ -65,6 +65,14 @@ const BLANK_SOCIALS = {
   youtubeUrl: '',
 } as const;
 
+/**
+ * UX-22 requires the account number to be re-typed, but only when it
+ * changes. The cases below that are not about the bank field pass the same
+ * value they are setting, so they keep testing what they were written to
+ * test.
+ */
+const CONFIRMING = (bankAccountNumber: string) => ({ bankAccountNumberConfirmation: bankAccountNumber });
+
 describe('getStoreSettings', () => {
   it('returns the real singleton row', async () => {
     const settings = await getStoreSettings();
@@ -77,6 +85,7 @@ describe('applyUpdateStoreSettings', () => {
     const result = await applyUpdateStoreSettings(staffActor(), {
       ...BLANK_SOCIALS,
       bankAccountNumber: '',
+      ...CONFIRMING(''),
       bankAccountHolderPl: '',
       shippingFlatRateGrosze: -1,
     });
@@ -90,6 +99,7 @@ describe('applyUpdateStoreSettings', () => {
     const result = await applyUpdateStoreSettings(staff, {
       ...BLANK_SOCIALS,
       bankAccountNumber: 'PL61 1090 1014 0000 0712 1981 2874',
+      ...CONFIRMING('PL61 1090 1014 0000 0712 1981 2874'),
       bankAccountHolderPl: 'RYT Sp. z o.o.',
       shippingFlatRateGrosze: 2_500,
     });
@@ -100,7 +110,7 @@ describe('applyUpdateStoreSettings', () => {
     expect(after.bankAccountHolderPl).toBe('RYT Sp. z o.o.');
     expect(after.shippingFlatRateGrosze).toBe(2_500);
 
-    await applyUpdateStoreSettings(staff, { ...BLANK_SOCIALS, bankAccountNumber: '   ', bankAccountHolderPl: '', shippingFlatRateGrosze: 2_000 });
+    await applyUpdateStoreSettings(staff, { ...BLANK_SOCIALS, bankAccountNumber: '   ', ...CONFIRMING('   '), bankAccountHolderPl: '', shippingFlatRateGrosze: 2_000 });
     const cleared = await getStoreSettings();
     expect(cleared.bankAccountNumber).toBeNull();
     expect(cleared.bankAccountHolderPl).toBeNull();
@@ -116,6 +126,7 @@ describe('applyUpdateStoreSettings - social profiles', () => {
     const result = await applyUpdateStoreSettings(staffActor(), {
       ...BLANK_SOCIALS,
       bankAccountNumber: '',
+      ...CONFIRMING(''),
       bankAccountHolderPl: '',
       shippingFlatRateGrosze: 2_000,
       facebookUrl: 'https://www.facebook.com/rytpl',
@@ -148,6 +159,7 @@ describe('applyUpdateStoreSettings - social profiles', () => {
       const result = await applyUpdateStoreSettings(staffActor(), {
         ...BLANK_SOCIALS,
         bankAccountNumber: '',
+        ...CONFIRMING(''),
         bankAccountHolderPl: '',
         shippingFlatRateGrosze: 2_000,
         facebookUrl,
@@ -162,11 +174,147 @@ describe('applyUpdateStoreSettings - social profiles', () => {
     const result = await applyUpdateStoreSettings(staffActor(), {
       ...BLANK_SOCIALS,
       bankAccountNumber: '',
+      ...CONFIRMING(''),
       bankAccountHolderPl: '',
       shippingFlatRateGrosze: 2_000,
     });
 
     expect(result.ok).toBe(true);
     expect((await getStoreSettings()).facebookUrl).toBeNull();
+  });
+});
+
+/**
+ * `docs/AI-CHECKLIST.md` UX-22 - a second confirmation on the bank-account
+ * field.
+ *
+ * This is the number every bank-transfer customer is told to pay into. A
+ * transposed digit sends real money elsewhere, and nothing about the wrong
+ * number looks wrong. Two guards, because neither is sufficient alone:
+ * the checksum rejects a mistyped Polish account outright, and the re-typed
+ * confirmation catches what a checksum cannot.
+ *
+ * The confirmation is required **only when the number actually changes**.
+ * Demanding it to edit the shipping rate would train whoever uses this page
+ * to paste the same value twice without reading it, which is how a
+ * confirmation stops being one.
+ */
+describe('applyUpdateStoreSettings - the bank account number', () => {
+  const VALID = 'PL61 1090 1014 0000 0712 1981 2874';
+
+  /**
+   * `StoreSettings` is a singleton every test in this run shares, and this
+   * rule is about a *change* - so each case states the number it is starting
+   * from rather than inheriting whatever the previous one left. The first
+   * version of these tests did inherit, and one passed for the wrong reason.
+   */
+  async function startingFrom(bankAccountNumber: string | null): Promise<void> {
+    snapshot = snapshot ?? (await prisma.storeSettings.findUniqueOrThrow({ where: { id: 1 } }));
+    await prisma.storeSettings.update({ where: { id: 1 }, data: { bankAccountNumber } });
+  }
+
+  function input(overrides: Record<string, unknown> = {}) {
+    return {
+      ...BLANK_SOCIALS,
+      bankAccountNumber: '',
+      bankAccountHolderPl: '',
+      shippingFlatRateGrosze: 2_000,
+      bankAccountNumberConfirmation: '',
+      ...overrides,
+    };
+  }
+
+  it('saves a valid number when it is confirmed', async () => {
+    await startingFrom(null);
+
+    const result = await applyUpdateStoreSettings(
+      staffActor(),
+      input({ bankAccountNumber: VALID, bankAccountNumberConfirmation: VALID }),
+    );
+
+    expect(result.ok).toBe(true);
+    expect((await getStoreSettings()).bankAccountNumber).toBe(VALID);
+  });
+
+  it('refuses a mistyped number outright, confirmed or not', async () => {
+    // Last digit changed. The check digits exist precisely to catch this,
+    // and confirming it twice would not make it right.
+    const mistyped = 'PL61 1090 1014 0000 0712 1981 2875';
+    await startingFrom(null);
+
+    const result = await applyUpdateStoreSettings(
+      staffActor(),
+      input({ bankAccountNumber: mistyped, bankAccountNumberConfirmation: mistyped }),
+    );
+
+    expect(result.ok).toBe(false);
+  });
+
+  it('refuses a new number that was not re-typed identically', async () => {
+    await startingFrom(null);
+
+    const result = await applyUpdateStoreSettings(
+      staffActor(),
+      input({ bankAccountNumber: VALID, bankAccountNumberConfirmation: '' }),
+    );
+
+    expect(result.ok).toBe(false);
+  });
+
+  it('ignores how the two were spaced', async () => {
+    // Nobody groups digits the same way twice. Refusing a real match over a
+    // space would teach whoever uses this page to paste rather than read.
+    await startingFrom(null);
+
+    const result = await applyUpdateStoreSettings(
+      staffActor(),
+      input({ bankAccountNumber: VALID, bankAccountNumberConfirmation: 'PL61109010140000071219812874' }),
+    );
+
+    expect(result.ok).toBe(true);
+  });
+
+  it('accepts a foreign account it cannot verify, provided it is confirmed', async () => {
+    // "We cannot check this" is not "this is wrong". The shop is not required
+    // to refuse a non-Polish account, and the confirmation still applies.
+    await startingFrom(null);
+    const german = 'DE89 3704 0044 0532 0130 00';
+
+    const result = await applyUpdateStoreSettings(
+      staffActor(),
+      input({ bankAccountNumber: german, bankAccountNumberConfirmation: german }),
+    );
+
+    expect(result.ok).toBe(true);
+  });
+
+  it('needs no confirmation to change something else', async () => {
+    /*
+      The rule that keeps the confirmation meaningful. If editing the
+      shipping rate demanded the account number be re-typed, whoever uses
+      this page would learn to paste it twice without looking - and a
+      confirmation nobody reads is not a confirmation.
+    */
+    await startingFrom(VALID);
+
+    const result = await applyUpdateStoreSettings(
+      staffActor(),
+      input({ bankAccountNumber: VALID, shippingFlatRateGrosze: 3_000 }),
+    );
+
+    expect(result.ok).toBe(true);
+    expect((await getStoreSettings()).shippingFlatRateGrosze).toBe(3_000);
+  });
+
+  it('needs no confirmation to clear the field', async () => {
+    // Clearing it un-configures the account; the confirmation page then says
+    // so honestly rather than printing a number. Nothing is misdirected by
+    // an absence.
+    await startingFrom(VALID);
+
+    const result = await applyUpdateStoreSettings(staffActor(), input({ bankAccountNumber: '' }));
+
+    expect(result.ok).toBe(true);
+    expect((await getStoreSettings()).bankAccountNumber).toBeNull();
   });
 });

@@ -21,9 +21,9 @@
 | **Review status** | Independent full-repository audit complete. **All four P0s fixed and verified** - the three from the audit, plus BUG-35 found and closed during remediation. **SEC-05 (security headers + CSP) closed 2026-08-31.** |
 | **Overall implementation status** | Feature-complete against `ARCHITECTURE.md` P0–P9. All P0s closed, **every listed product can actually be configured and ordered** (T-16 holds the line), §16.1's header half exists, and there is CI. **The e2e suite is green (70/70, both browsers)** - see T-23, T-24 and T-25. Remaining: **0 P0, 0 P1**, 32 P2, 14 P3. |
 | **Current highest-priority issue** | **UX-22** - a second confirmation on the bank-account field. CI's first-ever run was red (CI-01, fixed 2026-09-05); `main` stays red until that fix lands. |
-| **Recommended next task** | **UX-22**, then **PERF-03**. **The PR was opened and merged on 2026-09-05, and CI ran for the first time - red, on its first database step (CI-01).** That is fixed and the whole pipeline reproduced locally against virgin databases, but `main` carries the red run until the fix is merged. |
+| **Recommended next task** | **PERF-03**, then finishing **ARCH-02**. **The PR was opened and merged on 2026-09-05, and CI ran for the first time - red, on its first database step (CI-01).** That is fixed and the whole pipeline reproduced locally against virgin databases, but `main` carries the red run until the fix is merged. |
 | **Blocking issue** | None. `OPEN_ITEMS.md` §6 (rate-limit storage) is **resolved** - the owner chose Postgres on 2026-08-30 and it is built. |
-| **Last completed area** | **ARCH-02** (2026-09-05, partial). Before it: **BUG-04 + BUG-19 + T-26**. Before them: **CI-01**, the first real CI run's failure. Before it: **ARCH-03** the same day. Before it: **ADMIN-01** the same day, which closed the last P1. Before it: UX-26. Before it: UX-25 + T-25, and UX-23. Before it: UX-21, and SEC-11 + T-23 found while verifying it. Before them: the warehouse tool, the burger nav, the em-dash sweep, PERF-02 + PERF-05, BUG-05, BUG-06, BUG-07, SEC-04, SEC-10, ARCH-01, SEC-05, SEC-01, SEC-02, SEC-03, BUG-02, BUG-03, BUG-24, BUG-35 and the carried-forward P1-8. |
+| **Last completed area** | **UX-22** (2026-09-05). Before it: **ARCH-02** (partial). Before it: **BUG-04 + BUG-19 + T-26**. Before them: **CI-01**, the first real CI run's failure. Before it: **ARCH-03** the same day. Before it: **ADMIN-01** the same day, which closed the last P1. Before it: UX-26. Before it: UX-25 + T-25, and UX-23. Before it: UX-21, and SEC-11 + T-23 found while verifying it. Before them: the warehouse tool, the burger nav, the em-dash sweep, PERF-02 + PERF-05, BUG-05, BUG-06, BUG-07, SEC-04, SEC-10, ARCH-01, SEC-05, SEC-01, SEC-02, SEC-03, BUG-02, BUG-03, BUG-24, BUG-35 and the carried-forward P1-8. |
 | **Ready for the next implementation step?** | **Yes.** 1090/1090 unit + integration tests (four consecutive clean runs), **68/68 e2e across both browser projects** (two consecutive), typecheck clean, lint clean, production build succeeds. |
 
 **Verified baseline after the P0 fixes, SEC-05 and ARCH-01** (all actually run):
@@ -406,13 +406,13 @@ affected spec passed in isolation last session).
   - **Why it stopped there:** linking consumption to production means deciding which batch a given order drew from, and that is a real business rule (oldest first, cheapest first, or the operator picks) that the owner has not been asked yet. Guessing it would put wrong numbers into a cost report, which is worse than having no report.
   - **Expected:** a decision on batch selection, then a hook from the production status transition, then the cost-per-order view that becomes possible once consumption is recorded.
   - **Status:** TODO (needs an owner decision first)
-- [ ] **UX-22 · P3 · UX/security - no second confirmation on the bank-account field** - split out of SEC-04 on 2026-08-31 rather than folded into it.
-  - **Current:** `/panel/ustawienia` is ADMIN-only now, and `StoreSettings.bankAccountNumber` is a plain text field that saves with the rest of the form. It is the account number every bank-transfer customer is told to pay into.
-  - **Expected:** the audit's own "consider a second confirmation (re-entered password, or a typed confirmation string)". The `CustomerAnonymizeForm`'s existing confirm-dialog pattern is the obvious precedent to reuse.
-  - **Why P3, not P1:** the field is behind an ADMIN gate and every change is audited with before/after values, so this is defence against a slip rather than against an attacker. Expanding a security fix is how security fixes get delayed.
-  - **Evidence:** `REVIEW-DETAILED.md` SEC-04
-  - **Status:** TODO
-
+- [x] **UX-22 · P3 · UX/security - no second confirmation on the bank-account field** - **DONE 2026-09-05.**
+  - **Was:** `StoreSettings.bankAccountNumber` saved as a plain text field with the rest of the form. It is the number every bank-transfer customer is told to pay into, printed on the confirmation page and in the confirmation email, so a transposed digit sends real money elsewhere - and nothing about the wrong number looks wrong.
+  - **The suggested fix was a confirm dialog** (reusing `CustomerAnonymizeForm`'s pattern). **Deliberately not that.** A dialog is right for a destructive action and useless here: pressing „na pewno?" does not catch a typo, because the person confirming has the same wrong number in their head. What catches it is the checksum, and re-typing.
+  - **Two guards, neither sufficient alone.** `checkBankAccountNumber` verifies a Polish account with the IBAN mod-97 rule - which is exactly what its two leading digits are for, and it rejects both a single mistyped digit and a transposition deterministically. Re-typing catches whatever a checksum cannot, because you would have to make the same mistake twice.
+  - **Three judgement calls, all recorded in code.** A number it cannot verify (a foreign IBAN) returns `not-recognised`, **not** `checksum-failed` - "we cannot check this" must not be reported as "this is wrong", and the shop is not required to refuse a foreign account; the re-typed confirmation still applies to it. Spacing is ignored when comparing the two, because nobody groups digits the same way twice and refusing a real match over a space teaches the reader to paste rather than check. And the confirmation is required **only when the number actually changes** - demanding it to edit the shipping rate would train whoever uses this page to paste the same value twice without reading it, which is how a confirmation stops being one.
+  - **Evidence:** `tests/unit/bank-account.test.ts` (10, written first, including the transposition case) · seven cases in `admin-store-settings.test.ts` · `tests/e2e/admin-bank-account.spec.ts` proves the guard is reachable and legible in a real browser - the field is on the form, a mismatch stops the save **and says why**, nothing is written, and a correct pair goes through. **1181 unit/integration; e2e 74 → 76, all passing.**
+  - **Status:** DONE
 - [ ] **BUG-16 · P2 · SEO** - the sitemap omits `/kolekcje` and its children, `/strony/[slug]`, `/faq`, `/o-nas`, `/kontakt` and both legal pages (§18 also names designs and content pages), and sets no `lastModified` despite every model having `updatedAt`.
 
 ---
@@ -463,8 +463,8 @@ easier once it is green.
 
 | # | ID | Pri | Why now | Prerequisite |
 |---|---|---|---|---|
-| 1 | **UX-22** | P3 | A second confirmation on the bank-account field, split out of SEC-04. Small, and the last UX item outstanding. | none |
-| 3 | **PERF-03** | P2 | 22 admin repositories still use unbounded `findMany`. ADMIN-01 built the pagination helper they would reuse. | none |
+| 1 | **PERF-03** | P2 | 22 admin repositories still use unbounded `findMany`. ADMIN-01 built the pagination helper they would reuse, so this is now mostly application rather than design. | none |
+| 2 | **ARCH-02, the rest** | P2 | `SummaryStep` (189 lines) and five smaller components still sit in `Configurator.tsx`. The same mechanical move as the four already out. | none |
 
 **PERF-01 is not in this list any more.** Every one of its three steps now
 needs an owner decision - steps 2-3 because of SEC-05's nonce, step 1 because

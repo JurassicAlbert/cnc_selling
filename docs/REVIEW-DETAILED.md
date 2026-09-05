@@ -2620,3 +2620,76 @@ failure - the same argument `vitest.config.ts` records for its own timeout.
 
 The real repair remains fewer workers per server, which CI already does with
 `workers: 1`. Two consecutive full runs at 74/74 afterwards.
+
+---
+
+## UX-22 - No second confirmation on the bank-account field
+
+- **Status:** **RESOLVED 2026-09-05**
+- **Severity:** P3
+- **Area:** UX / security
+- **Files:** [src/domain/banking/account-number.ts](src/domain/banking/account-number.ts), [src/server/operations/admin-store-settings.ts](src/server/operations/admin-store-settings.ts), [src/ui/islands/admin/StoreSettingsForm.tsx](src/ui/islands/admin/StoreSettingsForm.tsx)
+
+`StoreSettings.bankAccountNumber` saved as a plain text field alongside the
+shipping rate. It is the number every bank-transfer customer is told to pay
+into - printed on the confirmation page and in the confirmation email - so a
+transposed digit sends real money somewhere else, and nothing about the wrong
+number looks wrong: it is the right length, the right shape, and the person
+who typed it reads it back as what they meant.
+
+**The suggested fix was a confirm dialog, and that is not what was built.**
+SEC-04 proposed reusing `CustomerAnonymizeForm`'s pattern. A dialog is the
+right control for a destructive action and the wrong one here: pressing „na
+pewno?" cannot catch a typo, because the person confirming has the same wrong
+number in their head. It would have satisfied the item's letter and none of
+its purpose.
+
+**Two guards instead, neither sufficient alone.**
+
+`checkBankAccountNumber` applies the IBAN mod-97 rule, which is exactly what a
+Polish account's two leading digits are for. Verified against real values
+before writing it: it accepts `PL61 1090 1014 0000 0712 1981 2874` with or
+without the prefix, and rejects both `...2875` (one digit changed) and
+`...2847` (two transposed) - the two realistic typos.
+
+Re-typing the number catches what a checksum cannot, because you would have to
+make the same mistake twice.
+
+**Three judgement calls, each recorded where it applies.**
+
+A number the checksum cannot verify - a German IBAN, say - returns
+`not-recognised`, deliberately distinct from `checksum-failed`, and only the
+second refuses the save. "We cannot check this" must not be reported as "this
+is wrong"; the shop is not required to refuse a foreign account, and the
+re-typed confirmation still applies to it, so an unverifiable number is not an
+unguarded one.
+
+Spacing is ignored when the two are compared. Nobody groups digits the same
+way twice, and refusing a real match over a space would teach whoever uses
+this page to paste rather than read.
+
+And the confirmation is required **only when the number actually changes**.
+Demanding it in order to edit the shipping rate would train the same person to
+paste the same value twice without looking, and a confirmation nobody reads is
+not a confirmation. Clearing the field needs none either: an absent number
+misdirects nothing, and `OrderSummary` already has honest copy for that state.
+
+**One implementation note.** The confirmation field is always rendered rather
+than revealed when the number is edited. This form is a Server Action with no
+client state watching the field, so a confirmation that appeared only after
+JavaScript noticed the typing is one a no-JS submit would skip entirely. It is
+enforced server-side; the field is there so the admin can satisfy a guard they
+can see.
+
+**Evidence.** `tests/unit/bank-account.test.ts` (10, written first) and seven
+cases in `admin-store-settings.test.ts`. Those integration cases were also
+rewritten to state the number each starts from: `StoreSettings` is a singleton
+every test in the run shares, this rule is about a *change*, and the first
+version inherited whatever the previous case left - one of them passed for the
+wrong reason until that was fixed.
+
+`tests/e2e/admin-bank-account.spec.ts` proves the guard is reachable and
+legible in a real browser: the field is on the form, a mismatch stops the save
+**and says why**, nothing is written, and a correct pair goes through. That
+last part matters - a refusal the admin cannot understand is a page they will
+work around.

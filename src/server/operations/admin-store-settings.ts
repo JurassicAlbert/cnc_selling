@@ -25,9 +25,15 @@ import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 import { refuseUnlessAdmin } from './admin-only';
+import { checkBankAccountNumber, normaliseBankAccountNumber } from '@/domain/banking/account-number';
 
 export type UpdateStoreSettingsInput = {
   readonly bankAccountNumber: string;
+  /**
+   * The same number, re-typed - UX-22. Only consulted when the account
+   * number actually changes; see `applyUpdateStoreSettings`.
+   */
+  readonly bankAccountNumberConfirmation: string;
   readonly bankAccountHolderPl: string;
   readonly shippingFlatRateGrosze: number;
   /** Blank means "no profile", which is the honest default for all four. */
@@ -84,6 +90,50 @@ export async function applyUpdateStoreSettings(
     return { ok: false, detail: 'Stawka wysyłki musi być liczbą całkowitą, nie mniejszą niż 0.' };
   }
 
+  const before = await prisma.storeSettings.findUniqueOrThrow({ where: { id: 1 } });
+
+  /*
+    UX-22. This is the number every bank-transfer customer is told to pay
+    into, printed on the confirmation page and in the confirmation email. A
+    transposed digit sends real money elsewhere and nothing about the wrong
+    number looks wrong.
+
+    Two guards, because neither is enough alone. The checksum rejects a
+    mistyped Polish account outright - that is what its two leading digits
+    are for - and re-typing catches what a checksum cannot, because you would
+    have to make the same mistake twice.
+
+    **Only when the number actually changes.** Requiring it to edit the
+    shipping rate would teach whoever uses this page to paste the same value
+    twice without reading it, and a confirmation nobody reads is not one.
+    Clearing the field needs no confirmation either: an absent number
+    misdirects nothing, and `OrderSummary` already says so honestly.
+  */
+  const accountChanged =
+    normaliseBankAccountNumber(input.bankAccountNumber) !== normaliseBankAccountNumber(before.bankAccountNumber ?? '');
+
+  if (accountChanged && blankToNull(input.bankAccountNumber) !== null) {
+    if (checkBankAccountNumber(input.bankAccountNumber) === 'checksum-failed') {
+      return {
+        ok: false,
+        detail:
+          'Numer rachunku jest nieprawidłowy - cyfry kontrolne się nie zgadzają. Sprawdź, czy nie ma literówki.',
+      };
+    }
+    // Spacing is ignored on purpose: nobody groups digits the same way
+    // twice, and refusing a real match over a space would train the reader
+    // to paste rather than check.
+    if (
+      normaliseBankAccountNumber(input.bankAccountNumberConfirmation) !==
+      normaliseBankAccountNumber(input.bankAccountNumber)
+    ) {
+      return {
+        ok: false,
+        detail: 'Aby zmienić numer rachunku, wpisz go ponownie w polu potwierdzenia. Wpisane numery różnią się.',
+      };
+    }
+  }
+
   if (SOCIAL_FIELDS.some((field) => !isUsableProfileUrl(input[field]))) {
     return {
       ok: false,
@@ -91,7 +141,6 @@ export async function applyUpdateStoreSettings(
     };
   }
 
-  const before = await prisma.storeSettings.findUniqueOrThrow({ where: { id: 1 } });
   const after = await prisma.storeSettings.update({
     where: { id: 1 },
     data: {

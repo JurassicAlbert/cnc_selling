@@ -645,6 +645,16 @@ export const ADMIN = {
     a guess about an account that may not exist. Anything left blank simply
     does not appear in the strip.
   */
+  /*
+    UX-22. The account number is what every bank-transfer customer is told to
+    pay into, so a typo sends real money elsewhere. Re-typing it is the guard
+    a confirm dialog cannot be: pressing „na pewno?" does not catch a
+    transposed digit, because the person confirming has the same wrong number
+    in their head.
+  */
+  settingsFieldBankAccountConfirmPl: 'Powtórz numer rachunku',
+  settingsFieldBankAccountConfirmHelperPl:
+    'Wymagane tylko przy zmianie numeru. Wpisz go ręcznie zamiast kopiować - to jedyny sposób, żeby wychwycić literówkę.',
   settingsSocialHeadingPl: 'Profile w mediach społecznościowych',
   settingsSocialHelperPl:
     'Pokazujemy je w pasku nad menu sklepu. Pole zostawione puste nie pojawi się w ogóle - nie podajemy adresów, których nie potwierdzisz. Wymagany pełny adres zaczynający się od https://.',
