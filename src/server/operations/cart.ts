@@ -37,7 +37,6 @@ import type { InstallationVariantCode } from '@/generated/prisma/enums';
 import { priceAndValidateSelections } from '@/server/configurator/validate-and-price';
 import { parseAcknowledgedWarnings } from '@/domain/configuration/input-schema';
 import type { PricingRejectionCode } from '@/server/configurator/validate-and-price';
-import { recordAnalyticsEvent } from '@/server/analytics/record-event';
 import { findOwnedDesignId } from '@/server/repositories/design-review';
 import type { Owner } from '@/server/session/ownership';
 import { hasNoOwner, ownerOrClauses } from '@/server/session/ownership';
@@ -72,7 +71,16 @@ async function verifyOwnedCustomDesign(customDesignId: string | null, owner: Own
 }
 
 export type AddToCartResult =
-  | { readonly ok: true }
+  | {
+      readonly ok: true;
+      /**
+       * The `add_to_cart` event this call owes, for the wrapper to schedule -
+       * BUG-12. Recorded here rather than sent, because `after()` throws
+       * outside a request scope and this `apply*` is called directly by the
+       * integration suite.
+       */
+      readonly track?: { readonly sessionToken: string; readonly userId: string | null; readonly productId: string };
+    }
   /**
    * `OPTION_UNAVAILABLE` is deliberately distinct from
    * `CONFIGURATION_INVALID` (`docs/REVIEW-DETAILED.md` SEC-03): it is
@@ -302,14 +310,10 @@ export async function applyAddToCart(
     await addOrMerge();
   }
 
-  void recordAnalyticsEvent({
-    name: 'add_to_cart',
-    sessionToken,
-    userId: owner.userId,
-    productId: data.productId,
-  });
-
-  return { ok: true };
+  // BUG-12: handed back for the wrapper to schedule with `after()`, rather
+  // than started and abandoned here. A serverless invocation can be frozen
+  // the moment the response is written.
+  return { ok: true, track: { sessionToken, userId: owner.userId, productId: data.productId } };
 }
 
 async function findOwnedCartItem(cartItemId: string, owner: Owner) {

@@ -1043,6 +1043,7 @@ Per your project rules, three things are explicitly forbidden in this codebase a
 | Unauthenticated | `/panel/*` | redirect to login |
 | `STAFF` | pricing write | 403 |
 | `STAFF` | catalogue write | 403 |
+| `STAFF` | any panel write | 403 |
 | `ADMIN` | pricing write | allow + audit entry |
 | Expired session | any action | re-auth, no data leak |
 
@@ -1051,10 +1052,25 @@ Per your project rules, three things are explicitly forbidden in this codebase a
 | Role | Can |
 |---|---|
 | `CUSTOMER` | own configurations, files, orders |
-| `STAFF` | orders, design review, production queue, customers (read); pricing and catalogue **read-only** |
+| `STAFF` | **read-only, everywhere.** Orders, design review, production queue, customers, pricing and the catalogue are all visible and none are writable |
 | `ADMIN` | everything, including pricing, catalogue CRUD, staff management, settings |
 
 There is no self-service path to `STAFF`/`ADMIN`. The first admin is created by seed script; further staff are invited from within the panel by an `ADMIN`.
+
+**Narrowed 2026-09-05** (P2-9). The row above used to read "orders, design
+review, production queue, customers (read); pricing and catalogue
+**read-only**", which left it genuinely unclear whether `(read)` scoped only
+`customers` or the whole list - and the code had answered "only customers",
+giving `STAFF` 84 of the 95 mutating panel operations while this same
+section's matrix said catalogue writes were a 403. The owner settled it:
+"admin is the only person doing changes on admin panel we dont have
+superadmin for now". All 84 moved to `requireAdminSession()`.
+
+`STAFF` is therefore a viewing role today, and nobody holds it. If an
+operator is hired, the six operations that are day-to-day production work
+rather than catalogue editing - order status transitions, marking an order
+paid, recording a shipment, deciding a design review, answering a support
+request, moderating a review - are the ones to hand back, one line each.
 
 ---
 

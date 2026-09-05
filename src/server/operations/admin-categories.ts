@@ -15,7 +15,7 @@ import { revalidatePath } from 'next/cache';
 import Papa from 'papaparse';
 
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 
@@ -76,7 +76,7 @@ export async function applyCreateCategory(
 }
 
 export async function createCategory(input: CategoryFormInput): Promise<CategoryMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyCreateCategory(staff, input);
   if (result.ok) {
     revalidatePath('/panel/kategorie');
@@ -129,7 +129,7 @@ export async function applyUpdateCategory(
 }
 
 export async function updateCategory(id: string, input: CategoryFormInput): Promise<CategoryMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyUpdateCategory(staff, id, input);
   if (result.ok) {
     revalidatePath('/panel/kategorie');
@@ -161,7 +161,7 @@ export async function applySetCategoryActive(
 }
 
 export async function setCategoryActive(id: string, isActive: boolean): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applySetCategoryActive(staff, id, isActive);
   revalidatePath('/panel/kategorie');
   revalidatePath(`/panel/kategorie/${id}`);
@@ -180,7 +180,7 @@ export async function applyBulkSetCategoryActive(staff: CurrentSession, ids: rea
 }
 
 export async function bulkSetCategoryActive(ids: readonly string[], isActive: boolean): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applyBulkSetCategoryActive(staff, ids, isActive);
   revalidatePath('/panel/kategorie');
 }
@@ -212,7 +212,7 @@ export async function applySetCategorySortOrder(
 }
 
 export async function setCategorySortOrder(id: string, sortOrder: number): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applySetCategorySortOrder(staff, id, sortOrder);
   revalidatePath('/panel/kategorie');
   revalidatePath(`/panel/kategorie/${id}`);
@@ -278,7 +278,7 @@ export async function applyImportCategoriesFromCsv(staff: CurrentSession, csvTex
 }
 
 export async function importCategoriesFromCsv(formData: FormData): Promise<ImportCategoriesResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const file = formData.get('file');
   if (!(file instanceof File) || file.size === 0) {
     return { ok: false, detail: 'Wybierz plik CSV.' };

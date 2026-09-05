@@ -34,6 +34,20 @@ export type OrderConfirmationView = {
   readonly orderNumber: string;
   readonly status: OrderStatus;
   readonly paymentMethod: PaymentMethod;
+  /*
+    BUG-04. Only `totalGrossGrosze` used to be here, so the confirmation
+    listed item lines that did not add up to the number underneath them and
+    never said why: for a paid-delivery order the arithmetic is wrong on its
+    face, and for a free-delivery order the customer is never told delivery
+    was free.
+
+    The checkout page had always broken this out correctly. The information
+    was being lost at exactly the moment it became the permanent record - the
+    document the customer keeps and pays from.
+  */
+  readonly subtotalNetGrosze: number;
+  readonly vatGrosze: number;
+  readonly shippingGrosze: number;
   readonly totalGrossGrosze: number;
   readonly email: string;
   /** 2026-08-29, owner feedback: the customer-facing confirmation never showed which delivery method or pickup point they'd actually chosen - a real gap, not by design. */
@@ -72,6 +86,9 @@ export async function listOrdersForUser(userId: string): Promise<readonly OrderS
     select: {
       orderNumber: true,
       status: true,
+      subtotalNetGrosze: true,
+      vatGrosze: true,
+      shippingGrosze: true,
       totalGrossGrosze: true,
       createdAt: true,
       items: { select: { quantity: true } },
@@ -102,6 +119,9 @@ export async function findOrderForUser(orderNumber: string, userId: string): Pro
       userId: true,
       status: true,
       paymentMethod: true,
+      subtotalNetGrosze: true,
+      vatGrosze: true,
+      shippingGrosze: true,
       totalGrossGrosze: true,
       email: true,
       deliveryMethodNamePl: true,
@@ -120,6 +140,9 @@ export async function findOrderForUser(orderNumber: string, userId: string): Pro
     orderNumber: order.orderNumber,
     status: order.status,
     paymentMethod: order.paymentMethod,
+    subtotalNetGrosze: order.subtotalNetGrosze,
+    vatGrosze: order.vatGrosze,
+    shippingGrosze: order.shippingGrosze,
     totalGrossGrosze: order.totalGrossGrosze,
     email: order.email,
     deliveryMethodNamePl: order.deliveryMethodNamePl,
@@ -144,6 +167,9 @@ export async function findOrderForConfirmation(
       accessToken: true,
       status: true,
       paymentMethod: true,
+      subtotalNetGrosze: true,
+      vatGrosze: true,
+      shippingGrosze: true,
       totalGrossGrosze: true,
       email: true,
       deliveryMethodNamePl: true,
@@ -172,6 +198,9 @@ export async function findOrderForConfirmation(
     orderNumber: order.orderNumber,
     status: order.status,
     paymentMethod: order.paymentMethod,
+    subtotalNetGrosze: order.subtotalNetGrosze,
+    vatGrosze: order.vatGrosze,
+    shippingGrosze: order.shippingGrosze,
     totalGrossGrosze: order.totalGrossGrosze,
     email: order.email,
     deliveryMethodNamePl: order.deliveryMethodNamePl,

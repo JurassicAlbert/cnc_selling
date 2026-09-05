@@ -289,6 +289,7 @@ model Material {
   configurations Configuration[]
 
   stock MaterialStock[]
+  orderItems OrderItem[]
 
   @@index([isAvailable, sortOrder])
 }
@@ -332,12 +333,59 @@ model MaterialStock {
   /// Delivery note number, shelf, batch quirks. Staff-facing only.
   notePl String? @db.Text
 
+  /// Cumulative area already cut from this batch, in mm². WAREHOUSE-01.
+  ///
+  /// Area rather than a board count, and the difference is the whole point:
+  /// one 2000x1250 board yields 240 coasters at 100x100, so decrementing
+  /// `quantity` per order item would be wrong by a factor of 240 within
+  /// days. `quantity` therefore keeps meaning "boards bought in this batch"
+  /// and this records how much of them has been used.
+  ///
+  /// Known and accepted inaccuracy: it treats every offcut as usable, so the
+  /// shelf reads a few percent fuller than it is. That was the owner's trade
+  /// on 2026-09-05, against typing a board count on every order.
+  consumedAreaMm2 Int @default(0)
+
   purchasedAt DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  consumptions StockConsumption[]
+
   @@index([materialId])
   @@index([purchasedAt])
+}
+
+/// One draw from one batch for one order item - WAREHOUSE-01.
+///
+/// Written when an order enters production, inside the same transaction as
+/// the status change, so an order cannot be in production with no record of
+/// what it took, or the reverse.
+///
+/// This is the audit trail behind `MaterialStock.consumedAreaMm2`: the
+/// running total is what the warehouse screen reads, and these rows are what
+/// it is made of. Kept per (order item, batch) because one item spans two
+/// batches when the older one runs out mid-cut.
+model StockConsumption {
+  id              String        @id @default(cuid())
+  orderId         String
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItemId     String
+  orderItem       OrderItem     @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  materialStockId String
+  materialStock   MaterialStock @relation(fields: [materialStockId], references: [id], onDelete: Restrict)
+
+  areaMm2    Int
+  /// This draw's share of the batch's board price, net.
+  costGrosze Int
+
+  createdAt DateTime @default(now())
+
+  /// An item draws from a given batch at most once per plan, so this is also
+  /// the guard against a repeated transition consuming the shelf twice.
+  @@unique([orderItemId, materialStockId])
+  @@index([orderId])
+  @@index([materialStockId])
 }
 
 /// Compatibility: which materials are offered for which product, and the
@@ -910,7 +958,27 @@ model DeliveryMethod {
   namePl                      String
   descPl                      String   @db.Text
   priceGrosze                 Int
-  /// Order subtotal (net) at or above which this method becomes free. `null` = never free.
+  /// Order subtotal (GROSS) at or above which this method becomes free.
+  /// `null` = never free.
+  ///
+  /// Said gross, and was wrong: this comment read "net" while
+  /// `evaluateDeliveryMethod` had always compared `subtotalGrossGrosze`, so
+  /// free shipping began 23% earlier than the documented policy - at 406,50 zł
+  /// on the then-seeded 500 zł threshold. `docs/REVIEW-DETAILED.md` BUG-08.
+  ///
+  /// Resolved by correcting the description rather than the comparison.
+  /// Gross is the better rule - "wydaj 400 zł" should mean the number on the
+  /// customer's cart, not a figure they would have to divide by 1.23 to
+  /// recognise - and switching the code to net would have quietly raised the
+  /// real threshold by 23% on a live shop. That is a pricing change, not a
+  /// bug fix.
+  ///
+  /// Set to 400 zł on 2026-09-05, the owner's answer to BUG-08's second
+  /// half ("free above 400 zł"). The weight-tier machinery still prices
+  /// every delivery below it, and still decides which methods are offered
+  /// at all: a threshold makes a feasible carriage free, it never makes an
+  /// impossible one happen. `evaluateDeliveryMethod` resolves feasibility
+  /// first for exactly that reason.
   freeShippingThresholdGrosze Int?
   estimatedDaysMin            Int
   estimatedDaysMax            Int
@@ -936,6 +1004,7 @@ model DeliveryMethod {
   /// prepared but not yet priced) - `priceGrosze`/`freeShippingThresholdGrosze`
   /// above stay the fallback flat rate for exactly that case.
   weightTiers                  DeliveryWeightTier[]
+  insuranceTiers               DeliveryInsuranceTier[]
 
   @@index([isActive, sortOrder])
 }
@@ -949,6 +1018,28 @@ model DeliveryMethod {
 /// set for a genuine physical-locker constraint (InPost Paczkomat's real
 /// door/compartment dimensions) - `null` for a courier with no such limit
 /// in its own published data.
+/// One declared-value band from a carrier's own published insurance rate
+/// card - `docs/OPEN_ITEMS.md` §10.
+///
+/// **No row is seeded, on purpose.** The owner chose the carrier's real
+/// declared-value table over a flat fee or a percentage, and neither InPost
+/// nor DPD publishes one citably - the same wall `Kurier GEIS` hit for its
+/// weight tiers. A method with no bands offers no insurance and shows no
+/// checkbox, so nothing invents a price nobody published. Adding the real
+/// bands at /panel/dostawa turns it on.
+model DeliveryInsuranceTier {
+  id               String         @id @default(cuid())
+  deliveryMethodId String
+  deliveryMethod   DeliveryMethod @relation(fields: [deliveryMethodId], references: [id], onDelete: Cascade)
+  labelPl          String
+  /// The highest order value this band covers, inclusive.
+  maxValueGrosze   Int
+  priceGrosze      Int
+  sortOrder        Int            @default(0)
+
+  @@index([deliveryMethodId, sortOrder])
+}
+
 model DeliveryWeightTier {
   id               String         @id @default(cuid())
   deliveryMethodId String
@@ -1010,6 +1101,15 @@ model Order {
   subtotalNetGrosze Int
   vatGrosze         Int
   shippingGrosze    Int
+  /// What the customer paid for declared-value cover, and the band they
+  /// bought - `docs/OPEN_ITEMS.md` §10. Zero and null when insurance was not
+  /// offered or not taken, which is every order until a real rate card exists.
+  ///
+  /// Snapshotted like `deliveryMethodNamePl` and `shippingGrosze` beside it:
+  /// a band renamed or repriced later must not change what an old order says
+  /// it bought.
+  insuranceGrosze   Int     @default(0)
+  insuranceLabelPl  String?
   totalGrossGrosze  Int
   currency          String @default("PLN")
 
@@ -1051,6 +1151,7 @@ model Order {
 
   items           OrderItem[]
   events          OrderEvent[]
+  stockConsumptions StockConsumption[]
   /// At most one - `Review.orderId` is `@unique`. A real customer testimonial
   /// requires a genuine `COMPLETED` order behind it (§16A.1 module 9: "no
   /// facility to author a testimonial in a customer's name").
@@ -1094,12 +1195,28 @@ model OrderItem {
 
   customerDesignId String?
   customerDesign   CustomerDesign?   @relation(fields: [customerDesignId], references: [id])
+  /// The catalogue material this line was configured from - WAREHOUSE-01.
+  ///
+  /// Deliberately a live foreign key beside a snapshot that deliberately has
+  /// none. `snapshot.materialNamePl` stays the record of what was *sold* and
+  /// must never be resolved back to a row; this is an operational pointer for
+  /// the warehouse, which is only meaningful against live stock. Matching the
+  /// snapshot's name back to a `Material` would be exactly the live catalogue
+  /// lookup a snapshot exists to prevent.
+  ///
+  /// Nullable because orders placed before 2026-09-05 carry no link, and
+  /// because a CUSTOM_UPLOAD line need not name a catalogue material at all.
+  materialId       String?
+  material         Material?         @relation(fields: [materialId], references: [id])
   /// Internal. Never shown to the customer in CAM terminology.
   productionMethod ProductionMethod?
   moduleCount      Int?
 
+  consumptions StockConsumption[]
+
   @@index([orderId])
   @@index([customerDesignId])
+  @@index([materialId])
 }
 
 enum ShipmentStatus {

@@ -23,6 +23,7 @@ export function StoreSettingsForm({ settings }: { readonly settings: StoreSettin
     capture(formData);
     const result = await updateStoreSettings({
       bankAccountNumber: String(formData.get('bankAccountNumber') ?? ''),
+      bankAccountNumberConfirmation: String(formData.get('bankAccountNumberConfirmation') ?? ''),
       bankAccountHolderPl: String(formData.get('bankAccountHolderPl') ?? ''),
       shippingFlatRateGrosze: grosze(formData, 'shippingFlatRatePln'),
       facebookUrl: String(formData.get('facebookUrl') ?? ''),
@@ -46,6 +47,21 @@ export function StoreSettingsForm({ settings }: { readonly settings: StoreSettin
           name="bankAccountNumber"
           defaultValue={fieldValue('bankAccountNumber', settings.bankAccountNumber ?? '')}
           size="small"
+        />
+        {/*
+          UX-22. Always rendered rather than revealed on edit: this form is a
+          Server Action with no client state watching the field, and a
+          confirmation that appears only after JavaScript notices you typing
+          is one that a no-JS submit would skip entirely. It is enforced
+          server-side, and only when the number actually changes - see
+          `applyUpdateStoreSettings`.
+        */}
+        <TextField
+          label={ADMIN.settingsFieldBankAccountConfirmPl}
+          name="bankAccountNumberConfirmation"
+          defaultValue=""
+          size="small"
+          helperText={ADMIN.settingsFieldBankAccountConfirmHelperPl}
         />
         <TextField
           label={ADMIN.settingsFieldBankAccountHolderPl}

@@ -42,7 +42,15 @@ export type OrderSummaryBankDetails = {
  */
 type OrderSummaryOrderView = Pick<
   OrderConfirmationView,
-  'orderNumber' | 'paymentMethod' | 'totalGrossGrosze' | 'items' | 'deliveryMethodNamePl' | 'pickupPointLabel'
+  | 'orderNumber'
+  | 'paymentMethod'
+  | 'subtotalNetGrosze'
+  | 'vatGrosze'
+  | 'shippingGrosze'
+  | 'totalGrossGrosze'
+  | 'items'
+  | 'deliveryMethodNamePl'
+  | 'pickupPointLabel'
 >;
 
 export function OrderSummary({
@@ -61,19 +69,74 @@ export function OrderSummary({
         <Stack spacing={1}>
           {order.items.map((item, index) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: an immutable order snapshot, never reordered or edited
-            <Stack key={index} direction="row" sx={{ justifyContent: 'space-between', gap: 2 }}>
-              <Typography variant="body2" color="text.secondary">
-                {item.snapshot.productNamePl} × {item.quantity}
-                {item.snapshot.materialNamePl !== null || item.snapshot.designNamePl !== null
-                  ? ` - ${[item.snapshot.materialNamePl, item.snapshot.designNamePl].filter((v) => v !== null).join(', ')}`
-                  : ''}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-                {formatPln(item.lineGrossGrosze)}
-              </Typography>
+            <Stack key={index} spacing={0.25}>
+              <Stack direction="row" sx={{ justifyContent: 'space-between', gap: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  {item.snapshot.productNamePl} × {item.quantity}
+                  {item.snapshot.materialNamePl !== null || item.snapshot.designNamePl !== null
+                    ? ` - ${[item.snapshot.materialNamePl, item.snapshot.designNamePl].filter((v) => v !== null).join(', ')}`
+                    : ''}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                  {formatPln(item.lineGrossGrosze)}
+                </Typography>
+              </Stack>
+
+              {/*
+                BUG-19. Both come from the snapshot, never from a live
+                catalogue row - §6.5 and §12 require them here, and reading
+                them at display time would mean this document changed after
+                the customer received it.
+
+                Guarded rather than assumed present: every order placed before
+                2026-09-05 has these keys genuinely absent, which is why
+                `snapshot.ts` types them optional. An order that predates them
+                simply shows one line less.
+              */}
+              {item.snapshot.installationVariantReceivesPl != null && (
+                <Typography variant="caption" color="text.secondary">
+                  {SITE.catalogueInstallationVariantsLabelPl}: {item.snapshot.installationVariantNamePl} -{' '}
+                  {item.snapshot.installationVariantReceivesPl}
+                </Typography>
+              )}
+              {item.snapshot.materialNotesPl != null && item.snapshot.materialNotesPl.length > 0 && (
+                <Typography variant="caption" color="text.secondary">
+                  {item.snapshot.materialNotesPl}
+                </Typography>
+              )}
             </Stack>
           ))}
         </Stack>
+        <Divider sx={{ my: 1.5 }} />
+
+        {/*
+          BUG-04. The item lines above are gross, so the subtotal shown here
+          is their sum - net plus VAT - not `subtotalNetGrosze`, which is the
+          net figure and would not reconcile with anything on screen. The VAT
+          is then stated underneath rather than added as a third line, because
+          it is already inside both numbers.
+        */}
+        <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
+          <Typography variant="body2" color="text.secondary">
+            {SITE.checkoutSubtotalLabelPl}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+            {formatPln(order.subtotalNetGrosze + order.vatGrosze)}
+          </Typography>
+        </Stack>
+
+        <Stack direction="row" sx={{ justifyContent: 'space-between', mt: 0.5 }}>
+          <Typography variant="body2" color="text.secondary">
+            {SITE.checkoutShippingLabelPl}
+            {order.pickupPointLabel === null ? '' : ` - ${order.deliveryMethodNamePl}`}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+            {/* Said out loud, not left blank: silence on a payment document
+                reads as an omission rather than as a gift. */}
+            {order.shippingGrosze === 0 ? SITE.orderFreeShippingPl : formatPln(order.shippingGrosze)}
+          </Typography>
+        </Stack>
+
         <Divider sx={{ my: 1.5 }} />
         <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
           <Typography variant="subtitle1">{SITE.orderTotalLabelPl}</Typography>
@@ -81,6 +144,9 @@ export function OrderSummary({
             {formatPln(order.totalGrossGrosze)}
           </Typography>
         </Stack>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'right' }}>
+          {SITE.orderVatIncludedPl(formatPln(order.vatGrosze))}
+        </Typography>
       </Paper>
 
       <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>

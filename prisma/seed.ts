@@ -1595,7 +1595,7 @@ const DELIVERY_METHOD_SEEDS: readonly DeliveryMethodSeed[] = [
     namePl: 'Kurier InPost',
     descPl: 'Dostawa kurierska InPost pod wskazany adres. Cena zależy od wagi paczki.',
     priceGrosze: 5_200, // flat-rate fallback only - real price always comes from weightTiers below
-    freeShippingThresholdGrosze: 50_000,
+    freeShippingThresholdGrosze: 40_000,
     estimatedDaysMin: 1,
     estimatedDaysMax: 3,
     carrier: 'InPost Kurier',
@@ -1634,7 +1634,7 @@ const DELIVERY_METHOD_SEEDS: readonly DeliveryMethodSeed[] = [
     namePl: 'Paczkomat InPost',
     descPl: 'Dostawa do wybranego Paczkomatu InPost. Cena zależy od rozmiaru i wagi paczki - wybierz konkretny punkt w kolejnym kroku.',
     priceGrosze: 2_049, // flat-rate fallback only
-    freeShippingThresholdGrosze: 50_000,
+    freeShippingThresholdGrosze: 40_000,
     estimatedDaysMin: 1,
     estimatedDaysMax: 3,
     carrier: 'InPost Paczkomaty',
@@ -1653,7 +1653,7 @@ const DELIVERY_METHOD_SEEDS: readonly DeliveryMethodSeed[] = [
     namePl: 'Punkt DPD Pickup',
     descPl: 'Dostawa do wybranego punktu DPD Pickup. Cena zależy od wagi paczki (do 20 kg - powyżej tej wagi punkt odbioru jest niedostępny, zgodnie z cennikiem DPD).',
     priceGrosze: 3_249, // flat-rate fallback only
-    freeShippingThresholdGrosze: 50_000,
+    freeShippingThresholdGrosze: 40_000,
     estimatedDaysMin: 1,
     estimatedDaysMax: 3,
     carrier: 'DPD Pickup',

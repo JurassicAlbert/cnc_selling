@@ -10,18 +10,38 @@
  */
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 
 import { checkOrderStatusTransition } from '@/domain/order-status/transitions';
 import type { OrderStatus } from '@/domain/order-status/transitions';
 import { orderStatusMessage } from '@/content/pl/messages';
+import { ADMIN } from '@/content/pl/admin';
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
+import { consumeStockForOrder } from '@/server/stock/consume-for-order';
+import type { OrderConsumption } from '@/server/stock/consume-for-order';
 import { mailer } from '@/server/mail/mailer';
 
 export type TransitionOrderStatusResult =
-  | { readonly ok: true }
+  | {
+      readonly ok: true;
+      /**
+       * WAREHOUSE-01. Set when entering production drew down less material
+       * than the order needs, because the recorded batches could not cover
+       * it. The transition still succeeded - production happens whether or
+       * not a delivery has been entered - so this is a warning to the
+       * operator, not a failure, and saying nothing would leave the shelf
+       * quietly wrong.
+       */
+      readonly stockWarningPl: string | null;
+      /**
+       * The status email this transition owes the customer, for the wrapper
+       * to schedule - BUG-12. Absent when there is nothing to send.
+       */
+      readonly notify?: { readonly email: string; readonly statusPl: string };
+    }
   | { readonly ok: false; readonly detail: string };
 
 export async function applyOrderStatusTransition(
@@ -77,7 +97,7 @@ export async function applyOrderStatusTransition(
       data: { status: toStatus },
     });
     if (updated.count === 0) {
-      return false;
+      return null;
     }
     await tx.orderEvent.create({
       data: {
@@ -90,9 +110,26 @@ export async function applyOrderStatusTransition(
         notePl,
       },
     });
-    return true;
+
+    /*
+      WAREHOUSE-01: the shelf is drawn down at the moment the order actually
+      goes on the machine, inside this same transaction - so an order cannot
+      be in production with no record of what it took, or the reverse.
+
+      Entering production is the right hook and it fires exactly once:
+      `transitions.ts` allows only CONFIRMED -> IN_PRODUCTION and nothing
+      returns to it, and the `updateMany` above has already refused a second
+      concurrent transition. `StockConsumption`'s unique index on (order item,
+      batch) is the belt to that pair of braces.
+
+      Consumption never blocks the transition. It returns a shortfall rather
+      than throwing when the recorded stock cannot cover the order, because
+      production happens whether or not a delivery has been entered.
+    */
+    const consumption = toStatus === 'IN_PRODUCTION' ? await consumeStockForOrder(tx, order.id) : null;
+    return { consumption };
   });
-  if (!applied) {
+  if (applied === null) {
     return { ok: false, detail: 'Status tego zamówienia zmienił się w międzyczasie - odśwież stronę i spróbuj ponownie.' };
   }
   await writeAuditLog({
@@ -103,16 +140,39 @@ export async function applyOrderStatusTransition(
     diff: { fromStatus: order.status, toStatus, notePl },
   });
 
-  // Fire-and-forget, after the transaction has committed - same reasoning
-  // as `create-order.ts`'s own order-confirmation send: a mailer failure
-  // must never undo a status change that has already, correctly, happened.
-  void mailer
-    .send('order-status-update', order.email, { orderNumber, statusPl: orderStatusMessage(toStatus) })
-    .catch(() => {
-      // Logged inside the mailer itself; nothing else to do here.
-    });
+  /*
+    BUG-12: the customer's status email is scheduled by the wrapper below, not
+    started and forgotten here. `after()` throws outside a request scope and
+    this `apply*` is called directly by the integration suite, so it belongs
+    in the wrapper - the same split the gate itself uses.
 
-  return { ok: true };
+    Still after the transaction has committed, which was the original point:
+    a mailer failure must never undo a status change that has already,
+    correctly, happened.
+  */
+  return {
+    ok: true,
+    stockWarningPl: describeStockShortfall(applied.consumption),
+    notify: { email: order.email, statusPl: orderStatusMessage(toStatus) },
+  };
+}
+
+/**
+ * The operator-facing sentence for a shortfall, or `null` when there is none.
+ *
+ * Square metres rather than mm², because that is the unit a delivery is
+ * bought and thought about in. Rounded to two places: a figure like
+ * "0,42 m² dębu" is actionable, and the exact millimetre count is in
+ * `StockConsumption` for anyone who needs it.
+ */
+function describeStockShortfall(consumption: OrderConsumption | null): string | null {
+  if (consumption === null || consumption.shortfalls.length === 0) {
+    return null;
+  }
+  const missing = consumption.shortfalls
+    .map((shortfall) => `${shortfall.materialNamePl}: ${(shortfall.areaMm2 / 1_000_000).toFixed(2)} m²`)
+    .join(', ');
+  return `${ADMIN.orderStockShortfallPl} ${missing}`;
 }
 
 export async function transitionOrderStatus(
@@ -120,9 +180,22 @@ export async function transitionOrderStatus(
   toStatus: OrderStatus,
   notePl: string | null,
 ): Promise<TransitionOrderStatusResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyOrderStatusTransition(staff, orderNumber, toStatus, notePl);
   if (result.ok) {
+    // BUG-12: scheduled through `after()` so a serverless invocation is kept
+    // alive until it settles, rather than `void`, which drops it silently.
+    if (result.notify !== undefined) {
+      const notify = result.notify;
+      after(async () => {
+        await mailer
+          .send('order-status-update', notify.email, { orderNumber, statusPl: notify.statusPl })
+          .catch(() => {
+            // Logged inside the mailer itself. Caught rather than left to
+            // reject, so a failed email is not reported as a failed request.
+          });
+      });
+    }
     revalidatePath(`/panel/zamowienia/${orderNumber}`);
     revalidatePath('/panel/zamowienia');
   }
@@ -134,7 +207,8 @@ export type MarkOrderPaidResult = { readonly ok: true } | { readonly ok: false; 
 export async function applyMarkOrderPaid(staff: CurrentSession, orderNumber: string): Promise<MarkOrderPaidResult> {
   const order = await prisma.order.findUnique({
     where: { orderNumber },
-    select: { id: true, paymentMethod: true, paymentStatus: true },
+    // `status` is read for the timeline entry below - BUG-20.
+    select: { id: true, paymentMethod: true, paymentStatus: true, status: true },
   });
   if (order === null) {
     return { ok: false, detail: 'Zamówienie nie istnieje.' };
@@ -151,9 +225,42 @@ export async function applyMarkOrderPaid(staff: CurrentSession, orderNumber: str
   // had both calls pass the check and both write, leaving two audit
   // entries for one real state change. Zero rows means the other click
   // already did it - the same honest "already paid" answer as above.
-  const updated = await prisma.order.updateMany({
-    where: { id: order.id, paymentStatus: { not: 'PAID' } },
-    data: { paymentStatus: 'PAID' },
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.order.updateMany({
+      where: { id: order.id, paymentStatus: { not: 'PAID' } },
+      data: { paymentStatus: 'PAID' },
+    });
+    if (result.count === 0) {
+      return result;
+    }
+
+    /*
+      BUG-20. The audit log answers "who changed what", for staff and
+      compliance. The timeline is the order's own history, and it is what
+      somebody reads when a customer asks what has happened - so payment, the
+      event they are most likely to ask about, belongs in it.
+
+      Written inside the same transaction as the payment itself, and after the
+      conditional update, so it inherits P1-6's atomicity: a double-clicked
+      button produces one payment and one entry, never two of either.
+
+      `fromStatus === toStatus` on purpose. Marking paid changes
+      `paymentStatus`, not the order's status, so this is not a transition and
+      must not render as one; `OrderEventTimeline` shows the note instead of a
+      "Nowe → Nowe" arrow when the two match.
+    */
+    await tx.orderEvent.create({
+      data: {
+        orderId: order.id,
+        fromStatus: order.status,
+        toStatus: order.status,
+        actorType: 'staff',
+        actorId: staff.userId,
+        actorEmail: staff.email,
+        notePl: ADMIN.orderEventPaymentRecordedPl,
+      },
+    });
+    return result;
   });
   if (updated.count === 0) {
     return { ok: false, detail: 'To zamówienie jest już oznaczone jako opłacone.' };
@@ -170,7 +277,7 @@ export async function applyMarkOrderPaid(staff: CurrentSession, orderNumber: str
 }
 
 export async function markOrderPaid(orderNumber: string): Promise<MarkOrderPaidResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyMarkOrderPaid(staff, orderNumber);
   if (result.ok) {
     revalidatePath(`/panel/zamowienia/${orderNumber}`);

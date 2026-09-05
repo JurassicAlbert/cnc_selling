@@ -14,6 +14,8 @@
  * `src/app/(marketing)/page.tsx`'s header comment for why).
  */
 
+import { countPl } from '@/domain/text/plural';
+
 export const SITE = {
   homeSeoTitlePl: 'RYT - meble i akcesoria z grawerem',
   homeSeoDescPl:
@@ -221,10 +223,16 @@ export const SITE = {
   cartShippingAtCheckoutPl: 'Koszt dostawy poznasz w kolejnym kroku, po wybraniu sposobu wysyłki.',
   cartKeepShoppingHeadingPl: 'Przeglądaj dalej',
   cartQuantityLabelPl: 'Ilość',
-  cartUpdateQuantityPl: 'Aktualizuj',
   cartRemovePl: 'Usuń',
-  cartDuplicatePl: 'Duplikuj',
-  cartEditPl: 'Edytuj',
+  /*
+    „Aktualizuj", „Duplikuj" and „Edytuj" were removed here on 2026-09-05
+    (UX-05/BUG-09), after the owner's 2026-09-04 instruction took the three
+    controls off the cart card and left the constants behind unused.
+    Deliberately deleted rather than kept "in case": a label still sitting in
+    the content file is how a removed control gets re-added by someone who
+    finds it and assumes it belongs somewhere. `CartContents.tsx`'s header
+    records what the removal cost.
+  */
   // 2026-08-29, cart UI/UX pass - real MUI stepper + a hard per-line cap
   // ("żeby nie było sytuacji w której klient kupuje 10000 sztuk produktu").
   cartQuantityDecreasePl: 'Zmniejsz ilość',
@@ -334,6 +342,18 @@ export const SITE = {
   orderItemsHeadingPl: 'Zamówione produkty',
   orderDeliveryMethodHeadingPl: 'Sposób dostawy',
   orderNumberLabelPl: 'Numer zamówienia',
+  /*
+    BUG-04. The confirmation used to show item lines, a divider and „Do
+    zapłaty", with nothing in between - so the lines did not add up to the
+    total and nothing said why.
+
+    Labels reused from the checkout page rather than invented, so the
+    document a customer pays from reads the same as the page they paid on.
+    `orderVatIncludedPl` is stated rather than itemised: every price on this
+    site is gross, and a Polish consumer confirmation has to say so.
+  */
+  orderVatIncludedPl: (vat: string) => `W tym VAT: ${vat}`,
+  orderFreeShippingPl: 'Gratis',
   orderTotalLabelPl: 'Do zapłaty',
   orderBankTransferHeadingPl: 'Dane do przelewu',
   orderBankTransferTitlePl: 'Tytuł przelewu',
@@ -408,6 +428,32 @@ export const SITE = {
   // 900px the control is the icon alone, so a screen reader is the only
   // consumer of this string.
   headerMenuTogglePl: 'Menu',
+  /*
+    BUG-28. The first thing a keyboard reaches on every page. Names the
+    destination rather than the mechanism ("Przejdź do treści", not "Pomiń
+    nawigację"): the person using it wants the content, and telling them what
+    they are skipping is less useful than telling them where they land.
+  */
+  skipToContentPl: 'Przejdź do treści',
+  /*
+    BUG-29. A storefront page carries three `nav` landmarks - this one, the
+    category bar and the breadcrumbs - and a screen reader's landmark list
+    read "navigation, navigation, Kategorie". The unlabelled one was the main
+    menu, which is the one somebody jumping by landmark is looking for.
+  */
+  headerMainNavPl: 'Menu główne',
+  /*
+    BUG-27. The visible count is a small circle beside the cart icon, marked
+    `aria-hidden` because it repeats a number the link already carries - which
+    left the link announced as „Koszyk 709,16 zł", with no way for a blind
+    customer to know whether it held one item or nine. This is that number, in
+    words, for the accessibility tree only.
+
+    Three Polish forms, not two: 1 produkt, 2 produkty, 5 produktów. See
+    `domain/text/plural.ts` - `n === 1 ? a : b` is simply wrong here.
+  */
+  cartItemCountPl: (count: number): string =>
+    countPl(count, { one: 'produkt', few: 'produkty', many: 'produktów' }),
   headerAccountLinkPl: 'Moje konto',
   headerLoginLinkPl: 'Zaloguj się',
   headerLogoutPl: 'Wyloguj się',

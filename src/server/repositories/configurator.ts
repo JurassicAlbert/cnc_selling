@@ -21,7 +21,14 @@ export type ConfiguratorProductData = {
   readonly productId: string;
   readonly namePl: string;
   readonly typeCode: ProductTypeCode;
-  readonly product: ProductRow & { readonly isFloorElement: boolean };
+  readonly product: ProductRow & {
+    readonly isFloorElement: boolean;
+    /** BUG-19: recorded in the order snapshot, never used to price. */
+    readonly slug: string;
+    readonly productionDaysMin: number;
+    readonly productionDaysMax: number;
+    readonly materialNotesPl: string | null;
+  };
   readonly options: ConfiguratorOptionData;
   readonly designsById: ReadonlyMap<
     string,
@@ -47,6 +54,8 @@ export type ConfiguratorProductData = {
       readonly minDetailSpacingUm: number;
       readonly minTextHeightUm: number;
       readonly isNaturalVariable: boolean;
+      /** BUG-19, §6.8: the order snapshot records the family as well as the name. */
+      readonly familyCode: string;
     }
   >;
   readonly finishesById: ReadonlyMap<
@@ -54,7 +63,15 @@ export type ConfiguratorProductData = {
     { readonly pricePerM2Grosze: number; readonly setupFeeGrosze: number }
   >;
   readonly thicknessesByMm: ReadonlyMap<number, { readonly priceFactorBp: number }>;
-  readonly installVariantsByCode: ReadonlyMap<string, { readonly priceFactorBp: number }>;
+  readonly installVariantsByCode: ReadonlyMap<
+    string,
+    {
+      readonly priceFactorBp: number;
+      /** BUG-19, §6.5: both go into the order snapshot, so it never needs a live lookup. */
+      readonly namePl: string;
+      readonly receivesPl: string;
+    }
+  >;
   readonly personalizationSpec: PersonalizationSpecRow | null;
   /** Only the fonts this product's `PersonalizationSpec.allowedFontIds` actually lists. */
   readonly fontsById: ReadonlyMap<string, FontRow>;
@@ -82,6 +99,13 @@ export async function getConfiguratorProductData(
       where: activeOnly ? { slug, isActive: true, category: { isActive: true } } : { slug },
       select: {
         id: true,
+        // BUG-19: the order snapshot captures the slug, the lead time and the
+        // material notes, so this query has to carry them. All three are
+        // display- or record-only here; nothing prices off them.
+        slug: true,
+        productionDaysMin: true,
+        productionDaysMax: true,
+        materialNotesPl: true,
         namePl: true,
         typeCode: true,
         basePriceGrosze: true,
@@ -128,6 +152,7 @@ export async function getConfiguratorProductData(
                 minDetailSpacingUm: true,
                 minTextHeightUm: true,
                 isNaturalVariable: true,
+                family: true,
                 finishes: {
                   select: {
                     finish: {
@@ -243,6 +268,9 @@ export async function getConfiguratorProductData(
         minDetailSpacingUm: material.minDetailSpacingUm,
         minTextHeightUm: material.minTextHeightUm,
         isNaturalVariable: material.isNaturalVariable,
+        // BUG-19 (§6.8: "material name and family"). `materialNotesPl` is a
+        // Product column, not a Material one, and is read from there.
+        familyCode: material.family,
       },
     ]),
   );
@@ -284,7 +312,13 @@ export async function getConfiguratorProductData(
   const installVariantsByCode = new Map(
     product.installVariants.map((variant) => [
       variant.code,
-      { priceFactorBp: variant.priceFactorBp },
+      {
+        priceFactorBp: variant.priceFactorBp,
+        // BUG-19 (§6.5: the „Co otrzymujesz" line "goes into the summary and
+        // the order snapshot").
+        namePl: variant.namePl,
+        receivesPl: variant.receivesPl,
+      },
     ]),
   );
 
@@ -299,7 +333,24 @@ export async function getConfiguratorProductData(
     ]),
   );
 
-  const productRow: ProductRow & { isFloorElement: boolean } = {
+  /*
+    `ProductRow` is deliberately the pricing subset (`mapping/to-domain.ts`) -
+    what `calculatePrice` needs and nothing else. The four fields added
+    alongside it are not pricing inputs; they are what BUG-19 captures into
+    the order snapshot, so they are carried here rather than widening
+    `ProductRow` and implying the pricing layer reads them.
+  */
+  const productRow: ProductRow & {
+    isFloorElement: boolean;
+    slug: string;
+    productionDaysMin: number;
+    productionDaysMax: number;
+    materialNotesPl: string | null;
+  } = {
+    slug: product.slug,
+    productionDaysMin: product.productionDaysMin,
+    productionDaysMax: product.productionDaysMax,
+    materialNotesPl: product.materialNotesPl,
     basePriceGrosze: product.basePriceGrosze,
     minPriceGrosze: product.minPriceGrosze,
     minWidthMm: product.minWidthMm,

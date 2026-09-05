@@ -6,60 +6,14 @@ import path from 'node:path';
 // `admin-authz.spec.ts` has this same line).
 import 'dotenv/config';
 
-import type { Locator, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 // Not `@playwright/test`: this spec registers accounts, and SEC-01 allows
 // one IP ten per day - fewer than a full suite run needs. See fixtures.ts.
 import { expect, test } from './fixtures';
-import { clearLoopbackRateLimits } from './rate-limit-reset';
+import { fillReliably } from './fill-reliably';
+import { registerAccount } from './register';
 
 import { prisma } from '../../src/server/db/client';
-
-/**
- * P9 continuation, 2026-08-28 - the full, real NEEDS_CHANGES round trip:
- * a customer uploads a design via `/moje-konto/wzory` (the standalone
- * library, P9 phase 2), a real staff account requests changes on it via
- * the existing admin review panel (`/panel/weryfikacja`, unchanged), and
- * the customer sees the notice, the staff's comment, and a real working
- * reupload form on the new `/moje-konto/wzory/[id]` detail page - closing
- * the gap `docs/CHECKLIST.md` flagged: `reuploadCustomDesign` was real and
- * domain-tested since P7 but had no UI to reach it.
- *
- * `reuploadCustomDesign`/`postCustomerDesignComment` both call
- * `requireOwnedDesignId`/`currentOwner()` internally, which read real
- * `next/headers` - not callable directly from a Vitest integration test
- * (the documented "cookies outside request scope" gotcha), so this is the
- * right level for it, same as `custom-upload.spec.ts`.
- *
- * Talks to Postgres directly (`prisma.user.update` to promote the staff
- * account) - same real, established pattern `admin-authz.spec.ts` set,
- * against the same shared dev database every other e2e spec and this
- * session's own manual verification already writes to.
- */
-
-async function fillReliably(locator: Locator, value: string): Promise<void> {
-  await expect(async () => {
-    await locator.click();
-    await locator.fill('');
-    await locator.pressSequentially(value, { delay: 10 });
-    await expect(locator).toHaveValue(value);
-  }).toPass({ timeout: 10_000 });
-}
-
-async function register(page: Page, params: { readonly name: string; readonly email: string; readonly password: string }) {
-  // Immediately before the submit, not merely once per test. Clearing per
-  // test leaves a real race under parallel workers: the counter is shared
-  // across all of them, so several tests can each register after the same
-  // clear and blow through SEC-01's ten-per-IP together. Seen on 2026-09-04,
-  // as a registration that silently stayed on `/rejestracja`. Clearing here
-  // shrinks the window to the milliseconds between this call and the click.
-  await clearLoopbackRateLimits();
-  await page.goto('/rejestracja');
-  await fillReliably(page.getByLabel('Imię i nazwisko'), params.name);
-  await fillReliably(page.getByLabel('Adres e-mail'), params.email);
-  await fillReliably(page.getByLabel('Hasło'), params.password);
-  await page.getByRole('button', { name: 'Załóż konto' }).click();
-  await expect(page).toHaveURL('/moje-konto');
-}
 
 /**
  * `submitLogin` redirects role-dependently (`mergeAndGetRedirectTarget`) -
@@ -81,6 +35,25 @@ async function logout(page: Page): Promise<void> {
   await expect(page).toHaveURL('/');
 }
 
+/*
+  One retry, for load and not for correctness - recorded 2026-09-05 rather
+  than left as a bare config line.
+
+  This is the heaviest spec in the suite: two registrations, three logins and
+  two real multipart uploads in one journey. Run alone it passes on both
+  browser projects, repeatedly. Run while the other project is doing the same
+  uploads, the server has been seen to answer one of them with "The
+  destination stream closed early" and the page renders its error boundary -
+  a failure whose only content is that two uploads collided.
+
+  A retry is the established remedy in this repository for exactly that
+  (`admin-pricing.test.ts` carries the same, for the same reason) and it is
+  also the one that can hide a real regression, so: the underlying stream
+  error is worth its own investigation and is recorded as T-30. This makes the
+  suite honest in the meantime, it does not close that question.
+*/
+test.describe.configure({ retries: 1 });
+
 test('customer uploads, staff requests changes, customer sees the notice and reuploads', async ({ page }) => {
   // Two registrations, three logins, two file uploads and a staff review in
   // one journey - it is genuinely slow, and the 30s default was being spent
@@ -94,13 +67,20 @@ test('customer uploads, staff requests changes, customer sees the notice and reu
   const staffEmail = `e2e-design-review-staff-${stamp}@example.test`;
 
   // --- Customer: upload a real design via the standalone library ---
-  await register(page, { name: 'E2E Customer', email: customerEmail, password: 'correcthorse123' });
+  await registerAccount(page, { name: 'E2E Customer', email: customerEmail, password: 'correcthorse123' });
   await page.goto('/moje-konto/wzory');
   const main = page.getByRole('main');
   await main.locator('input[type="file"]').setInputFiles(path.resolve(process.cwd(), 'public/images/photos/loft.jpg'));
   await main.getByLabel('Akceptuję powyższe oświadczenie').check();
   await main.getByRole('button', { name: 'Prześlij projekt' }).click();
-  await expect(main.getByText('Projekt został przesłany.')).toBeVisible();
+  /*
+    A real budget rather than the 5s default. The upload is a multipart POST
+    that writes a file and two rows, and under four parallel workers it does
+    not always finish inside five seconds - it failed here on 2026-09-05 with
+    the form still on screen and no error anywhere, then passed running alone.
+    A deadline is not a cost: an upload that lands quickly asserts quickly.
+  */
+  await expect(main.getByText('Projekt został przesłany.')).toBeVisible({ timeout: 20_000 });
 
   // The just-uploaded row's own detail link carries the real id - reused
   // directly rather than querying Prisma for it, so this test exercises
@@ -114,9 +94,20 @@ test('customer uploads, staff requests changes, customer sees the notice and reu
 
   await logout(page);
 
-  // --- Staff: request changes with a real, customer-visible comment ---
-  await register(page, { name: 'E2E Staff', email: staffEmail, password: 'correcthorse123' });
-  await prisma.user.update({ where: { email: staffEmail }, data: { role: 'STAFF' } });
+  /*
+    --- The reviewer requests changes, with a real customer-visible comment ---
+
+    ADMIN rather than STAFF since P2-9 (2026-09-05): the owner settled that
+    "admin is the only person doing changes on admin panel", so deciding a
+    design review is an ADMIN operation and a STAFF account now gets a 404 on
+    the submit. This test caught that the day the change landed.
+
+    The role is incidental to what this test is about - the customer's side of
+    the loop: that they see the notice, see the comment, and can reupload. It
+    just needs an account that can actually press the button.
+  */
+  await registerAccount(page, { name: 'E2E Reviewer', email: staffEmail, password: 'correcthorse123' });
+  await prisma.user.update({ where: { email: staffEmail }, data: { role: 'ADMIN' } });
   await logout(page);
   await login(page, { email: staffEmail, password: 'correcthorse123' });
 

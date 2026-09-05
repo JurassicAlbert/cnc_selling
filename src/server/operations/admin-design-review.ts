@@ -15,7 +15,7 @@ import { revalidatePath } from 'next/cache';
 
 import type { DesignReviewStatus, ProductionMethod } from '@/generated/prisma/enums';
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 
@@ -66,7 +66,7 @@ export async function decideDesignReview(
   productionMethod: ProductionMethod | null,
   commentPl: string | null,
 ): Promise<DecideDesignReviewResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyDesignReviewDecision(staff, designId, decision, productionMethod, commentPl);
   if (result.ok) {
     revalidatePath(`/panel/weryfikacja/${designId}`);

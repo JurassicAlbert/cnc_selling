@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { SITE } from '@/content/pl/site';
 import { listActiveCategories } from '@/server/repositories/categories';
 import { listActiveCollections } from '@/server/repositories/collections';
 import { getCartSummaryForRequest } from '@/server/repositories/cart';
@@ -63,6 +64,20 @@ export async function StorefrontChrome({ children }: { readonly children: ReactN
           youtubeUrl: storeSettings.youtubeUrl,
         }}
       />
+      {/*
+        BUG-28. The first thing a keyboard reaches on every storefront page.
+        Before the header, because a skip link that comes after the thing it
+        skips is decoration.
+
+        `#tresc` rather than a `main` selector: the target has to be a real id
+        for the fragment navigation to move focus, and `<main>` alone is not
+        addressable. `tabIndex={-1}` on the target so the browser will focus
+        it - without it the page scrolls and focus stays behind in the header,
+        which is the quiet way skip links fail.
+      */}
+      <a href="#tresc" className="skip-link">
+        {SITE.skipToContentPl}
+      </a>
       <SiteHeader
         categories={categories}
         collections={collections}
@@ -70,7 +85,9 @@ export async function StorefrontChrome({ children }: { readonly children: ReactN
         session={session === null ? null : { name: session.name }}
       />
       <SearchBar categories={categories} />
-      <main>{children}</main>
+      <main id="tresc" tabIndex={-1}>
+        {children}
+      </main>
       <Footer categories={categories} />
       {consentChoice === null && <CookieConsentBanner />}
     </>

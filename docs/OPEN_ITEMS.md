@@ -111,20 +111,30 @@ The original write-up is kept below for the record.
   scale, another service to run and pay for). Either is a couple of hours
   of work once chosen; choosing wrong is the expensive part.
 
-## 7. Should `STAFF` be able to edit the catalogue?
+## 7. Should `STAFF` be able to edit the catalogue? - **RESOLVED 2026-09-05**
 
-- `ARCHITECTURE.md` §16.3 says `STAFF` gets "pricing and catalogue
-  **read-only**", and §16.2's own test matrix lists "`STAFF` → catalogue
-  write → 403". The code does not do that: every catalogue mutation uses
-  `requireStaffSession()`, so `STAFF` can create, edit and retire
-  products, materials, designs, finishes, categories and collections.
-  Pricing *is* correctly `ADMIN`-only.
-- Not a security hole - no customer can reach any of it - but the docs
-  and the code genuinely disagree, and only the owner can say which one
-  is right.
-- **What's needed**: a decision. Either relax the docs (if staff are
-  trusted to run the catalogue day to day), or tighten ~20 actions to
-  `requireAdminSession()`. Cheap either way once decided.
+**The owner chose read-only:** "admin is the only person doing changes on
+admin panel we dont have superadmin for now". The docs were right and the
+code was over-permissive, so the code moves.
+
+- The disagreement was real: `ARCHITECTURE.md` §16.3 says `STAFF` gets
+  "pricing and catalogue **read-only**" and §16.2's test matrix lists
+  "`STAFF` → catalogue write → 403", while every catalogue mutation used
+  `requireStaffSession()`. Pricing *was* already correctly `ADMIN`-only.
+- **It was 84 operations, not the ~20 estimated here.** Measured before
+  acting, because the number changes what the work is. Six of them are not
+  catalogue at all but day-to-day operator work - moving an order through
+  production, marking it paid, recording a shipment, deciding a design
+  review, answering a support request, moderating a review - and the owner
+  was asked specifically about those before they moved too.
+- **Consequence, recorded because it is not obvious:** `STAFF` is now a
+  genuinely read-only role. Nobody holds it today (the owner runs the panel
+  alone and there is no tier above `ADMIN`), so this costs nothing now; if
+  an operator is hired, giving them back the six operational writes is one
+  line each, and the split is written down under P2-9 in
+  `docs/AI-CHECKLIST.md`.
+- Deleting the role entirely was offered and refused, so `STAFF` stays as
+  the read-only tier the architecture always described.
 
 ## 8. Four models with no admin screen at all
 
@@ -167,6 +177,39 @@ what happens to the stored file - kept (simplest, and what the order
 audit trail arguably requires) or purged on request (a real GDPR
 erasure path, larger). Both are a couple of hours once decided; deciding
 is the part only the owner can do.
+
+## 10. Package insurance - real carrier rate cards needed
+
+- **Owner request, 2026-09-05**, answering BUG-08: package insurance as a
+  checkout option the customer can select. Asked how it should be priced,
+  the owner chose **the carrier's real declared-value table** over a flat
+  fee or a percentage.
+- **What exists so far** (2026-09-05): the data model and the band-selection
+  rule. `DeliveryInsuranceTier` holds a carrier's declared-value bands the
+  same way `DeliveryWeightTier` holds weight brackets, `Order` carries
+  `insuranceGrosze` and `insuranceLabelPl` snapshotted like
+  `shippingGrosze`/`deliveryMethodNamePl` beside them, and
+  `domain/checkout/insurance.ts` picks the cheapest band that covers an order
+  (8 unit tests, written first). **No band is seeded**, so
+  `isInsuranceOffered` is false for every method and nothing appears anywhere
+  in the UI.
+- **Still to build**: the checkout checkbox, adding the premium to the order
+  total at creation, showing it on the confirmation and in the admin order
+  view, and the `/panel/dostawa` screen for entering bands. Deliberately not
+  built ahead of the rates - a checkout control that cannot be priced is a
+  control that cannot be tested end to end, and the shape of the screen
+  depends on what a real rate card turns out to look like (flat bands, or
+  bands per weight tier as well).
+- **What's blocking it**: InPost's and DPD's actual declared-value
+  ("ubezpieczenie przesyłki") rate cards - the value bands and what each
+  band costs. Both publish these to business account holders; neither has
+  a citable public table, which is the same wall item 2 hit with GEIS. The
+  owner chose this over a flat fee or a percentage of order value, both of
+  which could have shipped immediately.
+- **Why nothing is seeded meanwhile**: the same reason `Kurier GEIS` is
+  seeded `isActive: false`. The owner's own instruction is that "you are not
+  allowed to lie", and a plausible-looking premium presented as a quote is
+  exactly that.
 
 ---
 

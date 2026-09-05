@@ -363,7 +363,15 @@ export function CheckoutForm({
                                   {SITE.checkoutDeliveryMatchedTierPl(method.matchedTierLabelPl)}
                                 </Typography>
                               )}
-                              {method.feasible && method.priceGrosze === 0 && method.matchedTierLabelPl === null && (
+                              {/*
+                                UX-07: the notice celebrates the threshold,
+                                not the number. It used to fire on any zero
+                                with no tier, which is also personal
+                                collection - free because nothing is shipped,
+                                not because the order earned it. That
+                                method's own description already says so.
+                              */}
+                              {method.freeShippingApplied && (
                                 <Typography variant="caption" color="success.main">
                                   {SITE.checkoutFreeShippingAppliedPl}
                                 </Typography>

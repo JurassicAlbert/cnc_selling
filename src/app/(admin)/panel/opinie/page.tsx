@@ -3,19 +3,25 @@ import { Button, Stack, Typography } from '@mui/material';
 
 import { ADMIN, adminReviewStatusLabel } from '@/content/pl/admin';
 import { listReviewsForAdmin } from '@/server/repositories/admin-reviews';
+import { parsePagination } from '@/domain/pagination/page';
+import { AdminPageSummary } from '@/ui/primitives/AdminPageSummary';
 import { OpinieDataGrid } from '@/ui/islands/admin/OpinieDataGrid';
 import type { ReviewStatus } from '@/generated/prisma/enums';
 
 type AdminReviewsPageProps = {
-  readonly searchParams: Promise<{ readonly status?: string }>;
+  readonly searchParams: Promise<{ readonly status?: string; readonly page?: string; readonly perPage?: string }>;
 };
 
 const STATUSES: readonly ReviewStatus[] = ['PENDING', 'APPROVED', 'REJECTED'];
 
 export default async function AdminReviewsPage({ searchParams }: AdminReviewsPageProps) {
-  const { status } = await searchParams;
-  const filterStatus = isReviewStatus(status) ? status : undefined;
-  const reviews = await listReviewsForAdmin(filterStatus);
+  const params = await searchParams;
+  const filterStatus = isReviewStatus(params.status) ? params.status : undefined;
+  // PERF-03. The status filter above is a set of links, and
+  // `useServerPagination` rebuilds the query from whatever is already there -
+  // so paging keeps the filter and vice versa.
+  const page = parsePagination(params);
+  const reviews = await listReviewsForAdmin(filterStatus, page);
 
   return (
     <>
@@ -38,10 +44,18 @@ export default async function AdminReviewsPage({ searchParams }: AdminReviewsPag
         ))}
       </Stack>
 
-      {reviews.length === 0 ? (
+      {reviews.total === 0 ? (
         <Typography color="text.secondary">{ADMIN.reviewsEmptyPl}</Typography>
       ) : (
-        <OpinieDataGrid rows={reviews} />
+        <>
+          <AdminPageSummary skip={page.skip} take={page.take} total={reviews.total} />
+          <OpinieDataGrid
+            rows={reviews.items}
+            page={page.pageIndex}
+            pageSize={page.pageSize}
+            total={reviews.total}
+          />
+        </>
       )}
     </>
   );

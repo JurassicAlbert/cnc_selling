@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 import { deletePublicImage, savePublicImage } from '@/server/storage/public-images';
@@ -44,7 +44,7 @@ export async function applyUploadProductImage(
 }
 
 export async function uploadProductImage(productId: string, formData: FormData): Promise<ActionResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyUploadProductImage(staff, productId, formData);
   if (result.ok) {
     revalidateProduct(productId);
@@ -61,7 +61,7 @@ export async function applySetPrimaryProductImage(staff: CurrentSession, product
 }
 
 export async function setPrimaryProductImage(productId: string, imageId: string): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applySetPrimaryProductImage(staff, productId, imageId);
   revalidateProduct(productId);
 }
@@ -76,7 +76,7 @@ export async function applyRemoveProductImage(staff: CurrentSession, productId: 
 }
 
 export async function removeProductImage(productId: string, imageId: string): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applyRemoveProductImage(staff, productId, imageId);
   revalidateProduct(productId);
 }

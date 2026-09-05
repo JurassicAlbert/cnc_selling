@@ -15,7 +15,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 import { savePublicImage } from '@/server/storage/public-images';
@@ -117,7 +117,7 @@ export async function applyCreateMaterial(staff: CurrentSession, formData: FormD
 }
 
 export async function createMaterial(formData: FormData): Promise<MaterialMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyCreateMaterial(staff, formData);
   if (result.ok) {
     revalidatePath('/panel/materialy');
@@ -168,7 +168,7 @@ export async function applyUpdateMaterial(
 }
 
 export async function updateMaterial(id: string, formData: FormData): Promise<MaterialMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyUpdateMaterial(staff, id, formData);
   if (result.ok) {
     revalidatePath('/panel/materialy');
@@ -196,7 +196,7 @@ export async function applySetMaterialAvailable(staff: CurrentSession, id: strin
 }
 
 export async function setMaterialAvailable(id: string, isAvailable: boolean): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applySetMaterialAvailable(staff, id, isAvailable);
   revalidatePath('/panel/materialy');
   revalidatePath(`/panel/materialy/${id}`);
@@ -210,7 +210,7 @@ export async function applyBulkSetMaterialAvailable(staff: CurrentSession, ids: 
 }
 
 export async function bulkSetMaterialAvailable(ids: readonly string[], isAvailable: boolean): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applyBulkSetMaterialAvailable(staff, ids, isAvailable);
   revalidatePath('/panel/materialy');
 }
@@ -234,7 +234,7 @@ export async function applySetMaterialSortOrder(staff: CurrentSession, id: strin
 }
 
 export async function setMaterialSortOrder(id: string, sortOrder: number): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applySetMaterialSortOrder(staff, id, sortOrder);
   revalidatePath('/panel/materialy');
   revalidatePath(`/panel/materialy/${id}`);
@@ -292,7 +292,7 @@ export async function applyDuplicateMaterial(staff: CurrentSession, id: string):
 }
 
 export async function duplicateMaterial(id: string): Promise<MaterialMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyDuplicateMaterial(staff, id);
   if (result.ok) {
     revalidatePath('/panel/materialy');

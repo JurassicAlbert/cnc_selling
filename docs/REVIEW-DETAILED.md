@@ -451,7 +451,7 @@ T-05.
 
 ## BUG-04 - The order confirmation never shows shipping, VAT or the net subtotal
 
-- **Status:** CONFIRMED BUG · UX/UI
+- **Status:** **RESOLVED 2026-09-05** · CONFIRMED BUG · UX/UI
 - **Severity:** P1
 - **Area:** ecommerce / content / compliance
 - **Files:** [src/server/repositories/orders.ts](src/server/repositories/orders.ts) (`OrderConfirmationView`, `findOrderForConfirmation`, `findOrderForUser`), [src/ui/primitives/OrderSummary.tsx](src/ui/primitives/OrderSummary.tsx)
@@ -1258,7 +1258,7 @@ On the product page specifically, `Product` went from 3 identical queries to
 
 ## BUG-08 - Free-shipping threshold compares gross against a net-documented field
 
-- **Status:** CONFIRMED BUG
+- **Status:** **RESOLVED 2026-09-05** (was CONFIRMED BUG)
 - **Severity:** P2
 - **Files:** [src/domain/checkout/delivery.ts](src/domain/checkout/delivery.ts) (`evaluateDeliveryMethod`), [prisma/schema.prisma](prisma/schema.prisma) (`DeliveryMethod.freeShippingThresholdGrosze`)
 
@@ -1284,6 +1284,45 @@ Two separable things:
 
 **Acceptance criteria.** Unit test pinning which subtotal is compared;
 schema comment and admin label match it.
+
+### Resolved 2026-09-05 - the descriptions moved, not the comparison
+
+The parenthesis above ("fixing the *comment* may be the right call") turned
+out to be the whole of it, so this is worth stating plainly rather than
+leaving as an aside.
+
+**Gross is the rule, and now says so in all three places.** It is the number
+printed in the cart, the number a Polish shop states a free-delivery
+threshold against, and the only one a buyer can verify without doing
+arithmetic on VAT. Changing the *code* to net would have made the three
+agree just as well, and would have raised the real threshold by 23% on a
+live shop: every cart between 406,50 zł and 500 zł that gets free delivery
+today would silently stop getting it. That is a pricing decision belonging
+to the owner, not a correction belonging to a bug fix, and a schema comment
+is not authority enough to make it.
+
+- `prisma/schema.prisma` now documents `freeShippingThresholdGrosze` as
+  GROSS, with the reasoning rather than just the word.
+- `src/content/pl/admin.ts` helper text: „(brutto, czyli kwoty widocznej w
+  koszyku)", replacing „(netto)".
+- `src/domain/checkout/delivery.ts` carries the same reasoning immediately
+  above the comparison, so the next reader does not re-litigate it from the
+  code alone.
+
+**The observed consequence was not itself a defect.** 709,16 zł clears 500
+either way it is read, so all four methods showing „0,00 zł" was correct
+behaviour. What that observation really exposes is the business question
+below, which stays open.
+
+**Still the owner's decision:** whether a flat 500 zł threshold is right at
+all on made-to-order furniture, where it means the weight-tier machinery
+almost never fires. Unchanged.
+
+**Evidence:** four cases in `tests/unit/delivery-pricing.test.ts`, written
+before the change, pinning the comparison against gross - including the band
+between the net equivalent and the stated threshold, which is precisely
+where the two readings disagree and where a future tidy-up would flip the
+policy without anyone noticing.
 
 ---
 
@@ -1494,7 +1533,7 @@ warning.
 
 ## BUG-19 - The order snapshot omits fields the architecture requires
 
-- **Status:** CONFIRMED · MISSING FUNCTIONALITY
+- **Status:** **RESOLVED 2026-09-05** · CONFIRMED · MISSING FUNCTIONALITY
 - **Severity:** P2
 - **Files:** [src/server/orders/snapshot.ts](src/server/orders/snapshot.ts), [src/server/orders/create-order.ts](src/server/orders/create-order.ts) (`buildOrderItemInput`)
 
@@ -1522,7 +1561,7 @@ argument for doing it now.
 
 ## BUG-20 - Marking an order paid writes no `OrderEvent`
 
-- **Status:** CONFIRMED BUG
+- **Status:** **RESOLVED 2026-09-05** (was CONFIRMED BUG)
 - **Severity:** P2
 - **Files:** [src/server/operations/admin-orders.ts](src/server/operations/admin-orders.ts) (`applyMarkOrderPaid`)
 
@@ -1533,6 +1572,30 @@ lists "payment marking" alongside "order event timeline".
 
 **Recommended:** emit an `OrderEvent` (or extend the event model with a
 non-status event type) inside the same conditional update.
+
+### Resolved 2026-09-05
+
+`applyMarkOrderPaid` now writes the update and the `OrderEvent` inside one
+`prisma.$transaction`, inheriting P1-6's atomicity: an order marked paid
+with no event recorded, or an event with no payment, is not a state the code
+can reach. The `AuditLog` entry is still written alongside it - the two
+answer different questions (who changed what, versus what happened to this
+order) and neither replaces the other.
+
+**The event carries `fromStatus === toStatus`, deliberately.** Payment moves
+`paymentStatus`; the order's `status` does not change, so there is no
+transition to record and inventing one would put a false arrow in the
+timeline. The bare event model has no non-status event type, and adding one
+would have been a schema migration for a display concern, so the equal pair
+is the honest encoding and the renderer was taught to read it:
+`OrderEventTimeline.primaryLineOf` shows the event's note („Płatność
+zaksięgowana (przelew)") when the two statuses match, instead of a „Nowe →
+Nowe" arrow that carries no information, and the secondary line stops
+repeating it.
+
+**Evidence:** three cases in `tests/integration/admin-orders.test.ts`,
+written first - the event exists, it carries the note and the equal
+statuses, and the audit entry is still written beside it.
 
 ---
 
@@ -1876,7 +1939,7 @@ changes.
 | §13.1.6-7 - DPI and aspect warnings | never run (`target: null`) | BUG-11 |
 | §6.7 - "Duplicate deep-copies the Configuration" | now increments quantity (deliberate reversal) | BUG-33 |
 | `CHECKLIST.md:81` - step guards "reject a THICKNESS selection on WALL_ART" | never called | BUG-06 |
-| `DeliveryMethod.freeShippingThresholdGrosze` - "(net)" | compared against gross | BUG-08 |
+| ~~`DeliveryMethod.freeShippingThresholdGrosze` - "(net)"~~ | ~~compared against gross~~ | ~~BUG-08~~ - resolved 2026-09-05: documented as GROSS, which is what it always compared |
 | `public-images.ts` - "deployment target is a long-running Node server" | §3 names Vercel | SEC-06 |
 
 ---
@@ -2534,3 +2597,162 @@ step of both jobs in order against them:
 The probe databases were dropped afterwards. Worth noting that CI runs
 Playwright with `workers: 1`, so it is strictly less contended than this
 four-worker local run.
+
+---
+
+## BUG-04 and BUG-19, resolved - what the confirmation now says, and what the snapshot now keeps
+
+- **Status:** **RESOLVED 2026-09-05**
+- **Files:** [src/server/repositories/orders.ts](src/server/repositories/orders.ts), [src/ui/primitives/OrderSummary.tsx](src/ui/primitives/OrderSummary.tsx), [src/server/orders/snapshot.ts](src/server/orders/snapshot.ts), [src/server/orders/create-order.ts](src/server/orders/create-order.ts)
+
+**BUG-04.** `OrderConfirmationView` now carries `subtotalNetGrosze`,
+`vatGrosze` and `shippingGrosze`, and `OrderSummary` renders „Suma produktów
+/ Dostawa / Do zapłaty" with „W tym VAT" underneath. Labels are the checkout
+page's own, so the document a customer pays from reads like the page they paid
+on.
+
+Verified on a real order in the development data - the exact failure the item
+described. Before: item lines summing to **57,39 zł** above a „Do zapłaty" of
+**92,55 zł**, with nothing accounting for the difference. After:
+
+```
+Bransoletka z grawerem × 1 - Dąb, Gałązka oliwna      57,39 zł
+Suma produktów                                        57,39 zł
+Dostawa                                               35,16 zł
+Do zapłaty                                            92,55 zł
+                                        W tym VAT: 10,73 zł
+```
+
+And a free-delivery order reads „Dostawa - Gratis" rather than nothing:
+silence on a payment document reads as an omission, not as a gift.
+
+**One subtlety worth recording.** The subtotal shown is `subtotalNetGrosze +
+vatGrosze`, not `subtotalNetGrosze`. The item lines above it are gross, so
+printing the net figure there would have produced a column that still does not
+reconcile - a different wrong answer rather than a right one. VAT is stated
+underneath instead of added as a third line, because it is already inside both
+numbers.
+
+**BUG-19.** The snapshot now captures `productSlug`, `materialFamilyCode`,
+`productionDaysMin`/`Max`, `materialNotesPl` and the installation variant's
+`namePl`/`receivesPl`. All six come from data the checkout had already fetched
+and validated the price against, so nothing costs an extra query, and
+`ProductRow` was deliberately not widened - it is the pricing subset, and none
+of these price anything.
+
+**They are typed optional, not nullable, and that is the substantive
+decision.** Every order placed before today has these keys genuinely absent
+from its stored JSON, so `undefined` is the truth; `| null` would be a claim
+the data does not support. `machiningMilliMinutesPerM2` is typed `| null` and
+is really `undefined` on old rows - which is precisely how ADMIN-01 found
+`admin-production.ts` crashing on `moduleLayout.totalModules` and taking the
+production queue down for every order. Optional makes TypeScript force each
+reader to handle the absence; `OrderSummary` does, and an order that predates
+the change simply shows one line fewer.
+
+**Evidence.** `order-confirmation-totals.test.ts` (3) asserts T-06 - Σ item
+lines + shipping === `totalGrossGrosze` - at the boundary the page actually
+reads, so a plausible-looking wrong number fails it. Six cases in
+`create-order.test.ts` drive the real `createOrder` rather than hand-writing a
+snapshot, including one asserting that a variant this product does not offer
+stays null rather than becoming an invented label. One of them caught a wrong
+guess on the way: the material family is `SOLID_WOOD`, not `WOOD`.
+
+---
+
+## T-26 - Six copies of `fillReliably`, and a flake that kept moving between them
+
+- **Status:** **RESOLVED 2026-09-05**
+- **Severity:** P2
+- **Area:** tests
+
+Six specs each carried a near-identical private copy of the same typing
+helper, all with the same 10s retry budget. So the contention flake it guards
+against kept reappearing in whichever copy had not been touched: three
+full-suite runs were lost to it on 2026-09-05 alone, in `accounts.spec.ts`,
+`stale-configuration-link.spec.ts` and `admin-authz.spec.ts` - each passing in
+isolation, each looking like a different problem.
+
+Extracted to `tests/e2e/fill-reliably.ts` with a 30s budget. That is a
+**deadline, not a cost**: a field that fills on the first attempt returns
+immediately, so a longer deadline costs nothing except how long a genuinely
+stuck field waits before failing. What it buys is that `mobile-safari` typing
+45 characters into a React-controlled input, while three other workers hammer
+the same Next process, stops reporting "the machine was busy" as a test
+failure - the same argument `vitest.config.ts` records for its own timeout.
+
+The real repair remains fewer workers per server, which CI already does with
+`workers: 1`. Two consecutive full runs at 74/74 afterwards.
+
+---
+
+## UX-22 - No second confirmation on the bank-account field
+
+- **Status:** **RESOLVED 2026-09-05**
+- **Severity:** P3
+- **Area:** UX / security
+- **Files:** [src/domain/banking/account-number.ts](src/domain/banking/account-number.ts), [src/server/operations/admin-store-settings.ts](src/server/operations/admin-store-settings.ts), [src/ui/islands/admin/StoreSettingsForm.tsx](src/ui/islands/admin/StoreSettingsForm.tsx)
+
+`StoreSettings.bankAccountNumber` saved as a plain text field alongside the
+shipping rate. It is the number every bank-transfer customer is told to pay
+into - printed on the confirmation page and in the confirmation email - so a
+transposed digit sends real money somewhere else, and nothing about the wrong
+number looks wrong: it is the right length, the right shape, and the person
+who typed it reads it back as what they meant.
+
+**The suggested fix was a confirm dialog, and that is not what was built.**
+SEC-04 proposed reusing `CustomerAnonymizeForm`'s pattern. A dialog is the
+right control for a destructive action and the wrong one here: pressing „na
+pewno?" cannot catch a typo, because the person confirming has the same wrong
+number in their head. It would have satisfied the item's letter and none of
+its purpose.
+
+**Two guards instead, neither sufficient alone.**
+
+`checkBankAccountNumber` applies the IBAN mod-97 rule, which is exactly what a
+Polish account's two leading digits are for. Verified against real values
+before writing it: it accepts `PL61 1090 1014 0000 0712 1981 2874` with or
+without the prefix, and rejects both `...2875` (one digit changed) and
+`...2847` (two transposed) - the two realistic typos.
+
+Re-typing the number catches what a checksum cannot, because you would have to
+make the same mistake twice.
+
+**Three judgement calls, each recorded where it applies.**
+
+A number the checksum cannot verify - a German IBAN, say - returns
+`not-recognised`, deliberately distinct from `checksum-failed`, and only the
+second refuses the save. "We cannot check this" must not be reported as "this
+is wrong"; the shop is not required to refuse a foreign account, and the
+re-typed confirmation still applies to it, so an unverifiable number is not an
+unguarded one.
+
+Spacing is ignored when the two are compared. Nobody groups digits the same
+way twice, and refusing a real match over a space would teach whoever uses
+this page to paste rather than read.
+
+And the confirmation is required **only when the number actually changes**.
+Demanding it in order to edit the shipping rate would train the same person to
+paste the same value twice without looking, and a confirmation nobody reads is
+not a confirmation. Clearing the field needs none either: an absent number
+misdirects nothing, and `OrderSummary` already has honest copy for that state.
+
+**One implementation note.** The confirmation field is always rendered rather
+than revealed when the number is edited. This form is a Server Action with no
+client state watching the field, so a confirmation that appeared only after
+JavaScript noticed the typing is one a no-JS submit would skip entirely. It is
+enforced server-side; the field is there so the admin can satisfy a guard they
+can see.
+
+**Evidence.** `tests/unit/bank-account.test.ts` (10, written first) and seven
+cases in `admin-store-settings.test.ts`. Those integration cases were also
+rewritten to state the number each starts from: `StoreSettings` is a singleton
+every test in the run shares, this rule is about a *change*, and the first
+version inherited whatever the previous case left - one of them passed for the
+wrong reason until that was fixed.
+
+`tests/e2e/admin-bank-account.spec.ts` proves the guard is reachable and
+legible in a real browser: the field is on the form, a mismatch stops the save
+**and says why**, nothing is written, and a correct pair goes through. That
+last part matters - a refusal the admin cannot understand is a page they will
+work around.

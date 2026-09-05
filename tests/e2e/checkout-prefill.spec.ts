@@ -3,6 +3,7 @@ import 'dotenv/config';
 import type { Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
+import { registerAccount } from './register';
 import { prisma } from '../../src/server/db/client';
 
 /**
@@ -22,15 +23,6 @@ import { prisma } from '../../src/server/db/client';
  */
 
 const PASSWORD = 'correcthorse123';
-
-async function fillReliably(page: Page, label: string, value: string): Promise<void> {
-  const field = page.getByLabel(label, { exact: false }).first();
-  await expect(async () => {
-    await field.fill('');
-    await field.pressSequentially(value, { delay: 10 });
-    await expect(field).toHaveValue(value);
-  }).toPass({ timeout: 10_000 });
-}
 
 async function addSomethingToTheCart(page: Page): Promise<void> {
   await page.goto('/produkt/obraz-drewniany-z-grawerem');
@@ -62,14 +54,23 @@ test('a guest is offered an account rather than being made to type everything', 
 });
 
 test('a signed-in customer can fill the form from their account in one press', async ({ page }) => {
+  /*
+    Register, configure, add to cart, reach checkout, then press the prefill
+    button: five page loads and a scrypt password hash before the assertion
+    this test exists for. On `mobile-safari` under four parallel workers that
+    does not fit the 30s default, and it died on 2026-09-05 inside the
+    registration typing with everything still to do - which says the machine
+    was busy and nothing about the prefill.
+
+    `slow()` triples the budget without shortening what is proved. Same
+    remedy and same reasoning as `accounts.spec.ts` and
+    `design-review-customer.spec.ts`, both of which are this shape.
+  */
+  test.slow();
+
   const email = `test-prefill-${crypto.randomUUID()}@example.test`;
 
-  await page.goto('/rejestracja');
-  await fillReliably(page, 'Imię i nazwisko', 'Ala Kowalska');
-  await fillReliably(page, 'E-mail', email);
-  await fillReliably(page, 'Hasło', PASSWORD);
-  await page.getByRole('button', { name: 'Załóż konto' }).click();
-  await expect(page).toHaveURL('/moje-konto', { timeout: 15_000 });
+  await registerAccount(page, { name: 'Ala Kowalska', email, password: PASSWORD });
 
   try {
     await addSomethingToTheCart(page);

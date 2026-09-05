@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 
@@ -24,7 +24,7 @@ export async function applyAddMaterialFinish(staff: CurrentSession, materialId: 
 }
 
 export async function addMaterialFinish(materialId: string, finishId: string): Promise<ActionResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyAddMaterialFinish(staff, materialId, finishId);
   if (result.ok) {
     revalidateMaterial(materialId);
@@ -38,7 +38,7 @@ export async function applyRemoveMaterialFinish(staff: CurrentSession, materialI
 }
 
 export async function removeMaterialFinish(materialId: string, finishId: string): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applyRemoveMaterialFinish(staff, materialId, finishId);
   revalidateMaterial(materialId);
 }

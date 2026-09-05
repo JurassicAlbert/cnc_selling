@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 
@@ -56,7 +56,7 @@ export async function applyCreateExternalPatternResource(
 }
 
 export async function createExternalPatternResource(input: ExternalPatternResourceFormInput): Promise<ExternalPatternResourceMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyCreateExternalPatternResource(staff, input);
   if (result.ok) {
     revalidatePath('/panel/zasoby-zewnetrzne');
@@ -88,7 +88,7 @@ export async function updateExternalPatternResource(
   id: string,
   input: ExternalPatternResourceFormInput,
 ): Promise<ExternalPatternResourceMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyUpdateExternalPatternResource(staff, id, input);
   if (result.ok) {
     revalidatePath('/panel/zasoby-zewnetrzne');
@@ -113,7 +113,7 @@ export async function applySetExternalPatternResourceActive(staff: CurrentSessio
 }
 
 export async function setExternalPatternResourceActive(id: string, isActive: boolean): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applySetExternalPatternResourceActive(staff, id, isActive);
   revalidatePath('/panel/zasoby-zewnetrzne');
   revalidatePath('/wzory');

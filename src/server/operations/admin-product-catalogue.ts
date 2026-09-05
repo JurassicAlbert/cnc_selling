@@ -16,7 +16,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 import type { InstallationVariantCode } from '@/generated/prisma/enums';
@@ -41,7 +41,7 @@ export async function applyAddPresetSize(staff: CurrentSession, productId: strin
 }
 
 export async function addPresetSize(productId: string, input: PresetSizeInput): Promise<ActionResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyAddPresetSize(staff, productId, input);
   if (result.ok) {
     revalidateProduct(productId);
@@ -55,7 +55,7 @@ export async function applyRemovePresetSize(staff: CurrentSession, productId: st
 }
 
 export async function removePresetSize(productId: string, presetSizeId: string): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applyRemovePresetSize(staff, productId, presetSizeId);
   revalidateProduct(productId);
 }
@@ -74,7 +74,7 @@ export async function applyAddThickness(staff: CurrentSession, productId: string
 }
 
 export async function addThickness(productId: string, input: ThicknessInput): Promise<ActionResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyAddThickness(staff, productId, input);
   if (result.ok) {
     revalidateProduct(productId);
@@ -88,7 +88,7 @@ export async function applyRemoveThickness(staff: CurrentSession, productId: str
 }
 
 export async function removeThickness(productId: string, thicknessId: string): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applyRemoveThickness(staff, productId, thicknessId);
   revalidateProduct(productId);
 }
@@ -114,7 +114,7 @@ export async function applySetProductMaterial(
 }
 
 export async function setProductMaterial(productId: string, materialId: string, priceFactorBp: number): Promise<ActionResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applySetProductMaterial(staff, productId, materialId, priceFactorBp);
   if (result.ok) {
     revalidateProduct(productId);
@@ -128,7 +128,7 @@ export async function applyRemoveProductMaterial(staff: CurrentSession, productI
 }
 
 export async function removeProductMaterial(productId: string, materialId: string): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applyRemoveProductMaterial(staff, productId, materialId);
   revalidateProduct(productId);
 }
@@ -154,7 +154,7 @@ export async function applySetProductDesign(
 }
 
 export async function setProductDesign(productId: string, designId: string, surchargeGrosze: number): Promise<ActionResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applySetProductDesign(staff, productId, designId, surchargeGrosze);
   if (result.ok) {
     revalidateProduct(productId);
@@ -168,7 +168,7 @@ export async function applyRemoveProductDesign(staff: CurrentSession, productId:
 }
 
 export async function removeProductDesign(productId: string, designId: string): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applyRemoveProductDesign(staff, productId, designId);
   revalidateProduct(productId);
 }
@@ -200,7 +200,7 @@ export async function applyAddInstallationVariant(
 }
 
 export async function addInstallationVariant(productId: string, input: InstallationVariantInput): Promise<ActionResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyAddInstallationVariant(staff, productId, input);
   if (result.ok) {
     revalidateProduct(productId);
@@ -214,7 +214,7 @@ export async function applyRemoveInstallationVariant(staff: CurrentSession, prod
 }
 
 export async function removeInstallationVariant(productId: string, variantId: string): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applyRemoveInstallationVariant(staff, productId, variantId);
   revalidateProduct(productId);
 }

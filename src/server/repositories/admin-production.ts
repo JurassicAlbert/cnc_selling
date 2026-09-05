@@ -58,6 +58,24 @@ export type ProductionQueueItem = {
   readonly areaM2: number;
 };
 
+/**
+ * Deliberately **not** paginated, unlike the other admin lists PERF-03
+ * touched - and `/panel/produkcja` is the page that item named first.
+ *
+ * Two reasons, both about what this list is rather than how long it is.
+ *
+ * It holds work in progress: `CONFIRMED`, `IN_PRODUCTION`, `FINISHING`,
+ * `READY_TO_SHIP`. Orders leave it when they ship, so it is bounded by how
+ * much the shop can actually make, not by how long it has been trading. That
+ * is the opposite of design reviews or support requests, where nobody decides
+ * how many rows there are.
+ *
+ * And the page groups what it gets into one section per status. A page of
+ * twenty-five would be split across those sections, so a section could look
+ * empty when its rows are simply on page two - a wrong impression on the one
+ * screen that exists to answer "what is on the machine right now". The
+ * capacity bar above it is the honest signal if this list ever does get long.
+ */
 export async function listProductionQueue(): Promise<readonly ProductionQueueItem[]> {
   const orders = await prisma.order.findMany({
     where: { status: { in: [...PRODUCTION_STATUSES] } },

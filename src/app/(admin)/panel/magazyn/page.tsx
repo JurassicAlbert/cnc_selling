@@ -62,7 +62,16 @@ export default async function WarehousePage() {
                 </Stack>
               </TableCell>
               <TableCell align="right">
-                {row.boardsHeld > 0 ? row.boardsHeld : WAREHOUSE.noStockPl}
+                {/*
+                  WAREHOUSE-01: what is left, out of what was bought. The
+                  remainder is fractional because consumption is measured by
+                  area - a board with two coasters cut from it is not a used
+                  board - so it is shown to one decimal rather than rounded to
+                  a whole, which would read as a used board it is not.
+                */}
+                {row.boardsHeld > 0
+                  ? WAREHOUSE.boardsRemainingOfHeldPl(row.boardsRemaining.toFixed(1), row.boardsHeld)
+                  : WAREHOUSE.noStockPl}
               </TableCell>
               <TableCell align="right">{formatPln(row.stockValueGrosze)}</TableCell>
               <TableCell align="right">

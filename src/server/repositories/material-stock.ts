@@ -38,6 +38,16 @@ export type MaterialStockSummary = {
   /** What the catalogue charges, for comparison with what was paid. */
   readonly chargedPerM2Grosze: number;
   readonly boardsHeld: number;
+  /**
+   * Boards' worth still uncut, WAREHOUSE-01. Fractional on purpose.
+   *
+   * `boardsHeld` counts what was bought; this is what is left after every
+   * order that has gone into production. It is fractional because
+   * consumption is measured by area - a board with two coasters cut from it
+   * is not a used board, and rounding it to one would be the 240x error the
+   * area rule exists to avoid.
+   */
+  readonly boardsRemaining: number;
   /** Purchase value of everything still on the shelf. */
   readonly stockValueGrosze: number;
   /**
@@ -88,7 +98,14 @@ export async function listMaterialStockSummaries(): Promise<readonly MaterialSto
       isAvailable: true,
       pricePerM2Grosze: true,
       stock: {
-        select: { widthMm: true, heightMm: true, thicknessMm: true, quantity: true, purchasePriceGrosze: true },
+        select: {
+          widthMm: true,
+          heightMm: true,
+          thicknessMm: true,
+          quantity: true,
+          purchasePriceGrosze: true,
+          consumedAreaMm2: true,
+        },
       },
     },
     orderBy: [{ sortOrder: 'asc' }, { namePl: 'asc' }],
@@ -109,6 +126,23 @@ export async function listMaterialStockSummaries(): Promise<readonly MaterialSto
     const averageCostPerM2Grosze =
       heldAreaMm2 > 0 ? Math.round((stockValueGrosze * 1_000_000) / heldAreaMm2) : null;
 
+    /*
+      WAREHOUSE-01. Summed per batch rather than as one subtraction across the
+      material, because a batch that has been over-consumed must not lend its
+      negative remainder to a batch that has not - the same flooring
+      `remainingAreaMm2` does, and reachable the same way: the +/- control
+      adjusts a board count that may already have been drawn from.
+
+      `stockValueGrosze` and `averageCostPerM2Grosze` above are deliberately
+      left measuring what was *bought*. They answer "what did we pay and what
+      does this material cost us", which does not change when a board is cut.
+    */
+    const remainingAreaMm2 = material.stock.reduce(
+      (sum, batch) => sum + Math.max(0, batch.quantity * batch.widthMm * batch.heightMm - batch.consumedAreaMm2),
+      0,
+    );
+    const boardsRemaining = heldAreaMm2 > 0 ? (remainingAreaMm2 / heldAreaMm2) * boardsHeld : 0;
+
     return {
       materialId: material.id,
       materialSlug: material.slug,
@@ -117,6 +151,7 @@ export async function listMaterialStockSummaries(): Promise<readonly MaterialSto
       isAvailable: material.isAvailable,
       chargedPerM2Grosze: material.pricePerM2Grosze,
       boardsHeld,
+      boardsRemaining,
       stockValueGrosze,
       averageCostPerM2Grosze,
       marginBp:

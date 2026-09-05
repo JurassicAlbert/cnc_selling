@@ -5,6 +5,8 @@
  */
 
 import { prisma } from '@/server/db/client';
+import type { PageRequest } from '@/domain/pagination/page';
+import type { Page } from '@/server/repositories/page';
 import type { DesignReviewStatus, ProductionMethod } from '@/generated/prisma/enums';
 import type { UploadWarning } from '@/domain/upload/inspect';
 
@@ -15,23 +17,47 @@ export type PendingDesignReviewItem = {
   readonly customerLabel: string;
 };
 
-export async function listPendingDesignReviews(): Promise<readonly PendingDesignReviewItem[]> {
-  const designs = await prisma.customerDesign.findMany({
-    where: { status: 'PENDING_REVIEW' },
-    orderBy: { createdAt: 'asc' },
-    select: {
-      id: true,
-      createdAt: true,
-      file: { select: { originalName: true } },
-      user: { select: { email: true } },
-    },
-  });
-  return designs.map((design) => ({
-    id: design.id,
-    originalName: design.file.originalName,
-    createdAt: design.createdAt,
-    customerLabel: design.user?.email ?? 'gość',
-  }));
+/**
+ * PERF-03. This returned the whole table in one payload. It is a record
+ * customers create rather than a catalogue staff curate, so nobody decides
+ * how many rows there are - which is the distinction the item draws with
+ * "reuse ADMIN-01's pagination helper **as they grow**; do not pre-optimise
+ * all 22".
+ *
+ * One shared `where` for both halves, as in `listOrdersForAdmin`: a count
+ * built from a separately-written filter is how a list ends up offering
+ * pages of a result that has none of them.
+ */
+export async function listPendingDesignReviews(
+  page: Pick<PageRequest, 'skip' | 'take'>,
+): Promise<Page<PendingDesignReviewItem>> {
+  const where = { status: 'PENDING_REVIEW' as const };
+
+  const [designs, total] = await Promise.all([
+    prisma.customerDesign.findMany({
+      where,
+      orderBy: { createdAt: 'asc' },
+      skip: page.skip,
+      take: page.take,
+      select: {
+        id: true,
+        createdAt: true,
+        file: { select: { originalName: true } },
+        user: { select: { email: true } },
+      },
+    }),
+    prisma.customerDesign.count({ where }),
+  ]);
+
+  return {
+    items: designs.map((design) => ({
+      id: design.id,
+      originalName: design.file.originalName,
+      createdAt: design.createdAt,
+      customerLabel: design.user?.email ?? 'gość',
+    })),
+    total,
+  };
 }
 
 export type AdminDesignReviewComment = {

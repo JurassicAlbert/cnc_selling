@@ -25,7 +25,7 @@ export type StatusCandidate = {
   readonly blockedByDesignReview: boolean;
 };
 
-const TRANSITION_INITIAL_STATE: TransitionOrderStatusResult = { ok: true };
+const TRANSITION_INITIAL_STATE: TransitionOrderStatusResult = { ok: true, stockWarningPl: null };
 const PAID_INITIAL_STATE: MarkOrderPaidResult = { ok: true };
 
 export function OrderStatusActions({
@@ -51,6 +51,16 @@ export function OrderStatusActions({
   return (
     <Stack spacing={2} sx={{ mt: 2 }}>
       {!transitionState.ok && <Alert severity="error">{transitionState.detail}</Alert>}
+      {/*
+        WAREHOUSE-01: a warning, not an error, and deliberately separate from
+        the failure alert above. The transition succeeded - the shop cuts what
+        it has - so the order did move; what did not happen is the warehouse
+        covering it, and the operator is the only person who can put that
+        right.
+      */}
+      {transitionState.ok && transitionState.stockWarningPl !== null && (
+        <Alert severity="warning">{transitionState.stockWarningPl}</Alert>
+      )}
       {!paidState.ok && <Alert severity="error">{paidState.detail}</Alert>}
 
       {canMarkPaid && (

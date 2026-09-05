@@ -89,7 +89,22 @@ describe('applyOrderStatusTransition', () => {
     const staff = staffActor();
 
     const result = await applyOrderStatusTransition(staff, order.orderNumber, 'CONFIRMED', null);
-    expect(result).toEqual({ ok: true });
+    /*
+      Three fields, and each is a real assertion rather than noise.
+
+      `stockWarningPl` null: WAREHOUSE-01 - this order has no material linked,
+      so nothing was drawn and nothing was missing.
+
+      `notify` present: BUG-12 - the status email is no longer sent from
+      inside this `apply*` but handed back for the wrapper to schedule with
+      `after()`. Asserting the handover here is the only place a test can
+      reach it, since the wrapper itself needs a request scope.
+    */
+    expect(result).toEqual({
+      ok: true,
+      stockWarningPl: null,
+      notify: { email: order.email, statusPl: expect.any(String) },
+    });
 
     const updated = await prisma.order.findUniqueOrThrow({ where: { id: order.id } });
     expect(updated.status).toBe('CONFIRMED');
@@ -167,6 +182,59 @@ describe('applyMarkOrderPaid', () => {
     const updated = await prisma.order.findUniqueOrThrow({ where: { id: order.id } });
     expect(updated.paymentStatus).toBe('PAID');
     expect(await prisma.auditLog.count({ where: { entityId: order.id, action: 'update' } })).toBe(1);
+  });
+
+  /**
+   * `docs/REVIEW-DETAILED.md` BUG-20 - marking an order paid wrote an
+   * `AuditLog` but no `OrderEvent`, so payment never appeared in the order
+   * timeline.
+   *
+   * Those two records are for different readers and neither substitutes for
+   * the other. The audit log answers "who changed what" and is scoped to
+   * staff and compliance; the timeline is the order's own history, and it is
+   * what a member of staff reads when a customer asks what has happened to
+   * their order. Payment - the single event a customer is most likely to ask
+   * about - was missing from it entirely.
+   */
+  it('records the payment in the order timeline, not only in the audit log', async () => {
+    const order = await seedOrder({ paymentMethod: 'BANK_TRANSFER', paymentStatus: 'AWAITING' });
+
+    await applyMarkOrderPaid(staffActor(), order.orderNumber);
+
+    const events = await prisma.orderEvent.findMany({ where: { orderId: order.id } });
+    expect(events).toHaveLength(1);
+    // Not a status transition: the order's own status is untouched, so the
+    // event records the same status on both sides and carries the payment in
+    // its note. `OrderEventTimeline` renders that as the note rather than as
+    // a fake "Nowe → Nowe" arrow.
+    expect(events[0]?.fromStatus).toBe(order.status);
+    expect(events[0]?.toStatus).toBe(order.status);
+    expect(events[0]?.actorType).toBe('staff');
+    expect(events[0]?.notePl ?? '').not.toBe('');
+  });
+
+  it('leaves no timeline entry when the payment was refused', async () => {
+    // A refusal is not a thing that happened to the order. An entry here
+    // would tell staff a payment was recorded when none was.
+    const order = await seedOrder({ paymentMethod: 'CONTACT_ARRANGED' });
+
+    await applyMarkOrderPaid(staffActor(), order.orderNumber);
+
+    expect(await prisma.orderEvent.count({ where: { orderId: order.id } })).toBe(0);
+  });
+
+  it('a double-clicked "mark paid" writes exactly one timeline entry too', async () => {
+    // The same atomicity P1-6 established for the audit log. Two entries for
+    // one payment would read as two payments.
+    const order = await seedOrder({ paymentMethod: 'BANK_TRANSFER', paymentStatus: 'AWAITING' });
+    const staff = staffActor();
+
+    await Promise.all([
+      applyMarkOrderPaid(staff, order.orderNumber),
+      applyMarkOrderPaid(staff, order.orderNumber),
+    ]);
+
+    expect(await prisma.orderEvent.count({ where: { orderId: order.id } })).toBe(1);
   });
 
   it('rejects a CONTACT_ARRANGED order - nothing to mark paid', async () => {

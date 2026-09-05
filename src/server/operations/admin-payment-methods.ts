@@ -12,7 +12,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 import type { PaymentMethod } from '@/generated/prisma/enums';
@@ -54,7 +54,7 @@ export async function applyCreatePaymentMethodConfig(staff: CurrentSession, inpu
 }
 
 export async function createPaymentMethodConfig(input: PaymentMethodConfigFormInput): Promise<PaymentMethodConfigMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyCreatePaymentMethodConfig(staff, input);
   if (result.ok) {
     revalidatePath('/panel/platnosci');
@@ -82,7 +82,7 @@ export async function applyUpdatePaymentMethodConfig(
 }
 
 export async function updatePaymentMethodConfig(id: string, input: PaymentMethodConfigFormInput): Promise<PaymentMethodConfigMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyUpdatePaymentMethodConfig(staff, id, input);
   if (result.ok) {
     revalidatePath('/panel/platnosci');
@@ -108,7 +108,7 @@ export async function applySetPaymentMethodConfigActive(staff: CurrentSession, i
 }
 
 export async function setPaymentMethodConfigActive(id: string, isActive: boolean): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applySetPaymentMethodConfigActive(staff, id, isActive);
   revalidatePath('/panel/platnosci');
   revalidatePath(`/panel/platnosci/${id}`);

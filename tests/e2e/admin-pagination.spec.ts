@@ -3,6 +3,7 @@ import 'dotenv/config';
 import type { Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
+import { registerAccount } from './register';
 import { prisma } from '../../src/server/db/client';
 
 /**
@@ -39,15 +40,6 @@ const PAGE_SIZE = 25;
 const SEEDED_ORDERS = 110;
 const SEEDED_AUDIT_ROWS = 30;
 
-async function fillReliably(page: Page, label: string, value: string): Promise<void> {
-  const field = page.getByLabel(label, { exact: false }).first();
-  await expect(async () => {
-    await field.fill('');
-    await field.pressSequentially(value, { delay: 10 });
-    await expect(field).toHaveValue(value);
-  }).toPass({ timeout: 10_000 });
-}
-
 /**
  * Promoting an account is the one thing no UI path can do for itself - the
  * same approach `warehouse.spec.ts` and `admin-authz.spec.ts` already use.
@@ -55,12 +47,7 @@ async function fillReliably(page: Page, label: string, value: string): Promise<v
 async function signInAsAdmin(page: Page): Promise<string> {
   const email = `test-admin-pagination-${crypto.randomUUID()}@example.test`;
 
-  await page.goto('/rejestracja');
-  await fillReliably(page, 'Imię i nazwisko', 'E2E Pagination Admin');
-  await fillReliably(page, 'Adres e-mail', email);
-  await fillReliably(page, 'Hasło', PASSWORD);
-  await page.getByRole('button', { name: 'Załóż konto' }).click();
-  await expect(page).toHaveURL('/moje-konto', { timeout: 15_000 });
+  await registerAccount(page, { name: 'E2E Pagination Admin', email, password: PASSWORD });
 
   await prisma.user.update({ where: { email }, data: { role: 'ADMIN' } });
   return email;

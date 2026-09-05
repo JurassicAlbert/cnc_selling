@@ -447,7 +447,23 @@ export const ADMIN = {
   deliveryMethodFieldCarrierPl: 'Przewoźnik (opcjonalnie)',
   deliveryMethodFieldPricePl: 'Cena (zł)',
   deliveryMethodFieldFreeThresholdPl: 'Próg darmowej dostawy (zł, opcjonalnie)',
-  deliveryMethodFieldFreeThresholdHelperPl: 'Powyżej tej wartości zamówienia (netto) dostawa tą metodą jest darmowa. Zostaw puste, jeśli nigdy nie jest darmowa.',
+  // BUG-08: said „netto" while the code had always compared the gross
+  // subtotal, so staff setting 500 here were really setting 406,50 net.
+  deliveryMethodFieldFreeThresholdHelperPl:
+    'Powyżej tej wartości zamówienia (brutto, czyli kwoty widocznej w koszyku) dostawa tą metodą jest darmowa. Zostaw puste, jeśli nigdy nie jest darmowa.',
+  /*
+    BUG-20. Marking an order paid wrote an audit entry but nothing in the
+    order's own timeline - so payment, the event a customer is most likely to
+    ask about, was invisible on the page staff actually read to answer them.
+  */
+  /*
+    WAREHOUSE-01. Shown when an order goes into production and the warehouse
+    does not hold enough recorded material to cover it. The order moves either
+    way - the shop cuts what it has - so this reports a gap in the bookkeeping
+    rather than refusing the transition.
+  */
+  orderStockShortfallPl: 'Zamówienie trafiło do produkcji, ale w magazynie zabrakło materiału na pokrycie całości. Brakuje:',
+  orderEventPaymentRecordedPl: 'Płatność zaksięgowana (przelew)',
   deliveryMethodFieldDaysMinPl: 'Czas dostawy od (dni)',
   deliveryMethodFieldDaysMaxPl: 'Czas dostawy do (dni)',
   deliveryMethodFieldTrackingAvailablePl: 'Śledzenie przesyłki dostępne',
@@ -605,6 +621,14 @@ export const ADMIN = {
   // Shown to STAFF in place of the form (SEC-04). Says who can do it rather
   // than only that they cannot, so the reader knows what to do next.
   customerAnonymizeAdminOnlyPl: 'Anonimizację konta może wykonać tylko administrator.',
+  /*
+    P2-9, 2026-09-05. Shown once at the top of every panel screen to a STAFF
+    account, because the owner's standing rule is that nothing may be offered
+    and then refused by the system. The forms are still on the page - a STAFF
+    account is meant to see everything - so this says plainly what will happen
+    if one is submitted, rather than letting it fail as a 404.
+  */
+  staffReadOnlyNoticePl: 'Masz dostęp tylko do odczytu. Wszystko tu zobaczysz, ale zapisywanie zmian jest zarezerwowane dla administratora.',
 
   auditLogHeadingPl: 'Dziennik zdarzeń',
   auditLogFilterEntityPl: 'Encja',
@@ -645,6 +669,16 @@ export const ADMIN = {
     a guess about an account that may not exist. Anything left blank simply
     does not appear in the strip.
   */
+  /*
+    UX-22. The account number is what every bank-transfer customer is told to
+    pay into, so a typo sends real money elsewhere. Re-typing it is the guard
+    a confirm dialog cannot be: pressing „na pewno?" does not catch a
+    transposed digit, because the person confirming has the same wrong number
+    in their head.
+  */
+  settingsFieldBankAccountConfirmPl: 'Powtórz numer rachunku',
+  settingsFieldBankAccountConfirmHelperPl:
+    'Wymagane tylko przy zmianie numeru. Wpisz go ręcznie zamiast kopiować - to jedyny sposób, żeby wychwycić literówkę.',
   settingsSocialHeadingPl: 'Profile w mediach społecznościowych',
   settingsSocialHelperPl:
     'Pokazujemy je w pasku nad menu sklepu. Pole zostawione puste nie pojawi się w ogóle - nie podajemy adresów, których nie potwierdzisz. Wymagany pełny adres zaczynający się od https://.',
@@ -957,6 +991,14 @@ export const WAREHOUSE = {
   columnChargedPerM2Pl: 'Cena katalogowa za m²',
   columnMarginPl: 'Marża',
   noStockPl: 'Brak płyt na stanie',
+  /*
+    WAREHOUSE-01. The board count is now two numbers: what was bought and
+    what is left after production has cut into it. Shown as "3 z 4" rather
+    than only the remainder, because the operator orders against what was
+    bought and cuts against what is left, and one number without the other
+    invites the wrong reorder.
+  */
+  boardsRemainingOfHeldPl: (remaining: string, held: number): string => `${remaining} z ${held}`,
   marginUnknownPl: 'Nie wiadomo',
   marginNegativeNotePl: 'Poniżej kosztu zakupu',
 

@@ -10,7 +10,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 
@@ -74,7 +74,7 @@ export async function applyCreateDeliveryMethod(staff: CurrentSession, formData:
 }
 
 export async function createDeliveryMethod(formData: FormData): Promise<DeliveryMethodMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyCreateDeliveryMethod(staff, formData);
   if (result.ok) {
     revalidatePath('/panel/dostawa');
@@ -99,7 +99,7 @@ export async function applyUpdateDeliveryMethod(staff: CurrentSession, id: strin
 }
 
 export async function updateDeliveryMethod(id: string, formData: FormData): Promise<DeliveryMethodMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyUpdateDeliveryMethod(staff, id, formData);
   if (result.ok) {
     revalidatePath('/panel/dostawa');
@@ -125,7 +125,7 @@ export async function applySetDeliveryMethodActive(staff: CurrentSession, id: st
 }
 
 export async function setDeliveryMethodActive(id: string, isActive: boolean): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applySetDeliveryMethodActive(staff, id, isActive);
   revalidatePath('/panel/dostawa');
   revalidatePath(`/panel/dostawa/${id}`);
@@ -225,7 +225,7 @@ export async function addDeliveryWeightTier(
   deliveryMethodId: string,
   input: DeliveryWeightTierInput,
 ): Promise<DeliveryMethodMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyAddDeliveryWeightTier(staff, deliveryMethodId, input);
   if (result.ok) {
     revalidatePath(`/panel/dostawa/${deliveryMethodId}`);
@@ -258,7 +258,7 @@ export async function applyRemoveDeliveryWeightTier(
 }
 
 export async function removeDeliveryWeightTier(deliveryMethodId: string, tierId: string): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applyRemoveDeliveryWeightTier(staff, deliveryMethodId, tierId);
   revalidatePath(`/panel/dostawa/${deliveryMethodId}`);
   revalidatePath('/koszyk/zamowienie');

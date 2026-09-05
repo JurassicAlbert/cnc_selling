@@ -15,7 +15,7 @@ import { redirect } from 'next/navigation';
 import Papa from 'papaparse';
 
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 import { nextAvailableSlug } from '@/server/util/unique-slug';
@@ -92,7 +92,7 @@ export async function applyCreateProduct(staff: CurrentSession, input: ProductCo
 }
 
 export async function createProduct(input: ProductCoreInput): Promise<ProductMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyCreateProduct(staff, input);
   if (result.ok) {
     revalidatePath('/panel/produkty');
@@ -130,7 +130,7 @@ export async function applyUpdateProduct(
 }
 
 export async function updateProduct(id: string, input: ProductCoreInput): Promise<ProductMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyUpdateProduct(staff, id, input);
   if (result.ok) {
     revalidatePath('/panel/produkty');
@@ -156,7 +156,7 @@ export async function applySetProductActive(staff: CurrentSession, id: string, i
 }
 
 export async function setProductActive(id: string, isActive: boolean): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applySetProductActive(staff, id, isActive);
   revalidatePath('/panel/produkty');
   revalidatePath(`/panel/produkty/${id}`);
@@ -170,7 +170,7 @@ export async function applyBulkSetProductActive(staff: CurrentSession, ids: read
 }
 
 export async function bulkSetProductActive(ids: readonly string[], isActive: boolean): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applyBulkSetProductActive(staff, ids, isActive);
   revalidatePath('/panel/produkty');
 }
@@ -194,7 +194,7 @@ export async function applySetProductSortOrder(staff: CurrentSession, id: string
 }
 
 export async function setProductSortOrder(id: string, sortOrder: number): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applySetProductSortOrder(staff, id, sortOrder);
   revalidatePath('/panel/produkty');
   revalidatePath(`/panel/produkty/${id}`);
@@ -258,7 +258,7 @@ export async function applyDuplicateProduct(staff: CurrentSession, id: string): 
 }
 
 export async function duplicateProduct(id: string): Promise<ProductMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyDuplicateProduct(staff, id);
   if (result.ok) {
     revalidatePath('/panel/produkty');
@@ -413,7 +413,7 @@ export async function applyImportProductsFromCsv(staff: CurrentSession, csvText:
 }
 
 export async function importProductsFromCsv(formData: FormData): Promise<ImportProductsResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const file = formData.get('file');
   if (!(file instanceof File) || file.size === 0) {
     return { ok: false, detail: 'Wybierz plik CSV.' };

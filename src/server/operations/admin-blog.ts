@@ -12,7 +12,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 
@@ -64,7 +64,7 @@ export async function applyCreateBlogPost(staff: CurrentSession, input: BlogPost
 }
 
 export async function createBlogPost(input: BlogPostFormInput): Promise<BlogPostMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyCreateBlogPost(staff, input);
   if (result.ok) {
     revalidatePath('/panel/blog');
@@ -95,7 +95,7 @@ export async function applyUpdateBlogPost(staff: CurrentSession, id: string, inp
 }
 
 export async function updateBlogPost(id: string, input: BlogPostFormInput): Promise<BlogPostMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyUpdateBlogPost(staff, id, input);
   if (result.ok) {
     revalidatePath('/panel/blog');
@@ -122,7 +122,7 @@ export async function applySetBlogPostActive(staff: CurrentSession, id: string, 
 }
 
 export async function setBlogPostActive(id: string, isActive: boolean): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const current = await prisma.blogPost.findUnique({ where: { id }, select: { slug: true } });
   await applySetBlogPostActive(staff, id, isActive);
   revalidatePath('/panel/blog');

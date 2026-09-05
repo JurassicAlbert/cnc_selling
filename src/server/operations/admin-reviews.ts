@@ -9,7 +9,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 import type { ReviewStatus } from '@/generated/prisma/enums';
@@ -37,7 +37,7 @@ export async function applySetReviewStatus(
 }
 
 export async function setReviewStatus(id: string, status: Extract<ReviewStatus, 'APPROVED' | 'REJECTED'>): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applySetReviewStatus(staff, id, status);
   revalidatePath('/panel/opinie');
   revalidatePath('/');

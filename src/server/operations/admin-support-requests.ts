@@ -7,7 +7,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 import type { SupportRequestStatus } from '@/generated/prisma/enums';
@@ -43,7 +43,7 @@ export async function applyUpdateSupportRequest(
 }
 
 export async function updateSupportRequest(id: string, formData: FormData): Promise<SupportRequestMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const status = String(formData.get('status') ?? 'NEW') as SupportRequestStatus;
   const adminNotesRaw = formData.get('adminNotesPl');
   const adminNotesPl = typeof adminNotesRaw === 'string' && adminNotesRaw.trim().length > 0 ? adminNotesRaw.trim() : null;

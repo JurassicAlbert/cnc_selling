@@ -33,14 +33,13 @@ import { randomBytes } from 'node:crypto';
 import { sumGrosze } from '@/domain/money/money';
 import { checkOrderStatusTransition } from '@/domain/order-status/transitions';
 import type { OrderStatus } from '@/domain/order-status/transitions';
+import { formatOrderNumber, orderNumberCounterKey, orderNumberYearMonth } from '@/domain/orders/order-number';
 import { prisma } from '@/server/db/client';
 import type { Prisma } from '@/generated/prisma/client';
 import { findCartForRequest } from '@/server/repositories/cart';
 import type { CartItemView } from '@/server/repositories/cart';
 import { priceAndValidateSelections } from '@/server/configurator/validate-and-price';
 import type { ValidatedPricing } from '@/server/configurator/validate-and-price';
-import { recordAnalyticsEvent } from '@/server/analytics/record-event';
-import { mailer } from '@/server/mail/mailer';
 import { resolveDeliveryMethodsForCart } from '@/server/repositories/delivery-methods';
 import { findPickupPointById } from '@/server/delivery/pickup-points';
 import { SITE } from '@/content/pl/site';
@@ -81,7 +80,33 @@ export type CreateOrderInput = {
 };
 
 export type CreateOrderResult =
-  | { readonly ok: true; readonly orderNumber: string; readonly accessToken: string }
+  | {
+      readonly ok: true;
+      readonly orderNumber: string;
+      readonly accessToken: string;
+      /**
+       * What `actions/checkout.ts` needs to send the confirmation email and
+       * record the purchase - **or `null` when this call placed no new
+       * order**.
+       *
+       * BUG-12 moved both side effects to the action, because they must be
+       * scheduled with `after()` and that throws outside a request scope.
+       * Moving them made an existing subtlety load-bearing: the two
+       * idempotent-replay paths below return an order that a *previous*
+       * request created and already emailed, and they used to reach their
+       * `return` before the `void mailer` line ever ran. A caller that
+       * emailed on every `ok: true` would send a second confirmation to
+       * anyone who double-clicked.
+       *
+       * So the absence is modelled rather than left to a comment: `null`
+       * means "already dealt with", and there is no boolean for a caller to
+       * misread.
+       */
+      readonly confirmation: {
+        readonly totalGrossGrosze: number;
+        readonly paymentMethod: 'BANK_TRANSFER' | 'CONTACT_ARRANGED';
+      } | null;
+    }
   | { readonly ok: false; readonly code: 'CART_EMPTY' }
   /** Another checkout - a second tab, a second device - consumed this cart while this one was being submitted. Nothing was charged twice; the customer is told to check their orders. */
   | { readonly ok: false; readonly code: 'CART_CHANGED' }
@@ -99,6 +124,36 @@ type RevalidatedItem = {
   readonly lineVatGrosze: number;
   readonly lineGrossGrosze: number;
 };
+
+/**
+ * The rows this checkout priced, addressed by id **and by the quantity they
+ * were priced at** - `docs/AI-CHECKLIST.md` BUG-13.
+ *
+ * The claim used to be `id IN (...)` alone, which asks "are these lines still
+ * here" and not "are they still what I charged for". A quantity changed in a
+ * second tab between the pricing read and this transaction was therefore
+ * claimed happily and the customer was charged the old amount for the new
+ * cart - two of a thing they had just reduced to one, or one of a thing they
+ * had just made three.
+ *
+ * A disjunction of exact (id, quantity) pairs, so a row whose quantity moved
+ * matches nothing, the count falls short, and the existing
+ * `CartAlreadyClaimedError` path turns it into `CART_CHANGED` - the message
+ * that already tells the customer their cart changed and to look again.
+ * Nothing new to explain to them, and the same rollback.
+ *
+ * Exported for its test: the race it guards cannot be driven deterministically
+ * end to end, but the predicate can be, and this is the part that regresses.
+ */
+export function cartClaimWhere(
+  cartId: string,
+  items: readonly { readonly cartItemId: string; readonly quantity: number }[],
+): Prisma.CartItemWhereInput {
+  return {
+    cartId,
+    OR: items.map((item) => ({ id: item.cartItemId, quantity: item.quantity })),
+  };
+}
 
 function toJsonInput<T>(value: T): Prisma.InputJsonValue {
   return value as unknown as Prisma.InputJsonValue;
@@ -140,7 +195,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   // would race); this just avoids doing all the pricing work again.
   const alreadyPlaced = await findOrderByIdempotencyKey(input.idempotencyKey);
   if (alreadyPlaced !== null) {
-    return { ok: true, ...alreadyPlaced };
+    return { ok: true, ...alreadyPlaced, confirmation: null };
   }
 
   const cart = await findCartForRequest({
@@ -262,14 +317,25 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       // this transaction commits, then finds nothing left to delete. Coming up
       // short means someone else already bought this cart, so this whole
       // transaction rolls back rather than creating a second order for it.
+      //
+      // BUG-13: the predicate matches on quantity too, so "still here" is not
+      // mistaken for "still what I priced". See `cartClaimWhere`.
       const claimed = await tx.cartItem.deleteMany({
-        where: { id: { in: cartItemIds }, cartId: cart.cartId },
+        where: cartClaimWhere(cart.cartId, cart.items),
       });
       if (claimed.count !== cartItemIds.length) {
         throw new CartAlreadyClaimedError();
       }
 
-      const counterYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      /*
+        BUG-23: Warsaw's calendar, not the server's. `now.getFullYear()` /
+        `getMonth()` read the host timezone, so on a UTC host an order placed
+        at 00:30 on 1 September in Warsaw would be filed as `2026/08/…` - and
+        the same value keys the counter, so the sequence would jump back into
+        August's series and collide with numbers already issued.
+      */
+      const yearMonth = orderNumberYearMonth(now);
+      const counterYearMonth = orderNumberCounterKey(yearMonth);
       const counterRows = await tx.$queryRaw<{ lastValue: number }[]>`
       INSERT INTO "OrderNumberCounter" ("yearMonth", "lastValue")
       VALUES (${counterYearMonth}, 1)
@@ -281,7 +347,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       if (counterValue === undefined) {
         throw new Error('createOrder: order-number counter upsert returned no row');
       }
-      const number = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(counterValue).padStart(4, '0')}`;
+      const number = formatOrderNumber(yearMonth, counterValue);
 
       const order = await tx.order.create({
         data: {
@@ -375,7 +441,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     if (error instanceof CartAlreadyClaimedError || isUniqueConstraintViolation(error)) {
       const winner = await findOrderByIdempotencyKey(input.idempotencyKey);
       if (winner !== null) {
-        return { ok: true, ...winner };
+        return { ok: true, ...winner, confirmation: null };
       }
       if (error instanceof CartAlreadyClaimedError) {
         return { ok: false, code: 'CART_CHANGED' };
@@ -392,34 +458,38 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   // tests hit exactly that). Same split the `apply*`/wrapper pairs already
   // use: real logic here, framework side effects in the action.
 
-  // After commit, never inside the transaction - network I/O must not hold
-  // a pooled DB connection open, and a mailer failure must never undo an
-  // order that has already, correctly, been created (§15.3 note 3: "no fake
-  // email delivery... the order still succeeds").
-  void mailer
-    .send('order-confirmation', input.email, {
-      orderNumber,
+  /*
+    BUG-12: the confirmation email and the purchase event are NOT sent here.
+
+    They used to be, as `void mailer.send(...)` - a promise started and
+    forgotten. On a long-lived Node server that settles; on the serverless
+    target §18 names, the invocation can be frozen the moment the response is
+    written, so the email a customer is waiting for may never be sent and
+    nothing is logged either way, because the code that would log it never
+    ran. Next 16's `after()` is the fix, and it throws outside a request
+    scope - so it belongs in `actions/checkout.ts`, exactly where
+    `revalidatePath` was moved for the same reason (see the note above).
+
+    Still after commit and never inside the transaction, which was the
+    original point of the `void` and is preserved by the move: network I/O
+    must not hold a pooled DB connection open, and a mailer failure must
+    never undo an order that has already, correctly, been created (§15.3
+    note 3: "no fake email delivery... the order still succeeds").
+  */
+  return {
+    ok: true,
+    orderNumber,
+    accessToken,
+    confirmation: {
       totalGrossGrosze,
       // Safe today: only BANK_TRANSFER/CONTACT_ARRANGED are ever seeded
       // `isConnected: true`, so `paymentMethodConfig` (checked above) can
-      // never resolve to anything else in practice. Revisit this cast the
-      // day a real third provider actually goes connected - the mailer
-      // template itself would need a real Przelewy24/card/PayPal copy
-      // block first, which is out of this phase's scope.
+      // never resolve to anything else in practice. Revisit this cast the day
+      // a real third provider actually goes connected - the mailer template
+      // itself would need a real Przelewy24/card/PayPal copy block first.
       paymentMethod: paymentMethodConfig.provider as 'BANK_TRANSFER' | 'CONTACT_ARRANGED',
-    })
-    .catch(() => {
-      // Logged inside the mailer itself; nothing else to do here.
-    });
-
-  void recordAnalyticsEvent({
-    name: 'purchase',
-    sessionToken: input.sessionToken,
-    userId: input.userId,
-    payload: { totalGrossGrosze },
-  });
-
-  return { ok: true, orderNumber, accessToken };
+    },
+  };
 }
 
 function buildOrderItemInput(entry: RevalidatedItem) {
@@ -430,6 +500,19 @@ function buildOrderItemInput(entry: RevalidatedItem) {
       ? null
       : (validated.data.designsById.get(item.selections.designId) ?? null);
   const productionMethod = selectedDesign?.recommendedMethod ?? null;
+
+  // BUG-19. Everything below is looked up from the data this checkout already
+  // fetched and validated against - the same rows the price was computed
+  // from - so nothing here costs an extra query, and nothing is read at
+  // display time from a catalogue row that may since have changed.
+  const selectedMaterial =
+    item.selections.materialId === null
+      ? null
+      : (validated.data.materialsById.get(item.selections.materialId) ?? null);
+  const selectedInstallVariant =
+    item.selections.installationVariant === null
+      ? null
+      : (validated.data.installVariantsByCode.get(item.selections.installationVariant) ?? null);
 
   const snapshot: OrderItemSnapshot = {
     productNamePl: item.productNamePl,
@@ -446,6 +529,17 @@ function buildOrderItemInput(entry: RevalidatedItem) {
     moduleLayout,
     priceBreakdown,
     machiningMilliMinutesPerM2: selectedDesign?.machiningMilliMinutesPerM2 ?? null,
+
+    // §6.8's remaining fields, plus §12's and §6.5's. See `snapshot.ts` for
+    // why these are optional on the type and why they could never be
+    // backfilled.
+    productSlug: validated.data.product.slug,
+    materialFamilyCode: selectedMaterial?.familyCode ?? null,
+    productionDaysMin: validated.data.product.productionDaysMin,
+    productionDaysMax: validated.data.product.productionDaysMax,
+    materialNotesPl: validated.data.product.materialNotesPl,
+    installationVariantNamePl: selectedInstallVariant?.namePl ?? null,
+    installationVariantReceivesPl: selectedInstallVariant?.receivesPl ?? null,
   };
 
   return {
@@ -460,6 +554,25 @@ function buildOrderItemInput(entry: RevalidatedItem) {
     snapshotVersion: 1,
     pricingVersion: priceBreakdown.pricingVersion,
     customerDesignId: item.customDesignId,
+    /*
+      WAREHOUSE-01. An operational pointer to the live catalogue material,
+      recorded beside a snapshot that deliberately holds no foreign keys.
+
+      The two answer different questions and both are needed. The snapshot is
+      what was *sold* and must never be resolved back to a row - that is the
+      whole reason it exists. Stock, by contrast, is only meaningful live: to
+      take material off the shelf when this line goes into production, the
+      shelf has to be found, and matching `snapshot.materialNamePl` back to a
+      `Material` would be exactly the catalogue lookup the snapshot forbids.
+
+      Free: the id is already on the selection, and `selectedMaterial` is
+      already resolved above from the rows this checkout validated the price
+      against. Both are used: the id is what gets stored, and the resolved
+      row is the proof it still exists - `materialsById` is built from the
+      live query, so a miss means the material is not in the validated set
+      and a foreign key to it would fail.
+    */
+    materialId: selectedMaterial === null ? null : item.selections.materialId,
     productionMethod,
     moduleCount: moduleLayout.totalModules,
   };

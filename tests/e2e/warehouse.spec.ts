@@ -1,50 +1,17 @@
 import 'dotenv/config';
 
-import type { Locator, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 // Not `@playwright/test`: this spec registers accounts, and SEC-01 allows
 // one IP ten per day - fewer than a full suite run needs. See fixtures.ts.
 import { expect, test } from './fixtures';
-import { clearLoopbackRateLimits } from './rate-limit-reset';
+import { fillReliably } from './fill-reliably';
+import { registerAccount } from './register';
 
 import { prisma } from '../../src/server/db/client';
 
-/**
- * The warehouse tool, end to end. Owner request, 2026-09-04.
- *
- * A browser is the only place this can be proved. The screens sit behind
- * `requireStaffSession()`, the write behind `requireAdminSession()`, and both
- * read `next/headers`, so no Vitest test can reach either. The arithmetic has
- * its own unit tests (`tests/unit/stock.test.ts`) and the catalogue query has
- * its own integration tests (`tests/integration/what-fits-on-board.test.ts`);
- * what is left, and what this covers, is that an operator can actually record
- * a delivery and see what it can make.
- *
- * Registers its own admin rather than reusing a seeded one, the same approach
- * `admin-authz.spec.ts` takes: promoting an account is the one thing no UI
- * path can do without already being an admin.
- */
-
-async function fillReliably(locator: Locator, value: string): Promise<void> {
-  await expect(async () => {
-    await locator.click();
-    await locator.fill('');
-    await locator.pressSequentially(value, { delay: 10 });
-    await expect(locator).toHaveValue(value);
-  }).toPass({ timeout: 10_000 });
-}
-
 async function signInAsAdmin(page: Page, email: string): Promise<void> {
   const password = 'correcthorse123';
-  // Immediately before the submit - see `rate-limit-reset.ts`. Clearing once
-  // per test leaves a race under parallel workers, because the counter is
-  // shared across all of them.
-  await clearLoopbackRateLimits();
-  await page.goto('/rejestracja');
-  await fillReliably(page.getByLabel('Imię i nazwisko'), 'E2E Warehouse Admin');
-  await fillReliably(page.getByLabel('Adres e-mail'), email);
-  await fillReliably(page.getByLabel('Hasło'), password);
-  await page.getByRole('button', { name: 'Załóż konto' }).click();
-  await expect(page).toHaveURL('/moje-konto');
+  await registerAccount(page, { name: 'E2E Warehouse Admin', email, password });
 
   await prisma.user.update({ where: { email }, data: { role: 'ADMIN' } });
 
@@ -113,24 +80,26 @@ test('an admin records a delivery and sees what it can make', async ({ page }) =
 });
 
 test('a staff member can read the warehouse but not write to it', async ({ page }) => {
+  /*
+    Register, promote, sign out, sign back in, then read a panel screen: two
+    scrypt password hashes and five page loads before the assertion. That does
+    not fit `mobile-safari`'s 30s default under four parallel workers, and it
+    died on 2026-09-05 inside the sign-in typing with the assertion still to
+    come - which says the machine was busy and nothing about authorization.
+    Same remedy and reasoning as `accounts.spec.ts`.
+  */
+  test.slow();
+
   // Reads are STAFF because an operator needs to know what is on the shelf;
   // writes are ADMIN because that is where purchase prices and suppliers are
-  // recorded. Nothing in ARCHITECTURE.md §16.3 settles this, so the split is
-  // pinned here rather than left to whoever reads the code next.
+  // recorded. Since P2-9 (2026-09-05) that split is the panel-wide rule
+  // rather than this screen's own judgement call, but it is still worth
+  // pinning here: the warehouse is where it was decided first.
   const stamp = Date.now();
   const email = `e2e-warehouse-staff-${stamp}@example.test`;
   const password = 'correcthorse123';
 
-  // Immediately before the submit - see `rate-limit-reset.ts`. Clearing once
-  // per test leaves a race under parallel workers, because the counter is
-  // shared across all of them.
-  await clearLoopbackRateLimits();
-  await page.goto('/rejestracja');
-  await fillReliably(page.getByLabel('Imię i nazwisko'), 'E2E Warehouse Staff');
-  await fillReliably(page.getByLabel('Adres e-mail'), email);
-  await fillReliably(page.getByLabel('Hasło'), password);
-  await page.getByRole('button', { name: 'Załóż konto' }).click();
-  await expect(page).toHaveURL('/moje-konto');
+  await registerAccount(page, { name: 'E2E Warehouse Staff', email, password });
 
   await prisma.user.update({ where: { email }, data: { role: 'STAFF' } });
   await page.getByRole('button', { name: 'Wyloguj się' }).click();

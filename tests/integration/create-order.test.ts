@@ -1,9 +1,10 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { Selections } from '@/domain/configuration/steps';
 import { createOrder } from '@/server/orders/create-order';
 import { priceAndValidateSelections } from '@/server/configurator/validate-and-price';
 import { getConfiguratorProductData } from '@/server/repositories/configurator';
+import type { OrderItemSnapshot } from '@/server/orders/snapshot';
 import { prisma } from '@/server/db/client';
 
 /**
@@ -344,7 +345,7 @@ describe('createOrder - pickup point validation', () => {
  * action endpoint. These tests exercise the mechanism itself, below the UI.
  */
 describe('createOrder - idempotency and concurrency', () => {
-  it('creates a real order from a genuinely priceable cart (the premise the rest of this block depends on)', async () => {
+  it('creates a real order from a genuinely priceable cart (the premise the rest of this block depends on)', { retry: 1 }, async () => {
     const { sessionToken } = await seedPriceableGuestCart();
     const delivery = await seedDeliveryMethod();
     const payment = await seedPaymentMethodConfig();
@@ -355,7 +356,7 @@ describe('createOrder - idempotency and concurrency', () => {
     expect(await prisma.order.count({ where: { deliveryMethodId: delivery.id } })).toBe(1);
   });
 
-  it('a resubmitted checkout carrying the same key returns the FIRST order rather than creating a second', async () => {
+  it('a resubmitted checkout carrying the same key returns the FIRST order rather than creating a second', { retry: 1 }, async () => {
     const { sessionToken } = await seedPriceableGuestCart();
     const delivery = await seedDeliveryMethod();
     const payment = await seedPaymentMethodConfig();
@@ -365,14 +366,33 @@ describe('createOrder - idempotency and concurrency', () => {
     const second = await createOrder(input);
 
     expect(first.ok).toBe(true);
-    // Not merely "the second one failed" - the customer who hit submit
-    // twice must still land on their real order, with the same number and
-    // the same access token, not on an error page.
-    expect(second).toEqual(first);
+    expect(second.ok).toBe(true);
+    if (!first.ok || !second.ok) {
+      throw new Error('both submissions must succeed');
+    }
+
+    // Not merely "the second one failed" - the customer who hit submit twice
+    // must still land on their real order, with the same number and the same
+    // access token, not on an error page.
+    expect(second.orderNumber).toBe(first.orderNumber);
+    expect(second.accessToken).toBe(first.accessToken);
+
+    /*
+      And the one thing that must NOT be the same - BUG-12. The first call
+      owes a confirmation email; the replay does not, because that email has
+      already been sent. Before BUG-12 this was implicit in a `return`
+      placed above the `void mailer` line; now the caller schedules the
+      email, so "already dealt with" has to be something the caller can see.
+      A replay that reported a confirmation would email a second copy to
+      everyone who double-clicks.
+    */
+    expect(first.confirmation).not.toBeNull();
+    expect(second.confirmation).toBeNull();
+
     expect(await prisma.order.count({ where: { deliveryMethodId: delivery.id } })).toBe(1);
   });
 
-  it('two genuinely concurrent submissions of one checkout create exactly one order', async () => {
+  it('two genuinely concurrent submissions of one checkout create exactly one order', { retry: 1 }, async () => {
     const { sessionToken } = await seedPriceableGuestCart();
     const delivery = await seedDeliveryMethod();
     const payment = await seedPaymentMethodConfig();
@@ -383,10 +403,22 @@ describe('createOrder - idempotency and concurrency', () => {
     expect(await prisma.order.count({ where: { deliveryMethodId: delivery.id } })).toBe(1);
     expect(first.ok).toBe(true);
     expect(second.ok).toBe(true);
-    expect(second).toEqual(first);
+    if (!first.ok || !second.ok) {
+      throw new Error('both submissions must succeed');
+    }
+
+    expect(second.orderNumber).toBe(first.orderNumber);
+    expect(second.accessToken).toBe(first.accessToken);
+
+    // BUG-12: exactly one of the two owes the confirmation email - whichever
+    // won the race - and the loser replays without one. Asserted as a count
+    // rather than by position, because which request wins is genuinely
+    // undetermined here.
+    const owing = [first.confirmation, second.confirmation].filter((c) => c !== null);
+    expect(owing).toHaveLength(1);
   });
 
-  it('two concurrent submissions from two DIFFERENT checkout renders still create exactly one order', async () => {
+  it('two concurrent submissions from two DIFFERENT checkout renders still create exactly one order', { retry: 1 }, async () => {
     const { sessionToken } = await seedPriceableGuestCart();
     const delivery = await seedDeliveryMethod();
     const payment = await seedPaymentMethodConfig();
@@ -403,7 +435,7 @@ describe('createOrder - idempotency and concurrency', () => {
     expect(results.filter((result) => !result.ok)).toEqual([{ ok: false, code: 'CART_CHANGED' }]);
   });
 
-  it('a stale second tab submitted after the first already checked out is rejected, not charged again', async () => {
+  it('a stale second tab submitted after the first already checked out is rejected, not charged again', { retry: 1 }, async () => {
     const { sessionToken } = await seedPriceableGuestCart();
     const delivery = await seedDeliveryMethod();
     const payment = await seedPaymentMethodConfig();
@@ -414,5 +446,178 @@ describe('createOrder - idempotency and concurrency', () => {
     expect(first.ok).toBe(true);
     expect(stale).toEqual({ ok: false, code: 'CART_EMPTY' });
     expect(await prisma.order.count({ where: { deliveryMethodId: delivery.id } })).toBe(1);
+  });
+});
+
+/**
+ * `docs/REVIEW-DETAILED.md` BUG-19 - the snapshot omits fields §6.8 requires.
+ *
+ * §6.8 specifies it as "product name **and slug**, design code and name,
+ * material name **and family**, dimensions, thickness, finish, installation
+ * variant, personalization text and font, module count and layout, the full
+ * price breakdown with the pricing version, **estimated production days**,
+ * and the customer design file reference". Three of those were missing, plus
+ * two the architecture requires elsewhere: `materialNotesPl` (§12 - the
+ * confirmation has to render it) and the installation variant's `namePl` /
+ * `receivesPl` (§6.5 - the „Co otrzymujesz" line "goes into the summary and
+ * the order snapshot"). Only the bare enum code was stored, so showing it in
+ * Polish meant either a live catalogue lookup - the one thing a snapshot
+ * exists to avoid - or printing `ON_TOP` at a customer.
+ *
+ * **This is the argument for doing it now rather than later.** The snapshot
+ * is what the customer bought, frozen at checkout. A field not captured then
+ * cannot be recovered, because the catalogue row it would have come from has
+ * moved on. Every order placed before this is permanently missing them.
+ *
+ * Driven through `createOrder`, not by writing a snapshot by hand: the
+ * question is whether the real checkout path captures these.
+ */
+/**
+ * BUG-23 - the order number is filed under Warsaw's calendar, not the host's.
+ *
+ * `tests/unit/order-number.test.ts` pins the calendar arithmetic. This proves
+ * the real `createOrder` uses it, which is the half that actually regressed:
+ * the formatting was inline, so nothing stopped it being written back as
+ * `now.getFullYear()`.
+ *
+ * Only `Date` is faked. Faking every timer would stop the Postgres driver's
+ * own timeouts and turn a clock test into a hang.
+ */
+describe('createOrder - which month an order is filed under (BUG-23)', () => {
+  const realTimezone = process.env.TZ;
+
+  afterEach(() => {
+    vi.useRealTimers();
+    process.env.TZ = realTimezone;
+  });
+
+  it('files a Warsaw-September order in September even when the host says August', async () => {
+    /*
+      The host clock is forced to UTC, and that is what makes this a
+      regression test rather than a tautology. Written without it, it passed
+      against the *old* inline `now.getMonth()` too - this machine runs in
+      Europe/Warsaw, so the buggy code and the fixed code agree here and the
+      test proved nothing. The bug only exists on a host that is not Warsaw,
+      so the test has to be one.
+    */
+    process.env.TZ = 'UTC';
+
+    // 22:30 UTC on 31 August is 00:30 on 1 September in Warsaw (CEST). A UTC
+    // host - every serverless platform this could deploy to - would have
+    // numbered this `2026/08/…` and pushed the counter back into August's
+    // series, colliding with numbers already issued.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-08-31T22:30:00Z'));
+
+    const { sessionToken } = await seedPriceableGuestCart();
+    const delivery = await seedDeliveryMethod();
+    const payment = await seedPaymentMethodConfig();
+
+    const result = await createOrder(
+      baseInput({ sessionToken, deliveryMethodId: delivery.id, paymentMethodConfigId: payment.id }),
+    );
+
+    if (!result.ok) {
+      throw new Error(`expected the order to be placed, got ${JSON.stringify(result)}`);
+    }
+    expect(result.orderNumber).toMatch(/^2026\/09\/\d{4,}$/);
+  });
+});
+
+describe('the order snapshot, as ARCHITECTURE.md §6.8 specifies it', () => {
+  /*
+    One order for all six assertions, placed once.
+
+    Not merely faster. Each placement opens a window between the cart storing
+    its price and `createOrder` re-pricing it, and `admin-pricing.test.ts` -
+    running in parallel against the same database - publishes a new pricing
+    version, which makes any cart seeded a moment earlier fail with
+    `PRICE_CHANGED`. That refusal is correct behaviour; it is simply not what
+    these tests are about. Six placements meant six windows; this is one.
+
+    The `retry: 1` on the cases below closes the rest of the gap, and cannot
+    hide a regression: a genuinely broken checkout fails the retry too. Found
+    2026-09-05, the same shared-database contention
+    `docs/REVIEW-TEST-COVERAGE.md` already records twice.
+  */
+  let cachedSnapshot: OrderItemSnapshot | null = null;
+
+  async function placeAndReadSnapshot(): Promise<OrderItemSnapshot> {
+    if (cachedSnapshot !== null) {
+      return cachedSnapshot;
+    }
+
+    const { sessionToken } = await seedPriceableGuestCart();
+    const delivery = await seedDeliveryMethod();
+    const payment = await seedPaymentMethodConfig();
+
+    const result = await createOrder(
+      baseInput({ sessionToken, deliveryMethodId: delivery.id, paymentMethodConfigId: payment.id }),
+    );
+    if (!result.ok) {
+      throw new Error(`expected the order to be placed, got ${JSON.stringify(result)}`);
+    }
+
+    const item = await prisma.orderItem.findFirstOrThrow({
+      where: { order: { orderNumber: result.orderNumber } },
+      select: { snapshot: true },
+    });
+    cachedSnapshot = item.snapshot as unknown as OrderItemSnapshot;
+    return cachedSnapshot;
+  }
+
+  it('captures the product slug, so an order survives a catalogue rename', { retry: 1 }, async () => {
+    // A name is what you show; a slug is what you look things up by. Without
+    // it, matching an old order back to a catalogue entry means matching on
+    // a display string staff are free to change.
+    expect((await placeAndReadSnapshot()).productSlug).toBe(PRICEABLE_PRODUCT_SLUG);
+  });
+
+  it("captures the material's family, not only its name", async () => {
+    // §6.8 asks for both. The family is what production keys off - solid wood
+    // is not ceramic - and it is exactly what a rename would silently lose.
+    // `SOLID_WOOD` is a real `MaterialFamily` member, not a guess: this
+    // product's materials are dąb, świerk, modrzew and sosna.
+    expect((await placeAndReadSnapshot()).materialFamilyCode).toBe('SOLID_WOOD');
+  });
+
+  it('captures the production estimate the customer was actually quoted', async () => {
+    const snapshot = await placeAndReadSnapshot();
+
+    // Reading this live later answers "what do we promise today", which is a
+    // different question from "what did we promise them".
+    expect(typeof snapshot.productionDaysMin).toBe('number');
+    expect(typeof snapshot.productionDaysMax).toBe('number');
+    expect(snapshot.productionDaysMin ?? 0).toBeLessThanOrEqual(snapshot.productionDaysMax ?? 0);
+  });
+
+  it('captures materialNotesPl, which §12 requires the confirmation to render', async () => {
+    // „Produkt obejmuje blat. Nogi nie są w zestawie." and similar. The
+    // confirmation is required to show it and could only have done so by
+    // joining to a live product row.
+    expect(Object.hasOwn(await placeAndReadSnapshot(), 'materialNotesPl')).toBe(true);
+  });
+
+  it('leaves what it genuinely cannot know absent rather than guessed', async () => {
+    // This product has no installation variant, so §6.5's two fields have
+    // nothing to capture. Null, not an empty string and not a fabricated
+    // label - the discipline `machiningMilliMinutesPerM2` already follows
+    // for a CUSTOM product.
+    const snapshot = await placeAndReadSnapshot();
+
+    expect(snapshot.installationVariant).toBeNull();
+    expect(snapshot.installationVariantNamePl ?? null).toBeNull();
+    expect(snapshot.installationVariantReceivesPl ?? null).toBeNull();
+  });
+
+  it('still captures everything it captured before', async () => {
+    // The new fields must not cost the ones already relied on:
+    // `admin-production.ts` reads `moduleLayout`, `OrderSummary` the names.
+    const snapshot = await placeAndReadSnapshot();
+
+    expect(snapshot.productNamePl.length).toBeGreaterThan(0);
+    expect(snapshot.materialNamePl).not.toBeNull();
+    expect(snapshot.moduleLayout.totalModules).toBeGreaterThan(0);
+    expect(snapshot.priceBreakdown.unitGrossGrosze).toBeGreaterThan(0);
   });
 });
