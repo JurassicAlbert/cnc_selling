@@ -2473,3 +2473,64 @@ alongside them.
 prints „e2e: using cnc_selling_test on 127.0.0.1:5433". **Two consecutive full
 runs at 74/74**, nothing skipped, against a database reset immediately before.
 The development database is untouched by the suite from here on.
+
+---
+
+## CI-01 - The first CI run that ever executed died on its first database step
+
+- **Status:** **RESOLVED 2026-09-05** · CONFIRMED BUG
+- **Severity:** P1 (nothing in the pipeline ran at all)
+- **Area:** tooling / CI
+- **Files:** [.github/workflows/ci.yml](.github/workflows/ci.yml), [tests/unit/ci-workflow.test.ts](tests/unit/ci-workflow.test.ts)
+
+CI was added on 2026-08-31 (ARCH-01) and first actually executed on
+2026-09-05, when PR #1 was opened and merged. Both jobs failed on their first
+database step, and everything after it was skipped:
+
+```
+psql: error: invalid URI query parameter: "schema"
+```
+
+**Cause.** The step was `psql "$DATABASE_URL" -f docker/postgres-init/01-databases.sql`,
+and `DATABASE_URL` ends in `?schema=public`. That is Prisma's own parameter,
+not libpq's, and libpq parses a connection URI strictly: an unrecognised query
+parameter is an error, not something to ignore.
+
+**Why nothing caught it.** Locally that SQL file is applied by the Postgres
+container's own init directory on first boot - `docker compose up -d db` runs
+it, nobody runs the psql line. So the command had never executed anywhere
+before GitHub ran it. This is precisely the failure mode
+`tests/unit/ci-workflow.test.ts`'s header describes as the reason that file
+exists: a workflow step cannot fail locally, because it only ever runs
+somewhere else.
+
+**Fix.** Explicit connection flags rather than the Prisma URL, in both jobs,
+plus a new `ci-workflow.test.ts` case that fails if any `psql` line is handed
+`$DATABASE_URL` or `$TEST_DATABASE_URL` again. Both forms were run against a
+real Postgres before and after, so the guard is known to be guarding something
+real:
+
+```
+psql "postgresql://.../cnc_selling?schema=public" -c "select 1"
+  -> psql: error: invalid URI query parameter: "schema"
+psql -h 127.0.0.1 -p 5432 -U cnc -d cnc_selling -f 01-databases.sql
+  -> CREATE DATABASE / CREATE EXTENSION, both connections
+```
+
+**Verified by reproducing the whole pipeline locally**, which is the only way
+to check a workflow without pushing to find out. Two throwaway databases
+(`ci_probe`, `ci_probe_test`) created with the real init script, then every
+step of both jobs in order against them:
+
+| Step | Result |
+|---|---|
+| `db:deploy`, `db:deploy:test` | all migrations applied from zero |
+| `db:seed`, `db:seed:test` | seeded from empty |
+| `typecheck`, `lint` | clean |
+| `npm test` | **1145 passed** |
+| `npm run build` | compiled |
+| `npx playwright test` | **74 passed**, nothing skipped, against `ci_probe_test` |
+
+The probe databases were dropped afterwards. Worth noting that CI runs
+Playwright with `workers: 1`, so it is strictly less contended than this
+four-worker local run.
