@@ -14,6 +14,8 @@
  * `src/app/(marketing)/page.tsx`'s header comment for why).
  */
 
+import { countPl } from '@/domain/text/plural';
+
 export const SITE = {
   homeSeoTitlePl: 'RYT - meble i akcesoria z grawerem',
   homeSeoDescPl:
@@ -426,6 +428,32 @@ export const SITE = {
   // 900px the control is the icon alone, so a screen reader is the only
   // consumer of this string.
   headerMenuTogglePl: 'Menu',
+  /*
+    BUG-28. The first thing a keyboard reaches on every page. Names the
+    destination rather than the mechanism ("Przejdź do treści", not "Pomiń
+    nawigację"): the person using it wants the content, and telling them what
+    they are skipping is less useful than telling them where they land.
+  */
+  skipToContentPl: 'Przejdź do treści',
+  /*
+    BUG-29. A storefront page carries three `nav` landmarks - this one, the
+    category bar and the breadcrumbs - and a screen reader's landmark list
+    read "navigation, navigation, Kategorie". The unlabelled one was the main
+    menu, which is the one somebody jumping by landmark is looking for.
+  */
+  headerMainNavPl: 'Menu główne',
+  /*
+    BUG-27. The visible count is a small circle beside the cart icon, marked
+    `aria-hidden` because it repeats a number the link already carries - which
+    left the link announced as „Koszyk 709,16 zł", with no way for a blind
+    customer to know whether it held one item or nine. This is that number, in
+    words, for the accessibility tree only.
+
+    Three Polish forms, not two: 1 produkt, 2 produkty, 5 produktów. See
+    `domain/text/plural.ts` - `n === 1 ? a : b` is simply wrong here.
+  */
+  cartItemCountPl: (count: number): string =>
+    countPl(count, { one: 'produkt', few: 'produkty', many: 'produktów' }),
   headerAccountLinkPl: 'Moje konto',
   headerLoginLinkPl: 'Zaloguj się',
   headerLogoutPl: 'Wyloguj się',

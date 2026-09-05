@@ -926,6 +926,65 @@ html {
   outline-offset: 2px;
 }
 
+/* BUG-27 / BUG-28. Present to a screen reader, absent from the layout.
+ *
+ * The clip technique rather than `display: none` or `visibility: hidden`,
+ * both of which remove the element from the accessibility tree as well as
+ * from the screen - the mistake `.header-label-text` below already records
+ * having made once, where it turned the cart link's whole accessible name
+ * into the bare count badge. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* BUG-28. The skip link: off-screen until focused, then a real, visible
+ * control at the top of the page.
+ *
+ * Not `.sr-only` with a `:focus` override, because a clipped element that
+ * becomes visible still has to be moved back into the layout, and doing that
+ * in two places is how skip links end up focusable but invisible - the
+ * failure they are famous for. Positioned off the top edge instead, and slid
+ * down on focus, so the focused state is the ordinary one. */
+.skip-link {
+  position: absolute;
+  top: 0;
+  left: var(--space-4);
+  z-index: 100;
+  transform: translateY(-150%);
+  padding: var(--space-3) var(--space-4);
+  border-radius: 0 0 var(--radius-card) var(--radius-card);
+  background: var(--mui-palette-background-paper);
+  color: var(--mui-palette-text-primary);
+  box-shadow: var(--shadow-md);
+  text-decoration: none;
+}
+
+/* `:focus`, not `:focus-visible`. A skip link is off-screen until focused, so
+ * the only way to reach it is the keyboard - which makes the distinction
+ * moot - and `:focus-visible` does not match focus moved programmatically,
+ * which is how a browser-based check would see it. Plain `:focus` shows it
+ * whenever it is focused, which is the behaviour actually wanted. */
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+/* The skip link's destination. `tabindex="-1"` makes `<main>` focusable so
+ * the jump moves focus and not just the scroll position, and this stops the
+ * browser drawing a ring around the entire page content when it does.
+ *
+ * Scoped through `:not(:focus-visible)` rather than removing the outline
+ * outright: if a browser ever decides this focus *does* warrant a visible
+ * indicator, it keeps one. Blanket `outline: none` is how focus indicators
+ * get lost. */
+main[tabindex='-1']:focus:not(:focus-visible) {
+  outline: none;
+}
+
 /* UX-23. Below 600px the logo, the burger, the cart and the account menu do
    not fit on one line with their labels, and the header row wrapped onto
    two. The icons and the cart's count badge stay; the words go.

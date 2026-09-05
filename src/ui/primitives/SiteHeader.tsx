@@ -87,7 +87,15 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
       }}
     >
       <Container>
+        {/*
+          BUG-29: named, because it is not the only `nav` on the page. The
+          category bar and the breadcrumbs are landmarks too, and a screen
+          reader's landmark list read "navigation, navigation, Kategorie" -
+          with the unlabelled one being the main menu somebody jumping by
+          landmark is actually looking for.
+        */}
         <nav
+          aria-label={SITE.headerMainNavPl}
           className="site-header-nav"
           style={{
             display: 'flex',
@@ -220,9 +228,18 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
             <span className="header-label-text">{SITE.cartHeadingPl}</span>
             {cartSummary.itemCount > 0 && (
               <>
+                {/*
+                  BUG-27. The badge stays `aria-hidden`: it is a decorative
+                  circle repeating a number, and read out it would announce a
+                  bare „1" in the middle of the link's name. What was missing
+                  is the number in a form worth hearing - without it the link
+                  announced only its own label and the total, and a blind
+                  customer could not tell one item from nine.
+                */}
                 <span className="cart-count-badge" aria-hidden="true">
                   {cartSummary.itemCount}
                 </span>
+                <span className="sr-only">{SITE.cartItemCountPl(cartSummary.itemCount)}</span>
                 <span
                   className="header-label-text"
                   style={{ font: 'var(--mui-font-caption)', color: 'var(--mui-palette-text-secondary)' }}
