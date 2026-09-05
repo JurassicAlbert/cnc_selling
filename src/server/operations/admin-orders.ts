@@ -14,6 +14,7 @@ import { revalidatePath } from 'next/cache';
 import { checkOrderStatusTransition } from '@/domain/order-status/transitions';
 import type { OrderStatus } from '@/domain/order-status/transitions';
 import { orderStatusMessage } from '@/content/pl/messages';
+import { ADMIN } from '@/content/pl/admin';
 import { prisma } from '@/server/db/client';
 import { requireStaffSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
@@ -134,7 +135,8 @@ export type MarkOrderPaidResult = { readonly ok: true } | { readonly ok: false; 
 export async function applyMarkOrderPaid(staff: CurrentSession, orderNumber: string): Promise<MarkOrderPaidResult> {
   const order = await prisma.order.findUnique({
     where: { orderNumber },
-    select: { id: true, paymentMethod: true, paymentStatus: true },
+    // `status` is read for the timeline entry below - BUG-20.
+    select: { id: true, paymentMethod: true, paymentStatus: true, status: true },
   });
   if (order === null) {
     return { ok: false, detail: 'Zamówienie nie istnieje.' };
@@ -151,9 +153,42 @@ export async function applyMarkOrderPaid(staff: CurrentSession, orderNumber: str
   // had both calls pass the check and both write, leaving two audit
   // entries for one real state change. Zero rows means the other click
   // already did it - the same honest "already paid" answer as above.
-  const updated = await prisma.order.updateMany({
-    where: { id: order.id, paymentStatus: { not: 'PAID' } },
-    data: { paymentStatus: 'PAID' },
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.order.updateMany({
+      where: { id: order.id, paymentStatus: { not: 'PAID' } },
+      data: { paymentStatus: 'PAID' },
+    });
+    if (result.count === 0) {
+      return result;
+    }
+
+    /*
+      BUG-20. The audit log answers "who changed what", for staff and
+      compliance. The timeline is the order's own history, and it is what
+      somebody reads when a customer asks what has happened - so payment, the
+      event they are most likely to ask about, belongs in it.
+
+      Written inside the same transaction as the payment itself, and after the
+      conditional update, so it inherits P1-6's atomicity: a double-clicked
+      button produces one payment and one entry, never two of either.
+
+      `fromStatus === toStatus` on purpose. Marking paid changes
+      `paymentStatus`, not the order's status, so this is not a transition and
+      must not render as one; `OrderEventTimeline` shows the note instead of a
+      "Nowe → Nowe" arrow when the two match.
+    */
+    await tx.orderEvent.create({
+      data: {
+        orderId: order.id,
+        fromStatus: order.status,
+        toStatus: order.status,
+        actorType: 'staff',
+        actorId: staff.userId,
+        actorEmail: staff.email,
+        notePl: ADMIN.orderEventPaymentRecordedPl,
+      },
+    });
+    return result;
   });
   if (updated.count === 0) {
     return { ok: false, detail: 'To zamówienie jest już oznaczone jako opłacone.' };
