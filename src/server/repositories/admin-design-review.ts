@@ -71,7 +71,13 @@ export type AdminDesignReviewView = {
   readonly id: string;
   readonly status: DesignReviewStatus;
   readonly productionMethod: ProductionMethod | null;
-  readonly autoWarnings: readonly UploadWarning[];
+  /**
+   * `null` means the automatic check has not run yet - BUG-11. It only runs
+   * once a target size exists, which is at add-to-cart, so a design uploaded
+   * and never configured has never been assessed. Collapsing that to `[]`
+   * told staff „Brak ostrzeżeń." about a check that never happened.
+   */
+  readonly autoWarnings: readonly UploadWarning[] | null;
   readonly fileId: string;
   readonly originalName: string;
   readonly mimeType: string;
@@ -101,7 +107,7 @@ export async function findDesignReviewForAdmin(designId: string): Promise<AdminD
     id: design.id,
     status: design.status,
     productionMethod: design.productionMethod,
-    autoWarnings: (design.autoWarnings as unknown as UploadWarning[] | null) ?? [],
+    autoWarnings: design.autoWarnings as unknown as UploadWarning[] | null,
     fileId: design.fileId,
     originalName: design.file.originalName,
     mimeType: design.file.mimeType,

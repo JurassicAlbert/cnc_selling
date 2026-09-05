@@ -25,7 +25,7 @@ import { UPLOAD } from '@/content/pl/upload';
 import type { UploadWarning } from '@/domain/upload/inspect';
 import { sanitizeFilenameForDisplay } from '@/domain/upload/inspect';
 import { prisma } from '@/server/db/client';
-import type { Prisma } from '@/generated/prisma/client';
+import { Prisma } from '@/generated/prisma/client';
 import { getSession } from '@/server/auth/session';
 import { ensureGuestSessionToken } from '@/server/session/guest-session';
 import { requestIpAddress } from '@/server/session/request-ip';
@@ -133,7 +133,16 @@ export async function uploadCustomDesign(formData: FormData): Promise<UploadCust
         sessionToken,
         status: 'PENDING_REVIEW',
         titlePl,
-        autoWarnings: toJsonInput(inspected.warnings),
+        /*
+          BUG-11: `null`, not `[]`. `target` is null here on purpose -
+          CUSTOM_UPLOAD comes before SIZE, so there is no size to check
+          against yet - which means the inspector returned an empty list
+          without having assessed anything. Storing that as `[]` made the
+          review screen say „Brak ostrzeżeń." about a check that never ran.
+          `null` records the truth: not assessed. `reinspect-design.ts` fills
+          it in at add-to-cart, where the target size finally exists.
+        */
+        autoWarnings: inspected.warnings.length === 0 ? Prisma.JsonNull : toJsonInput(inspected.warnings),
         ipConfirmedAt: new Date(),
         ipDeclarationVersion: UPLOAD.ipDeclarationVersion,
         ipDeclarationTextPl: UPLOAD.ipDeclarationTextPl,

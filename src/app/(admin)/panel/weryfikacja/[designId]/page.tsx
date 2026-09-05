@@ -39,7 +39,13 @@ export default async function AdminDesignReviewDetailPage({ params }: DesignRevi
       <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>
         {ADMIN.designReviewWarningsHeadingPl}
       </Typography>
-      {design.autoWarnings.length === 0 ? (
+      {/*
+        BUG-11: three states, not two. `null` is "never assessed" and must not
+        read as a clean bill of health.
+      */}
+      {design.autoWarnings === null ? (
+        <Typography color="warning.main">{ADMIN.designReviewNotAssessedPl}</Typography>
+      ) : design.autoWarnings.length === 0 ? (
         <Typography color="text.secondary">{ADMIN.designReviewNoWarningsPl}</Typography>
       ) : (
         <List dense>

@@ -243,6 +243,16 @@ export const ADMIN = {
   designReviewOriginalFilePl: 'Pobierz oryginalny plik',
   designReviewWarningsHeadingPl: 'Ostrzeżenia automatyczne',
   designReviewNoWarningsPl: 'Brak ostrzeżeń.',
+  /*
+    BUG-11. „Brak ostrzeżeń." and „nie sprawdzono" are different facts and were
+    being shown as the same one. The DPI and aspect checks need a target size,
+    which only exists once the customer has chosen dimensions - so a design
+    uploaded and never configured has genuinely not been assessed, and saying
+    „Brak ostrzeżeń." about it is a false reassurance on the screen where
+    somebody decides whether to cut it.
+  */
+  designReviewNotAssessedPl:
+    'Nie sprawdzono automatycznie - wymiary docelowe nie były jeszcze znane w chwili przesłania pliku. Kontrola rozdzielczości i proporcji uruchamia się po dodaniu projektu do koszyka.',
   designReviewCommentsHeadingPl: 'Komentarze',
   designReviewCommentLabelPl: 'Nowy komentarz (widoczny dla klienta)',
   designReviewProductionMethodLabelPl: 'Metoda produkcji',
