@@ -65,7 +65,7 @@ describe('re-upload after NEEDS_CHANGES', () => {
     ok({ fromStatus: 'NEEDS_CHANGES', toStatus: 'PENDING_REVIEW', actorType: 'customer' });
   });
 
-  it('does not let staff perform the re-upload transition — it is the customer\'s action', () => {
+  it('does not let staff perform the re-upload transition - it is the customer\'s action', () => {
     issue(
       { fromStatus: 'NEEDS_CHANGES', toStatus: 'PENDING_REVIEW', actorType: 'staff' },
       'ACTOR_NOT_PERMITTED',
@@ -78,17 +78,17 @@ describe('illegal transitions', () => {
     issue({ fromStatus: 'PENDING_REVIEW', toStatus: 'PENDING_REVIEW', actorType: 'staff' }, 'ILLEGAL_TRANSITION');
   });
 
-  it('rejects any transition out of APPROVED — it is terminal', () => {
+  it('rejects any transition out of APPROVED - it is terminal', () => {
     issue({ fromStatus: 'APPROVED', toStatus: 'NEEDS_CHANGES', actorType: 'staff' }, 'ILLEGAL_TRANSITION');
     issue({ fromStatus: 'APPROVED', toStatus: 'PENDING_REVIEW', actorType: 'customer' }, 'ILLEGAL_TRANSITION');
   });
 
-  it('rejects any transition out of REJECTED — it is terminal', () => {
+  it('rejects any transition out of REJECTED - it is terminal', () => {
     issue({ fromStatus: 'REJECTED', toStatus: 'PENDING_REVIEW', actorType: 'customer' }, 'ILLEGAL_TRANSITION');
     issue({ fromStatus: 'REJECTED', toStatus: 'APPROVED', actorType: 'staff' }, 'ILLEGAL_TRANSITION');
   });
 
-  it('rejects skipping straight from NEEDS_CHANGES to APPROVED — a re-upload must go through PENDING_REVIEW again', () => {
+  it('rejects skipping straight from NEEDS_CHANGES to APPROVED - a re-upload must go through PENDING_REVIEW again', () => {
     issue({ fromStatus: 'NEEDS_CHANGES', toStatus: 'APPROVED', actorType: 'staff' }, 'ILLEGAL_TRANSITION');
   });
 });

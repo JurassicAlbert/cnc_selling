@@ -59,6 +59,12 @@ export const NOUNS = {
     few: 'wzory',
     many: 'wzorów',
   },
+  minute: {
+    one: 'minutę',
+    few: 'minuty',
+    many: 'minut',
+    other: 'minuty',
+  },
 } as const satisfies Record<string, PolishPluralForms>;
 
 export type NounKey = keyof typeof NOUNS;

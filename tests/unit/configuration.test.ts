@@ -13,9 +13,9 @@ import {
 } from '@/domain/configuration/steps';
 
 /**
- * The configurator step machine — ARCHITECTURE.md §5 (per-product-type step
+ * The configurator step machine - ARCHITECTURE.md §5 (per-product-type step
  * lists) and §7.1 (a step is enterable only if every prior required
- * selection is valid). Pure: no product ids, no compatibility resolution —
+ * selection is valid). Pure: no product ids, no compatibility resolution -
  * that lives in `domain/compatibility` and is combined with this module by
  * the server layer, not duplicated here.
  */
@@ -25,7 +25,7 @@ function selections(overrides: Partial<Selections>): Selections {
 }
 
 describe('stepsForProductType', () => {
-  it('WALL_ART — no THICKNESS, no INSTALLATION_VARIANT', () => {
+  it('WALL_ART - no THICKNESS, no INSTALLATION_VARIANT', () => {
     expect(stepsForProductType('WALL_ART')).toEqual([
       'DESIGN',
       'MATERIAL',
@@ -101,7 +101,7 @@ describe('stepsForProductType', () => {
   });
 });
 
-describe('isStepEnterable — a step opens only once every prior step is satisfied', () => {
+describe('isStepEnterable - a step opens only once every prior step is satisfied', () => {
   const steps = stepsForProductType('WALL_ART'); // DESIGN, MATERIAL, SIZE, FINISH, PERSONALIZATION, SUMMARY
 
   it('the first step is always enterable, regardless of selections', () => {
@@ -131,7 +131,7 @@ describe('isStepEnterable — a step opens only once every prior step is satisfi
     expect(isStepEnterable(steps, 3, both)).toBe(true);
   });
 
-  it('PERSONALIZATION is optional — its absence never blocks the step after it (SUMMARY)', () => {
+  it('PERSONALIZATION is optional - its absence never blocks the step after it (SUMMARY)', () => {
     const everythingButPersonalization = selections({
       designId: 'linoryt-01',
       materialId: 'dab',
@@ -148,7 +148,7 @@ describe('isStepEnterable — a step opens only once every prior step is satisfi
   });
 });
 
-describe('furthestEnterableStepIndex — where a returning customer resumes', () => {
+describe('furthestEnterableStepIndex - where a returning customer resumes', () => {
   const steps = stepsForProductType('WALL_ART');
 
   it('resumes at 0 with nothing selected', () => {
@@ -172,7 +172,7 @@ describe('furthestEnterableStepIndex — where a returning customer resumes', ()
   });
 });
 
-describe('checkStepEntry — the entry guard, with a reason code', () => {
+describe('checkStepEntry - the entry guard, with a reason code', () => {
   const steps = stepsForProductType('WALL_ART');
 
   it('ok for the first step', () => {
@@ -204,7 +204,7 @@ describe('checkStepEntry — the entry guard, with a reason code', () => {
   });
 });
 
-describe('checkStepAppliesToProductType — rejects a step foreign to this product type', () => {
+describe('checkStepAppliesToProductType - rejects a step foreign to this product type', () => {
   it('THICKNESS does not apply to WALL_ART', () => {
     const steps = stepsForProductType('WALL_ART');
     const result = checkStepAppliesToProductType(steps, 'THICKNESS');

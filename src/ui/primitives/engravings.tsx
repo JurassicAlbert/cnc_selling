@@ -6,20 +6,20 @@ type EngravingProps = {
 
 /**
  * Original, hand-authored line-art illustrations in an "engraved wood art"
- * style — added 2026-08-26 so the hexagon decorations and the hero mosaic
+ * style - added 2026-08-26 so the hexagon decorations and the hero mosaic
  * have real content that (a) actually looks engraved, per the owner's
  * request, and (b) is guaranteed not to duplicate any of the real sourced
  * photography already used for categories/products/blog (all 7 stock
  * photos are already spread across those three surfaces; reusing any of
  * them a third or fourth time in decoration is exactly the repetition the
  * owner flagged). Pure `stroke="currentColor"` line art, no fill except
- * where noted — tint via the parent's CSS `color`, same convention as
+ * where noted - tint via the parent's CSS `color`, same convention as
  * `src/ui/icons/index.tsx`. `viewBox="0 0 200 200"`, centered on
  * (100, 100), so every illustration drops into a hex tile or the mosaic
  * at any size without adjustment.
  */
 
-/** An 8-petal radiating botanical mandala — the richest of the five, used for the hero's big honeycomb mosaic. */
+/** An 8-petal radiating botanical mandala - the richest of the five, used for the hero's big honeycomb mosaic. */
 export function BotanicalEngraving({ style }: EngravingProps) {
   return (
     <svg aria-hidden="true" viewBox="0 0 200 200" style={style} fill="none" stroke="currentColor" strokeWidth={2}>
@@ -32,7 +32,7 @@ export function BotanicalEngraving({ style }: EngravingProps) {
   );
 }
 
-/** Concentric circles + an 8-point radiating star with tick marks — a precision/compass motif for CNC work. */
+/** Concentric circles + an 8-point radiating star with tick marks - a precision/compass motif for CNC work. */
 export function GeometricEngraving({ style }: EngravingProps) {
   return (
     <svg aria-hidden="true" viewBox="0 0 200 200" style={style} fill="none" stroke="currentColor" strokeWidth={2}>
@@ -49,7 +49,7 @@ export function GeometricEngraving({ style }: EngravingProps) {
   );
 }
 
-/** Flowing horizontal contour lines — a wood-grain motif. */
+/** Flowing horizontal contour lines - a wood-grain motif. */
 export function WaveGrainEngraving({ style }: EngravingProps) {
   return (
     <svg aria-hidden="true" viewBox="0 0 200 200" style={style} fill="none" stroke="currentColor" strokeWidth={2}>
@@ -64,7 +64,7 @@ export function WaveGrainEngraving({ style }: EngravingProps) {
   );
 }
 
-/** A 4-line, 8-point compass star — a navigation/precision motif, distinct from the geometric tick-mark version. */
+/** A 4-line, 8-point compass star - a navigation/precision motif, distinct from the geometric tick-mark version. */
 export function CompassEngraving({ style }: EngravingProps) {
   return (
     <svg aria-hidden="true" viewBox="0 0 200 200" style={style} fill="none" stroke="currentColor" strokeWidth={2}>
@@ -77,7 +77,7 @@ export function CompassEngraving({ style }: EngravingProps) {
   );
 }
 
-/** A single curved branch with alternating leaves — simpler and smaller than the full mandala, for tighter tiles. */
+/** A single curved branch with alternating leaves - simpler and smaller than the full mandala, for tighter tiles. */
 export function LeafSprigEngraving({ style }: EngravingProps) {
   return (
     <svg aria-hidden="true" viewBox="0 0 200 200" style={style} fill="none" stroke="currentColor" strokeWidth={2}>

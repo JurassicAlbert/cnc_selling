@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Wzór — gaj brzozowy">
+  <g fill="none" stroke="#3E2A1A">
+    <!-- distant, faint trunks -->
+    <g stroke-width="2.5" stroke-opacity="0.3">
+      <path d="M15,190 L18,60" />
+      <path d="M35,190 L37,50" />
+      <path d="M165,190 L163,55" />
+      <path d="M182,190 L180,65" />
+    </g>
+
+    <!-- mid trunks -->
+    <g stroke-width="4" stroke-opacity="0.55">
+      <path d="M55,192 L58,40" />
+      <path d="M148,192 L146,45" />
+    </g>
+    <g stroke-width="1.5" stroke-opacity="0.55">
+      <path d="M56,70 L60,68" />
+      <path d="M55,100 L61,99" />
+      <path d="M56,130 L60,132" />
+      <path d="M147,80 L151,78" />
+      <path d="M146,115 L150,117" />
+      <path d="M147,150 L151,149" />
+    </g>
+
+    <!-- foreground trunks, full weight, birch-bark marks -->
+    <g stroke-width="7">
+      <path d="M85,195 L88,20" />
+      <path d="M120,195 L117,20" />
+    </g>
+    <g stroke-width="2.5" stroke-linecap="round">
+      <path d="M85,45 L91,43" />
+      <path d="M86,75 L92,78" />
+      <path d="M87,105 L93,103" />
+      <path d="M87,140 L93,143" />
+      <path d="M88,170 L94,168" />
+      <path d="M114,55 L120,53" />
+      <path d="M115,85 L121,87" />
+      <path d="M116,120 L122,118" />
+      <path d="M117,155 L123,157" />
+    </g>
+
+    <!-- canopy -->
+    <path d="M60,30 Q102,4 145,32 Q160,45 148,58 Q108,20 62,55 Q48,42 60,30 Z"
+          stroke-width="2" fill="#3E2A1A" fill-opacity="0.1" />
+
+    <!-- fallen leaves / ground texture -->
+    <g stroke-width="1.5" stroke-opacity="0.4">
+      <path d="M30,188 Q34,183 39,188" />
+      <path d="M70,192 Q75,186 80,192" />
+      <path d="M100,190 Q105,185 110,190" />
+      <path d="M135,193 Q140,187 145,193" />
+      <path d="M165,189 Q169,184 173,189" />
+    </g>
+  </g>
+</svg>

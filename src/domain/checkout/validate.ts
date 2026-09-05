@@ -1,15 +1,15 @@
 /**
- * Checkout field validation — NIP checksum, postal code, phone.
+ * Checkout field validation - NIP checksum, postal code, phone.
  *
  * Real Polish algorithms, not format guesses. A NIP that merely "looks like
- * ten digits" is not a NIP — the checksum is what makes it one, and a wrong
+ * ten digits" is not a NIP - the checksum is what makes it one, and a wrong
  * one on an invoice is a real compliance problem, not a cosmetic one.
  */
 
 const NIP_WEIGHTS = [6, 5, 7, 2, 3, 4, 5, 6, 7] as const;
 
 /**
- * Polish NIP (tax identification number) checksum — ten digits, no dashes.
+ * Polish NIP (tax identification number) checksum - ten digits, no dashes.
  * `sum % 11` over the first nine digits, weighted, must equal the tenth
  * digit; `sum % 11 === 10` is defined as invalid, not wrapped to 0.
  */
@@ -35,9 +35,11 @@ export function validatePostalCode(code: string): boolean {
 }
 
 /**
- * Lenient on purpose — `Order.phone` is optional, and Polish phone numbers
- * appear in many written forms (with/without `+48`, spaces, dashes). This
- * rejects obvious garbage, not anything that isn't the one canonical format.
+ * Lenient on purpose - `Order.phone` is required (2026-08-29 owner
+ * request), but Polish phone numbers appear in many written forms
+ * (with/without `+48`, spaces, dashes). This rejects obvious garbage, not
+ * anything that isn't the one canonical format; emptiness itself is
+ * checked separately by the caller, not here.
  */
 export function validatePhone(phone: string): boolean {
   const digitsOnly = phone.replace(/[\s-]/g, '');

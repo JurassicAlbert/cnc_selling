@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
   };
 }
 
-/** Same honest-404 pattern as categories/products/orders — an unknown or unpublished slug renders identically. */
+/** Same honest-404 pattern as categories/products/orders - an unknown or unpublished slug renders identically. */
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
   const { slug } = await params;
   const post = await getPublishedBlogPostBySlug(slug);

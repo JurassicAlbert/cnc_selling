@@ -1,6 +1,6 @@
 // Applies pending migrations to the integration-test database
 // (TEST_DATABASE_URL), by re-invoking `prisma migrate deploy` with
-// DATABASE_URL programmatically overridden — not shell env-var
+// DATABASE_URL programmatically overridden - not shell env-var
 // substitution (`$VAR`/`%VAR%`), which differs between POSIX shells and
 // Windows cmd and would make this script non-portable. See
 // `tests/integration/setup.ts` for why this database needs to exist at
@@ -11,7 +11,7 @@ import { spawnSync } from 'node:child_process';
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 if (testDatabaseUrl === undefined || testDatabaseUrl.length === 0) {
-  console.error('TEST_DATABASE_URL is not set — check your .env');
+  console.error('TEST_DATABASE_URL is not set - check your .env');
   process.exit(1);
 }
 

@@ -3,10 +3,10 @@
  *
  * Three severities with genuinely different consequences:
  *
- *   error   — cannot be manufactured. Blocks Next and add-to-cart.
- *   warning — manufacturable, but the result may disappoint. Requires an
+ *   error   - cannot be manufactured. Blocks Next and add-to-cart.
+ *   warning - manufacturable, but the result may disappoint. Requires an
  *             explicit acknowledgement before the customer can continue.
- *   notice  — informational. Displayed, no interaction.
+ *   notice  - informational. Displayed, no interaction.
  *
  * Nothing here ever silently alters the customer's choice. It reports; the
  * customer decides.
@@ -14,21 +14,33 @@
 
 export type Severity = 'error' | 'warning' | 'notice';
 
-export type FeasibilityCode =
-  | 'LINE_TOO_THIN'
-  | 'DESIGN_TOO_DETAILED'
-  | 'DETAIL_SPACING_TOO_TIGHT'
-  | 'MODULAR_BUILD'
-  | 'NATURAL_VARIATION'
-  | 'FLOOR_MATCH_NOT_GUARANTEED'
-  | 'THICKNESS_EXCEEDS_MACHINE'
+/**
+ * The closed set, as a runtime value rather than only a type - 2026-08-31,
+ * for `docs/REVIEW-DETAILED.md` BUG-07. `Configuration.acknowledgedWarnings`
+ * is a `String[]` column that a Server Action wrote straight through with no
+ * allow-list at all, so a crafted request could store arbitrary strings in
+ * it. Validating against a union type is impossible; validating against this
+ * array is trivial, and deriving `FeasibilityCode` from it keeps the two
+ * from ever disagreeing.
+ */
+export const FEASIBILITY_CODES = [
+  'LINE_TOO_THIN',
+  'DESIGN_TOO_DETAILED',
+  'DETAIL_SPACING_TOO_TIGHT',
+  'MODULAR_BUILD',
+  'NATURAL_VARIATION',
+  'FLOOR_MATCH_NOT_GUARANTEED',
+  'THICKNESS_EXCEEDS_MACHINE',
   /**
    * Constructed by `domain/joinery`'s `buildJoineryFinding`, not by
-   * `evaluateFeasibility` below — that function never produces this code,
+   * `evaluateFeasibility` below - that function never produces this code,
    * so it stays inert until something calls `buildJoineryFinding`
    * directly, which nothing does yet (prepared but disabled).
    */
-  | 'JOINED_PANEL_YATO_YANE';
+  'JOINED_PANEL_YATO_YANE',
+] as const;
+
+export type FeasibilityCode = (typeof FEASIBILITY_CODES)[number];
 
 export type FeasibilityFinding = {
   readonly code: FeasibilityCode;
@@ -64,7 +76,7 @@ export type MachineConstraints = {
 export type FeasibilityInput = {
   readonly widthMm: number;
   /**
-   * `null` for a product with no catalog design at all — `CUSTOM`
+   * `null` for a product with no catalog design at all - `CUSTOM`
    * (customer-uploaded artwork, P4). Line-width/spacing/detail-level
    * feasibility genuinely can't be evaluated against an unreviewed
    * upload; that's what design review (§13.3) is for. `null` simply
@@ -76,7 +88,7 @@ export type FeasibilityInput = {
   readonly isFloorElement: boolean;
   /**
    * The chosen thickness, or `null` for a product type with no THICKNESS
-   * step (§5) — WALL_ART and KITCHEN_TILE never supply one, and the check
+   * step (§5) - WALL_ART and KITCHEN_TILE never supply one, and the check
    * is skipped rather than guessing a value that was never configured.
    */
   readonly thicknessMm: number | null;
@@ -90,7 +102,7 @@ export function evaluateFeasibility(
   const { design, material } = input;
 
   // `design === null` (CUSTOM, no catalog design) skips all three
-  // design-derived findings below entirely — see FeasibilityInput's
+  // design-derived findings below entirely - see FeasibilityInput's
   // comment on why nothing here is guessed in its place.
   if (design !== null) {
     // Features scale with the product: a design drawn for 600 mm and produced

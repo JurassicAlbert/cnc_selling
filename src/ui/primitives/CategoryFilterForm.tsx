@@ -14,7 +14,7 @@ type CategoryFilterFormProps = {
 
 /**
  * A real filter/sort sidebar with zero client JavaScript. A native `<form
- * method="get">` re-navigates the browser with new query params on submit —
+ * method="get">` re-navigates the browser with new query params on submit -
  * the server re-renders the category page against them (see
  * `src/app/(shop)/[category]/page.tsx`). No client island needed for
  * something this simple, which keeps a static category page static: no MUI,
@@ -22,8 +22,8 @@ type CategoryFilterFormProps = {
  * reason to ship any client JS at all.
  *
  * Honestly scoped: with 0-1 products per category today there is very
- * little to actually filter down from. It's real and correctly wired —
- * ready to matter once the catalogue grows — not decoration.
+ * little to actually filter down from. It's real and correctly wired -
+ * ready to matter once the catalogue grows - not decoration.
  */
 export function CategoryFilterForm({
   actionPath,
@@ -48,22 +48,26 @@ export function CategoryFilterForm({
         >
           {SITE.filterMaterialLabelPl}
         </legend>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label style={{ font: 'var(--mui-font-body2)', color: 'var(--mui-palette-text-primary)' }}>
-            <input type="radio" name="material" value="" defaultChecked={selectedMaterialSlug === null} />{' '}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <label className="form-option-label">
+            <input
+              className="form-control-radio"
+              type="radio"
+              name="material"
+              value=""
+              defaultChecked={selectedMaterialSlug === null}
+            />
             {SITE.filterAllMaterialsPl}
           </label>
           {materials.map((material) => (
-            <label
-              key={material.slug}
-              style={{ font: 'var(--mui-font-body2)', color: 'var(--mui-palette-text-primary)' }}
-            >
+            <label key={material.slug} className="form-option-label">
               <input
+                className="form-control-radio"
                 type="radio"
                 name="material"
                 value={material.slug}
                 defaultChecked={selectedMaterialSlug === material.slug}
-              />{' '}
+              />
               {material.namePl}
             </label>
           ))}
@@ -74,37 +78,14 @@ export function CategoryFilterForm({
         <span style={{ font: 'var(--mui-font-subtitle2)', color: 'var(--mui-palette-text-primary)' }}>
           {SITE.sortLabelPl}
         </span>
-        <select
-          name="sort"
-          defaultValue={sort ?? ''}
-          style={{
-            font: 'var(--mui-font-body2)',
-            padding: 8,
-            border: '1px solid var(--mui-palette-divider)',
-            borderRadius: 2,
-            backgroundColor: 'var(--mui-palette-background-paper)',
-            color: 'var(--mui-palette-text-primary)',
-          }}
-        >
+        <select className="form-select" name="sort" defaultValue={sort ?? ''}>
           <option value="">{SITE.sortRelevancePl}</option>
           <option value="price_asc">{SITE.sortPriceAscPl}</option>
           <option value="price_desc">{SITE.sortPriceDescPl}</option>
         </select>
       </label>
 
-      <button
-        type="submit"
-        style={{
-          font: 'var(--mui-font-button)',
-          textTransform: 'none',
-          padding: '10px 16px',
-          border: 'none',
-          borderRadius: 2,
-          backgroundColor: 'var(--mui-palette-primary-main)',
-          color: 'var(--mui-palette-background-paper)',
-          cursor: 'pointer',
-        }}
-      >
+      <button className="form-button" type="submit">
         {SITE.filterApplyPl}
       </button>
     </form>

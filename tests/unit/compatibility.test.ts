@@ -11,7 +11,7 @@ import {
  * §7.2 of the architecture doc: each configurator step's options are the
  * already-filtered result of a pure function, not a hidden option and not a
  * client-side guess. Every function here takes rows the mapper already
- * fetched — no DB, no I/O — and decides which subset is actually offered.
+ * fetched - no DB, no I/O - and decides which subset is actually offered.
  */
 
 describe('availableMaterials', () => {
@@ -57,7 +57,7 @@ describe('availableFinishes', () => {
   });
 
   it('returns nothing when the material has no compatible finishes at all', () => {
-    // A material with no MaterialFinish rows offers no finish — never treated
+    // A material with no MaterialFinish rows offers no finish - never treated
     // as "everything is compatible", unlike the material/design narrowing
     // rule. There is no MaterialFinish equivalent of "empty means all".
     expect(availableFinishes([])).toEqual([]);
@@ -107,7 +107,7 @@ describe('availableDesigns', () => {
   it('offers only APPROVED_COMMERCIAL and PUBLIC_DOMAIN designs, never the other rights statuses', () => {
     // No material chosen yet: linoryt-01 and linoryt-02 pass on rights alone.
     // REQUIRES_PERMISSION, RESTRICTED and CUSTOMER_SUPPLIED are never sellable,
-    // regardless of activity or material narrowing — brief §12.
+    // regardless of activity or material narrowing - brief §12.
     expect(availableDesigns(designs, null)).toEqual(['linoryt-01', 'linoryt-02']);
   });
 
@@ -117,7 +117,7 @@ describe('availableDesigns', () => {
 
   it('treats an empty DesignMaterial narrowing list as "every material the product allows"', () => {
     // linoryt-01 has no DesignMaterial rows, so it must be offered no matter
-    // which material is selected — the schema's own comment on
+    // which material is selected - the schema's own comment on
     // Design.materials is explicit about this.
     expect(availableDesigns(designs, 'jesion')).toContain('linoryt-01');
   });

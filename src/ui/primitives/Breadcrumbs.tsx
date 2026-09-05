@@ -11,7 +11,7 @@ export type Crumb = {
 
 /**
  * RSC-safe. Renders both the visible trail and `BreadcrumbList` JSON-LD
- * (ARCHITECTURE.md §18) — one component, so the two can never drift apart.
+ * (ARCHITECTURE.md §18) - one component, so the two can never drift apart.
  */
 export function Breadcrumbs({ trail }: { trail: readonly Crumb[] }) {
   const items: Crumb[] = [{ labelPl: SITE.catalogueHomeLinkPl, href: '/' }, ...trail];
@@ -31,7 +31,7 @@ export function Breadcrumbs({ trail }: { trail: readonly Crumb[] }) {
     <nav aria-label={SITE.catalogueHomeLinkPl} style={{ font: 'var(--mui-font-body2)' }}>
       <script
         type="application/ld+json"
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: only way to emit JSON-LD; toSafeJsonLd escapes `<` so it can't break out of the script tag — src/ui/seo/json-ld.ts
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: only way to emit JSON-LD; toSafeJsonLd escapes `<` so it can't break out of the script tag - src/ui/seo/json-ld.ts
         dangerouslySetInnerHTML={{ __html: toSafeJsonLd(jsonLd) }}
       />
       {items.map((item, index) => (

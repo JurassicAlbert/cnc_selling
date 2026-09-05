@@ -27,10 +27,10 @@ function parseSort(value: string | undefined): ProductSort {
 }
 
 /**
- * Server-rendered from the DB (ARCHITECTURE.md §18) — no client-side fetch
+ * Server-rendered from the DB (ARCHITECTURE.md §18) - no client-side fetch
  * for content. The filter sidebar (`CategoryFilterForm`) is a native GET
  * form: submitting it re-navigates with new query params, which this page
- * reads server-side. Zero client JS for filtering — see that component's
+ * reads server-side. Zero client JS for filtering - see that component's
  * header comment for why that's a deliberate choice, not an oversight.
  */
 export default async function CategoryPage({ params, searchParams }: CategoryPageProps) {
@@ -97,7 +97,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
                     categoryNamePl={product.categoryNamePl}
                     categorySlug={product.categorySlug}
                     imageUrl={product.primaryImageUrl}
-                    minPriceGrosze={product.minPriceGrosze}
+                    startingPriceGrossGrosze={product.startingPriceGrossGrosze}
                     hasPersonalization={product.hasPersonalization}
                     productionDaysMin={product.productionDaysMin}
                     productionDaysMax={product.productionDaysMax}

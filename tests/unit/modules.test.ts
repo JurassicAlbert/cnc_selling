@@ -18,7 +18,7 @@ function layoutOf(widthMm: number, heightMm: number, limits = LIMITS): ModuleLay
   return result.layout;
 }
 
-describe('splitIntoModules — single module', () => {
+describe('splitIntoModules - single module', () => {
   it('produces one module for a product well inside the usable area', () => {
     const layout = layoutOf(400, 600);
     expect(layout.totalModules).toBe(1);
@@ -26,7 +26,7 @@ describe('splitIntoModules — single module', () => {
     expect(layout.modules).toHaveLength(1);
   });
 
-  it('produces ONE module at exactly the usable width — the classic off-by-one', () => {
+  it('produces ONE module at exactly the usable width - the classic off-by-one', () => {
     const layout = layoutOf(580, 880);
     expect(layout.cols).toBe(1);
     expect(layout.rows).toBe(1);
@@ -47,7 +47,7 @@ describe('splitIntoModules — single module', () => {
   });
 });
 
-describe('splitIntoModules — the 120 x 120 cm case from the brief', () => {
+describe('splitIntoModules - the 120 x 120 cm case from the brief', () => {
   const layout = layoutOf(1200, 1200);
 
   it('splits into a 3 x 2 grid on this machine', () => {
@@ -89,7 +89,7 @@ describe('splitIntoModules — the 120 x 120 cm case from the brief', () => {
   });
 });
 
-describe('splitIntoModules — the pieces must reconstruct the product exactly', () => {
+describe('splitIntoModules - the pieces must reconstruct the product exactly', () => {
   const cases: ReadonlyArray<readonly [number, number]> = [
     [1200, 1200],
     [1000, 700],
@@ -116,7 +116,7 @@ describe('splitIntoModules — the pieces must reconstruct the product exactly',
   });
 });
 
-describe('splitIntoModules — sliver avoidance', () => {
+describe('splitIntoModules - sliver avoidance', () => {
   it('never produces a module below the minimum size when it can be avoided', () => {
     const layout = layoutOf(1170, 500);
     for (const module of layout.modules) {
@@ -145,7 +145,7 @@ describe('splitIntoModules — sliver avoidance', () => {
   });
 });
 
-describe('splitIntoModules — invalid input', () => {
+describe('splitIntoModules - invalid input', () => {
   it('rejects a zero dimension', () => {
     const result = splitIntoModules(0, 500, LIMITS);
     expect(result).toMatchObject({ ok: false, code: 'INVALID_DIMENSIONS' });
@@ -180,7 +180,7 @@ describe('splitIntoModules — invalid input', () => {
   });
 });
 
-describe('splitIntoModules — a larger machine makes the same product one piece', () => {
+describe('splitIntoModules - a larger machine makes the same product one piece', () => {
   it('produces a single module when the machine can take it', () => {
     const layout = layoutOf(1200, 1200, {
       usableWidthMm: 1500,

@@ -15,11 +15,11 @@ type FooterProps = {
 };
 
 /**
- * Added 2026-08-25 — the owner's explicit feedback was that the site had no
+ * Added 2026-08-25 - the owner's explicit feedback was that the site had no
  * footer at all. Real content only, per the owner's own clarified policy:
  * category links and search (both real, already-built pages), and links to
  * the two legal stub pages below, honestly marked as still in preparation.
- * No email, phone, social links, or invented company registration details —
+ * No email, phone, social links, or invented company registration details -
  * none of that exists anywhere in this system yet (same reasoning the P5
  * handover used for the bank account number).
  */
@@ -58,7 +58,7 @@ export function Footer({ categories }: FooterProps) {
 
           <div>
             <div style={{ font: 'var(--mui-font-h6)', color: 'var(--mui-palette-text-primary)' }}>
-              CNC Selling
+              RYT
             </div>
             <div
               style={{
@@ -118,6 +118,25 @@ export function Footer({ categories }: FooterProps) {
               <Link href="/blog" className="footer-link" style={{ font: 'var(--mui-font-body2)' }}>
                 {SITE.footerBlogLinkPl}
               </Link>
+              {/*
+               * The "Wzory" link is deliberately absent, not forgotten.
+               * `/wzory` calls `notFound()` on purpose (owner, 2026-08-29:
+               * "ukryj na razie podstronę dla wzorów") - but this link was
+               * left pointing at it, so every page on the site carried a
+               * link into a 404. Found by crawling the storefront during
+               * the 2026-08-30 audit, not by reading the code.
+               *
+               * Restoring it is the other half of re-enabling that page:
+               * delete the `notFound()` line in
+               * `(marketing)/wzory/page.tsx` and put this link back. The
+               * copy (`SITE.footerPatternsLinkPl`) is deliberately kept.
+               */}
+              <Link href="/kolekcje" className="footer-link" style={{ font: 'var(--mui-font-body2)' }}>
+                {SITE.footerCollectionsLinkPl}
+              </Link>
+              <Link href="/kontakt" className="footer-link" style={{ font: 'var(--mui-font-body2)' }}>
+                {SITE.footerContactLinkPl}
+              </Link>
               <Link href="/regulamin" className="footer-link" style={{ font: 'var(--mui-font-body2)' }}>
                 {SITE.footerTermsLinkPl}
               </Link>
@@ -131,13 +150,13 @@ export function Footer({ categories }: FooterProps) {
             </div>
           </div>
 
-          {/* Its own grid column (2026-08-26, owner's request) — not nested
+          {/* Its own grid column (2026-08-26, owner's request) - not nested
               inside the brand column with the tagline/description. Hidden
               below 980px (see the `.footer-grid` media queries above) so it
               never competes for space with the 3 real content columns on
               narrower viewports; the animation is decorative, the links
               above it aren't. */}
-          {/* `display` deliberately lives only in the class below, not here —
+          {/* `display` deliberately lives only in the class below, not here -
               an inline style always wins the cascade over a stylesheet rule
               (same reasoning as `.hero-grid`/`.footer-grid` above), so
               setting `display: flex` inline would defeat the `display: none`

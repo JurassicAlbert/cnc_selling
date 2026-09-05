@@ -135,7 +135,7 @@ export function sumGrosze(values: readonly Grosze[]): Grosze {
  *  - Four-digit amounts are NOT grouped: `1234,56 zł`, not `1 234,56 zł`.
  *    Polish CLDR sets minimumGroupingDigits to 2, so the separator appears
  *    only from five digits. If the brand prefers grouping everywhere, add
- *    `useGrouping: 'always'` here — but change it in one place, not per call
+ *    `useGrouping: 'always'` here - but change it in one place, not per call
  *    site, and update the tests deliberately.
  */
 export function formatPln(grosze: Grosze): string {

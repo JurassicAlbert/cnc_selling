@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Wzór — panorama górska">
+  <g fill="none" stroke="#3E2A1A">
+    <!-- sun -->
+    <circle cx="60" cy="55" r="18" stroke-width="2.5" />
+    <g stroke-width="1.5" stroke-opacity="0.7">
+      <path d="M60,30 L60,24" />
+      <path d="M60,86 L60,80" />
+      <path d="M35,55 L29,55" />
+      <path d="M91,55 L85,55" />
+      <path d="M42,37 L38,33" />
+      <path d="M78,73 L82,77" />
+      <path d="M78,37 L82,33" />
+      <path d="M42,73 L38,77" />
+    </g>
+
+    <!-- back ridge -->
+    <path d="M-5,110 L30,75 L55,98 L85,60 L120,100 L150,72 L180,105 L205,90 L205,200 L-5,200 Z"
+          stroke-width="2" stroke-opacity="0.35" fill="#3E2A1A" fill-opacity="0.06" />
+
+    <!-- mid ridge -->
+    <path d="M-5,135 L25,108 L50,128 L82,92 L108,124 L140,100 L170,132 L205,115 L205,200 L-5,200 Z"
+          stroke-width="2.5" stroke-opacity="0.6" fill="#3E2A1A" fill-opacity="0.12" />
+
+    <!-- front ridge with peak detailing -->
+    <path d="M-5,165 L20,140 L45,120 L60,132 L78,105 L95,128 L118,112 L140,140 L165,122 L188,150 L205,140 L205,200 L-5,200 Z"
+          stroke-width="3.5" fill="#3E2A1A" fill-opacity="0.22" />
+    <path d="M78,105 L72,118 L84,118 Z" stroke-width="1.5" fill="#3E2A1A" fill-opacity="0.3" />
+    <path d="M20,140 L15,150 L26,150 Z" stroke-width="1.5" fill="#3E2A1A" fill-opacity="0.3" />
+
+    <!-- treeline -->
+    <g stroke-width="2" fill="#3E2A1A" fill-opacity="0.5">
+      <path d="M18,178 L22,160 L26,178 Z" />
+      <path d="M28,182 L33,158 L38,182 Z" />
+      <path d="M42,180 L46,164 L50,180 Z" />
+      <path d="M140,180 L145,160 L150,180 Z" />
+      <path d="M152,184 L158,156 L164,184 Z" />
+      <path d="M166,180 L170,165 L174,180 Z" />
+      <path d="M178,182 L182,168 L186,182 Z" />
+    </g>
+
+    <!-- water line -->
+    <path d="M-5,188 Q50,182 100,188 T205,188" stroke-width="2" stroke-opacity="0.5" />
+    <path d="M-5,193 Q50,188 100,193 T205,193" stroke-width="1.5" stroke-opacity="0.35" />
+  </g>
+</svg>

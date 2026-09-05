@@ -6,14 +6,14 @@ import {
 } from '@/domain/order-status/transitions';
 
 /**
- * The order status machine. `fromStatus: null` represents order creation —
+ * The order status machine. `fromStatus: null` represents order creation -
  * `OrderEvent.fromStatus` is nullable for exactly this event, per
  * ARCHITECTURE.md §6.8.
  *
  * The graph encoded here is this project's own design (ARCHITECTURE.md
  * enumerates the OrderStatus values but does not fully specify the edges);
- * it follows §15's payment rule directly — BANK_TRANSFER orders are created
- * `AWAITING_PAYMENT`, CONTACT_ARRANGED orders are created `NEW` — and one
+ * it follows §15's payment rule directly - BANK_TRANSFER orders are created
+ * `AWAITING_PAYMENT`, CONTACT_ARRANGED orders are created `NEW` - and one
  * explicit rule from §13.3: "an order containing a CustomerDesign not in
  * APPROVED cannot leave DESIGN_REVIEW", except to CANCELLED, which must
  * always remain reachable regardless of an unresolved design.
@@ -115,21 +115,21 @@ describe('illegal transitions', () => {
     );
   });
 
-  it('rejects any transition out of COMPLETED — it is terminal', () => {
+  it('rejects any transition out of COMPLETED - it is terminal', () => {
     issue(
       { fromStatus: 'COMPLETED', toStatus: 'CANCELLED', actorType: 'staff', hasUnapprovedCustomDesign: false },
       'ILLEGAL_TRANSITION',
     );
   });
 
-  it('rejects any transition out of CANCELLED — it is terminal', () => {
+  it('rejects any transition out of CANCELLED - it is terminal', () => {
     issue(
       { fromStatus: 'CANCELLED', toStatus: 'NEW', actorType: 'staff', hasUnapprovedCustomDesign: false },
       'ILLEGAL_TRANSITION',
     );
   });
 
-  it('rejects cancelling a shipped order — cancellation ends once goods are sent', () => {
+  it('rejects cancelling a shipped order - cancellation ends once goods are sent', () => {
     issue(
       { fromStatus: 'SHIPPED', toStatus: 'CANCELLED', actorType: 'staff', hasUnapprovedCustomDesign: false },
       'ILLEGAL_TRANSITION',
@@ -160,14 +160,14 @@ describe('actor permission', () => {
     });
   });
 
-  it('does not let a customer confirm their own order — only staff marks payment received', () => {
+  it('does not let a customer confirm their own order - only staff marks payment received', () => {
     issue(
       { fromStatus: 'NEW', toStatus: 'CONFIRMED', actorType: 'customer', hasUnapprovedCustomDesign: false },
       'ACTOR_NOT_PERMITTED',
     );
   });
 
-  it('does not let the system mark payment received — there is no payment integration (brief: nothing faked)', () => {
+  it('does not let the system mark payment received - there is no payment integration (brief: nothing faked)', () => {
     issue(
       {
         fromStatus: 'AWAITING_PAYMENT',
@@ -179,7 +179,7 @@ describe('actor permission', () => {
     );
   });
 
-  it('no longer lets a customer cancel once an order is confirmed — only staff can, past that point', () => {
+  it('no longer lets a customer cancel once an order is confirmed - only staff can, past that point', () => {
     issue(
       { fromStatus: 'CONFIRMED', toStatus: 'CANCELLED', actorType: 'customer', hasUnapprovedCustomDesign: false },
       'ACTOR_NOT_PERMITTED',
@@ -236,7 +236,7 @@ describe('the design-review gate (§13.3)', () => {
     });
   });
 
-  it('does not apply to any other status — an unapproved flag elsewhere has no effect', () => {
+  it('does not apply to any other status - an unapproved flag elsewhere has no effect', () => {
     ok({ fromStatus: 'NEW', toStatus: 'CONFIRMED', actorType: 'staff', hasUnapprovedCustomDesign: true });
   });
 });

@@ -5,9 +5,9 @@ import type { FileStorage } from '@/server/storage/file-storage';
 
 /**
  * Dev/MVP implementation of `FileStorage`, writing into `/uploads-dev/`
- * at the repo root — already gitignored (`.gitignore`'s `/uploads-dev/`
+ * at the repo root - already gitignored (`.gitignore`'s `/uploads-dev/`
  * predates this file, confirming it's the intended target). Not meant
- * for production (no redundancy, no CDN, single-instance-only) — that's
+ * for production (no redundancy, no CDN, single-instance-only) - that's
  * `file-storage.ts`'s documented, deliberate gap, not an oversight here.
  */
 
@@ -17,7 +17,7 @@ const UPLOADS_ROOT = path.resolve(process.cwd(), 'uploads-dev');
  * Storage keys are generated server-side (`crypto.randomUUID()` at the
  * call site) and never derived from user input, but this is still the
  * layer responsible for refusing to touch the filesystem outside its own
- * root — a defense-in-depth check, not a trust boundary this class
+ * root - a defense-in-depth check, not a trust boundary this class
  * assumes some other layer already enforced perfectly.
  */
 const SAFE_KEY_PATTERN = /^[a-zA-Z0-9_-]+$/;
@@ -48,7 +48,7 @@ class LocalDiskStorage implements FileStorage {
 
   async getSignedUrl(): Promise<string> {
     throw new Error(
-      'LocalDiskStorage.getSignedUrl is not implemented — every file is served through the authorizing /api/plik/[fileId] route instead; see file-storage.ts\'s header.',
+      'LocalDiskStorage.getSignedUrl is not implemented - every file is served through the authorizing /api/plik/[fileId] route instead; see file-storage.ts\'s header.',
     );
   }
 

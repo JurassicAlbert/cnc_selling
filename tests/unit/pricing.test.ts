@@ -6,7 +6,7 @@ import { PricingError } from '@/domain/pricing/types';
 
 /**
  * A concrete, non-nullable `DesignPricing` for spreading in overrides
- * (e.g. `{ ...BASE_DESIGN, method }`) — `BASE.design` itself is typed
+ * (e.g. `{ ...BASE_DESIGN, method }`) - `BASE.design` itself is typed
  * `DesignPricing | null` (P4 widened `PricingInput.design` to support
  * CUSTOM products with no catalog design), so spreading it directly
  * loses TypeScript's certainty that every property is present. `BASE`
@@ -50,7 +50,7 @@ function priceOf(overrides: Partial<PricingInput> = {}) {
   return calculatePrice({ ...BASE, ...overrides });
 }
 
-describe('calculatePrice — components in isolation', () => {
+describe('calculatePrice - components in isolation', () => {
   it('charges material by area', () => {
     // 1 m² x 200,00 zł/m² = 200,00 zł
     expect(priceOf().components.materialGrosze).toBe(20_000);
@@ -123,7 +123,7 @@ describe('calculatePrice — components in isolation', () => {
   });
 });
 
-describe('calculatePrice — assembly', () => {
+describe('calculatePrice - assembly', () => {
   it('reconciles: components sum to the subtotal', () => {
     const { components, componentsSubtotalGrosze } = priceOf();
     const sum = Object.values(components).reduce((a, b) => a + b, 0);
@@ -156,7 +156,7 @@ describe('calculatePrice — assembly', () => {
   });
 });
 
-describe('calculatePrice — the minimum price clamp', () => {
+describe('calculatePrice - the minimum price clamp', () => {
   it('leaves a price above the floor alone', () => {
     const result = priceOf({ minPriceGrosze: 10_000 });
     expect(result.minimumApplied).toBe(false);
@@ -177,7 +177,7 @@ describe('calculatePrice — the minimum price clamp', () => {
   });
 });
 
-describe('calculatePrice — VAT and quantity', () => {
+describe('calculatePrice - VAT and quantity', () => {
   it('computes VAT on the unit price, then multiplies', () => {
     const result = priceOf({ quantity: 3 });
     expect(result.unitVatGrosze).toBe(8_855);
@@ -212,7 +212,7 @@ describe('calculatePrice — VAT and quantity', () => {
   });
 });
 
-describe('calculatePrice — version pinning', () => {
+describe('calculatePrice - version pinning', () => {
   it('echoes the pricing version into the breakdown', () => {
     expect(priceOf({ pricingVersion: 42 }).pricingVersion).toBe(42);
   });
@@ -227,7 +227,7 @@ describe('calculatePrice — version pinning', () => {
   });
 });
 
-describe('calculatePrice — determinism', () => {
+describe('calculatePrice - determinism', () => {
   it('returns identical results for identical input', () => {
     expect(priceOf()).toEqual(priceOf());
   });
@@ -261,7 +261,7 @@ describe('calculatePrice — determinism', () => {
   });
 });
 
-describe('calculatePrice — invalid input is rejected, never coerced', () => {
+describe('calculatePrice - invalid input is rejected, never coerced', () => {
   it('rejects a zero quantity', () => {
     expect(() => priceOf({ quantity: 0 })).toThrow(PricingError);
   });
@@ -309,7 +309,7 @@ describe('calculatePrice — invalid input is rejected, never coerced', () => {
   });
 });
 
-describe('design: null — CUSTOM products with no catalog design (P4)', () => {
+describe('design: null - CUSTOM products with no catalog design (P4)', () => {
   it('zeroes machining and design-surcharge, not an estimate', () => {
     const result = priceOf({ design: null });
     expect(result.components.machiningGrosze).toBe(0);

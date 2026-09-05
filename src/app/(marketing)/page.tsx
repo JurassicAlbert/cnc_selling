@@ -4,7 +4,9 @@ import Link from 'next/link';
 
 import { listPublishedBlogPosts } from '@/server/repositories/blog';
 import { listActiveCategories } from '@/server/repositories/categories';
+import { listFaqTeaser } from '@/server/repositories/faq';
 import { listAllActiveProducts } from '@/server/repositories/products';
+import { listApprovedReviews } from '@/server/repositories/reviews';
 import { CategoryTile } from '@/ui/primitives/CategoryTile';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
@@ -18,27 +20,29 @@ import { TrustBadgeStrip } from '@/ui/primitives/TrustBadgeStrip';
 import { SITE } from '@/content/pl/site';
 
 /**
- * A Server Component. No `@mui/material` import — `biome.json`'s `overrides`
+ * A Server Component. No `@mui/material` import - `biome.json`'s `overrides`
  * enforces that for every file under `(marketing)` and `(shop)`.
  *
  * Redesigned 2026-08-24 to match the density of the owner's chosen reference
- * (Bazaar `fashion-2`) — hero, trust badges, category tiles, one honest
- * product grid — while keeping every rule the previous pass established:
+ * (Bazaar `fashion-2`) - hero, trust badges, category tiles, one honest
+ * product grid - while keeping every rule the previous pass established:
  * no fabricated reviews/ratings, no fake multi-curated product sections (one
  * real "Nasze produkty" grid, not four labelled the way a much larger
  * catalogue would be), no invented trust claims (the badges state only
  * things actually true of this business). Hero/craftsmanship narrative
- * copy still isn't here — this is real functional chrome, not the
+ * copy still isn't here - this is real functional chrome, not the
  * owner's-own-words content ARCHITECTURE.md §22 describes, which remains
  * unbuilt.
  */
 const blogDateFormatter = new Intl.DateTimeFormat('pl-PL', { dateStyle: 'long' });
 
 export default async function MarketingHomePage() {
-  const [categories, products, blogPosts] = await Promise.all([
+  const [categories, products, blogPosts, reviews, faqTeaser] = await Promise.all([
     listActiveCategories(),
     listAllActiveProducts(),
     listPublishedBlogPosts(),
+    listApprovedReviews(6),
+    listFaqTeaser(4),
   ]);
 
   return (
@@ -58,7 +62,7 @@ export default async function MarketingHomePage() {
             <style>{`
               .hero-grid { grid-template-columns: 1fr; }
               @media (min-width: 900px) {
-                /* Wider than 1fr 1fr on purpose — the hex mosaic needs real
+                /* Wider than 1fr 1fr on purpose - the hex mosaic needs real
                    room to read as a proper hero visual, not a small accent
                    next to the heading (2026-08-26). */
                 .hero-grid { grid-template-columns: 1fr 1.3fr; }
@@ -75,6 +79,7 @@ export default async function MarketingHomePage() {
                   style={{
                     display: 'inline-block',
                     font: 'var(--mui-font-button)',
+                letterSpacing: 'var(--mui-letter-spacing-button)',
                     textTransform: 'none',
                     padding: '12px 28px',
                     borderRadius: 'var(--radius-card)',
@@ -145,7 +150,7 @@ export default async function MarketingHomePage() {
                 categoryNamePl={product.categoryNamePl}
                 categorySlug={product.categorySlug}
                 imageUrl={product.primaryImageUrl}
-                minPriceGrosze={product.minPriceGrosze}
+                startingPriceGrossGrosze={product.startingPriceGrossGrosze}
                 hasPersonalization={product.hasPersonalization}
                 productionDaysMin={product.productionDaysMin}
                 productionDaysMax={product.productionDaysMax}
@@ -219,9 +224,64 @@ export default async function MarketingHomePage() {
               <Link
                 href="/blog"
                 className="nav-link"
-                style={{ font: 'var(--mui-font-button)', textTransform: 'none' }}
+                style={{ font: 'var(--mui-font-button)',
+                letterSpacing: 'var(--mui-letter-spacing-button)', textTransform: 'none' }}
               >
                 {SITE.blogViewAllPl}
+              </Link>
+            </div>
+          </Container>
+        </Section>
+      )}
+
+      {reviews.length > 0 && (
+        <Section surface="paper">
+          <Container>
+            <Heading level={2}>{SITE.homeReviewsHeadingPl}</Heading>
+            <div
+              style={{
+                marginBlockStart: 24,
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                gap: 24,
+              }}
+            >
+              {reviews.map((review, index) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: a fixed, freshly-fetched list, never reordered client-side
+                <div key={index} style={{ padding: 24, borderRadius: 'var(--radius-card)', backgroundColor: 'var(--mui-palette-background-default)', boxShadow: 'var(--shadow-sm)' }}>
+                  <Text>{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</Text>
+                  <div style={{ marginBlockStart: 8 }}>
+                    <Text muted>{review.bodyPl}</Text>
+                  </div>
+                  <div style={{ marginBlockStart: 12, font: 'var(--mui-font-subtitle2)' }}>{review.authorNamePl}</div>
+                </div>
+              ))}
+            </div>
+          </Container>
+        </Section>
+      )}
+
+      {faqTeaser.length > 0 && (
+        <Section>
+          <Container>
+            <Heading level={2}>{SITE.homeFaqHeadingPl}</Heading>
+            <div style={{ marginBlockStart: 24, display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 720 }}>
+              {faqTeaser.map((faq) => (
+                <details
+                  key={faq.id}
+                  style={{ border: '1px solid var(--mui-palette-divider)', borderRadius: 'var(--radius-card)', padding: '16px 20px' }}
+                >
+                  <summary style={{ font: 'var(--mui-font-h6)', cursor: 'pointer' }}>{faq.questionPl}</summary>
+                  <div style={{ marginBlockStart: 12 }}>
+                    <Text muted>{faq.answerPl}</Text>
+                  </div>
+                </details>
+              ))}
+            </div>
+            <div style={{ marginBlockStart: 32 }}>
+              <Link href="/faq" className="nav-link" style={{ font: 'var(--mui-font-button)',
+                letterSpacing: 'var(--mui-letter-spacing-button)', textTransform: 'none' }}>
+                {SITE.faqViewAllPl}
               </Link>
             </div>
           </Container>

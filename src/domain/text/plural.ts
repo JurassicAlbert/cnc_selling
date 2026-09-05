@@ -2,9 +2,9 @@
  * Polish plurals have three forms where English has two.
  *
  *   1 moduł        (one)
- *   2 moduły       (few)   — n % 10 in 2..4, and n % 100 not in 12..14
- *   5 modułów      (many)  — everything else
- *   1,5 dnia       (other) — decimals take the genitive singular
+ *   2 moduły       (few)   - n % 10 in 2..4, and n % 100 not in 12..14
+ *   5 modułów      (many)  - everything else
+ *   1,5 dnia       (other) - decimals take the genitive singular
  *
  * `n === 1 ? singular : plural` is simply wrong here, and it is wrong in
  * every place a count is rendered: modules, days, cart items, reviews.
@@ -19,7 +19,7 @@ export type PolishPluralForms = {
   readonly many: string;
   /**
    * Decimal counts (1,5 / 2,5). Polish uses the genitive singular here, which
-   * is often a different word from `many` — "1,5 dnia" but "5 dni".
+   * is often a different word from `many` - "1,5 dnia" but "5 dni".
    * Falls back to `many` when not supplied.
    */
   readonly other?: string;

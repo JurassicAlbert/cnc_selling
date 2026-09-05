@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * The 2D preview — ARCHITECTURE.md §7.3, closed 2026-08-24. Persistent
+ * The 2D preview - ARCHITECTURE.md §7.3, closed 2026-08-24. Persistent
  * across every step, live-updating with the same selections the price
  * already reacts to.
  *
@@ -9,11 +9,11 @@
  * picture, and a picture makes claims a sentence does not:
  *
  *   - The material swatch is a REAL photo of that material
- *     (`Material.imageUrl`, sourced in the 2026-08-24 redesign) — not this
+ *     (`Material.imageUrl`, sourced in the 2026-08-24 redesign) - not this
  *     exact piece of wood/tile the customer will receive, but genuinely that
  *     material, not a generic stand-in.
  *   - The design artwork is the ONE seeded `Design` row's own
- *     `previewUrl` — today that is still the "wzór podstawowy — do
+ *     `previewUrl` - today that is still the "wzór podstawowy - do
  *     zastąpienia" placeholder SVG (see `prisma/seed.ts`'s header), so the
  *     mockup composites a real material photo with a placeholder pattern.
  *     That is an honest reflection of the data, not a bug: once real design
@@ -21,12 +21,12 @@
  *     change required.
  *   - The engraved text is fully real: rendered in the EXACT font file
  *     `seedFont` parsed the glyph coverage from (`Font.fileUrl`, loaded here
- *     via the Font Loading API), never a system-font stand-in — the
+ *     via the Font Loading API), never a system-font stand-in - the
  *     `Font` model's own header comment ("the preview MUST render with this
  *     same file, or the preview is a lie") is the reason this component
  *     loads a font by URL instead of just setting a CSS `font-family` name
  *     and hoping.
- *   - The module seam lines are exact — drawn directly from
+ *   - The module seam lines are exact - drawn directly from
  *     `ModuleLayout.modules`' real `xMm`/`yMm`/`widthMm`/`heightMm`
  *     (`domain/modules/split.ts`), the same numbers the price and the
  *     production plan already use. Nothing here is re-derived or guessed.
@@ -53,7 +53,7 @@ type ConfiguratorPreviewProps = {
     readonly minHeightMm: number;
     readonly maxHeightMm: number;
   };
-  /** Only present once `pricing.status === 'priced'` — no seams to draw before that. */
+  /** Only present once `pricing.status === 'priced'` - no seams to draw before that. */
   readonly moduleLayout: ModuleLayout | null;
 };
 

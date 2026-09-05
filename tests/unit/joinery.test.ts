@@ -9,7 +9,7 @@ describe('buildJoineryFinding', () => {
     expect(buildJoineryFinding(1)).toBeNull();
   });
 
-  it('returns null for zero modules (defensive — never a valid layout)', () => {
+  it('returns null for zero modules (defensive - never a valid layout)', () => {
     expect(buildJoineryFinding(0)).toBeNull();
   });
 

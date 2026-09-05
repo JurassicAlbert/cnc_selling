@@ -3,8 +3,8 @@
  *
  * `src/domain` is pure: every rate, limit and tolerance is passed in as an
  * argument. This module is the one place allowed to turn a Prisma row into
- * those arguments, and it exists as its own file — rather than being inlined
- * into each Server Action — for one reason: a mistake here does not throw. It
+ * those arguments, and it exists as its own file - rather than being inlined
+ * into each Server Action - for one reason: a mistake here does not throw. It
  * produces a plausible, wrong price, or a feasibility verdict that quietly
  * passes something the machine cannot cut.
  *
@@ -61,7 +61,7 @@ const MM2_PER_M2 = 1_000_000;
 const NEUTRAL_FACTOR_BP = BASIS_POINTS;
 
 // ---------------------------------------------------------------------------
-// Row shapes — deliberately the narrowest slice of each model that is needed
+// Row shapes - deliberately the narrowest slice of each model that is needed
 // ---------------------------------------------------------------------------
 
 export type ProductRow = Pick<
@@ -131,7 +131,7 @@ export type PricingRows = {
   readonly productMaterial: Pick<ProductMaterialModel, 'priceFactorBp'>;
   /** Null for product types without a thickness step. */
   readonly thickness: Pick<ProductThicknessModel, 'priceFactorBp'> | null;
-  /** Null for CUSTOM (no catalog design — a customer-uploaded design instead, P4). Always paired with `productDesign` — both null or both present. */
+  /** Null for CUSTOM (no catalog design - a customer-uploaded design instead, P4). Always paired with `productDesign` - both null or both present. */
   readonly design: DesignRow | null;
   readonly productDesign: Pick<ProductDesignModel, 'surchargeGrosze'> | null;
   /** Null while the customer has not chosen a finish. */

@@ -3,13 +3,13 @@
  *
  * Two layers, run in order:
  *
- *   1. Structural baseline — rows the application cannot run without:
+ *   1. Structural baseline - rows the application cannot run without:
  *      the machine's real limits (D7), one placeholder pricing version (D4),
  *      the first admin account. Unconditional, every run.
- *   2. Catalogue — the owner's real category list (2026-08-23): loft
+ *   2. Catalogue - the owner's real category list (2026-08-23): loft
  *      furniture, engraved jewellery, gres kitchen backsplashes, engraved
  *      floor panels, wall art, and an "inne" catch-all. One representative
- *      product per category — "inne" originally stayed empty (nothing
+ *      product per category - "inne" originally stayed empty (nothing
  *      concrete to describe in a catch-all yet), until P4's upload
  *      pipeline made a real customer-supplied-design product possible;
  *      see `seedProducts`'s comment above `wlasnyProjekt` for why that
@@ -17,29 +17,29 @@
  *
  * What is still deliberately NOT real:
  *
- *   - Every price (`TODO_PRICING`, D4) — invented round numbers, never to
+ *   - Every price (`TODO_PRICING`, D4) - invented round numbers, never to
  *     reach a customer before being replaced.
- *   - Every product/category/material photo — as of 2026-08-24, real,
+ *   - Every product/category/material photo - as of 2026-08-24, real,
  *     freely-licensed stock photography (Unsplash; source URLs are recorded
  *     next to each `STOCK_PHOTO` usage below), sourced specifically to
  *     match each category's actual subject (loft furniture, wood/laser
  *     jewellery, ceramic tile, engraved floor panels, engraved wall art),
  *     not generic filler. This is an explicit owner decision (2026-08-24),
  *     superseding the original "generated SVG placeholder" approach for
- *     photos specifically — see `docs/HANDOVER.md` for the redesign pass
+ *     photos specifically - see `docs/HANDOVER.md` for the redesign pass
  *     this belongs to. It is STILL a placeholder in the sense that matters:
  *     it is not a photo of this shop's own work, and must be swapped for
- *     real photography before launch, same as before — only the interim
+ *     real photography before launch, same as before - only the interim
  *     fidelity changed, not the "must swap" discipline.
- *   - The design's preview art and the installation diagram — still
+ *   - The design's preview art and the installation diagram - still
  *     generated on-brand placeholder SVGs
  *     (`scripts/generate-placeholder-images.mjs`), NOT stock photos. Those
  *     two are a different kind of placeholder than "here is what a wooden
  *     stool looks like": one is the business's actual creative IP (a
  *     design's artwork), the other is specific technical instruction (an
- *     installation diagram) — a stock stand-in for either would be actively
+ *     installation diagram) - a stock stand-in for either would be actively
  *     wrong, not just generic, so both keep the honestly-labelled SVG.
- *   - Every description below is a first, functional draft — plain and
+ *   - Every description below is a first, functional draft - plain and
  *     accurate rather than flowery, so it is serviceable if it accidentally
  *     ships unreviewed, but it is NOT final marketing copy and the owner
  *     should expect to rewrite it.
@@ -47,25 +47,25 @@
  *     pattern (not a real engraving motif) for the same reason as the
  *     photos: a design's artwork is the business's actual creative IP,
  *     not something to invent.
- *   - 4 `BlogPost` rows (2026-08-25, owner's explicit request) — real,
+ *   - 4 `BlogPost` rows (2026-08-25, owner's explicit request) - real,
  *     generic craft/material topics (wood care, the CNC/laser process,
  *     the materials used, what personalization means), no invented
  *     claims, numbers, or customer voices. A first draft, same
- *     "must be reviewed before launch" discipline as everything above —
+ *     "must be reviewed before launch" discipline as everything above -
  *     see `seedBlogPosts()`'s own comment for why this doesn't conflict
  *     with the no-fabricated-reviews rule. Each reuses an already-sourced
- *     category/material photo (2026-08-26, owner's follow-up request) —
+ *     category/material photo (2026-08-26, owner's follow-up request) -
  *     no new image sourcing for placeholder posts.
  *
- * What IS fully real, added 2026-08-24: the `Font` row (`seedFont`) — a
+ * What IS fully real, added 2026-08-24: the `Font` row (`seedFont`) - a
  * genuine, freely-licensed font file (`public/fonts/Inter-Variable.ttf`,
  * Google's own OFL repository) with its Polish-diacritic glyph coverage
  * parsed live from the actual cmap table every time this script runs, never
  * a hardcoded JSON blob. `minHeightUm` (the legibility floor) is this one's
- * placeholder number — a real value needs an actual test cut.
+ * placeholder number - a real value needs an actual test cut.
  *
  * Idempotent throughout: every row is upserted (or existence-checked first,
- * for models without a natural unique key — see `seedProductImage`).
+ * for models without a natural unique key - see `seedProductImage`).
  * Re-running this script must never duplicate or silently overwrite
  * something a human already edited through the future admin panel.
  */
@@ -78,14 +78,22 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import opentype from 'opentype.js';
 
 import { PrismaClient } from '../src/generated/prisma/client';
+// Uses the app's own singleton client rather than this file's, which means a
+// second pool is open for the last step of a seed. Deliberate: threading a
+// client through `refreshAllStartingPrices` → `getConfiguratorProductData` →
+// the repositories would be the dependency-injection refactor this codebase
+// explicitly decided against (see `tests/integration/env-setup.ts`), and a
+// one-shot script can afford one extra pool for a few seconds.
+import { refreshAllStartingPrices } from '../src/server/pricing/starting-price';
 import { POLISH_SPECIFIC_LETTERS } from '../src/domain/personalization/validate';
+import { formatMmAsCentimetres } from '../src/domain/text/numeric-input';
 
 const adapter = new PrismaPg({ connectionString: requireEnv('DATABASE_URL') });
 const prisma = new PrismaClient({ adapter });
 
 const PLACEHOLDER_IMAGE = (slug: string) => `/images/placeholders/${slug}.svg`;
 /**
- * Real, freely-licensed stock photos (Unsplash License — free for
+ * Real, freely-licensed stock photos (Unsplash License - free for
  * commercial/noncommercial use). Source URLs, for traceability when these
  * get replaced by real photography:
  *   loft.jpg                  unsplash.com/photos/photo-1604115556773-97387d5985b3
@@ -101,17 +109,34 @@ const STOCK_PHOTO = (slug: string) => `/images/photos/${slug}.jpg`;
 async function main(): Promise<void> {
   await seedMachineSettings();
   await seedPricingSettings();
+  await seedStoreSettings();
+  await seedEmailTemplates();
   await seedFirstAdmin();
 
   const materials = await seedMaterials();
   const finishes = await seedFinishes();
   await seedMaterialFinishCompatibility(materials, finishes);
-  const design = await seedDesign();
+  const designs = await seedDesigns();
+  await seedDesignCollections(designs);
   const font = await seedFont();
 
   const categories = await seedCategories();
-  await seedProducts(categories, materials, design, font);
+  await seedProducts(categories, materials, finishes, designs, font);
   await seedBlogPosts();
+  await seedFaqs();
+  await seedExternalPatternResources();
+  await seedProductCollections();
+  await seedDeliveryMethods();
+  await seedPaymentMethodConfigs();
+
+  // Last, deliberately: the advertised "od X zł" is derived from everything
+  // above it - products, materials, finishes, designs, compatibility rows
+  // and the active pricing version - so it can only be computed once the
+  // whole catalogue exists. See `src/server/pricing/starting-price.ts` for
+  // why it is stored rather than computed per request
+  // (`docs/REVIEW-DETAILED.md` BUG-02).
+  await refreshAllStartingPrices();
+  console.log('Product: refreshed advertised starting prices');
 }
 
 // ---------------------------------------------------------------------------
@@ -123,7 +148,7 @@ async function main(): Promise<void> {
  * ("600 x 500 x 100 mm" working area, stated verbatim). `minModuleMm` is the
  * pre-existing 150mm assumption, kept after the owner's own "10mm" answer
  * turned out to describe material thickness, not the module-split floor.
- * `jointAllowanceMm` and `weeklyCapacityMinutes` have no resolved value yet —
+ * `jointAllowanceMm` and `weeklyCapacityMinutes` have no resolved value yet -
  * left at their schema defaults (0) rather than invented.
  */
 async function seedMachineSettings(): Promise<void> {
@@ -153,11 +178,11 @@ async function seedMachineSettings(): Promise<void> {
  * D4, resolved 2026-08-23: seed placeholder numbers, clearly marked, so the
  * pricing pipeline is testable end to end before real rates exist. Every
  * value below is invented and MUST be replaced before any price is shown to
- * a customer — that is what `notePl` says, in the one place a future admin
+ * a customer - that is what `notePl` says, in the one place a future admin
  * screen would actually display it.
  *
  * Only ever creates version 1, and only if no PricingSettings row exists.
- * Once a real rate set is published, this function becomes a no-op forever —
+ * Once a real rate set is published, this function becomes a no-op forever -
  * versioning happens through the (future) admin pricing screen, never here.
  */
 async function seedPricingSettings(): Promise<void> {
@@ -170,7 +195,7 @@ async function seedPricingSettings(): Promise<void> {
   const created = await prisma.pricingSettings.create({
     data: {
       version: 1,
-      // TODO_PRICING — every rate below is an invented placeholder (D4).
+      // TODO_PRICING - every rate below is an invented placeholder (D4).
       machineRateCncGrosze: 15_000, // 150,00 zł/min-equivalent, invented
       machineRateLaserGrosze: 12_000, // 120,00 zł/min-equivalent, invented
       moduleSurchargeGrosze: 4_000, // 40,00 zł per extra module, invented
@@ -179,7 +204,7 @@ async function seedPricingSettings(): Promise<void> {
         { maxAreaM2: 2, maxModules: 4, priceGrosze: 4_500 },
         { maxAreaM2: null, maxModules: null, priceGrosze: 9_000 },
       ],
-      vatRateBp: 2_300, // 23% — the one number here that IS real (PL standard rate)
+      vatRateBp: 2_300, // 23% - the one number here that IS real (PL standard rate)
       isActive: true,
       publishedAt: new Date(),
       publishedByEmail: 'seed-script',
@@ -192,9 +217,73 @@ async function seedPricingSettings(): Promise<void> {
 }
 
 /**
+ * `StoreSettings` (P7b Settings slice, 2026-08-27) - real bank-transfer
+ * details and the shipping rate, admin-editable from `/panel/ustawienia`.
+ * Create-only, unlike `seedMachineSettings`' always-overwrite `upsert`:
+ * once this row exists it is real admin-owned data, and re-running this
+ * script must never stomp on an admin's actual configured rate/account
+ * number back to placeholders. `shippingFlatRateGrosze: 2000` preserves the
+ * exact amount the old hardcoded `SHIPPING_FLAT_GROSZE` constant charged;
+ * bank fields start `null`, preserving the exact existing "not configured
+ * yet" placeholder text shown to customers.
+ */
+async function seedStoreSettings(): Promise<void> {
+  const existing = await prisma.storeSettings.findUnique({ where: { id: 1 } });
+  if (existing !== null) {
+    console.log('StoreSettings: row already exists, leaving it alone');
+    return;
+  }
+  await prisma.storeSettings.create({ data: { id: 1, shippingFlatRateGrosze: 2_000 } });
+  console.log('StoreSettings: created (shipping 20,00 zł, bank details not yet configured)');
+}
+
+/**
+ * `EmailTemplate` rows (P7b Settings slice) - DB-editable overrides for
+ * `mailer.ts`'s hardcoded subject/body text, `{{placeholder}}`-ified
+ * versions of the exact existing copy so behavior is unchanged until an
+ * admin edits them. Create-only per key, same non-destructive reasoning as
+ * `seedStoreSettings` above.
+ */
+async function seedEmailTemplates(): Promise<void> {
+  const templates: ReadonlyArray<{ readonly key: string; readonly subjectPl: string; readonly bodyPl: string }> = [
+    {
+      key: 'order-confirmation',
+      subjectPl: 'Potwierdzenie zamówienia {{orderNumber}}',
+      bodyPl:
+        'Dziękujemy za zamówienie {{orderNumber}}.\n\nKwota do zapłaty: {{totalGrossZloty}}.\nSposób płatności: {{paymentMethodPl}}.\n\nO dalszych krokach poinformujemy Cię osobnym e-mailem.',
+    },
+    {
+      key: 'verification-otp',
+      // No `{{otp}}` here, deliberately - `docs/REVIEW-DETAILED.md` SEC-02.
+      // A subject reaches lock screens and notification previews; the code
+      // belongs in the body only. Migration
+      // `20260831010000_otp_subject_without_code` fixes rows already seeded
+      // with the old value.
+      subjectPl: 'Kod {{otpPurposePl}} - RYT',
+      bodyPl:
+        'Kod {{otpPurposePl}}: {{otp}}\n\nKod jest ważny przez 5 minut. Jeśli to nie Ty prosiłeś/aś o ten kod, zignoruj tę wiadomość.',
+    },
+    {
+      key: 'order-status-update',
+      subjectPl: 'Zamówienie {{orderNumber}}: {{statusPl}}',
+      bodyPl: 'Status Twojego zamówienia {{orderNumber}} zmienił się na: {{statusPl}}.',
+    },
+  ];
+  for (const template of templates) {
+    const existing = await prisma.emailTemplate.findUnique({ where: { key: template.key } });
+    if (existing !== null) {
+      console.log(`EmailTemplate: "${template.key}" already exists, leaving it alone`);
+      continue;
+    }
+    await prisma.emailTemplate.create({ data: template });
+    console.log(`EmailTemplate: created "${template.key}"`);
+  }
+}
+
+/**
  * The first ADMIN. Seeded from the project owner's own email so there is an
- * account to sign in with the moment Auth.js is wired up in P0's remaining
- * Next.js work — there is no other path to this role (§16.3).
+ * account to sign in with once a real password is set via Better Auth (P6)
+ * - there is no other path to this role (§16.3).
  */
 async function seedFirstAdmin(): Promise<void> {
   const email = requireEnv('SEED_ADMIN_EMAIL');
@@ -207,20 +296,48 @@ async function seedFirstAdmin(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// 2. Catalogue — materials, finishes, the placeholder design
+// 2. Catalogue - materials, finishes, the placeholder design
 // ---------------------------------------------------------------------------
 
-type SeededMaterials = { readonly dab: { readonly id: string }; readonly gres: { readonly id: string } };
+type SeededMaterials = {
+  readonly dab: { readonly id: string };
+  readonly gres: { readonly id: string };
+  readonly swierk: { readonly id: string };
+  readonly modrzew: { readonly id: string };
+  readonly sosna: { readonly id: string };
+};
 
 /**
- * Two materials, deliberately minimal: oak (wood, used by four of the five
- * real categories) and white gres (ceramic, used by the gres category
- * itself). Metal and leather for the jewellery line exist as a decision —
- * "keep hidden for now, possible to unlock" — but are NOT seeded here.
- * Leather needs no schema change when that day comes (the `LEATHER`
- * `MaterialFamily` value already exists); metal does (no `METAL` value
- * exists yet). Both are deferred rather than half-seeded as invisible rows,
- * so there is nothing to forget was there.
+ * 2026-08-29, owner request: "add more material (dąb, świerk, modrzew,
+ * sosna)" - three real, distinct softwood species alongside the existing
+ * dąb (oak, hardwood) and gres (ceramic, unrelated). No real photography
+ * exists for any of the three yet, so each gets the same honest "photo
+ * pending" placeholder SVG `wzor-podstawowy.svg` already established
+ * (`seedDesigns`'s own header comment) - never dąb's real photo reused
+ * under a different name, which would misrepresent what the material
+ * actually looks like. `pricePerM2Grosze` values are placeholder estimates
+ * (`TODO_PRICING`, same discipline as every other price in this file) -
+ * softwood cheaper than dąb, modrzew (larch - denser, weather-resistant)
+ * priced above świerk/sosna (spruce/pine).
+ *
+ * Metal and leather for the jewellery line exist as a decision - "keep
+ * hidden for now, possible to unlock" - but are NOT seeded here. Leather
+ * needs no schema change when that day comes (the `LEATHER` `MaterialFamily`
+ * value already exists); metal does (no `METAL` value exists yet). Both are
+ * deferred rather than half-seeded as invisible rows, so there is nothing
+ * to forget was there.
+ *
+ * 2026-08-29: `densityKgPerM3` values - standard, published reference
+ * figures for seasoned/kiln-dried furniture-grade timber (~12% moisture)
+ * and porcelain stoneware, NOT a business-specific number (owner's own
+ * "you are not allowed to lie" instruction extends to this too, even
+ * though it isn't carrier pricing): dąb (European oak) ~750, świerk
+ * (Norway spruce) ~450, modrzew (European larch) ~600, sosna (Scots pine)
+ * ~480, gres (porcelain stoneware tile) ~2400 kg/m³ - mid-range of the
+ * commonly-cited 700–900 / 410–500 / 550–700 / 410–550 / 2300–2450 kg/m³
+ * bands respectively. Used by `domain/shipping/weight.ts` to compute real
+ * per-configuration shipping weight from actual width×height×thickness,
+ * never a fabricated flat per-product weight.
  */
 async function seedMaterials(): Promise<SeededMaterials> {
   const dab = await prisma.material.upsert({
@@ -231,9 +348,10 @@ async function seedMaterials(): Promise<SeededMaterials> {
       family: 'SOLID_WOOD',
       shortDescPl: 'Lite drewno dębowe, ciepły ton i wyraźny rysunek słojów.',
       characteristicsPl:
-        'Drewno naturalne — usłojenie, odcień i ewentualne sęki różnią się w każdym egzemplarzu.',
+        'Drewno naturalne - usłojenie, odcień i ewentualne sęki różnią się w każdym egzemplarzu.',
       imageUrl: STOCK_PHOTO('material-dab'),
       pricePerM2Grosze: 18_000, // TODO_PRICING
+      densityKgPerM3: 750,
       maxSheetWidthMm: 1200,
       maxSheetHeightMm: 2400,
       minLineWidthUm: 1_200,
@@ -255,9 +373,10 @@ async function seedMaterials(): Promise<SeededMaterials> {
       namePl: 'Gres biały',
       family: 'CERAMIC',
       shortDescPl: 'Gres wielkoformatowy, jednolita biała powierzchnia pod grawer.',
-      characteristicsPl: 'Materiał produkowany — bez naturalnych odchyleń koloru między sztukami.',
+      characteristicsPl: 'Materiał produkowany - bez naturalnych odchyleń koloru między sztukami.',
       imageUrl: STOCK_PHOTO('gres'),
       pricePerM2Grosze: 22_000, // TODO_PRICING
+      densityKgPerM3: 2400,
       maxSheetWidthMm: 600,
       maxSheetHeightMm: 1200,
       minLineWidthUm: 800,
@@ -272,12 +391,97 @@ async function seedMaterials(): Promise<SeededMaterials> {
     update: {},
   });
 
-  console.log(`Material: ${dab.namePl}, ${gres.namePl}`);
-  return { dab, gres };
+  const swierk = await prisma.material.upsert({
+    where: { slug: 'swierk' },
+    create: {
+      slug: 'swierk',
+      namePl: 'Świerk',
+      family: 'SOLID_WOOD',
+      shortDescPl: 'Lite drewno świerkowe, jasny ton, delikatny rysunek słojów.',
+      characteristicsPl:
+        'Drewno naturalne - usłojenie, odcień i ewentualne sęki różnią się w każdym egzemplarzu.',
+      imageUrl: PLACEHOLDER_IMAGE('material-swierk'),
+      pricePerM2Grosze: 9_000, // TODO_PRICING
+      densityKgPerM3: 450,
+      maxSheetWidthMm: 1200,
+      maxSheetHeightMm: 2400,
+      minLineWidthUm: 1_200,
+      minDetailSpacingUm: 2_000,
+      minTextHeightUm: 6_000,
+      grainDirection: 'LENGTHWISE',
+      supportsCnc: true,
+      supportsLaser: true,
+      isNaturalVariable: true,
+      isAvailable: true,
+    },
+    update: {},
+  });
+
+  const modrzew = await prisma.material.upsert({
+    where: { slug: 'modrzew' },
+    create: {
+      slug: 'modrzew',
+      namePl: 'Modrzew',
+      family: 'SOLID_WOOD',
+      shortDescPl: 'Lite drewno modrzewiowe, ciepły czerwonawy ton, odporne na warunki zewnętrzne.',
+      characteristicsPl:
+        'Drewno naturalne - usłojenie, odcień i ewentualne sęki różnią się w każdym egzemplarzu.',
+      imageUrl: PLACEHOLDER_IMAGE('material-modrzew'),
+      pricePerM2Grosze: 12_000, // TODO_PRICING
+      densityKgPerM3: 600,
+      maxSheetWidthMm: 1200,
+      maxSheetHeightMm: 2400,
+      minLineWidthUm: 1_200,
+      minDetailSpacingUm: 2_000,
+      minTextHeightUm: 6_000,
+      grainDirection: 'LENGTHWISE',
+      supportsCnc: true,
+      supportsLaser: true,
+      isNaturalVariable: true,
+      isAvailable: true,
+    },
+    update: {},
+  });
+
+  const sosna = await prisma.material.upsert({
+    where: { slug: 'sosna' },
+    create: {
+      slug: 'sosna',
+      namePl: 'Sosna',
+      family: 'SOLID_WOOD',
+      shortDescPl: 'Lite drewno sosnowe, jasny ton, wyraźne sęki.',
+      characteristicsPl:
+        'Drewno naturalne - usłojenie, odcień i ewentualne sęki różnią się w każdym egzemplarzu.',
+      imageUrl: PLACEHOLDER_IMAGE('material-sosna'),
+      pricePerM2Grosze: 8_000, // TODO_PRICING
+      densityKgPerM3: 480,
+      maxSheetWidthMm: 1200,
+      maxSheetHeightMm: 2400,
+      minLineWidthUm: 1_200,
+      minDetailSpacingUm: 2_000,
+      minTextHeightUm: 6_000,
+      grainDirection: 'LENGTHWISE',
+      supportsCnc: true,
+      supportsLaser: true,
+      isNaturalVariable: true,
+      isAvailable: true,
+    },
+    update: {},
+  });
+
+  console.log(
+    `Material: ${dab.namePl}, ${gres.namePl}, ${swierk.namePl}, ${modrzew.namePl}, ${sosna.namePl}`,
+  );
+  return { dab, gres, swierk, modrzew, sosna };
 }
 
-type SeededFinishes = { readonly olejowanie: { readonly id: string } };
+type SeededFinishes = {
+  readonly olejowanie: { readonly id: string };
+  readonly bejcowanie: { readonly id: string };
+  readonly lakierowanie: { readonly id: string };
+};
 
+/** 2026-08-29, owner request: "add more ... wykończenie (olejowanie, bejcowanie, lakierowanie)" - real, distinct finish kinds, both `FinishKind` values already existed in the schema (`STAIN`, `VARNISH`). Availability per material/product is a separate, later step (`seedMaterialFinishCompatibility`/`seedProductFinishExclusions`) - this function only creates the three real rows. */
 async function seedFinishes(): Promise<SeededFinishes> {
   const olejowanie = await prisma.finish.upsert({
     where: { slug: 'olejowanie' },
@@ -295,70 +499,376 @@ async function seedFinishes(): Promise<SeededFinishes> {
     },
     update: {},
   });
-  console.log(`Finish: ${olejowanie.namePl}`);
-  return { olejowanie };
+
+  const bejcowanie = await prisma.finish.upsert({
+    where: { slug: 'bejcowanie' },
+    create: {
+      slug: 'bejcowanie',
+      namePl: 'Bejcowanie',
+      kind: 'STAIN',
+      descPl: 'Bejca barwiąca drewno przy zachowaniu widocznego usłojenia.',
+      imageUrl: STOCK_PHOTO('material-dab'),
+      pricePerM2Grosze: 5_000, // TODO_PRICING
+      setupFeeGrosze: 0,
+      extraDaysMin: 1,
+      extraDaysMax: 3,
+      isAvailable: true,
+    },
+    update: {},
+  });
+
+  const lakierowanie = await prisma.finish.upsert({
+    where: { slug: 'lakierowanie' },
+    create: {
+      slug: 'lakierowanie',
+      namePl: 'Lakierowanie',
+      kind: 'VARNISH',
+      descPl: 'Bezbarwny lakier, najwyższa odporność na wilgoć i zarysowania.',
+      imageUrl: STOCK_PHOTO('material-dab'),
+      pricePerM2Grosze: 6_000, // TODO_PRICING
+      setupFeeGrosze: 0,
+      extraDaysMin: 2,
+      extraDaysMax: 4,
+      isAvailable: true,
+    },
+    update: {},
+  });
+
+  console.log(`Finish: ${olejowanie.namePl}, ${bejcowanie.namePl}, ${lakierowanie.namePl}`);
+  return { olejowanie, bejcowanie, lakierowanie };
 }
 
+/**
+ * 2026-08-29: every solid-wood material now supports all three finishes at
+ * the *material* level - dąb/świerk/modrzew/sosna can each genuinely be
+ * oiled, stained, or varnished. Which of those a given *product* actually
+ * offers is a separate, narrower rule (`seedProductFinishExclusions`,
+ * below) - a real e.g. "Obrazy" wall-art product can still be restricted to
+ * olejowanie only even though dąb itself supports all three. Gres is not
+ * finished the same way - no row for it, which means the FINISH step for
+ * gres products currently has nothing to offer. Acceptable for P2
+ * (catalogue display); a real gap for P3 (configurator) to close before
+ * that step ships for KITCHEN_TILE.
+ */
 async function seedMaterialFinishCompatibility(
   materials: SeededMaterials,
   finishes: SeededFinishes,
 ): Promise<void> {
-  // Oak can be oiled. Gres is not finished the same way — no row for it,
-  // which means the FINISH step for gres products currently has nothing to
-  // offer. Acceptable for P2 (catalogue display); a real gap for P3
-  // (configurator) to close before that step ships for KITCHEN_TILE.
-  await prisma.materialFinish.upsert({
-    where: {
-      materialId_finishId: { materialId: materials.dab.id, finishId: finishes.olejowanie.id },
-    },
-    create: { materialId: materials.dab.id, finishId: finishes.olejowanie.id },
-    update: {},
-  });
+  const woods = [materials.dab, materials.swierk, materials.modrzew, materials.sosna];
+  const allFinishes = [finishes.olejowanie, finishes.bejcowanie, finishes.lakierowanie];
+  for (const material of woods) {
+    for (const finish of allFinishes) {
+      await prisma.materialFinish.upsert({
+        where: { materialId_finishId: { materialId: material.id, finishId: finish.id } },
+        create: { materialId: material.id, finishId: finish.id },
+        update: {},
+      });
+    }
+  }
 }
 
-type SeededDesign = { readonly id: string };
-
 /**
- * One placeholder pattern, named as one. A design's artwork is the
- * business's actual creative IP — not something to invent, same as product
- * photography. Production metadata (line width, machining time, detail
- * level) is engineering estimate, not creative content, so it gets
- * reasonable placeholder numbers rather than being left unset; nothing here
- * can be priced or feasibility-checked without them.
+ * 2026-08-29, owner request, verbatim: "bejcowanie and lakierowanie is not
+ * available by default for Obrazy" - the "Obrazy" category's one product
+ * (`obraz-drewniany-z-grawerem`) keeps only olejowanie even though its
+ * material (dąb) supports all three at the compatibility level above. See
+ * `ProductFinishExclusion`'s own schema comment for why this needs a
+ * product-scoped rule rather than a material-scoped one: other dąb products
+ * (loft, panel, szachownica) are NOT excluded, so they keep all three.
  */
-async function seedDesign(): Promise<SeededDesign> {
-  const design = await prisma.design.upsert({
-    where: { slug: 'wzor-podstawowy' },
-    create: {
-      slug: 'wzor-podstawowy',
-      code: 'WZR-001',
-      namePl: 'Wzór podstawowy — do zastąpienia',
-      descPl: 'Wzór zastępczy używany do testowania katalogu przed dodaniem prawdziwych projektów.',
-      tags: ['placeholder'],
-      thumbnailUrl: PLACEHOLDER_IMAGE('wzor-podstawowy'),
-      previewUrl: PLACEHOLDER_IMAGE('wzor-podstawowy'),
-      isActive: true,
-      referenceWidthMm: 600,
-      minLineWidthUm: 1_200,
-      minDetailSpacingUm: 2_000,
-      recommendedMethod: 'CNC_CARVE',
-      minRecommendedWidthMm: 300,
-      detailLevel: 3,
-      machiningMilliMinutesPerM2: 2_500,
-      rightsStatus: 'APPROVED_COMMERCIAL',
-      rightsNotes:
-        'Wzór zastępczy stworzony na potrzeby seeda — do wymiany na prawdziwy projekt przed uruchomieniem sklepu.',
-    },
-    update: {},
-  });
-  console.log(`Design: ${design.code} (${design.namePl})`);
-  return design;
+async function seedProductFinishExclusions(
+  productId: string,
+  finishIds: readonly string[],
+): Promise<void> {
+  for (const finishId of finishIds) {
+    await prisma.productFinishExclusion.upsert({
+      where: { productId_finishId: { productId, finishId } },
+      create: { productId, finishId },
+      update: {},
+    });
+  }
+}
+
+type SeededDesign = { readonly id: string; readonly slug: string };
+
+const PATTERN_IMAGE = (slug: string) => `/images/patterns/${slug}.svg`;
+
+type DesignSeedInput = {
+  readonly slug: string;
+  readonly code: string;
+  readonly namePl: string;
+  readonly descPl: string;
+  readonly tags: readonly string[];
+  readonly imageSlug: string;
+  readonly detailLevel: number;
+  /** Distinct and explicit - the configurator's default design is the first offered one, and ties made that non-deterministic. See the block comment below. */
+  readonly sortOrder: number;
+  /** Defaults to true. Only `wzor-podstawowy` is false, and its own entry says why. */
+  readonly isActive?: boolean;
+};
+
+/**
+ * 2026-08-29, owner feedback: the pattern list needs more than one row to
+ * actually be a real "pick a ready-made pattern" experience - a single
+ * placeholder can't populate a dropdown. A design's artwork is still the
+ * business's actual creative IP (same reasoning `wzor-podstawowy`'s own
+ * comment already gave for not inventing product photography) - these five
+ * are original, hand-authored line-art motifs (`public/images/patterns/*
+ * .svg`, transparent background, no fill/blend imported from anywhere),
+ * the same "engraved wood art" register `src/ui/primitives/engravings.tsx`
+ * already established for site decoration, not a stand-in for a real
+ * commissioned catalogue.
+ *
+ * **`wzor-podstawowy` is seeded INACTIVE as of 2026-08-31**
+ * (`docs/REVIEW-DETAILED.md` BUG-03, owner: "we should not have pattern
+ * selection for now… rather show product with already existing pattern").
+ * It used to be active and, because pattern selection is hidden, it was
+ * also the design silently attached to every order - so a placeholder
+ * literally named "do zastąpienia" reached the cart, the immutable order
+ * snapshot and the production sheet. Deactivated rather than deleted:
+ * §16A.2's soft-delete invariant, and the "still a placeholder" signal is
+ * kept by the row continuing to exist. It is the only design whose artwork
+ * still lives in `placeholders/` rather than `patterns/`; every other one
+ * is real.
+ *
+ * `sortOrder` is explicit and distinct for the same reason: the
+ * configurator takes the first offered design as its default, and with
+ * every row at 0 the winner was whatever Postgres happened to return -
+ * which, since machining time and surcharge are pricing inputs, could
+ * change the price between two loads of the same page.
+ */
+const DESIGN_SEEDS: readonly DesignSeedInput[] = [
+  {
+    slug: 'wzor-podstawowy',
+    code: 'WZR-001',
+    namePl: 'Wzór podstawowy - do zastąpienia',
+    descPl: 'Wzór zastępczy używany do testowania katalogu przed dodaniem prawdziwych projektów.',
+    tags: ['placeholder'],
+    imageSlug: 'placeholders/wzor-podstawowy',
+    detailLevel: 3,
+    sortOrder: 1,
+    // Deactivated 2026-08-31 - see the block comment above.
+    isActive: false,
+  },
+  {
+    slug: 'galazka-oliwna',
+    code: 'WZR-002',
+    namePl: 'Gałązka oliwna',
+    descPl: 'Delikatna gałązka z naprzemiennymi listkami - subtelny, roślinny motyw.',
+    tags: ['roślinny', 'minimalistyczny'],
+    imageSlug: 'galazka-oliwna',
+    detailLevel: 2,
+    sortOrder: 2,
+  },
+  {
+    slug: 'kompas-nawigacyjny',
+    code: 'WZR-003',
+    namePl: 'Kompas nawigacyjny',
+    descPl: 'Symetryczny kompas z krzyżującymi się liniami - precyzyjny, geometryczny motyw.',
+    tags: ['geometryczny', 'precyzja'],
+    imageSlug: 'kompas-nawigacyjny',
+    detailLevel: 2,
+    sortOrder: 3,
+  },
+  {
+    slug: 'fala-drewna',
+    code: 'WZR-004',
+    namePl: 'Fala drewna',
+    descPl: 'Płynące poziome linie przypominające usłojenie drewna.',
+    tags: ['organiczny', 'usłojenie'],
+    imageSlug: 'fala-drewna',
+    detailLevel: 1,
+    sortOrder: 4,
+  },
+  {
+    slug: 'mandala-botaniczna',
+    code: 'WZR-005',
+    namePl: 'Mandala botaniczna',
+    descPl: 'Promienista mandala złożona z ośmiu roślinnych płatków - najbardziej rozbudowany z wzorów.',
+    tags: ['roślinny', 'mandala'],
+    imageSlug: 'mandala-botaniczna',
+    detailLevel: 4,
+    sortOrder: 5,
+  },
+  {
+    slug: 'wzor-geometryczny',
+    code: 'WZR-006',
+    namePl: 'Wzór geometryczny',
+    descPl: 'Koncentryczne okręgi i linie tworzące symetryczny, techniczny motyw.',
+    tags: ['geometryczny'],
+    imageSlug: 'wzor-geometryczny',
+    detailLevel: 2,
+    sortOrder: 6,
+  },
+  {
+    slug: 'drzewo-zycia',
+    code: 'WZR-007',
+    namePl: 'Drzewo życia',
+    descPl: 'Symetryczne drzewo z gałęziami i korzeniami - motyw łączący korzenie z koroną.',
+    tags: ['roślinny', 'symboliczny'],
+    imageSlug: 'drzewo-zycia',
+    detailLevel: 3,
+    sortOrder: 7,
+  },
+  {
+    slug: 'serce-azurowe',
+    code: 'WZR-008',
+    namePl: 'Serce ażurowe',
+    descPl: 'Serce z delikatną wewnętrzną linią - prosty, popularny motyw na prezent.',
+    tags: ['symboliczny', 'minimalistyczny'],
+    imageSlug: 'serce-azurowe',
+    detailLevel: 1,
+    sortOrder: 8,
+  },
+  {
+    slug: 'faza-ksiezyca',
+    code: 'WZR-009',
+    namePl: 'Fazy księżyca',
+    descPl: 'Rząd czterech faz księżyca - od nowiu przez pełnię do ostatniej kwadry.',
+    tags: ['symboliczny', 'geometryczny'],
+    imageSlug: 'faza-ksiezyca',
+    detailLevel: 2,
+    sortOrder: 9,
+  },
+  {
+    slug: 'pioro-lesne',
+    code: 'WZR-010',
+    namePl: 'Pióro leśne',
+    descPl: 'Stylizowane pióro z symetrycznymi żyłkami po obu stronach trzonu.',
+    tags: ['roślinny', 'symboliczny'],
+    imageSlug: 'pioro-lesne',
+    detailLevel: 2,
+    sortOrder: 10,
+  },
+  /**
+   * 2026-08-29, owner feedback: the first ten patterns read as "too basic"
+   * next to real reference woodcut/relief pieces - these two are a real
+   * step up in complexity on purpose: layered depth (multiple overlapping
+   * ridge/canopy shapes at different opacities, simulating the "which
+   * layer sits in front" read a relief or multi-pass engraving would give),
+   * many more path elements than the first ten, still genuinely original
+   * line art (no external source), still a flat 2D SVG a laser/CNC can cut
+   * directly - not a literal 3D relief model, which is a real, separate
+   * production technique this catalogue doesn't model as a pattern yet.
+   */
+  {
+    slug: 'panorama-gorska',
+    code: 'WZR-011',
+    namePl: 'Panorama górska',
+    descPl: 'Wielowarstwowa panorama gór z linią drzew i słońcem - bogatszy, wielopoziomowy motyw.',
+    tags: ['krajobraz', 'zaawansowany'],
+    imageSlug: 'panorama-gorska',
+    detailLevel: 4,
+    sortOrder: 11,
+  },
+  {
+    slug: 'gaj-brzozowy',
+    code: 'WZR-012',
+    namePl: 'Gaj brzozowy',
+    descPl: 'Rząd brzozowych pni o różnej głębi i grubości, z korą i opadającymi liśćmi - bogaty, warstwowy motyw leśny.',
+    tags: ['krajobraz', 'zaawansowany'],
+    imageSlug: 'gaj-brzozowy',
+    detailLevel: 4,
+    sortOrder: 12,
+  },
+];
+
+async function seedDesigns(): Promise<readonly SeededDesign[]> {
+  const designs: SeededDesign[] = [];
+  for (const input of DESIGN_SEEDS) {
+    const imageUrl = input.imageSlug.startsWith('placeholders/')
+      ? PLACEHOLDER_IMAGE(input.imageSlug.slice('placeholders/'.length))
+      : PATTERN_IMAGE(input.imageSlug);
+    const design = await prisma.design.upsert({
+      where: { slug: input.slug },
+      create: {
+        slug: input.slug,
+        code: input.code,
+        namePl: input.namePl,
+        descPl: input.descPl,
+        tags: [...input.tags],
+        thumbnailUrl: imageUrl,
+        previewUrl: imageUrl,
+        isActive: input.isActive ?? true,
+        sortOrder: input.sortOrder,
+        referenceWidthMm: 600,
+        minLineWidthUm: 1_200,
+        minDetailSpacingUm: 2_000,
+        recommendedMethod: 'CNC_CARVE',
+        minRecommendedWidthMm: 300,
+        detailLevel: input.detailLevel,
+        machiningMilliMinutesPerM2: 2_500,
+        rightsStatus: 'APPROVED_COMMERCIAL',
+        rightsNotes:
+          input.slug === 'wzor-podstawowy'
+            ? 'Wzór zastępczy stworzony na potrzeby seeda - do wymiany na prawdziwy projekt przed uruchomieniem sklepu.'
+            : 'Oryginalny wzór graficzny stworzony na potrzeby tego projektu (linia grawerska, brak zewnętrznego źródła).',
+      },
+      update: {},
+    });
+    console.log(`Design: ${design.code} (${design.namePl})`);
+    designs.push(design);
+  }
+  return designs;
+}
+
+type DesignCollectionSeedInput = {
+  readonly slug: string;
+  readonly namePl: string;
+  readonly descPl: string;
+  readonly sortOrder: number;
+  readonly memberSlugs: readonly string[];
+};
+
+/**
+ * 2026-08-29, owner request: "make [patterns] into pattern's categories".
+ * `DesignCollection` already existed (admin CRUD at `/panel/kolekcje`,
+ * unrelated to `ProductCollection`) but had zero seeded rows before this -
+ * these two groupings sort this session's own six original patterns
+ * (`DESIGN_SEEDS`, above) by real visual theme. `wzor-podstawowy` (still a
+ * placeholder) and `fala-drewna` (a wood-grain motif, not roślinny or
+ * geometryczny) are deliberately left uncategorised rather than forced into
+ * a bucket that doesn't fit - same "don't force it" discipline as every
+ * other real/honest-gap decision in this file.
+ */
+const DESIGN_COLLECTION_SEEDS: readonly DesignCollectionSeedInput[] = [
+  {
+    slug: 'motywy-roslinne',
+    namePl: 'Motywy roślinne',
+    descPl: 'Wzory czerpiące z natury - gałązki, liście, kwiatowe mandale.',
+    sortOrder: 1,
+    memberSlugs: ['galazka-oliwna', 'mandala-botaniczna'],
+  },
+  {
+    slug: 'motywy-geometryczne',
+    namePl: 'Motywy geometryczne',
+    descPl: 'Symetryczne, precyzyjne wzory - kompasy, okręgi, linie.',
+    sortOrder: 2,
+    memberSlugs: ['kompas-nawigacyjny', 'wzor-geometryczny'],
+  },
+];
+
+async function seedDesignCollections(designs: readonly SeededDesign[]): Promise<void> {
+  const designIdBySlug = new Map(designs.map((design) => [design.slug, design.id]));
+  for (const input of DESIGN_COLLECTION_SEEDS) {
+    const collection = await prisma.designCollection.upsert({
+      where: { slug: input.slug },
+      create: { slug: input.slug, namePl: input.namePl, descPl: input.descPl, sortOrder: input.sortOrder, isActive: true },
+      update: {},
+    });
+    for (const memberSlug of input.memberSlugs) {
+      const designId = designIdBySlug.get(memberSlug);
+      if (designId === undefined) continue;
+      await prisma.design.update({ where: { id: designId }, data: { collectionId: collection.id } });
+    }
+    console.log(`DesignCollection: ${collection.namePl} (${input.memberSlugs.length} wzorów)`);
+  }
 }
 
 /**
- * The first real engraving font — the `Font` model's own header comment
+ * The first real engraving font - the `Font` model's own header comment
  * (`prisma/schema.prisma`) says coverage is "parsed from the font's cmap
- * table at seed time and stored — never assumed from the font's name or its
+ * table at seed time and stored - never assumed from the font's name or its
  * declared language support." This function is that parse, run for real
  * against a real file every time the seed runs, not a JSON blob copied in
  * once and left to go stale.
@@ -367,12 +877,12 @@ async function seedDesign(): Promise<SeededDesign> {
  * (`src/ui/theme/fonts.ts`), already relied on for real Polish body copy
  * sitewide, SIL Open Font License (`public/fonts/Inter-OFL.txt`, MIT-compatible
  * for this purpose), and a genuinely plausible real-world choice for
- * laser-engraved text — a clean sans-serif alongside decorative faces is
+ * laser-engraved text - a clean sans-serif alongside decorative faces is
  * common in real engraving shops. `public/fonts/Inter-Variable.ttf` was
  * downloaded from Google's own OFL font repository
- * (github.com/google/fonts, ofl/inter) — the exact file this function reads.
+ * (github.com/google/fonts, ofl/inter) - the exact file this function reads.
  * `minHeightUm` (3mm) is this pass's one invented number here, same
- * TODO_PRICING-style placeholder discipline as everywhere else — a real
+ * TODO_PRICING-style placeholder discipline as everywhere else - a real
  * legibility floor needs an actual test cut, not a guess.
  */
 async function seedFont(): Promise<{ readonly id: string }> {
@@ -394,7 +904,7 @@ async function seedFont(): Promise<{ readonly id: string }> {
   });
   if (!supportsPolishDiacritics) {
     throw new Error(
-      'seedFont: Inter-Variable.ttf is missing a Polish-specific glyph — re-check the downloaded file, do not seed a font that fails this.',
+      'seedFont: Inter-Variable.ttf is missing a Polish-specific glyph - re-check the downloaded file, do not seed a font that fails this.',
     );
   }
 
@@ -422,7 +932,7 @@ async function seedFont(): Promise<{ readonly id: string }> {
 }
 
 /**
- * A cmap's covered code points as inclusive [start, end] pairs — a real
+ * A cmap's covered code points as inclusive [start, end] pairs - a real
  * face covers thousands of individual code points, and most of them are
  * already contiguous Unicode blocks, so this keeps the stored JSON small
  * without losing anything `toFontSpec` needs to reconstruct the exact set.
@@ -442,7 +952,7 @@ function compressToRanges(codePoints: readonly number[]): Array<[number, number]
 }
 
 // ---------------------------------------------------------------------------
-// 3. Catalogue — categories and products
+// 3. Catalogue - categories and products
 // ---------------------------------------------------------------------------
 
 type CategorySeed = {
@@ -452,40 +962,60 @@ type CategorySeed = {
   readonly seoTitlePl: string;
   readonly seoDescPl: string;
   readonly sortOrder: number;
+  readonly isActive: boolean;
+  /** `STOCK_PHOTO(slug)` by default; `null` for a category with no real, subject-matched photo sourced yet - same "stays empty until a real one exists" honesty already established for "Inne". */
+  readonly imageUrl?: string | null;
 };
 
 /**
- * The owner's real category list, confirmed 2026-08-23 — see
+ * The owner's real category list, confirmed 2026-08-23 - see
  * docs/ARCHITECTURE.md §5 for how each maps onto `ProductTypeCode`. "Inne"
  * is seeded with no product: it is an open catch-all by definition, and
  * inventing a concrete item for it would be less honest than leaving it
  * empty until a real one exists.
+ *
+ * **2026-08-28, owner request**: Gres and Panele podłogowe temporarily
+ * disabled (`isActive: false`) - real existing categories/products are kept,
+ * not deleted, exactly the mechanism `Category.isActive` exists for. A new
+ * `gry-planszowe` category added, active from creation. `isActive` is only
+ * ever applied in `seedCategories`' `create` block (see that function's own
+ * comment) - a fresh database gets the current intended state, but
+ * re-running this seed against an already-seeded database never fights a
+ * later real admin toggle (e.g. re-enabling Gres) back to this default.
  */
 const CATEGORY_SEEDS: readonly CategorySeed[] = [
   {
     slug: 'loft',
     namePl: 'Loft',
+    // Deactivated 2026-09-04 at the owner's request ("z kategorii wyłączyć na
+    // razie loft"). The category and its stool are intact, so re-enabling is
+    // one boolean; nothing about the product was deleted.
     descPl:
       'Stołki, półki i małe stoliki łączące metalową podstawę w stylu loft z drewnianym blatem z grawerem.',
-    seoTitlePl: 'Meble loft z grawerem — stołki, półki, stoliki',
+    seoTitlePl: 'Meble loft z grawerem - stołki, półki, stoliki',
     seoDescPl: 'Drewniane blaty z grawerem na metalowej podstawie w stylu loft. Wykonanie na zamówienie.',
     sortOrder: 1,
+    isActive: false,
   },
   {
     slug: 'amulety-i-bransoletki',
     namePl: 'Amulety i bransoletki',
-    descPl: 'Drobna biżuteria z drewna z grawerem — amulety i bransoletki na indywidualne zamówienie.',
+    descPl: 'Drobna biżuteria z drewna z grawerem - amulety i bransoletki na indywidualne zamówienie.',
     seoTitlePl: 'Amulety i bransoletki z grawerem',
     seoDescPl: 'Drewniane amulety i bransoletki z personalizowanym grawerem.',
     sortOrder: 2,
+    isActive: true,
   },
   {
     slug: 'gres',
     namePl: 'Gres',
-    descPl: 'Fartuchy kuchenne z gresu z grawerem — trwałe wykończenie ściany nad blatem.',
+    descPl: 'Fartuchy kuchenne z gresu z grawerem - trwałe wykończenie ściany nad blatem.',
     seoTitlePl: 'Fartuchy kuchenne z gresu z grawerem',
     seoDescPl: 'Gresowe fartuchy kuchenne z grawerowanym wzorem, dopasowane na wymiar.',
     sortOrder: 3,
+    // Temporarily disabled 2026-08-28 at the owner's request. Products and
+    // history stay intact - only storefront visibility changes.
+    isActive: false,
   },
   {
     slug: 'panele-podlogowe',
@@ -494,22 +1024,46 @@ const CATEGORY_SEEDS: readonly CategorySeed[] = [
     seoTitlePl: 'Drewniane panele podłogowe z grawerem',
     seoDescPl: 'Panele podłogowe z drewna z grawerowanym wzorem, wykonanie na wymiar.',
     sortOrder: 4,
+    // Temporarily disabled 2026-08-28 at the owner's request. Products and
+    // history stay intact - only storefront visibility changes.
+    isActive: false,
   },
   {
     slug: 'obrazy-drewniane',
     namePl: 'Obrazy',
-    descPl: 'Obrazy z drewna z grawerem — gotowe wzory lub własny projekt.',
+    descPl: 'Obrazy z drewna z grawerem - gotowe wzory lub własny projekt.',
     seoTitlePl: 'Obrazy drewniane z grawerem',
     seoDescPl: 'Drewniane obrazy z grawerowanym wzorem, z możliwością personalizacji.',
     sortOrder: 5,
+    isActive: true,
   },
   {
-    slug: 'inne',
-    namePl: 'Inne',
-    descPl: 'Projekty nietypowe, wykraczające poza pozostałe kategorie — wycena indywidualna.',
-    seoTitlePl: 'Inne realizacje z grawerem',
-    seoDescPl: 'Nietypowe zlecenia z grawerem, wykonywane na indywidualne zamówienie.',
+    slug: 'gry-planszowe',
+    namePl: 'Gry planszowe',
+    descPl:
+      'Drewniane gry planszowe z grawerem - klasyczne rozgrywki wykonane na zamówienie, z możliwością personalizacji.',
+    seoTitlePl: 'Drewniane gry planszowe z grawerem',
+    seoDescPl: 'Gry planszowe z drewna z grawerowanym wzorem, wykonanie na zamówienie.',
     sortOrder: 6,
+    isActive: true,
+    // No real, subject-matched photo sourced yet - same honest "stays
+    // empty" precedent "Inne" originally used, rather than a misleading
+    // reused photo from an unrelated category.
+    imageUrl: null,
+  },
+  {
+    // Renamed from "Inne" 2026-09-04, owner: "inne to powinno być zamówienie
+    // własne". It already held exactly one product, the CUSTOM_UPLOAD
+    // "Własny projekt z grawerem", so this makes the label describe what the
+    // category has always contained rather than changing what is in it. The
+    // slug moves with the name because nothing links to /inne yet.
+    slug: 'zamowienie-wlasne',
+    namePl: 'Zamówienie własne',
+    descPl: 'Prześlij własny projekt, a wykonamy go na wybranym materiale i w wybranym rozmiarze. Wycena indywidualna.',
+    seoTitlePl: 'Zamówienie własne z grawerem - Twój projekt',
+    seoDescPl: 'Prześlij własny wzór i zamów grawer na drewnie lub gresie. Wycena indywidualna.',
+    sortOrder: 7,
+    isActive: true,
   },
 ];
 
@@ -524,8 +1078,9 @@ async function seedCategories(): Promise<Record<string, { readonly id: string }>
         descPl: seed.descPl,
         seoTitlePl: seed.seoTitlePl,
         seoDescPl: seed.seoDescPl,
-        imageUrl: STOCK_PHOTO(seed.slug),
+        imageUrl: seed.imageUrl === undefined ? STOCK_PHOTO(seed.slug) : seed.imageUrl,
         sortOrder: seed.sortOrder,
+        isActive: seed.isActive,
       },
       update: {},
     });
@@ -536,7 +1091,7 @@ async function seedCategories(): Promise<Record<string, { readonly id: string }>
 }
 
 // ---------------------------------------------------------------------------
-// 4. Blog — placeholder posts
+// 4. Blog - placeholder posts
 // ---------------------------------------------------------------------------
 
 type BlogPostSeed = {
@@ -547,16 +1102,18 @@ type BlogPostSeed = {
   readonly seoTitlePl: string;
   readonly seoDescPl: string;
   readonly publishedAt: Date;
-  /** Reuses an already-sourced category/material photo (`STOCK_PHOTO`) — no new image sourcing for placeholder posts. */
+  /** Reuses an already-sourced category/material photo (`STOCK_PHOTO`) - no new image sourcing for placeholder posts. */
   readonly imageUrl: string;
+  /** Defaults to `true`. Same `isActive` mechanism as `CATEGORY_SEEDS` - only ever applied in `seedBlogPosts`'s `create` block, so re-running this seed never fights a later real admin toggle back to this default. */
+  readonly isActive?: boolean;
 };
 
 /**
  * Explicit, one-time exception to this project's "nothing is faked" rule
- * — added 2026-08-25 at the owner's direct request, so the new homepage
+ * - added 2026-08-25 at the owner's direct request, so the new homepage
  * blog section and `/blog` render real content instead of the empty
  * state. This is NOT the same category of fabrication `docs/ARCHITECTURE.md`
- * §16A.1 module 9 forbids (reviews/testimonials in a customer's voice) —
+ * §16A.1 module 9 forbids (reviews/testimonials in a customer's voice) -
  * these are generic, genuinely-useful craft/material topics the business
  * could really publish, with no invented numbers, dates, or customer
  * claims. Same discipline as `TODO_PRICING`: a real first draft, safe to
@@ -570,8 +1127,8 @@ const BLOG_POST_SEEDS: readonly BlogPostSeed[] = [
     shortDescPl:
       'Kilka prostych zasad pielęgnacji, dzięki którym drewniany produkt z grawerem posłuży przez lata.',
     bodyPl:
-      'Drewno to materiał naturalny — reaguje na wilgotność i temperaturę otoczenia, dlatego warto unikać stawiania produktów bezpośrednio nad grzejnikiem lub w miejscu z dużymi wahaniami wilgotności.\n\nDo czyszczenia na co dzień wystarczy sucha lub lekko wilgotna ściereczka. Należy unikać silnych detergentów i moczenia elementu w wodzie — może to uszkodzić zarówno drewno, jak i wykończenie olejem.\n\nGrawerowane wzory z czasem mogą lekko pociemnieć wraz z naturalnym starzeniem się drewna — to normalny proces, który nie wpływa na trwałość wzoru.\n\nRegularne, delikatne naoliwienie (raz na kilka miesięcy, zależnie od intensywności użytkowania) pomaga utrzymać naturalny wygląd i chroni powierzchnię przed wysychaniem.',
-    seoTitlePl: 'Jak dbać o drewniane produkty z grawerem — CNC Selling',
+      'Drewno to materiał naturalny - reaguje na wilgotność i temperaturę otoczenia, dlatego warto unikać stawiania produktów bezpośrednio nad grzejnikiem lub w miejscu z dużymi wahaniami wilgotności.\n\nDo czyszczenia na co dzień wystarczy sucha lub lekko wilgotna ściereczka. Należy unikać silnych detergentów i moczenia elementu w wodzie - może to uszkodzić zarówno drewno, jak i wykończenie olejem.\n\nGrawerowane wzory z czasem mogą lekko pociemnieć wraz z naturalnym starzeniem się drewna - to normalny proces, który nie wpływa na trwałość wzoru.\n\nRegularne, delikatne naoliwienie (raz na kilka miesięcy, zależnie od intensywności użytkowania) pomaga utrzymać naturalny wygląd i chroni powierzchnię przed wysychaniem.',
+    seoTitlePl: 'Jak dbać o drewniane produkty z grawerem - CNC Selling',
     seoDescPl: 'Proste zasady pielęgnacji drewnianych produktów z grawerem, aby służyły przez lata.',
     publishedAt: new Date('2026-08-01T09:00:00Z'),
     imageUrl: STOCK_PHOTO('material-dab'),
@@ -581,30 +1138,37 @@ const BLOG_POST_SEEDS: readonly BlogPostSeed[] = [
     titlePl: 'Jak powstaje grawer CNC i laserowy',
     shortDescPl: 'Krótkie wyjaśnienie, czym różni się frezowanie CNC od grawerowania laserowego.',
     bodyPl:
-      'Frezowanie CNC polega na precyzyjnym usuwaniu materiału za pomocą obracającej się frezarki, sterowanej komputerowo według wcześniej przygotowanego projektu. Sprawdza się przy głębszych, wyraźnie wyczuwalnych fakturowo wzorach.\n\nGrawerowanie laserowe działa inaczej — skupiona wiązka światła wypala lub przebarwia powierzchnię materiału, co pozwala uzyskać bardzo drobne detale i delikatne cieniowanie, niemożliwe do wykonania frezem.\n\nWybór metody zależy od materiału, wielkości detali wzoru i efektu, jaki ma zostać osiągnięty — czasem obie techniki są łączone w jednym produkcie.\n\nKażdy projekt jest najpierw sprawdzany pod kątem wykonalności — minimalnej grubości linii i odstępów między detalami — zanim trafi do produkcji.',
-    seoTitlePl: 'Jak powstaje grawer CNC i laserowy — CNC Selling',
+      'Frezowanie CNC polega na precyzyjnym usuwaniu materiału za pomocą obracającej się frezarki, sterowanej komputerowo według wcześniej przygotowanego projektu. Sprawdza się przy głębszych, wyraźnie wyczuwalnych fakturowo wzorach.\n\nGrawerowanie laserowe działa inaczej - skupiona wiązka światła wypala lub przebarwia powierzchnię materiału, co pozwala uzyskać bardzo drobne detale i delikatne cieniowanie, niemożliwe do wykonania frezem.\n\nWybór metody zależy od materiału, wielkości detali wzoru i efektu, jaki ma zostać osiągnięty - czasem obie techniki są łączone w jednym produkcie.\n\nKażdy projekt jest najpierw sprawdzany pod kątem wykonalności - minimalnej grubości linii i odstępów między detalami - zanim trafi do produkcji.',
+    seoTitlePl: 'Jak powstaje grawer CNC i laserowy - CNC Selling',
     seoDescPl: 'Czym różni się frezowanie CNC od grawerowania laserowego i kiedy stosujemy każdą z technik.',
     publishedAt: new Date('2026-08-10T09:00:00Z'),
     imageUrl: STOCK_PHOTO('inne'),
   },
   {
     slug: 'dab-i-gres-materialy-ktore-wykorzystujemy',
-    titlePl: 'Dąb i gres — materiały, które wykorzystujemy',
+    titlePl: 'Dąb i gres - materiały, które wykorzystujemy',
     shortDescPl: 'Krótko o tym, dlaczego akurat te materiały trafiły do naszej oferty.',
     bodyPl:
-      'Dąb to twarde, naturalne drewno o wyraźnym rysunku słojów — każdy egzemplarz jest inny, co sprawia, że gotowy produkt jest unikalny. Dobrze znosi grawerowanie zarówno CNC, jak i laserowe, a przy odpowiedniej pielęgnacji zachowuje trwałość na lata.\n\nGres to materiał ceramiczny o wysokiej odporności na wilgoć i uszkodzenia mechaniczne — sprawdza się szczególnie tam, gdzie drewno nie byłoby praktycznym wyborem, na przykład jako fartuch kuchenny nad blatem roboczym.\n\nOba materiały mają swoje realne ograniczenia — minimalną grubość linii wzoru czy maksymalny rozmiar arkusza — które są uwzględniane już na etapie konfiguracji produktu, aby zamówienie było wykonalne w praktyce, nie tylko w projekcie.',
-    seoTitlePl: 'Dąb i gres — materiały, które wykorzystujemy — CNC Selling',
+      'Dąb to twarde, naturalne drewno o wyraźnym rysunku słojów - każdy egzemplarz jest inny, co sprawia, że gotowy produkt jest unikalny. Dobrze znosi grawerowanie zarówno CNC, jak i laserowe, a przy odpowiedniej pielęgnacji zachowuje trwałość na lata.\n\nGres to materiał ceramiczny o wysokiej odporności na wilgoć i uszkodzenia mechaniczne - sprawdza się szczególnie tam, gdzie drewno nie byłoby praktycznym wyborem, na przykład jako fartuch kuchenny nad blatem roboczym.\n\nOba materiały mają swoje realne ograniczenia - minimalną grubość linii wzoru czy maksymalny rozmiar arkusza - które są uwzględniane już na etapie konfiguracji produktu, aby zamówienie było wykonalne w praktyce, nie tylko w projekcie.',
+    seoTitlePl: 'Dąb i gres - materiały, które wykorzystujemy - CNC Selling',
     seoDescPl: 'Dlaczego dąb i gres trafiły do oferty i czym różnią się jako materiały pod grawer.',
     publishedAt: new Date('2026-08-18T09:00:00Z'),
     imageUrl: STOCK_PHOTO('gres'),
+    // Disabled 2026-08-28, same owner request/date as CATEGORY_SEEDS'
+    // gres/panele-podlogowe: this post presents gres as a current, offered
+    // material ("sprawdza się... jako fartuch kuchenny nad blatem
+    // roboczym") - misleading while that category is off. The post itself
+    // is kept, not deleted or rewritten - same "history stays intact, only
+    // visibility changes" reasoning as the category/product rows.
+    isActive: false,
   },
   {
     slug: 'czym-jest-personalizacja-grawerem',
     titlePl: 'Czym jest personalizacja grawerem',
     shortDescPl: 'Jak działa dodanie własnego tekstu do produktu i na co zwrócić uwagę.',
     bodyPl:
-      'Personalizacja pozwala dodać własny tekst — na przykład imię, datę lub krótką sentencję — bezpośrednio na powierzchni produktu, w wybranym kroju pisma.\n\nNie każdy krój pisma obsługuje wszystkie znaki, dlatego przed zatwierdzeniem tekstu sprawdzane jest realne pokrycie glifów w wybranej czcionce — łącznie z polskimi znakami diakrytycznymi, takimi jak „ł" czy „ę".\n\nDługość tekstu i liczba wierszy są ograniczone przez rozmiar produktu — zbyt drobny tekst mógłby nie zostać precyzyjnie wykonany, dlatego minimalna wysokość liter jest sprawdzana automatycznie podczas konfiguracji.\n\nNie każdy produkt oferuje personalizację — dostępność tej opcji zależy od konkretnego wyrobu i jest zawsze widoczna wprost w konfiguratorze.',
-    seoTitlePl: 'Czym jest personalizacja grawerem — CNC Selling',
+      'Personalizacja pozwala dodać własny tekst - na przykład imię, datę lub krótką sentencję - bezpośrednio na powierzchni produktu, w wybranym kroju pisma.\n\nNie każdy krój pisma obsługuje wszystkie znaki, dlatego przed zatwierdzeniem tekstu sprawdzane jest realne pokrycie glifów w wybranej czcionce - łącznie z polskimi znakami diakrytycznymi, takimi jak „ł" czy „ę".\n\nDługość tekstu i liczba wierszy są ograniczone przez rozmiar produktu - zbyt drobny tekst mógłby nie zostać precyzyjnie wykonany, dlatego minimalna wysokość liter jest sprawdzana automatycznie podczas konfiguracji.\n\nNie każdy produkt oferuje personalizację - dostępność tej opcji zależy od konkretnego wyrobu i jest zawsze widoczna wprost w konfiguratorze.',
+    seoTitlePl: 'Czym jest personalizacja grawerem - CNC Selling',
     seoDescPl: 'Jak działa personalizacja tekstem i na co zwrócić uwagę przy wyborze kroju pisma.',
     publishedAt: new Date('2026-08-24T09:00:00Z'),
     imageUrl: STOCK_PHOTO('obrazy-drewniane'),
@@ -624,6 +1188,7 @@ async function seedBlogPosts(): Promise<void> {
         seoDescPl: seed.seoDescPl,
         publishedAt: seed.publishedAt,
         imageUrl: seed.imageUrl,
+        isActive: seed.isActive ?? true,
       },
       // Re-asserted on every run: the 4 posts were originally seeded
       // 2026-08-25 with no image, so an existing dev database needs this
@@ -634,10 +1199,598 @@ async function seedBlogPosts(): Promise<void> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 5. FAQ - real customer questions, not placeholders
+// ---------------------------------------------------------------------------
+
+type FaqSeed = {
+  readonly questionPl: string;
+  readonly answerPl: string;
+  readonly sortOrder: number;
+};
+
+/**
+ * `docs/CHECKLIST.md`'s FAQ line - real questions a customer of THIS
+ * business would actually have, covering products, customization,
+ * patterns/designs, ordering, production, shipping, payments, returns,
+ * personalization, and materials. Every answer states only what is
+ * actually true of the current implementation (bank transfer / contact
+ * -arranged payment only, no live courier tracking, custom designs go
+ * through internal review) - no invented policy, matching `TODO_PRICING`'s
+ * own "real content, safe to demo" discipline elsewhere in this file.
+ *
+ * Create-only per question, like `seedStoreSettings`/`seedEmailTemplates`:
+ * once a row exists it's real admin-owned content (`/panel/faq`), and
+ * re-running this script must never stomp an admin's edit back to the
+ * seed text. Matched by `questionPl` since `Faq` has no natural slug/key.
+ */
+const FAQ_SEEDS: readonly FaqSeed[] = [
+  {
+    questionPl: 'Czym różni się wybór gotowego wzoru od przesłania własnego projektu?',
+    answerPl:
+      'Przy każdym produkcie, który to oferuje, możesz wybrać jeden z naszych gotowych wzorów w konfiguratorze - to najszybsza droga do zamówienia. Jeśli wolisz coś w pełni własnego, możesz zamiast tego przesłać swój plik (JPG, PNG, SVG lub PDF) - dotyczy to produktów oznaczonych jako możliwość realizacji z własnego projektu. Żadna z tych opcji nie jest obowiązkowa dla wszystkich produktów - dostępność zależy od konkretnego wyrobu i jest zawsze widoczna wprost w konfiguratorze.',
+    sortOrder: 1,
+  },
+  {
+    questionPl: 'Co się dzieje z moim przesłanym projektem po zamówieniu?',
+    answerPl:
+      'Każdy przesłany plik trafia najpierw do wewnętrznej weryfikacji - sprawdzamy go pod kątem wykonalności (m.in. rozdzielczość, format, ewentualne problemy techniczne) przed przyjęciem do produkcji. Status weryfikacji („oczekuje", „zaakceptowany", „wymaga poprawy") widzisz na koncie klienta. Realizacja rozpoczyna się dopiero po akceptacji projektu - to celowe zabezpieczenie, dzięki któremu nie tracisz materiału na plik, który technicznie nie dałby się poprawnie wykonać.',
+    sortOrder: 2,
+  },
+  {
+    questionPl: 'Jak długo trwa realizacja zamówienia?',
+    answerPl:
+      'Czas realizacji zależy od konkretnego produktu i jest zawsze podany w jego karcie - zwykle od kilku do kilkunastu dni roboczych, licząc od zaakceptowania projektu (w przypadku własnego pliku) lub złożenia zamówienia (przy gotowym wzorze). Zamówienia z personalizacją lub nietypowym wymiarem mogą wymagać nieco więcej czasu ze względu na dodatkowe sprawdzenie wykonalności.',
+    sortOrder: 3,
+  },
+  {
+    questionPl: 'Jakie materiały są dostępne i czym się różnią?',
+    answerPl:
+      'Pracujemy przede wszystkim na drewnie dębowym oraz gresie ceramicznym, z ofertą stopniowo rozszerzaną. Dąb to materiał naturalny - rysunek słojów, odcień i drobne sęki różnią się w każdym egzemplarzu, co sprawia, że gotowy produkt jest niepowtarzalny. Gres sprawdza się tam, gdzie liczy się odporność na wilgoć i uszkodzenia mechaniczne, np. jako fartuch kuchenny. Dostępność materiału zależy od wybranego produktu - pełna lista widoczna jest w konfiguratorze.',
+    sortOrder: 4,
+  },
+  {
+    questionPl: 'Czy mogę dodać własny tekst (personalizację) do produktu?',
+    answerPl:
+      'Tak, w produktach oferujących personalizację możesz dodać własny tekst - na przykład imię, datę lub krótką sentencję - w wybranym kroju pisma. System automatycznie sprawdza, czy wybrana czcionka obsługuje wszystkie wpisane znaki (w tym polskie znaki diakrytyczne, jak „ł" czy „ę") oraz czy tekst zmieści się czytelnie przy wybranym rozmiarze produktu, zanim pozwoli przejść dalej.',
+    sortOrder: 5,
+  },
+  {
+    questionPl: 'Jakie formy płatności są dostępne?',
+    answerPl:
+      'Obecnie płatność odbywa się przelewem bankowym na podane w potwierdzeniu zamówienia dane, lub poprzez indywidualne ustalenie warunków płatności z naszym zespołem - wybór formy płatności następuje na etapie składania zamówienia. Sukcesywnie rozszerzamy dostępne opcje płatności; jeśli dana metoda nie jest jeszcze aktywna, nie pojawi się jako wybieralna przy zamówieniu.',
+    sortOrder: 6,
+  },
+  {
+    questionPl: 'Ile kosztuje i ile trwa dostawa?',
+    answerPl:
+      'Koszt dostawy jest stały i wyświetlany w podsumowaniu koszyka przed złożeniem zamówienia - nie doliczamy żadnych ukrytych opłat na etapie płatności. Paczkę nadajemy po zakończeniu produkcji; orientacyjny czas dostawy zależy od wybranego przewoźnika i jest widoczny przy zamówieniu.',
+    sortOrder: 7,
+  },
+  {
+    questionPl: 'Czy mogę zwrócić zamówiony produkt?',
+    answerPl:
+      'Produkty wykonywane na indywidualne zamówienie (z personalizacją, własnym projektem lub niestandardowym wymiarem) są, zgodnie z art. 38 pkt 3 ustawy o prawach konsumenta, wyłączone z 14-dniowego prawa odstąpienia od umowy - dokładnie dlatego, że są wytwarzane specjalnie dla Ciebie i nie możemy przyjąć ich z powrotem do sprzedaży. Pełna treść tego zastrzeżenia znajduje się w naszym Regulaminie i jest potwierdzana świadomie przy składaniu zamówienia.',
+    sortOrder: 8,
+  },
+  {
+    questionPl: 'Jak dbać o drewniane produkty z grawerem?',
+    answerPl:
+      'Do czyszczenia na co dzień wystarczy sucha lub lekko wilgotna ściereczka - należy unikać silnych detergentów i moczenia produktu w wodzie. Drewno to materiał naturalny, warto więc unikać stawiania go bezpośrednio nad źródłem ciepła lub w miejscu z dużymi wahaniami wilgotności. Regularne, delikatne naoliwienie (raz na kilka miesięcy) pomaga zachować naturalny wygląd na dłużej.',
+    sortOrder: 9,
+  },
+  {
+    questionPl: 'Czy każdy rozmiar i wzór jest technicznie możliwy do wykonania?',
+    answerPl:
+      'Nie zawsze - każda kombinacja wzoru, materiału i rozmiaru jest automatycznie sprawdzana pod kątem wykonalności (minimalna szerokość linii, odstępy między detalami, minimalna wysokość tekstu). Jeśli wybrana kombinacja przekracza możliwości techniczne, konfigurator poinformuje Cię o tym wprost i podpowie, co zmienić - np. większy rozmiar lub inny materiał - zanim będzie można dodać produkt do koszyka.',
+    sortOrder: 10,
+  },
+  {
+    questionPl: 'Czy mogę zamówić bardzo duży lub nietypowy produkt?',
+    answerPl:
+      'Wiele naszych produktów można wykonać w większych rozmiarach niż standardowe, łącząc kilka precyzyjnie dopasowanych elementów w jedną spójną całość - to ułatwia też transport i montaż. Jeśli potrzebujesz czegoś zupełnie nietypowego, skorzystaj z kategorii „Inne" lub skontaktuj się z nami bezpośrednio - każde nietypowe zgłoszenie rozpatrujemy indywidualnie.',
+    sortOrder: 11,
+  },
+  {
+    questionPl: 'Czy zdjęcia produktów odpowiadają temu, co faktycznie otrzymam?',
+    answerPl:
+      'Zdjęcia w naszym sklepie pokazują rzeczywisty charakter materiału i techniki grawerowania, ale przy materiałach naturalnych, takich jak drewno, rysunek słojów, odcień i drobne sęki różnią się w każdym egzemplarzu - to nie wada, a naturalna cecha materiału, która sprawia, że każdy produkt jest unikalny. Dokładny efekt personalizacji lub własnego projektu zależy od wybranych przez Ciebie ustawień.',
+    sortOrder: 12,
+  },
+  {
+    questionPl: 'Jak mogę skontaktować się w sprawie zamówienia?',
+    answerPl:
+      'Jeśli masz pytanie dotyczące już złożonego zamówienia, statusu realizacji lub dostawy, najszybciej odpowiemy na wiadomość wysłaną z podaniem numeru zamówienia. Dane kontaktowe znajdziesz w stopce strony oraz w wiadomości potwierdzającej złożenie zamówienia.',
+    sortOrder: 13,
+  },
+];
+
+async function seedFaqs(): Promise<void> {
+  for (const seed of FAQ_SEEDS) {
+    const existing = await prisma.faq.findFirst({ where: { questionPl: seed.questionPl } });
+    if (existing !== null) {
+      console.log(`Faq: "${seed.questionPl.slice(0, 40)}..." already exists, leaving it alone`);
+      continue;
+    }
+    const created = await prisma.faq.create({
+      data: { questionPl: seed.questionPl, answerPl: seed.answerPl, sortOrder: seed.sortOrder, isActive: true },
+    });
+    console.log(`Faq: created "${created.questionPl.slice(0, 50)}..."`);
+  }
+}
+
+type ExternalPatternResourceSeed = {
+  readonly namePl: string;
+  readonly url: string;
+  readonly descPl: string;
+  readonly sourceLabel: string;
+  readonly sortOrder: number;
+};
+
+/**
+ * P9 phase 3 + 2026-08-28 continuation: real external free-pattern
+ * resources shown on `/wzory`, always clearly labelled as third-party -
+ * never presented as this project's own content. Every row here was
+ * actually visited (`WebFetch`) and checked for real red flags before
+ * being added, not just returned by a search - one real candidate
+ * (LibraryLaser) was checked and deliberately excluded: mixed "free" vs.
+ * paid pricing, vague ownership, no visible IP-verification process for
+ * its user-submitted files. Create-only, matched by `url` (no natural
+ * unique key), same non-destructive precedent as `seedFaqs`.
+ */
+const EXTERNAL_PATTERN_RESOURCE_SEEDS: readonly ExternalPatternResourceSeed[] = [
+  {
+    namePl: '3axis.co - darmowe wzory DXF/SVG do CNC i lasera',
+    url: 'https://www.3axis.co/',
+    descPl:
+      'Niezależny, zewnętrzny serwis z bazą darmowych plików wektorowych (DXF, SVG, CDR) do cięcia i grawerowania CNC/laserowego. To nie są nasze materiały - przed użyciem sprawdź zasady licencjonowania obowiązujące na tej stronie.',
+    sourceLabel: '3axis.co',
+    sortOrder: 1,
+  },
+  {
+    namePl: 'CNCCookbook - darmowe pliki DXF',
+    url: 'https://www.cnccookbook.com/free-dxf-files/',
+    descPl:
+      'Zewnętrzny serwis prowadzony przez uznaną w branży firmę edukacyjną CNCCookbook - darmowe pliki DXF w kilkunastu kategoriach, bez rejestracji. To nie są nasze materiały - przed użyciem sprawdź zasady licencjonowania obowiązujące na tej stronie.',
+    sourceLabel: 'cnccookbook.com',
+    sortOrder: 2,
+  },
+  {
+    namePl: 'FreeLaserFile - darmowe wzory DXF/SVG do lasera',
+    url: 'https://freelaserfile.com/',
+    descPl:
+      'Niezależny, zewnętrzny serwis z bazą darmowych wzorów do cięcia laserowego (DXF, SVG, AI, CDR), pobieranych bez zakładania konta. To nie są nasze materiały - przed użyciem sprawdź zasady licencjonowania obowiązujące na tej stronie.',
+    sourceLabel: 'freelaserfile.com',
+    sortOrder: 3,
+  },
+  /**
+   * 2026-08-29, owner request. Visited and checked directly (`Browser`),
+   * same as every other row here - real red flag found and disclosed
+   * rather than hidden: unlike the three resources above (genuinely free,
+   * no account needed), Magnific (the rebranded Freepik) is a large stock
+   * -content marketplace whose "grawer" category is overwhelmingly labelled
+   * "Premium" (paid licence) or "Wygenerowano przez AI", not a free-file
+   * repository - the description below says so plainly rather than
+   * implying it belongs in the same "free to use" bucket as the rest of
+   * this list. No artwork or files from this site were copied into this
+   * project's own `Design` catalogue (§12/rights discipline) - it's linked
+   * as a paid reference/inspiration source only.
+   */
+  {
+    namePl: 'Magnific (dawniej Freepik) - grawer, głównie treści płatne',
+    url: 'https://www.magnific.com/pl/darmowe-zdjecie-wektory/grawer',
+    descPl:
+      'Duży, zewnętrzny serwis stockowy (dawniej Freepik) z wektorami/zdjęciami na temat grawerunku. Większość wyników jest oznaczona jako Premium (płatna licencja) lub wygenerowana przez AI - to nie jest baza darmowych plików jak pozostałe pozycje na tej liście. To nie są nasze materiały - żaden plik stąd nie został skopiowany do naszego katalogu wzorów; przed jakimkolwiek użyciem sprawdź licencję konkretnego zasobu na tej stronie.',
+    sourceLabel: 'magnific.com',
+    sortOrder: 4,
+  },
+];
+
+async function seedExternalPatternResources(): Promise<void> {
+  for (const seed of EXTERNAL_PATTERN_RESOURCE_SEEDS) {
+    const existing = await prisma.externalPatternResource.findFirst({ where: { url: seed.url } });
+    if (existing !== null) {
+      console.log(`ExternalPatternResource: "${seed.namePl}" already exists, leaving it alone`);
+      continue;
+    }
+    const created = await prisma.externalPatternResource.create({
+      data: {
+        namePl: seed.namePl,
+        url: seed.url,
+        descPl: seed.descPl,
+        sourceLabel: seed.sourceLabel,
+        sortOrder: seed.sortOrder,
+        isActive: true,
+      },
+    });
+    console.log(`ExternalPatternResource: created "${created.namePl}"`);
+  }
+}
+
+/**
+ * P9 phase 4: one real `ProductCollection` - a curated, ready-made
+ * grouping of already-seeded products, explicitly NOT customer-request-
+ * driven (§14/§15). Runs after `seedProducts`, so it looks the real rows
+ * up by slug rather than being threaded through as a return value.
+ * Create-only, matched by slug, same non-destructive precedent as every
+ * other seed function in this file.
+ */
+type ProductCollectionSeed = {
+  readonly slug: string;
+  readonly namePl: string;
+  readonly descPl: string;
+  readonly sortOrder: number;
+  readonly memberSlugs: readonly string[];
+  readonly imageUrl: string | null;
+};
+
+/**
+ * 2026-08-29, owner request: five real new collections, alongside the
+ * original "Polecane na prezent". Three (`ryfle`, `linoryt`,
+ * `sztuka-japonska`) name real techniques the business's 4-axis CNC can do
+ * (owner, verbatim: "the site sales everything from wood... ryflowanie
+ * drewna, linoryty... Sztuka japońska (łączenie drewna według sztuki
+ * japońskiej)") but that have no matching seeded `Product` rows yet - real,
+ * disclosed gaps, seeded with zero members rather than forcing an
+ * ill-fitting existing product in, same "prepared, not yet populated"
+ * precedent this file already uses elsewhere (`ryfle`/`linoryt`/
+ * `sztuka-japonska` all resolve to `memberSlugs: []`).
+ *
+ * 2026-08-29 follow-up: the owner supplied real photography for two of
+ * these directly (`public/images/collections/*.png` - files named
+ * `ChatGPT*.png` in their own Downloads folder, copied in and renamed
+ * here) - `ryfle` and `linoryt` now show a real representative image even
+ * with `memberSlugs: []`. `sztuka-japonska` still has no matching image
+ * (none of the supplied photos are wood-joinery work) - left `null`,
+ * honestly, rather than reusing an unrelated one.
+ */
+const PRODUCT_COLLECTION_SEEDS: readonly ProductCollectionSeed[] = [
+  {
+    slug: 'polecane-na-prezent',
+    namePl: 'Polecane na prezent',
+    descPl:
+      'Nasz gotowy, samodzielnie dobrany wybór produktów, które najczęściej sprawdzają się jako prezent - bez konieczności przechodzenia przez pełną konfigurację. Każdy z nich można też skonfigurować od podstaw z poziomu jego własnej strony produktu.',
+    sortOrder: 1,
+    memberSlugs: ['bransoletka-z-grawerem', 'obraz-drewniany-z-grawerem'],
+    imageUrl: null,
+  },
+  {
+    slug: 'gry-planszowe-i-figury',
+    namePl: 'Gry planszowe i figury',
+    descPl: 'Drewniane gry planszowe i figury z grawerowanym wykończeniem.',
+    sortOrder: 2,
+    memberSlugs: ['szachownica-z-grawerem'],
+    imageUrl: null,
+  },
+  {
+    slug: 'ryfle',
+    namePl: 'Ryfle',
+    descPl: 'Ryflowane panele drewniane - regularne, frezowane rowki nadające powierzchni fakturę i głębię.',
+    sortOrder: 3,
+    memberSlugs: [],
+    imageUrl: '/images/collections/ryfle-lamele.png',
+  },
+  {
+    slug: 'linoryt',
+    namePl: 'Linoryt',
+    descPl: 'Obrazy w drewnie inspirowane techniką linorytu - kontrastowa, graficzna kompozycja.',
+    sortOrder: 4,
+    memberSlugs: [],
+    imageUrl: '/images/collections/linoryt-zamek.png',
+  },
+  {
+    slug: 'komplety-restauracje-i-kuchnia',
+    namePl: 'Komplety dla restauracji i do kuchni',
+    descPl: 'Zestawy i elementy wykończenia z drewna i gresu dopasowane do restauracji i kuchni.',
+    sortOrder: 5,
+    memberSlugs: ['fartuch-kuchenny-z-grawerem'],
+    imageUrl: null,
+  },
+  {
+    slug: 'sztuka-japonska',
+    namePl: 'Sztuka japońska',
+    descPl: 'Łączenie drewna według tradycyjnej sztuki japońskiej - bez gwoździ i kleju, samą precyzją cięcia.',
+    sortOrder: 6,
+    memberSlugs: [],
+    imageUrl: null,
+  },
+];
+
+async function seedProductCollections(): Promise<void> {
+  for (const seed of PRODUCT_COLLECTION_SEEDS) {
+    const existing = await prisma.productCollection.findUnique({ where: { slug: seed.slug }, select: { id: true, namePl: true, imageUrl: true } });
+    if (existing !== null) {
+      // Create-only for everything else, but a `null` image is a real,
+      // later-discovered gap this seed can now honestly fill - never
+      // overwrites a real `imageUrl` an admin (or an earlier run of this
+      // same seed) already set.
+      if (existing.imageUrl === null && seed.imageUrl !== null) {
+        await prisma.productCollection.update({ where: { id: existing.id }, data: { imageUrl: seed.imageUrl } });
+        console.log(`ProductCollection: "${existing.namePl}" already exists - added missing imageUrl`);
+      } else {
+        console.log(`ProductCollection: "${existing.namePl}" already exists, leaving it alone`);
+      }
+      continue;
+    }
+
+    const members =
+      seed.memberSlugs.length === 0
+        ? []
+        : await prisma.product.findMany({ where: { slug: { in: [...seed.memberSlugs] } }, select: { id: true } });
+
+    const collection = await prisma.productCollection.create({
+      data: {
+        slug: seed.slug,
+        namePl: seed.namePl,
+        descPl: seed.descPl,
+        imageUrl: seed.imageUrl,
+        isActive: true,
+        sortOrder: seed.sortOrder,
+        items: { create: members.map((member, index) => ({ productId: member.id, sortOrder: index })) },
+      },
+    });
+    console.log(`ProductCollection: created "${collection.namePl}" with ${members.length} product(s)`);
+  }
+}
+
+type WeightTierSeed = {
+  readonly labelPl: string;
+  readonly maxWeightGrams: number;
+  readonly priceGrosze: number;
+  readonly maxWidthMm?: number;
+  readonly maxHeightMm?: number;
+  readonly maxDepthMm?: number;
+  readonly sortOrder: number;
+};
+
+type DeliveryMethodSeed = {
+  readonly namePl: string;
+  readonly descPl: string;
+  readonly priceGrosze: number;
+  readonly freeShippingThresholdGrosze: number | null;
+  readonly estimatedDaysMin: number;
+  readonly estimatedDaysMax: number;
+  readonly carrier: string | null;
+  readonly trackingAvailable: boolean;
+  readonly requiresPickupPoint: boolean;
+  readonly isActive: boolean;
+  readonly sortOrder: number;
+  readonly weightTiers: readonly WeightTierSeed[];
+};
+
+/**
+ * 2026-08-29 rewrite, owner request: "cena powinna być przeliczana na
+ * podstawie wielkości i wagi produktu zgodnie z danymi cenowymi wybranego
+ * kuriera" - real weight-tier prices, sourced from each carrier's own
+ * published price list, cited per method below. No fabricated numbers
+ * anywhere in this array - a method with no real published tiers gets
+ * `weightTiers: []` (falls back to its flat `priceGrosze`, e.g.
+ * `Odbiór osobisty`) or, for a real carrier with no real numbers found at
+ * all (GEIS - real search performed, no published static price list
+ * exists, only interactive per-shipment quote forms), `isActive: false`
+ * with a comment naming what's needed rather than an invented one.
+ *
+ * "Kurier InPost" prices: InPost's own real "Kurier Standard" (business)
+ * net tiers from https://inpost.pl/cenniki (fetched 2026-08-29), converted
+ * to a gross customer-facing price the same way InPost's own page states
+ * business pricing is converted: net × 1.13 (their stated 13% fuel
+ * surcharge) × 1.23 (23% VAT). "Paczkomat InPost" prices: InPost's own
+ * real INDIVIDUAL/consumer "Paczkomat 24/7" tier prices from the same
+ * page - already gross, 0% fuel surcharge per that page. Real locker
+ * door/compartment dimensions from the same source (width×height fixed
+ * per InPost's own published data; only depth varies by size).
+ *
+ * "Punkt DPD Pickup" prices: DPD's own real, official "Cennik krajowy DPD
+ * Pickup" (version 1.8, effective 01.09.2025), the exact content of
+ * `https://www.dpd.com/pl/pl/cennik-przesylek-krajowych/` - WebFetch
+ * against DPD's own site was blocked (HTTP 403, bot protection); the
+ * owner pasted the real page content directly. The 20–31.5kg bracket is
+ * deliberately NOT included here - DPD's own price list states it
+ * ("Przedział wagowy niedostępny dla przesyłek kierowanych do odbioru w
+ * Punkcie DPD Pickup") is unavailable for Pickup-point delivery
+ * specifically.
+ */
+const DELIVERY_METHOD_SEEDS: readonly DeliveryMethodSeed[] = [
+  {
+    namePl: 'Kurier InPost',
+    descPl: 'Dostawa kurierska InPost pod wskazany adres. Cena zależy od wagi paczki.',
+    priceGrosze: 5_200, // flat-rate fallback only - real price always comes from weightTiers below
+    freeShippingThresholdGrosze: 50_000,
+    estimatedDaysMin: 1,
+    estimatedDaysMax: 3,
+    carrier: 'InPost Kurier',
+    trackingAvailable: false,
+    requiresPickupPoint: false,
+    isActive: true,
+    sortOrder: 1,
+    weightTiers: [
+      { labelPl: 'do 1 kg', maxWeightGrams: 1_000, priceGrosze: 3_516, sortOrder: 1 },
+      { labelPl: 'do 2 kg', maxWeightGrams: 2_000, priceGrosze: 3_751, sortOrder: 2 },
+      { labelPl: 'do 5 kg', maxWeightGrams: 5_000, priceGrosze: 4_457, sortOrder: 3 },
+      { labelPl: 'do 10 kg', maxWeightGrams: 10_000, priceGrosze: 5_161, sortOrder: 4 },
+      { labelPl: 'do 15 kg', maxWeightGrams: 15_000, priceGrosze: 6_100, sortOrder: 5 },
+      { labelPl: 'do 20 kg', maxWeightGrams: 20_000, priceGrosze: 6_805, sortOrder: 6 },
+      { labelPl: 'do 25 kg', maxWeightGrams: 25_000, priceGrosze: 7_507, sortOrder: 7 },
+      { labelPl: 'do 30 kg', maxWeightGrams: 30_000, priceGrosze: 8_212, sortOrder: 8 },
+      { labelPl: 'do 40 kg', maxWeightGrams: 40_000, priceGrosze: 12_427, sortOrder: 9 },
+      { labelPl: 'do 50 kg', maxWeightGrams: 50_000, priceGrosze: 15_010, sortOrder: 10 },
+    ],
+  },
+  {
+    namePl: 'Odbiór osobisty',
+    descPl: 'Bezpłatny odbiór osobisty po wcześniejszym umówieniu terminu - szczegóły ustalamy indywidualnie po złożeniu zamówienia.',
+    priceGrosze: 0,
+    freeShippingThresholdGrosze: null,
+    estimatedDaysMin: 1,
+    estimatedDaysMax: 5,
+    carrier: null,
+    trackingAvailable: false,
+    requiresPickupPoint: false,
+    isActive: true,
+    sortOrder: 2,
+    weightTiers: [],
+  },
+  {
+    namePl: 'Paczkomat InPost',
+    descPl: 'Dostawa do wybranego Paczkomatu InPost. Cena zależy od rozmiaru i wagi paczki - wybierz konkretny punkt w kolejnym kroku.',
+    priceGrosze: 2_049, // flat-rate fallback only
+    freeShippingThresholdGrosze: 50_000,
+    estimatedDaysMin: 1,
+    estimatedDaysMax: 3,
+    carrier: 'InPost Paczkomaty',
+    trackingAvailable: false,
+    requiresPickupPoint: true,
+    isActive: true,
+    sortOrder: 3,
+    weightTiers: [
+      { labelPl: 'XS', maxWeightGrams: 3_000, priceGrosze: 1_149, maxWidthMm: 230, maxHeightMm: 400, maxDepthMm: 40, sortOrder: 1 },
+      { labelPl: 'A', maxWeightGrams: 25_000, priceGrosze: 1_649, maxWidthMm: 380, maxHeightMm: 640, maxDepthMm: 80, sortOrder: 2 },
+      { labelPl: 'B', maxWeightGrams: 25_000, priceGrosze: 1_849, maxWidthMm: 380, maxHeightMm: 640, maxDepthMm: 190, sortOrder: 3 },
+      { labelPl: 'C', maxWeightGrams: 25_000, priceGrosze: 2_049, maxWidthMm: 380, maxHeightMm: 640, maxDepthMm: 410, sortOrder: 4 },
+    ],
+  },
+  {
+    namePl: 'Punkt DPD Pickup',
+    descPl: 'Dostawa do wybranego punktu DPD Pickup. Cena zależy od wagi paczki (do 20 kg - powyżej tej wagi punkt odbioru jest niedostępny, zgodnie z cennikiem DPD).',
+    priceGrosze: 3_249, // flat-rate fallback only
+    freeShippingThresholdGrosze: 50_000,
+    estimatedDaysMin: 1,
+    estimatedDaysMax: 3,
+    carrier: 'DPD Pickup',
+    trackingAvailable: false,
+    requiresPickupPoint: true,
+    isActive: true,
+    sortOrder: 4,
+    weightTiers: [
+      { labelPl: 'do 0,50 kg', maxWeightGrams: 500, priceGrosze: 1_699, sortOrder: 1 },
+      { labelPl: 'do 1,00 kg', maxWeightGrams: 1_000, priceGrosze: 1_799, sortOrder: 2 },
+      { labelPl: 'do 3,00 kg', maxWeightGrams: 3_000, priceGrosze: 1_999, sortOrder: 3 },
+      { labelPl: 'do 5,00 kg', maxWeightGrams: 5_000, priceGrosze: 2_249, sortOrder: 4 },
+      { labelPl: 'do 10,00 kg', maxWeightGrams: 10_000, priceGrosze: 2_749, sortOrder: 5 },
+      { labelPl: 'do 20,00 kg', maxWeightGrams: 20_000, priceGrosze: 3_249, sortOrder: 6 },
+    ],
+  },
+  {
+    // 2026-08-29, owner request: "check other companies like GEIS and much
+    // more". Real search performed (epaka.pl, globkurier.pl, fastpost.pl,
+    // pogotowiepaczkowe.pl, geis.pl itself) - GEIS does not publish a
+    // static weight-tier price list anywhere found; every source only
+    // offers an interactive per-shipment quote form. Seeded here as a
+    // real, visible-to-staff row - same "honest, not yet priced" pattern
+    // `PaymentMethodConfig`'s `isConnected: false` already established -
+    // rather than either inventing numbers or silently omitting the
+    // option the owner asked about. `isActive: false` keeps it OFF the
+    // real checkout until real numbers exist (from the owner directly, or
+    // a real published GEIS price list someone finds).
+    namePl: 'Kurier GEIS',
+    descPl: 'Nieaktywne - brak realnego, publicznie dostępnego cennika wagowego GEIS. Wymaga cennika od właściciela sklepu lub bezpośrednio od GEIS.',
+    priceGrosze: 0,
+    freeShippingThresholdGrosze: null,
+    estimatedDaysMin: 1,
+    estimatedDaysMax: 3,
+    carrier: 'GEIS',
+    trackingAvailable: false,
+    requiresPickupPoint: false,
+    isActive: false,
+    sortOrder: 5,
+    weightTiers: [],
+  },
+];
+
+/**
+ * 2026-08-29: the three original methods ("Kurier"/"Paczkomat", both flat-
+ * rate, plus a stray earlier "Paczkomat" row) are renamed rather than
+ * updated in place - a genuinely different pricing model (real weight
+ * tiers) under a clearer name ("Kurier InPost"/"Paczkomat InPost"), not a
+ * same-method edit. Deactivating the old namePl rows (never deleting -
+ * they may already be referenced by a real historical `Order.deliveryMethodId`)
+ * so checkout shows only the new, real, weight-priced ones.
+ */
+const RETIRED_DELIVERY_METHOD_NAMES = ['Kurier', 'Paczkomat'] as const;
+
+async function seedDeliveryMethods(): Promise<void> {
+  for (const retiredName of RETIRED_DELIVERY_METHOD_NAMES) {
+    const retired = await prisma.deliveryMethod.updateMany({
+      where: { namePl: retiredName, isActive: true },
+      data: { isActive: false },
+    });
+    if (retired.count > 0) {
+      console.log(`DeliveryMethod: deactivated superseded "${retiredName}" (${retired.count} row(s))`);
+    }
+  }
+
+  for (const seed of DELIVERY_METHOD_SEEDS) {
+    const existing = await prisma.deliveryMethod.findFirst({ where: { namePl: seed.namePl } });
+    if (existing !== null) {
+      console.log(`DeliveryMethod: "${seed.namePl}" already exists, leaving it alone`);
+      continue;
+    }
+    const { weightTiers, ...fields } = seed;
+    const created = await prisma.deliveryMethod.create({
+      data: { ...fields, weightTiers: { create: weightTiers.map(({ sortOrder, ...tier }) => ({ ...tier, sortOrder })) } },
+    });
+    console.log(`DeliveryMethod: created "${created.namePl}" with ${weightTiers.length} weight tier(s)`);
+  }
+}
+
+type PaymentMethodConfigSeed = {
+  readonly namePl: string;
+  readonly descPl: string;
+  readonly provider: 'BANK_TRANSFER' | 'CONTACT_ARRANGED' | 'PRZELEWY24';
+  readonly isConnected: boolean;
+  readonly sortOrder: number;
+};
+
+/**
+ * P9 phase 6: real payment method rows. Two genuinely connected (the same
+ * two methods checkout has always actually supported), and one honest
+ * `isConnected: false` row for Przelewy24 - a real database row, visible
+ * to staff in `/panel/platnosci`, that can never be selected at checkout
+ * because no real integration exists yet (§14/§15). This is what "real
+ * DB-driven config + honest unconnected state" means in practice, not
+ * just in the schema comment.
+ */
+const PAYMENT_METHOD_CONFIG_SEEDS: readonly PaymentMethodConfigSeed[] = [
+  {
+    namePl: 'Przelew bankowy',
+    descPl: 'Płatność przelewem na numer konta podany w potwierdzeniu zamówienia. Zamówienie przechodzi do realizacji po zaksięgowaniu wpłaty.',
+    provider: 'BANK_TRANSFER',
+    isConnected: true,
+    sortOrder: 1,
+  },
+  {
+    namePl: 'Ustalenie indywidualne',
+    descPl: 'Skontaktujemy się, aby ustalić szczegóły płatności indywidualnie.',
+    provider: 'CONTACT_ARRANGED',
+    isConnected: true,
+    sortOrder: 2,
+  },
+  {
+    namePl: 'Przelewy24',
+    descPl: 'Szybkie płatności online. Ta metoda nie jest jeszcze podłączona i nie jest dostępna przy składaniu zamówienia.',
+    provider: 'PRZELEWY24',
+    isConnected: false,
+    sortOrder: 3,
+  },
+];
+
+async function seedPaymentMethodConfigs(): Promise<void> {
+  for (const seed of PAYMENT_METHOD_CONFIG_SEEDS) {
+    const existing = await prisma.paymentMethodConfig.findFirst({ where: { namePl: seed.namePl } });
+    if (existing !== null) {
+      console.log(`PaymentMethodConfig: "${seed.namePl}" already exists, leaving it alone`);
+      continue;
+    }
+    const created = await prisma.paymentMethodConfig.create({ data: { ...seed, isActive: true } });
+    console.log(`PaymentMethodConfig: created "${created.namePl}" (isConnected: ${created.isConnected})`);
+  }
+}
+
 async function seedProducts(
   categories: Record<string, { readonly id: string }>,
   materials: SeededMaterials,
-  design: SeededDesign,
+  finishes: SeededFinishes,
+  designs: readonly SeededDesign[],
   font: { readonly id: string },
 ): Promise<void> {
   const loft = categories.loft;
@@ -645,14 +1798,28 @@ async function seedProducts(
   const gres = categories.gres;
   const panele = categories['panele-podlogowe'];
   const obrazy = categories['obrazy-drewniane'];
-  const inne = categories.inne;
+  const gryPlanszowe = categories['gry-planszowe'];
+  /*
+    The category the CUSTOM_UPLOAD product lives in. Keyed by slug, and the
+    slug changed on 2026-09-04 when „Inne" became „Zamówienie własne" - see
+    `CATEGORY_SEEDS`. This lookup was not changed with it, so `seedProducts`
+    threw "seedCategories must run before seedProducts" on any database
+    seeded from empty.
+
+    Found 2026-09-05 by ARCH-03's new `npm run db:reset`, which is the first
+    thing in this repository that routinely seeds from zero. Nothing caught
+    it before because every existing database already had the products, and
+    an upsert over an existing row never reaches the lookup that failed.
+  */
+  const zamowienieWlasne = categories['zamowienie-wlasne'];
   if (
     loft === undefined ||
     amulety === undefined ||
     gres === undefined ||
     panele === undefined ||
     obrazy === undefined ||
-    inne === undefined
+    gryPlanszowe === undefined ||
+    zamowienieWlasne === undefined
   ) {
     throw new Error('seedCategories must run before seedProducts');
   }
@@ -666,8 +1833,8 @@ async function seedProducts(
     longDescPl:
       'Stołek z dębowym siedziskiem z grawerowanym wzorem. Podstawa metalowa w stylu loft dostępna jako dodatek.',
     careInstructionsPl: 'Czyścić suchą lub lekko wilgotną ściereczką. Unikać długiego kontaktu z wodą.',
-    materialNotesPl: 'Podstawa metalowa w stylu loft dostępna jako dodatek — zapytaj o wycenę.',
-    seoTitlePl: 'Stołek loftowy z grawerem — dąb',
+    materialNotesPl: 'Podstawa metalowa w stylu loft dostępna jako dodatek - zapytaj o wycenę.',
+    seoTitlePl: 'Stołek loftowy z grawerem - dąb',
     seoDescPl: 'Dębowy stołek z grawerowanym wzorem, podstawa loft dostępna jako dodatek.',
     basePriceGrosze: 15_000,
     minPriceGrosze: 20_000,
@@ -682,9 +1849,10 @@ async function seedProducts(
     { thicknessMm: 27, labelPl: '27 mm' },
     { thicknessMm: 40, labelPl: '40 mm' },
   ]);
-  await seedProductMaterial(loftStool.id, materials.dab.id);
-  await seedProductDesign(loftStool.id, design.id);
-  await seedProductImage(loftStool.id, STOCK_PHOTO('loft'), 'Stołek loftowy z grawerem — stal i drewno w stylu loft');
+  await seedProductMaterials(loftStool.id, [materials.dab.id, materials.swierk.id, materials.modrzew.id, materials.sosna.id]);
+  await seedProductDesigns(loftStool.id, designs);
+  await seedProductPresetSizes(loftStool.id, { minWidthMm: 250, maxWidthMm: 400, minHeightMm: 250, maxHeightMm: 400 });
+  await seedProductImage(loftStool.id, STOCK_PHOTO('loft'), 'Stołek loftowy z grawerem - stal i drewno w stylu loft');
   await seedPersonalizationSpec(loftStool.id, {
     maxCharacters: 30,
     maxLines: 2,
@@ -701,7 +1869,7 @@ async function seedProducts(
     longDescPl: 'Bransoletka wykonana z drewna dębowego, z możliwością grawerowanej personalizacji.',
     careInstructionsPl: 'Unikać kontaktu z wodą i chemikaliami. Przechowywać w suchym miejscu.',
     materialNotesPl: null,
-    seoTitlePl: 'Bransoletka z grawerem — drewno dębowe',
+    seoTitlePl: 'Bransoletka z grawerem - drewno dębowe',
     seoDescPl: 'Drewniana bransoletka z personalizowanym grawerem, wykonanie na zamówienie.',
     basePriceGrosze: 3_000,
     minPriceGrosze: 4_000,
@@ -712,8 +1880,9 @@ async function seedProducts(
     minHeightMm: 15,
     maxHeightMm: 30,
   });
-  await seedProductMaterial(bransoletka.id, materials.dab.id);
-  await seedProductDesign(bransoletka.id, design.id);
+  await seedProductMaterials(bransoletka.id, [materials.dab.id, materials.swierk.id, materials.modrzew.id, materials.sosna.id]);
+  await seedProductDesigns(bransoletka.id, designs);
+  await seedProductPresetSizes(bransoletka.id, { minWidthMm: 40, maxWidthMm: 220, minHeightMm: 15, maxHeightMm: 30 });
   await seedProductImage(
     bransoletka.id,
     STOCK_PHOTO('amulety-i-bransoletki'),
@@ -735,7 +1904,7 @@ async function seedProducts(
     longDescPl: 'Fartuch kuchenny wykonany z gresu, z grawerowanym wzorem, wykonanie na wymiar.',
     careInstructionsPl: 'Czyścić standardowymi środkami do ceramiki. Odporny na wilgoć i wysoką temperaturę.',
     materialNotesPl: null,
-    installationInfoPl: 'Wybierz sposób montażu w pierwszym kroku konfiguracji — patrz warianty montażu.',
+    installationInfoPl: 'Wybierz sposób montażu w pierwszym kroku konfiguracji - patrz warianty montażu.',
     seoTitlePl: 'Fartuch kuchenny z gresu z grawerem',
     seoDescPl: 'Gresowy fartuch kuchenny z grawerowanym wzorem, dopasowany na wymiar.',
     basePriceGrosze: 30_000,
@@ -748,7 +1917,8 @@ async function seedProducts(
     maxHeightMm: 700,
   });
   await seedProductMaterial(fartuch.id, materials.gres.id);
-  await seedProductDesign(fartuch.id, design.id);
+  await seedProductDesigns(fartuch.id, designs);
+  await seedProductPresetSizes(fartuch.id, { minWidthMm: 300, maxWidthMm: 1200, minHeightMm: 300, maxHeightMm: 700 });
   await seedProductImage(fartuch.id, STOCK_PHOTO('gres'), 'Biały gres z grawerowanym wzorem');
   await seedInstallationVariant(fartuch.id, {
     code: 'ON_TOP',
@@ -783,8 +1953,11 @@ async function seedProducts(
     { thicknessMm: 14, labelPl: '14 mm' },
     { thicknessMm: 20, labelPl: '20 mm' },
   ]);
-  await seedProductMaterial(panel.id, materials.dab.id);
-  await seedProductDesign(panel.id, design.id);
+  await seedProductMaterials(panel.id, [materials.dab.id, materials.swierk.id, materials.modrzew.id, materials.sosna.id]);
+  await seedProductDesigns(panel.id, designs);
+  // No seedProductPresetSizes call - this product's own requiresExactSize:
+  // true above means a fixed S/M/L list would be actively wrong, not just
+  // unhelpful (see ProductPresetSize's own use in Configurator.tsx).
   await seedProductImage(
     panel.id,
     STOCK_PHOTO('panele-podlogowe'),
@@ -800,7 +1973,7 @@ async function seedProducts(
     longDescPl: 'Obraz z drewna dębowego z grawerowanym wzorem, z możliwością personalizacji tekstem.',
     careInstructionsPl: 'Czyścić suchą ściereczką. Chronić przed bezpośrednim nasłonecznieniem.',
     materialNotesPl: null,
-    seoTitlePl: 'Obraz drewniany z grawerem — dąb',
+    seoTitlePl: 'Obraz drewniany z grawerem - dąb',
     seoDescPl: 'Dębowy obraz ścienny z grawerowanym wzorem, z możliwością personalizacji.',
     basePriceGrosze: 12_000,
     minPriceGrosze: 15_000,
@@ -811,8 +1984,12 @@ async function seedProducts(
     minHeightMm: 200,
     maxHeightMm: 1200,
   });
-  await seedProductMaterial(obraz.id, materials.dab.id);
-  await seedProductDesign(obraz.id, design.id);
+  await seedProductMaterials(obraz.id, [materials.dab.id, materials.swierk.id, materials.modrzew.id, materials.sosna.id]);
+  await seedProductDesigns(obraz.id, designs);
+  await seedProductPresetSizes(obraz.id, { minWidthMm: 200, maxWidthMm: 1200, minHeightMm: 200, maxHeightMm: 1200 });
+  // Owner request, verbatim: "bejcowanie and lakierowanie is not available
+  // by default for Obrazy" - this is the "Obrazy" category's one product.
+  await seedProductFinishExclusions(obraz.id, [finishes.bejcowanie.id, finishes.lakierowanie.id]);
   await seedProductImage(
     obraz.id,
     STOCK_PHOTO('obrazy-drewniane'),
@@ -826,30 +2003,75 @@ async function seedProducts(
   });
 
   /**
-   * "inne" was deliberately left empty when first seeded (2026-08-24) —
+   * `gry-planszowe` was seeded active (2026-08-28) but with zero products -
+   * a real gap: an active category with nothing in it never actually shows
+   * up in `listAllActiveProducts()`/the homepage grid/search, so the
+   * category existing was not enough on its own. Same `WALL_ART` type and
+   * shape as `obraz` above (flat engraved dąb panel) - the checkered 8×8
+   * playing field itself is a fixed feature of the product, not something
+   * `Design` selection changes; the customer's chosen `Design` decorates the
+   * border/frame instead, and `Personalization` adds an optional engraved
+   * dedication on the back. No `seedProductImage` call - same honest
+   * "stays empty until a real, subject-matched photo exists" precedent the
+   * category itself and "Inne" already use; `ProductCard`/the product page
+   * both render correctly with zero images (see `ProductCard.tsx`).
+   */
+  const szachownica = await upsertProduct({
+    slug: 'szachownica-z-grawerem',
+    typeCode: 'WALL_ART',
+    categoryId: gryPlanszowe.id,
+    namePl: 'Szachownica z grawerem',
+    shortDescPl: 'Dębowa szachownica z grawerowanym wzorem obwódki.',
+    longDescPl:
+      'Drewniana szachownica z grawerowanym wzorem zdobiącym obwódkę planszy. Pole gry ma stały, szachowy układ 8×8 - personalizacji podlega zdobienie wokół planszy oraz opcjonalny grawerowany napis na spodzie, np. dedykacja.',
+    careInstructionsPl: 'Czyścić suchą ściereczką. Unikać długiego kontaktu z wodą.',
+    materialNotesPl: null,
+    seoTitlePl: 'Szachownica z grawerem - dąb',
+    seoDescPl: 'Dębowa szachownica z grawerowanym wzorem obwódki, z możliwością personalizacji.',
+    basePriceGrosze: 12_000,
+    minPriceGrosze: 15_000,
+    productionDaysMin: 5,
+    productionDaysMax: 10,
+    minWidthMm: 300,
+    maxWidthMm: 600,
+    minHeightMm: 300,
+    maxHeightMm: 600,
+  });
+  await seedProductMaterials(szachownica.id, [materials.dab.id, materials.swierk.id, materials.modrzew.id, materials.sosna.id]);
+  await seedProductDesigns(szachownica.id, designs);
+  await seedProductPresetSizes(szachownica.id, { minWidthMm: 300, maxWidthMm: 600, minHeightMm: 300, maxHeightMm: 600 });
+  await seedPersonalizationSpec(szachownica.id, {
+    maxCharacters: 30,
+    maxLines: 1,
+    minTextHeightUm: 6_000,
+    allowedFontIds: [font.id],
+  });
+
+  /**
+   * "inne" was deliberately left empty when first seeded (2026-08-24) -
    * at that time there was nothing real to put there. Its own Polish
    * description ("Projekty nietypowe, wykraczające poza pozostałe
-   * kategorie — wycena indywidualna" — unusual projects, beyond the
+   * kategorie - wycena indywidualna" - unusual projects, beyond the
    * other categories, individually priced) already described exactly
    * this: a customer-supplied custom design, engraved on request. P4's
    * upload pipeline (`CUSTOM_UPLOAD` step, `ARCHITECTURE.md` §13) is
    * what makes that offer real rather than aspirational, so this product
    * fulfills the category's original intent rather than reversing the
-   * "kept empty" decision. `CUSTOM`'s step list has no `DESIGN` step —
-   * the customer's own upload replaces a catalogue design entirely — so
+   * "kept empty" decision. `CUSTOM`'s step list has no `DESIGN` step -
+   * the customer's own upload replaces a catalogue design entirely - so
    * this is the one product in the seed with no `seedProductDesign` call.
    */
   const wlasnyProjekt = await upsertProduct({
     slug: 'wlasny-projekt-z-grawerem',
     typeCode: 'CUSTOM',
-    categoryId: inne.id,
+    categoryId: zamowienieWlasne.id,
     namePl: 'Własny projekt z grawerem',
-    shortDescPl: 'Prześlij swój projekt — wykonamy grawer według Twojego pliku.',
+    shortDescPl: 'Prześlij swój projekt - wykonamy grawer według Twojego pliku.',
     longDescPl:
       'Dla projektów, które nie mieszczą się w pozostałych kategoriach: prześlij własny plik (JPG, PNG, SVG lub PDF), a wykonamy grawer na dębowym elemencie według Twojego wzoru. Każde zgłoszenie sprawdzamy indywidualnie pod kątem wykonalności przed przyjęciem do produkcji.',
     careInstructionsPl: 'Czyścić suchą lub lekko wilgotną ściereczką. Unikać długiego kontaktu z wodą.',
     materialNotesPl: null,
-    seoTitlePl: 'Własny projekt z grawerem — dąb',
+    seoTitlePl: 'Własny projekt z grawerem - dąb',
     seoDescPl: 'Grawer według własnego, przesłanego projektu, wykonanie na indywidualne zamówienie.',
     basePriceGrosze: 15_000,
     minPriceGrosze: 20_000,
@@ -860,7 +2082,8 @@ async function seedProducts(
     minHeightMm: 200,
     maxHeightMm: 1200,
   });
-  await seedProductMaterial(wlasnyProjekt.id, materials.dab.id);
+  await seedProductMaterials(wlasnyProjekt.id, [materials.dab.id, materials.swierk.id, materials.modrzew.id, materials.sosna.id]);
+  await seedProductPresetSizes(wlasnyProjekt.id, { minWidthMm: 200, maxWidthMm: 1200, minHeightMm: 200, maxHeightMm: 1200 });
   await seedProductImage(wlasnyProjekt.id, STOCK_PHOTO('inne'), 'Dębowy element przygotowany pod własny grawerowany projekt');
   await seedPersonalizationSpec(wlasnyProjekt.id, {
     maxCharacters: 40,
@@ -870,7 +2093,7 @@ async function seedProducts(
   });
 
   console.log(
-    'Products: 6 seeded (loft, amulety, gres, panele, obrazy, wlasny-projekt) — "inne" now holds the P4 custom-upload product',
+    'Products: 7 seeded (loft, amulety, gres, panele, obrazy, szachownica, wlasny-projekt) - "inne" now holds the P4 custom-upload product',
   );
 }
 
@@ -953,6 +2176,52 @@ async function seedProductMaterial(productId: string, materialId: string): Promi
   });
 }
 
+/** Plural form for the 2026-08-29 four-wood-species catalogue - every wood product now offers dąb/świerk/modrzew/sosna, not just dąb alone. */
+async function seedProductMaterials(productId: string, materialIds: readonly string[]): Promise<void> {
+  for (const materialId of materialIds) {
+    await seedProductMaterial(productId, materialId);
+  }
+}
+
+/**
+ * S/M/L, computed from the product's own real dimension envelope
+ * (`minWidthMm`/`maxWidthMm`/`minHeightMm`/`maxHeightMm`) rather than
+ * invented numbers - real bounds a product's own `upsertProduct` call
+ * already declared, just surfaced as three concrete pick-one choices
+ * instead of a free-typed range. Skipped entirely for `requiresExactSize`
+ * products (floor elements) - see `ProductPresetSize`'s use in
+ * `Configurator.tsx` for why a fixed list makes no sense there.
+ */
+async function seedProductPresetSizes(
+  productId: string,
+  envelope: { readonly minWidthMm: number; readonly maxWidthMm: number; readonly minHeightMm: number; readonly maxHeightMm: number },
+): Promise<void> {
+  const mid = (min: number, max: number) => Math.round((min + max) / 2);
+  const presets = [
+    { widthMm: envelope.minWidthMm, heightMm: envelope.minHeightMm, labelPl: 'Mały', sortOrder: 0 },
+    {
+      widthMm: mid(envelope.minWidthMm, envelope.maxWidthMm),
+      heightMm: mid(envelope.minHeightMm, envelope.maxHeightMm),
+      labelPl: 'Średni',
+      sortOrder: 1,
+    },
+    { widthMm: envelope.maxWidthMm, heightMm: envelope.maxHeightMm, labelPl: 'Duży', sortOrder: 2 },
+  ];
+  for (const preset of presets) {
+    await prisma.productPresetSize.upsert({
+      where: { productId_widthMm_heightMm: { productId, widthMm: preset.widthMm, heightMm: preset.heightMm } },
+      create: {
+        productId,
+        widthMm: preset.widthMm,
+        heightMm: preset.heightMm,
+        labelPl: `${preset.labelPl} (${formatMmAsCentimetres(preset.widthMm)}×${formatMmAsCentimetres(preset.heightMm)} cm)`,
+        sortOrder: preset.sortOrder,
+      },
+      update: {},
+    });
+  }
+}
+
 async function seedProductDesign(productId: string, designId: string): Promise<void> {
   await prisma.productDesign.upsert({
     where: { productId_designId: { productId, designId } },
@@ -961,10 +2230,17 @@ async function seedProductDesign(productId: string, designId: string): Promise<v
   });
 }
 
+/** Every product that offers a DESIGN step gets the full pattern catalogue - no per-product curation exists yet, so offering all of them is the honest default rather than an arbitrary subset. */
+async function seedProductDesigns(productId: string, designs: readonly SeededDesign[]): Promise<void> {
+  for (const design of designs) {
+    await seedProductDesign(productId, design.id);
+  }
+}
+
 /**
  * ProductImage has no natural unique key beyond its cuid `id`, so a plain
  * `create` would duplicate the row on every rerun. Existence is checked by
- * (productId, url) instead — good enough for one placeholder image per
+ * (productId, url) instead - good enough for one placeholder image per
  * product; a real multi-photo gallery will need a proper key when it exists.
  */
 async function seedProductImage(productId: string, url: string, altPl: string): Promise<void> {
@@ -1033,7 +2309,7 @@ async function seedInstallationVariant(
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (value === undefined || value.length === 0) {
-    throw new Error(`${name} is not set — check your .env`);
+    throw new Error(`${name} is not set - check your .env`);
   }
   return value;
 }

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-/** A responsive card grid. RSC-safe — no `@mui/material` import. */
+/** A responsive card grid. RSC-safe - no `@mui/material` import. */
 export function Grid({ children }: { children: ReactNode }) {
   return (
     <div

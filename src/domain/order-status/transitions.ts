@@ -8,9 +8,9 @@
  *   - §15: `BANK_TRANSFER` orders are created `AWAITING_PAYMENT`,
  *     `CONTACT_ARRANGED` orders are created `NEW`. There is no payment
  *     integration (an explicit "nothing is faked" rule), so nothing but a
- *     human — `staff` — may ever move an order out of `AWAITING_PAYMENT`.
+ *     human - `staff` - may ever move an order out of `AWAITING_PAYMENT`.
  *   - §13.3: "an order containing a CustomerDesign not in APPROVED cannot
- *     leave DESIGN_REVIEW" — except to `CANCELLED`, which must always stay
+ *     leave DESIGN_REVIEW" - except to `CANCELLED`, which must always stay
  *     reachable. A customer stuck behind a design review must still be able
  *     to cancel.
  *
@@ -19,7 +19,7 @@
  * cancel at any earlier stage; a customer may only cancel before their order
  * is confirmed (paid, or otherwise accepted).
  *
- * `fromStatus: null` represents order CREATION — `OrderEvent.fromStatus` is
+ * `fromStatus: null` represents order CREATION - `OrderEvent.fromStatus` is
  * nullable for exactly that event (§6.8).
  */
 
@@ -77,16 +77,16 @@ type Edge = {
 
 const EDGES: readonly Edge[] = [
   // Creation. Always the system: nobody clicks a button to create an order
-  // in status NEW or AWAITING_PAYMENT — checkout does.
+  // in status NEW or AWAITING_PAYMENT - checkout does.
   { from: null, to: 'NEW', actors: ['system'] },
   { from: null, to: 'AWAITING_PAYMENT', actors: ['system'] },
 
   // Entering design review happens automatically as soon as a custom design
-  // is attached — no human decides to route an order there.
+  // is attached - no human decides to route an order there.
   { from: 'NEW', to: 'DESIGN_REVIEW', actors: ['system'] },
   { from: 'AWAITING_PAYMENT', to: 'DESIGN_REVIEW', actors: ['system'] },
 
-  // Confirming an order means "payment received, or otherwise accepted" —
+  // Confirming an order means "payment received, or otherwise accepted" -
   // always a human judgement, staff-only, since nothing here is automated.
   { from: 'NEW', to: 'CONFIRMED', actors: ['staff'] },
   { from: 'AWAITING_PAYMENT', to: 'CONFIRMED', actors: ['staff'] },
@@ -102,7 +102,7 @@ const EDGES: readonly Edge[] = [
   { from: 'FINISHING', to: 'CANCELLED', actors: ['staff'] },
   { from: 'READY_TO_SHIP', to: 'CANCELLED', actors: ['staff'] },
 
-  // Production, staff-only throughout — there is no production automation.
+  // Production, staff-only throughout - there is no production automation.
   { from: 'CONFIRMED', to: 'IN_PRODUCTION', actors: ['staff'] },
   { from: 'IN_PRODUCTION', to: 'FINISHING', actors: ['staff'] },
   { from: 'FINISHING', to: 'READY_TO_SHIP', actors: ['staff'] },
@@ -120,8 +120,8 @@ export function isTerminalOrderStatus(status: OrderStatus): boolean {
 
 /**
  * Checks one proposed transition. Order of checks: does the edge exist at
- * all, then is this actor allowed to use it, then — only for the one edge it
- * applies to — the design-review gate.
+ * all, then is this actor allowed to use it, then - only for the one edge it
+ * applies to - the design-review gate.
  */
 export function checkOrderStatusTransition(
   input: OrderTransitionInput,

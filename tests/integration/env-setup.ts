@@ -1,5 +1,5 @@
 /**
- * Vitest `setupFiles` entry — runs once per test file, before that
+ * Vitest `setupFiles` entry - runs once per test file, before that
  * file's own imports evaluate (Vitest's actual guarantee for
  * `setupFiles`, unlike relying on import-order within a test file,
  * which is fragile). Overrides `process.env.DATABASE_URL` to
@@ -12,14 +12,14 @@
  * instead, with zero dependency-injection changes anywhere. The
  * alternative (threading a Prisma client through every repository
  * function as a parameter) would be a much larger, unrelated refactor
- * of code this project never built with test-injectability in mind —
+ * of code this project never built with test-injectability in mind -
  * out of scope for adding P4. `tests/integration/setup.ts` re-exports
  * that same now-test-pointed singleton as `testPrisma`.
  *
  * Applies globally (`vitest.config.ts`'s `setupFiles`), not just to
- * `tests/integration/` — harmless for `tests/unit/*`, which are pure
+ * `tests/integration/` - harmless for `tests/unit/*`, which are pure
  * and never read `DATABASE_URL` at all. Deliberately does NOT throw when
- * `TEST_DATABASE_URL` is missing — `tests/unit/*` must keep working with
+ * `TEST_DATABASE_URL` is missing - `tests/unit/*` must keep working with
  * no DB configured at all (`vitest.config.ts`'s own "no DB" guarantee);
  * an integration test that actually needs the override will fail on its
  * own first real query instead, with a real Postgres connection error,

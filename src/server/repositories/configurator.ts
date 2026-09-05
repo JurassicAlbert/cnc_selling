@@ -13,7 +13,7 @@ import type {
 /**
  * Everything the configurator's server actions need for one product, in one
  * fetch. Assembled here rather than inline in the Server Action so the
- * Prisma query stays in one reviewable place — `src/server/repositories` is
+ * Prisma query stays in one reviewable place - `src/server/repositories` is
  * already the project's convention for "the only files that query Prisma for
  * page content" (see `docs/HANDOVER.md` §9e).
  */
@@ -62,12 +62,24 @@ export type ConfiguratorProductData = {
   readonly pricing: PricingSettingsRow;
 };
 
+/**
+ * `activeOnly` defaults to `true` (every existing call site's behavior,
+ * unchanged) - pass `false` only from a caller already gated behind
+ * `requireStaffSession()`, e.g. the "Preview as customer" admin feature
+ * previewing a not-yet-published product's configurator exactly as
+ * `/produkt/[slug]/page.tsx` renders it.
+ */
 export async function getConfiguratorProductData(
   slug: string,
+  activeOnly = true,
 ): Promise<ConfiguratorProductData | null> {
   const [product, machine, pricing] = await Promise.all([
     prisma.product.findFirst({
-      where: { slug, isActive: true },
+      // Same `category.isActive` cascade as `products.ts`'s
+      // `findProductBySlug` - a deactivated category (Gres/Panele
+      // podłogowe, 2026-08-28) must block pricing/checkout for its
+      // products too, not just hide them from listings.
+      where: activeOnly ? { slug, isActive: true, category: { isActive: true } } : { slug },
       select: {
         id: true,
         namePl: true,
@@ -92,6 +104,15 @@ export async function getConfiguratorProductData(
           },
         },
         materials: {
+          // `docs/REVIEW-DETAILED.md` BUG-03. Without an ORDER BY, Postgres
+          // makes no promise about row order, and the configurator takes
+          // `[0]` as its default material - so the default (and therefore
+          // the price, via `priceFactorBp`) could differ between two loads
+          // of the same page, surfacing later as an unexplained
+          // PRICE_CHANGED at checkout. `sortOrder` is what staff actually
+          // control; `slug` breaks ties so the result is total, not merely
+          // partial.
+          orderBy: [{ material: { sortOrder: 'asc' } }, { material: { slug: 'asc' } }],
           select: {
             priceFactorBp: true,
             material: {
@@ -114,6 +135,7 @@ export async function getConfiguratorProductData(
                         id: true,
                         namePl: true,
                         isAvailable: true,
+                        imageUrl: true,
                         pricePerM2Grosze: true,
                         setupFeeGrosze: true,
                       },
@@ -125,6 +147,12 @@ export async function getConfiguratorProductData(
           },
         },
         designs: {
+          // Same reasoning as `materials` above, and it matters more here:
+          // `machiningMilliMinutesPerM2` and `surchargeGrosze` are both
+          // pricing inputs, so an unordered default design meant the same
+          // visible configuration could genuinely cost two different
+          // amounts on two page loads.
+          orderBy: [{ design: { sortOrder: 'asc' } }, { design: { code: 'asc' } }],
           select: {
             surchargeGrosze: true,
             design: {
@@ -160,6 +188,17 @@ export async function getConfiguratorProductData(
             priceFactorBp: true,
           },
         },
+        presetSizes: {
+          select: { id: true, widthMm: true, heightMm: true, labelPl: true },
+          orderBy: { sortOrder: 'asc' },
+        },
+        // 2026-08-29: which finishes are excluded for THIS product even when
+        // the material otherwise allows them (`ProductFinishExclusion`'s own
+        // schema comment - e.g. bejcowanie/lakierowanie off by default for
+        // the wall-art "Obrazy" product). A `Set` of ids, filtered against
+        // below - never trusted as "the only finishes", since a material's
+        // own `MaterialFinish` compatibility still applies first.
+        finishExclusions: { select: { finishId: true } },
       },
     }),
     prisma.machineSettings.findUnique({ where: { id: 1 } }),
@@ -169,6 +208,8 @@ export async function getConfiguratorProductData(
   if (product === null || machine === null || pricing === null) {
     return null;
   }
+
+  const excludedFinishIds = new Set(product.finishExclusions.map((row) => row.finishId));
 
   // A second round trip, deliberately: `allowedFontIds` only exists once we
   // have `product.personalization`, so this cannot join into the query
@@ -208,10 +249,12 @@ export async function getConfiguratorProductData(
 
   const finishesById = new Map(
     product.materials.flatMap(({ material }) =>
-      material.finishes.map(({ finish }) => [
-        finish.id,
-        { pricePerM2Grosze: finish.pricePerM2Grosze, setupFeeGrosze: finish.setupFeeGrosze },
-      ]),
+      material.finishes
+        .filter(({ finish }) => !excludedFinishIds.has(finish.id))
+        .map(({ finish }) => [
+          finish.id,
+          { pricePerM2Grosze: finish.pricePerM2Grosze, setupFeeGrosze: finish.setupFeeGrosze },
+        ]),
     ),
   );
 
@@ -274,11 +317,14 @@ export async function getConfiguratorProductData(
       namePl: material.namePl,
       isAvailable: material.isAvailable,
       imageUrl: material.imageUrl,
-      finishes: material.finishes.map(({ finish }) => ({
-        id: finish.id,
-        namePl: finish.namePl,
-        isAvailable: finish.isAvailable,
-      })),
+      finishes: material.finishes
+        .filter(({ finish }) => !excludedFinishIds.has(finish.id))
+        .map(({ finish }) => ({
+          id: finish.id,
+          namePl: finish.namePl,
+          isAvailable: finish.isAvailable,
+          imageUrl: finish.imageUrl,
+        })),
     })),
     designs: product.designs.map(({ design }) => ({
       id: design.id,
@@ -301,6 +347,12 @@ export async function getConfiguratorProductData(
       maxThicknessMm: variant.maxThicknessMm,
     })),
     fonts: fonts.map((font) => ({ id: font.id, namePl: font.namePl, fileUrl: font.fileUrl })),
+    presetSizes: product.presetSizes.map((preset) => ({
+      id: preset.id,
+      widthMm: preset.widthMm,
+      heightMm: preset.heightMm,
+      labelPl: preset.labelPl,
+    })),
   };
 
   return {

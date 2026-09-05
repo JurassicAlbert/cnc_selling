@@ -1,4 +1,4 @@
-// CNC Selling — data model.
+// CNC Selling - data model.
 //
 // Design notes that govern this whole file (docs/ARCHITECTURE.md §6.1,
 // docs/HANDOVER.md §4). Breaking one of these is a bug, not a style choice:
@@ -14,7 +14,7 @@
 //   * Machining time is INTEGER THOUSANDTHS OF A MINUTE per m²
 //     (`machiningMilliMinutesPerM2`): 2500 = 2.5 min/m².
 //   * `…Pl` marks a column holding customer-visible Polish copy. Everything
-//     else — identifiers, enums, comments — is English.
+//     else - identifiers, enums, comments - is English.
 //
 // The domain layer in `src/domain` owns the rules; this file owns storage.
 // `src/server/mapping` is the only place allowed to convert between them, and
@@ -40,7 +40,7 @@ datasource db {
 /// diverged from the original brief's five assumed types. Neither needed a
 /// structural rework: LOFT_FURNITURE reuses TABLE_TOP's exact step list (the
 /// steel base is a bought-in accessory, described in copy for now rather than
-/// a modelled component — see docs/HANDOVER.md for why), and JEWELRY drops
+/// a modelled component - see docs/HANDOVER.md for why), and JEWELRY drops
 /// THICKNESS/FINISH since a small engraved blank has neither. See §5's
 /// updated step table in docs/ARCHITECTURE.md.
 enum ProductTypeCode {
@@ -54,7 +54,7 @@ enum ProductTypeCode {
 }
 
 /// Real joinery techniques for the "joined panel" large-format tier
-/// (`Product.supportsPanelJoinery`) — see that field's comment. Only one
+/// (`Product.supportsPanelJoinery`) - see that field's comment. Only one
 /// member today: Yato-yane (a grooved-edge spline/loose-tongue joint), the
 /// one of the owner's three candidate techniques that actually joins two
 /// separate flat panels edge-to-edge into one larger surface and is
@@ -67,7 +67,7 @@ enum JoineryTechniqueCode {
 
 model Category {
   id         String    @id @default(cuid())
-  slug       String    @unique // "obrazy-drewniane" — transliterated, never percent-encoded
+  slug       String    @unique // "obrazy-drewniane" - transliterated, never percent-encoded
   namePl     String
   descPl     String    @db.Text
   seoTitlePl String
@@ -82,7 +82,7 @@ model Category {
   @@index([isActive, sortOrder])
 }
 
-/// Scaffold only, added 2026-08-25 at the owner's request — real
+/// Scaffold only, added 2026-08-25 at the owner's request - real
 /// infrastructure, zero seeded rows. No admin panel exists yet (P7), so a
 /// real post today means a manual DB insert until one does; the same
 /// honest limitation as every other "prepared, not yet wired to an
@@ -117,7 +117,7 @@ model Product {
   longDescPl         String          @db.Text
   careInstructionsPl String          @db.Text
   installationInfoPl String?         @db.Text
-  /// "Blat. Nogi nie są w zestawie." — rendered on the product page, in the
+  /// "Blat. Nogi nie są w zestawie." - rendered on the product page, in the
   /// configurator summary AND in the order confirmation (§12).
   materialNotesPl    String?         @db.Text
   seoTitlePl         String
@@ -126,11 +126,27 @@ model Product {
   /// Floor price before any component is added.
   basePriceGrosze   Int
   /// The clamp: never sold below this, whatever the components add up to.
+  /// **NET, and an internal figure** - never show it to a customer. It was
+  /// being rendered as the catalogue's "od X zł" until 2026-08-31, which
+  /// understated every price by the VAT rate and, for several products, was
+  /// below anything that could actually be built. Use
+  /// `startingPriceGrossGrosze` for anything customer-facing.
   minPriceGrosze    Int
+  /// The advertised "od X zł" - the GROSS price of the cheapest
+  /// configuration a customer could actually buy, computed by
+  /// `server/pricing/starting-price.ts` and refreshed whenever anything
+  /// that can move a price changes.
+  ///
+  /// Stored rather than computed per request because a category page
+  /// renders many products and each computation needs that product's whole
+  /// option graph. `null` means "genuinely not knowable yet" - a `CUSTOM`
+  /// product cannot be priced before the customer's own artwork exists -
+  /// and every caller must then render no price at all, never zero.
+  startingPriceGrossGrosze Int?
   productionDaysMin Int
   productionDaysMax Int
 
-  // Dimension envelope — feeds domain/dimensions DimensionEnvelope.
+  // Dimension envelope - feeds domain/dimensions DimensionEnvelope.
   minWidthMm        Int
   maxWidthMm        Int
   minHeightMm       Int
@@ -145,14 +161,14 @@ model Product {
   requiresExactSize Boolean @default(false)
 
   /// Large-format tier: whether two-or-more of this product's normal-size
-  /// panels can be joined into one larger piece. Real but inert today — no
+  /// panels can be joined into one larger piece. Real but inert today - no
   /// server action, resolver, or UI reads this field yet (see
   /// `src/domain/joinery`). Default false on every product, same
   /// "modelled, not yet enforced" precedent as
   /// MachineSettings.jointAllowanceMm and THICKNESS_EXCEEDS_MACHINE.
   supportsPanelJoinery Boolean               @default(false)
   joineryTechniqueCode JoineryTechniqueCode?
-  /// The larger envelope that applies once panels are joined — distinct
+  /// The larger envelope that applies once panels are joined - distinct
   /// from maxWidthMm/maxHeightMm above, which stay the single-panel limit.
   joinedMaxWidthMm     Int?
   joinedMaxHeightMm    Int?
@@ -162,14 +178,18 @@ model Product {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  presetSizes     ProductPresetSize[]
-  materials       ProductMaterial[]
-  designs         ProductDesign[]
-  thicknesses     ProductThickness[]
-  images          ProductImage[]
-  personalization PersonalizationSpec?
-  installVariants InstallationVariant[]
-  configurations  Configuration[]
+  presetSizes      ProductPresetSize[]
+  materials        ProductMaterial[]
+  designs          ProductDesign[]
+  thicknesses      ProductThickness[]
+  images           ProductImage[]
+  personalization  PersonalizationSpec?
+  installVariants  InstallationVariant[]
+  configurations   Configuration[]
+  finishExclusions ProductFinishExclusion[]
+  /// P9 phase 4: membership in a `ProductCollection` ("ready-made" curated
+  /// grouping) - unrelated to `DesignCollection`, which groups *patterns*.
+  collectionItems  ProductCollectionItem[]
 
   @@index([categoryId, isActive])
   @@index([typeCode, isActive])
@@ -238,10 +258,17 @@ model Material {
   characteristicsPl String         @db.Text
   imageUrl          String
   pricePerM2Grosze  Int
+  /// 2026-08-29, owner request: real shipping weight, computed instead of
+  /// guessed, needs a real material density. Sourced from standard,
+  /// published wood-density reference values (seasoned/kiln-dried, ~12%
+  /// moisture) and porcelain-stoneware (gres) reference density - see
+  /// `prisma/seed.ts`'s `MATERIAL_SEEDS` for the actual figures used and
+  /// their sourcing note. Never a business-specific fabricated number.
+  densityKgPerM3    Int
   isAvailable       Boolean        @default(true)
   sortOrder         Int            @default(0)
 
-  // Production envelope — limits module size independently of the machine.
+  // Production envelope - limits module size independently of the machine.
   maxSheetWidthMm    Int
   maxSheetHeightMm   Int
   minLineWidthUm     Int
@@ -261,7 +288,56 @@ model Material {
   designs        DesignMaterial[]
   configurations Configuration[]
 
+  stock MaterialStock[]
+
   @@index([isAvailable, sortOrder])
+}
+
+/// A batch of physical boards actually held in the workshop - the owner's
+/// 2026-09-04 request to "save materials what we have on magazine".
+///
+/// This is the first place the shop records what it PAID, as opposed to what
+/// it charges (`Material.pricePerM2Grosze`, which drives `domain/pricing`).
+/// The two together are what make a minimum viable price computable at all;
+/// see `src/domain/stock/board.ts`.
+///
+/// One row is one batch of identically sized boards, not one board, because
+/// that is how they are bought and how a delivery note reads. `quantity` is
+/// the count still on the shelf.
+model MaterialStock {
+  id         String   @id @default(cuid())
+  materialId String
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  /// The board as delivered. Integer millimetres, like every other dimension
+  /// in this schema.
+  widthMm     Int
+  heightMm    Int
+  thicknessMm Int
+
+  /// How many boards of this exact size are still held.
+  quantity Int @default(0)
+
+  /// Net price for ONE board of these dimensions, in grosze. Per board rather
+  /// than per batch so the figure survives partial use: consuming three of
+  /// five boards must not change what each one cost.
+  purchasePriceGrosze Int
+
+  /// Where it came from, so a restock does not start with a search. Free text
+  /// rather than a Supplier table: there is no second use for a supplier
+  /// record yet, and inventing one now would be a model without a caller.
+  supplierNamePl String?
+  supplierUrl    String?
+
+  /// Delivery note number, shelf, batch quirks. Staff-facing only.
+  notePl String? @db.Text
+
+  purchasedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([materialId])
+  @@index([purchasedAt])
 }
 
 /// Compatibility: which materials are offered for which product, and the
@@ -314,8 +390,9 @@ model Finish {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  materials      MaterialFinish[]
-  configurations Configuration[]
+  materials         MaterialFinish[]
+  configurations    Configuration[]
+  productExclusions ProductFinishExclusion[]
 
   @@index([isAvailable, sortOrder])
 }
@@ -328,6 +405,26 @@ model MaterialFinish {
   finish     Finish   @relation(fields: [finishId], references: [id], onDelete: Cascade)
 
   @@id([materialId, finishId])
+  @@index([finishId])
+}
+
+/// 2026-08-29: `MaterialFinish` is a per-material rule ("oak may be
+/// oiled/stained/varnished") - real, but not enough on its own once two
+/// products share a material yet should offer different finishes (owner
+/// request: bejcowanie/lakierowanie stay off by default for the "Obrazy"
+/// wall-art product even though dąb itself supports them elsewhere). A row
+/// here means "this finish is excluded for this product" even when the
+/// material otherwise allows it - resolved as an extra filter on top of
+/// `MaterialFinish`, never instead of it. No admin UI yet (seeded directly);
+/// a real gap, same "establishes the pattern, not a full sweep" scoping
+/// this session's admin-polish passes already used elsewhere.
+model ProductFinishExclusion {
+  productId String
+  finishId  String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  finish    Finish  @relation(fields: [finishId], references: [id], onDelete: Cascade)
+
+  @@id([productId, finishId])
   @@index([finishId])
 }
 
@@ -374,6 +471,8 @@ model Design {
   previewUrl   String
   isActive     Boolean           @default(true)
   sortOrder    Int               @default(0)
+  /// P9 phase 2: admin-curated highlight, shown first/prominently on the real pattern-browsing page. Purely presentational - no pricing or availability meaning.
+  featured     Boolean           @default(false)
 
   // Production metadata.
   /// The width at which the minimums below are declared. Producing the design
@@ -393,7 +492,7 @@ model Design {
   machiningMilliMinutesPerM2 Int
 
   // Rights (brief §12). Only APPROVED_COMMERCIAL and PUBLIC_DOMAIN are ever
-  // selectable in the configurator — enforced by a query filter, not by
+  // selectable in the configurator - enforced by a query filter, not by
   // discipline. A new design deliberately defaults to non-sellable.
   rightsStatus    DesignRightsStatus @default(REQUIRES_PERMISSION)
   sourceArtist    String?
@@ -410,6 +509,7 @@ model Design {
   /// Optional narrowing. No rows means "every material the product allows".
   materials      DesignMaterial[]
   configurations Configuration[]
+  favoritedBy    DesignFavorite[]
 
   @@index([isActive, rightsStatus])
   @@index([collectionId])
@@ -426,6 +526,36 @@ model ProductDesign {
   @@index([designId])
 }
 
+/// P9 phase 4: curated "ready-made" groupings of independently-created
+/// products - deliberately a NEW, separate model from `DesignCollection`
+/// above, which groups *patterns* (e.g. "linoryt series"), not sellable
+/// products. A product can belong to more than one collection, or none.
+model ProductCollection {
+  id        String                  @id @default(cuid())
+  slug      String                  @unique
+  namePl    String
+  descPl    String                  @db.Text
+  imageUrl  String?
+  sortOrder Int                     @default(0)
+  isActive  Boolean                 @default(true)
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  items     ProductCollectionItem[]
+
+  @@index([isActive, sortOrder])
+}
+
+model ProductCollectionItem {
+  collectionId String
+  productId    String
+  sortOrder    Int               @default(0)
+  collection   ProductCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  product      Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, productId])
+  @@index([productId])
+}
+
 model DesignMaterial {
   designId   String
   materialId String
@@ -434,6 +564,26 @@ model DesignMaterial {
 
   @@id([designId, materialId])
   @@index([materialId])
+}
+
+/// P9 phase 3: links to free/external pattern sources (e.g. 3axis.co) shown
+/// on the customer-facing pattern-browsing page. Never our own content - the
+/// frontend must always label these as external, `target="_blank"`. Admin
+/// CRUD only, no delete (isActive toggle, same as every other catalogue
+/// entity) - see `Faq` for the identical shape/precedent.
+model ExternalPatternResource {
+  id          String   @id @default(cuid())
+  namePl      String
+  url         String
+  descPl      String?  @db.Text
+  /// Short label naming the source site, shown as a badge next to the link (e.g. "3axis.co").
+  sourceLabel String
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
 }
 
 // ---------------------------------------------------------------------------
@@ -480,7 +630,7 @@ model PersonalizationSpec {
   maxCharacters      Int      @default(40)
   maxLines           Int      @default(2)
   /// Product-level floor. The effective minimum is the STRICTER of this and
-  /// the chosen material's `minTextHeightUm` — resolved in the mapper.
+  /// the chosen material's `minTextHeightUm` - resolved in the mapper.
   minTextHeightUm    Int      @default(6000)
   pricePerCharGrosze Int      @default(0)
   flatFeeGrosze      Int      @default(0)
@@ -492,7 +642,7 @@ model PersonalizationSpec {
 /// Decorative faces frequently ship Basic Latin only. A customer types
 /// „Michał", the preview silently substitutes a fallback glyph, and the
 /// mistake becomes permanent on a finished oak tabletop that cannot be re-run.
-/// So coverage is parsed from the font's cmap table at seed time and stored —
+/// So coverage is parsed from the font's cmap table at seed time and stored -
 /// never assumed from the font's name or its declared language support.
 model Font {
   id                       String  @id @default(cuid())
@@ -508,7 +658,7 @@ model Font {
   /// code points. The mapper expands them into the Set the domain expects.
   coveredCodePointRanges   Json
   /// Denormalised convenience flag for admin listing ("does this face have
-  /// ą ć ę ł ń ó ś ź ż at all?"). NEVER used for validation — the ranges are.
+  /// ą ć ę ł ń ó ś ź ż at all?"). NEVER used for validation - the ranges are.
   supportsPolishDiacritics Boolean @default(false)
   isActive                 Boolean @default(true)
   sortOrder                Int     @default(0)
@@ -543,7 +693,7 @@ model PricingSettings {
   vatRateBp              Int       @default(2300)
   isActive               Boolean   @default(false)
   publishedAt            DateTime?
-  /// Who published it and why — this table changes every price on the site.
+  /// Who published it and why - this table changes every price on the site.
   publishedByEmail       String?
   notePl                 String?   @db.Text
   createdAt              DateTime  @default(now())
@@ -561,10 +711,10 @@ model PricingSettings {
 /// D7 resolved 2026-08-23 with the owner: usableWidthMm 600, usableHeightMm
 /// 500 (the machine can feed material either way, so which axis is which
 /// does not matter), minModuleMm kept at the original 150 assumption, and
-/// maxWorkpieceThicknessMm 100 — the machine's Z-axis limit, a hardware
+/// maxWorkpieceThicknessMm 100 - the machine's Z-axis limit, a hardware
 /// capability distinct from `ProductThickness` or any material's own sheet
 /// limits. Recorded here for the seed script (P2); not yet enforced by any
-/// domain rule — `domain/feasibility` has no THICKNESS_EXCEEDS_MACHINE check
+/// domain rule - `domain/feasibility` has no THICKNESS_EXCEEDS_MACHINE check
 /// yet, so a product configured thicker than this is not currently rejected.
 model MachineSettings {
   id                      Int      @id @default(1)
@@ -572,7 +722,7 @@ model MachineSettings {
   usableHeightMm          Int
   minModuleMm             Int
   /// The machine's Z-axis limit. Distinct from a material's own sheet or
-  /// thickness limits — this one is a hardware ceiling that applies no
+  /// thickness limits - this one is a hardware ceiling that applies no
   /// matter what is being cut.
   maxWorkpieceThicknessMm Int
   /// Allowance per joint, reserved for the future production pipeline.
@@ -643,14 +793,25 @@ model Cart {
   user         User?      @relation(fields: [userId], references: [id])
   sessionToken String?    @unique
   items        CartItem[]
+
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 }
 
 /// Two different configurations of the same product are two CartItem rows
-/// pointing at two Configuration rows — the brief's edge case is satisfied
-/// structurally. "Duplicate" deep-copies the Configuration; it does not
-/// increment quantity.
+/// pointing at two Configuration rows - the brief's edge case is satisfied
+/// structurally.
+///
+/// Two IDENTICAL configurations are never two rows. Enforced by
+/// `@@unique([cartId, configurationSignature])` below and by every write
+/// path in `server/operations/cart.ts` (add, duplicate, edit) merging into
+/// the existing line instead of creating a twin.
+///
+/// This comment used to say the opposite of that last part - "Duplicate
+/// deep-copies the Configuration; it does not increment quantity" - which
+/// was a deliberate decision the owner reversed on 2026-08-30: "duplicate
+/// the same product in basket like separate product since its the same only
+/// the quantity should change." Left recorded rather than quietly swapped.
 model CartItem {
   id              String        @id @default(cuid())
   cartId          String
@@ -659,7 +820,18 @@ model CartItem {
   configuration   Configuration @relation(fields: [configurationId], references: [id])
   quantity        Int           @default(1)
   addedAt         DateTime      @default(now())
-
+  /// 2026-08-30 (`docs/AUDIT-2026-08-30.md` P1-4): the line's own identity
+  /// - `domain/cart/signature.ts` builds it from exactly the selections a
+  /// customer makes, and that file's header explains which and why. The
+  /// unique index below is what makes "adding the identical thing twice
+  /// bumps the quantity" true even for two genuinely concurrent requests;
+  /// a read-then-create check alone would race, which is how the
+  /// double-click duplicate got in. Rows created before this column exists
+  /// carry a `legacy:` value derived from their own configuration id -
+  /// unique by construction, and honestly not a real signature, so they
+  /// simply never merge with anything.
+  configurationSignature String
+  @@unique([cartId, configurationSignature])
   @@index([cartId])
 }
 
@@ -683,6 +855,11 @@ enum OrderStatus {
 enum PaymentMethod {
   BANK_TRANSFER
   CONTACT_ARRANGED
+  /// P9 phase 6: real DB row exists (`PaymentMethodConfig`), `isConnected: false`
+  /// - visible to admins, never selectable at checkout. See that model's comment.
+  PRZELEWY24
+  CARD
+  PAYPAL
 }
 
 enum PaymentStatus {
@@ -690,23 +867,137 @@ enum PaymentStatus {
   UNDERPAID
   PAID
   REFUNDED
+  /// P9 phase 6 additions - additive only, no existing value removed or
+  /// repurposed. None of the two real payment methods' own tested logic
+  /// (`applyMarkOrderPaid` etc.) currently produces these; they exist for
+  /// a real future provider integration's honest lifecycle, not simulated.
+  PENDING
+  FAILED
+  CANCELLED
+}
+
+/// P9 phase 6: real, admin-managed payment method configuration -
+/// `isConnected: false` means "a real row, visible to staff, but never
+/// selectable at checkout" - the honest "not yet integrated" state
+/// (docs/ARCHITECTURE.md §14's `PaymentProvider` interface has no
+/// implementation yet for anything beyond bank transfer / contact-
+/// arranged). Deliberately NOT admin-editable via the form - flipping it
+/// to `true` would let an admin silently "enable" a payment method with no
+/// real integration behind it, exactly what §15's "no fake payment" rule
+/// forbids. Only ever set `true` by real code once a real provider exists.
+model PaymentMethodConfig {
+  id          String        @id @default(cuid())
+  namePl      String
+  descPl      String        @db.Text
+  provider    PaymentMethod
+  isConnected Boolean       @default(false)
+  isActive    Boolean       @default(true)
+  sortOrder   Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  orders      Order[]
+
+  @@index([isActive, isConnected, sortOrder])
+}
+
+/// P9 phase 5: real, admin-managed delivery/shipping methods - replaces the
+/// single hardcoded `StoreSettings.shippingFlatRateGrosze` at checkout.
+/// That field stays as-is for now (still used as the fallback when no
+/// method row exists yet, e.g. right after this migration on a fresh DB)
+/// but a real checkout always prefers a real `DeliveryMethod` row.
+model DeliveryMethod {
+  id                          String   @id @default(cuid())
+  namePl                      String
+  descPl                      String   @db.Text
+  priceGrosze                 Int
+  /// Order subtotal (net) at or above which this method becomes free. `null` = never free.
+  freeShippingThresholdGrosze Int?
+  estimatedDaysMin            Int
+  estimatedDaysMax            Int
+  carrier                     String?
+  trackingAvailable           Boolean  @default(false)
+  /// 2026-08-29: does this method need a real pickup point picked at
+  /// checkout (a parcel locker, a courier's own pickup point) rather than
+  /// just a home address? `server/delivery/pickup-points.ts` is the
+  /// (honestly static, non-live) dataset the checkout picker searches -
+  /// see that file's own header comment.
+  requiresPickupPoint         Boolean  @default(false)
+  isActive                    Boolean  @default(true)
+  sortOrder                   Int      @default(0)
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+  orders                      Order[]
+  /// 2026-08-29, owner request: "cena powinna być przeliczana na podstawie
+  /// wielkości i wagi produktu zgodnie z danymi cenowymi wybranego kuriera"
+  /// - real weight-tier pricing, sourced from each carrier's own real,
+  /// published price list (see `prisma/seed.ts`'s `DELIVERY_WEIGHT_TIER_SEEDS`
+  /// for the exact source URL cited per method). Empty for a method with no
+  /// real published tiers yet (e.g. `Odbiór osobisty`, or a carrier row
+  /// prepared but not yet priced) - `priceGrosze`/`freeShippingThresholdGrosze`
+  /// above stay the fallback flat rate for exactly that case.
+  weightTiers                  DeliveryWeightTier[]
+
+  @@index([isActive, sortOrder])
+}
+
+/// One weight bracket of one real carrier's own published price list -
+/// `computeShippingGrosze` (`domain/checkout/delivery.ts`) picks the
+/// cheapest tier whose `maxWeightGrams` is at or above the cart's real
+/// total weight (`domain/shipping/weight.ts`, computed from each item's
+/// real dimensions × its material's real density - never a guessed
+/// per-product number). `maxWidthMm`/`maxHeightMm`/`maxDepthMm` are only
+/// set for a genuine physical-locker constraint (InPost Paczkomat's real
+/// door/compartment dimensions) - `null` for a courier with no such limit
+/// in its own published data.
+model DeliveryWeightTier {
+  id               String         @id @default(cuid())
+  deliveryMethodId String
+  deliveryMethod   DeliveryMethod @relation(fields: [deliveryMethodId], references: [id], onDelete: Cascade)
+  labelPl          String
+  maxWeightGrams   Int
+  priceGrosze      Int
+  maxWidthMm       Int?
+  maxHeightMm      Int?
+  maxDepthMm       Int?
+  sortOrder        Int            @default(0)
+
+  @@index([deliveryMethodId, sortOrder])
 }
 
 model Order {
-  id            String        @id @default(cuid())
-  orderNumber   String        @unique // "2026/08/0042" — from a sequence, never count()+1
-  userId        String?
-  user          User?         @relation(fields: [userId], references: [id])
+  id                    String               @id @default(cuid())
+  orderNumber           String               @unique // "2026/08/0042" - from a sequence, never count()+1
+  userId                String?
+  user                  User?                @relation(fields: [userId], references: [id])
   /// Guest order lookup. 32 random bytes, compared in constant time.
-  accessToken   String        @unique
-  status        OrderStatus   @default(NEW)
-  paymentMethod PaymentMethod
-  paymentStatus PaymentStatus @default(AWAITING)
+  accessToken           String               @unique
+  /// 2026-08-30 (`docs/AUDIT-2026-08-30.md` P0-2): one checkout render's
+  /// own submission id. Minted server-side per render of
+  /// `/koszyk/zamowienie` and carried in a hidden field, so a double click,
+  /// a retried request after a dropped connection, or a back-and-resubmit
+  /// all arrive carrying the SAME value - the `@unique` here is what makes
+  /// the second one return the first one's order instead of creating a
+  /// second real order for one purchase. Nullable only for rows written
+  /// before this column existed; every new order sets it.
+  idempotencyKey        String?              @unique
+  status                OrderStatus          @default(NEW)
+  paymentMethod         PaymentMethod
+  paymentStatus         PaymentStatus        @default(AWAITING)
+  /// P9 phase 6: which real `PaymentMethodConfig` row was actually shown/
+  /// chosen - traceability only. `paymentMethod` above stays the field the
+  /// two real methods' own tested logic (`applyMarkOrderPaid` etc.) reads;
+  /// this is additive, never a replacement.
+  paymentMethodConfigId String?
+  paymentMethodConfig   PaymentMethodConfig? @relation(fields: [paymentMethodConfigId], references: [id])
 
   // Buyer data is CAPTURED, never re-read from the user profile: a customer
   // who moves house must not retroactively change where an old order went.
   email       String
-  phone       String?
+  /// 2026-08-29, owner request: required, not optional - a status/shipment
+  /// update needs a real contact channel beyond email. Historical rows from
+  /// before this requirement backfill to `''` (migration), distinguishable
+  /// from a real number, never `null`.
+  phone       String
   firstName   String
   lastName    String
   companyName String?
@@ -722,6 +1013,30 @@ model Order {
   totalGrossGrosze  Int
   currency          String @default("PLN")
 
+  /// P9 phase 5: which real `DeliveryMethod` row was chosen, nullable
+  /// because the row can be deactivated later - the name/price actually
+  /// charged are snapshotted below (`deliveryMethodNamePl`,
+  /// `shippingGrosze` above), never re-read live, same discipline as
+  /// `OrderItem.snapshot`.
+  deliveryMethodId     String?
+  deliveryMethod       DeliveryMethod? @relation(fields: [deliveryMethodId], references: [id])
+  deliveryMethodNamePl String
+  /// 2026-08-29: set only when `deliveryMethod.requiresPickupPoint` was
+  /// true at checkout - the id/label of the point chosen from the static
+  /// dataset in `server/delivery/pickup-points.ts`, snapshotted the same
+  /// way `deliveryMethodNamePl` is (that dataset could change shape later;
+  /// what a customer actually picked must never move under them).
+  pickupPointId        String?
+  pickupPointLabel     String?
+  /// 2026-08-29, owner request: the "shipping form" is really two different
+  /// audiences - instructions FOR the courier (gate code, "leave with
+  /// neighbour", floor number) vs a note FOR US about the shipment (nothing
+  /// to do with production). Both customer-submitted at checkout, both
+  /// optional, kept as two separate columns rather than one so staff and a
+  /// courier label print never accidentally show the other's note.
+  courierNotePl           String? @db.Text
+  internalShipmentNotePl  String? @db.Text
+
   // Acknowledgements, stored verbatim: a consent record is only evidence if
   // it captures WHAT was agreed to. Custom-made goods are exempt from the
   // 14-day withdrawal right (art. 38 pkt 3) and that must be acknowledged.
@@ -734,8 +1049,17 @@ model Order {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  items  OrderItem[]
-  events OrderEvent[]
+  items           OrderItem[]
+  events          OrderEvent[]
+  /// At most one - `Review.orderId` is `@unique`. A real customer testimonial
+  /// requires a genuine `COMPLETED` order behind it (§16A.1 module 9: "no
+  /// facility to author a testimonial in a customer's name").
+  reviews         Review[]
+  /// P9 phase 7: one order → one package (real reality here, not a
+  /// modelling shortcut) - manually managed, never a live carrier API.
+  shipment        Shipment?
+  /// P9 phase 8: support requests a customer filed about this order.
+  supportRequests SupportRequest[]
 
   @@index([userId])
   @@index([status])
@@ -749,7 +1073,7 @@ model OrderItem {
   quantity        Int
   unitNetGrosze   Int
   unitGrossGrosze Int
-  /// VAT is computed on the UNIT price then multiplied by quantity — not on
+  /// VAT is computed on the UNIT price then multiplied by quantity - not on
   /// the line total. The two differ by up to a grosz and invoices use the
   /// unit form.
   vatRateBp       Int    @default(2300)
@@ -760,7 +1084,7 @@ model OrderItem {
   /// FULL immutable snapshot (§6.8). Product name, design code, material,
   /// dimensions, finish, variant, personalization, module layout, the whole
   /// PriceBreakdown and the pricing version. Rendering an order NEVER joins
-  /// to a live catalogue row — a test mutates every catalogue row after an
+  /// to a live catalogue row - a test mutates every catalogue row after an
   /// order and asserts the rendered order is unchanged.
   snapshot        Json
   snapshotVersion Int  @default(1)
@@ -776,6 +1100,108 @@ model OrderItem {
 
   @@index([orderId])
   @@index([customerDesignId])
+}
+
+enum ShipmentStatus {
+  PREPARING
+  SHIPPED
+  IN_TRANSIT
+  DELIVERED
+  ISSUE
+  RETURNED
+}
+
+/// P9 phase 7: manually-managed shipment tracking - one order, one package
+/// (real reality, not a modelling shortcut). No carrier API is integrated
+/// anywhere in this project; every field here is set by a staff member
+/// looking at a real package, not fetched live. `trackingNumber` may still
+/// be given to the customer as a real reference to check on the carrier's
+/// own site - this project just never claims to poll it (§9/§15's "no
+/// fake carrier tracking" rule).
+model Shipment {
+  id      String @id @default(cuid())
+  orderId String @unique
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  carrier        String?
+  trackingNumber String?
+  status         ShipmentStatus @default(PREPARING)
+
+  shippedAt           DateTime?
+  estimatedDeliveryAt DateTime?
+  deliveredAt         DateTime?
+
+  /// Staff-only - a real problem (damaged in transit, lost, address issue).
+  issueDescriptionPl String? @db.Text
+  /// Staff-only - how it was actually resolved (reshipped, refunded, etc.).
+  issueResolutionPl  String? @db.Text
+  /// Staff-only, never shown to the customer.
+  internalNotesPl    String? @db.Text
+  /// Shown to the customer alongside the status - e.g. "paczka czeka w punkcie odbioru".
+  customerNotesPl    String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// P9 phase 8: support requests specifically about this shipment (e.g. "where is my package").
+  supportRequests SupportRequest[]
+}
+
+enum SupportRequestStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+/// P9 phase 8: a real, internal DB-driven support/contact workflow - no
+/// fake external communication integration (no real email/chat/ticketing
+/// system wired up here, §9/§15). A staff member reads and answers these
+/// through the panel; `email` is how they'd actually reply, outside this
+/// system, same honest limitation already documented for the mailer.
+model SupportRequest {
+  id String @id @default(cuid())
+
+  /// Set when filed by a logged-in customer; null for a guest submission.
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id])
+  /// Optional context - a request can stand alone, or be about one real order/shipment.
+  orderId    String?
+  order      Order?    @relation(fields: [orderId], references: [id])
+  shipmentId String?
+  shipment   Shipment? @relation(fields: [shipmentId], references: [id])
+
+  /// Always captured, even for a logged-in user - same "capture, don't
+  /// re-read from the profile" discipline as `Order`'s own buyer fields.
+  email     String
+  namePl    String?
+  subjectPl String
+  messagePl String  @db.Text
+
+  status       SupportRequestStatus @default(NEW)
+  /// Staff-only - never shown to the customer.
+  adminNotesPl String?              @db.Text
+
+  /// 2026-08-30 duplicate sweep. The support form is zero-JS, so nothing on
+  /// the client disables it while the action runs - a double-click or a
+  /// browser retry filed the same question twice and staff could not tell
+  /// whether the customer had really asked twice.
+  ///
+  /// A hash of (email, subject, message, order, five-minute bucket). The
+  /// bucket is what makes this a duplicate GUARD rather than a permanent
+  /// ban: writing in again next week with the same subject and message is a
+  /// real second request - usually because nobody answered the first - and
+  /// must never be silently swallowed. Nullable for rows written before
+  /// this column existed; Postgres treats NULLs as distinct, so they never
+  /// collide with each other.
+  dedupeKey String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([userId])
+  @@index([orderId])
 }
 
 model OrderEvent {
@@ -847,13 +1273,18 @@ model CustomerDesign {
   user             User?              @relation(fields: [userId], references: [id])
   sessionToken     String?
   status           DesignReviewStatus @default(PENDING_REVIEW)
+  /// P9 phase 2: the customer's own label for this upload ("Logo firmy",
+  /// "Wzór na prezent") - lets them tell their own saved designs apart on
+  /// the standalone library page. Optional: older rows and quick re-uploads
+  /// have none, shown by original filename instead.
+  titlePl          String?
   /// Decided internally during review. Not shown raw to the customer.
   productionMethod ProductionMethod?
   /// UploadWarning[] from the upload inspector (resolution, aspect, DPI).
   autoWarnings     Json?
 
   // IP consent record (brief §12). The exact text is stored, not just a
-  // boolean — a consent record is only evidence if it captures what was
+  // boolean - a consent record is only evidence if it captures what was
   // agreed to, and the wording will change over time.
   ipConfirmedAt        DateTime?
   ipDeclarationVersion String?
@@ -885,8 +1316,26 @@ model DesignReviewComment {
 }
 
 // ---------------------------------------------------------------------------
-// Users (Auth.js v5 + Prisma adapter) and roles
+// Users (Better Auth + Prisma adapter) and roles - P6, 2026-08-26
 // ---------------------------------------------------------------------------
+//
+// `User`/`Account`/`Session`/`Verification` field names/shapes here are
+// Better Auth's own exact expected schema - read directly from
+// `node_modules/@better-auth/core/dist/db/schema/{user,account,session,
+// verification}.d.mts` (its zod schemas), not guessed or copied from
+// NextAuth/Auth.js's different convention (an earlier version of this
+// schema was shaped for Auth.js specifically - see the P6 planning
+// decision in `docs/HANDOVER.md` for why Better Auth replaced it: Auth.js
+// v5 is still beta with no verified Prisma 7 support, Better Auth is
+// stable and explicitly supports Prisma 7). `role`/`phone`/`anonymizedAt`
+// on `User` are this project's own additions on top of Better Auth's base
+// shape, registered via `user.additionalFields` in `src/server/auth/auth.ts`
+// so the adapter round-trips them untouched.
+//
+// No real Account/Session/Verification rows existed before this migration
+// (nothing used these tables - no auth existed yet), so this rebuilds
+// them rather than attempting an in-place column rename with data to
+// preserve.
 
 enum UserRole {
   CUSTOMER
@@ -896,9 +1345,9 @@ enum UserRole {
 
 model User {
   id            String    @id @default(cuid())
-  name          String?
+  name          String
   email         String    @unique
-  emailVerified DateTime?
+  emailVerified Boolean   @default(false)
   image         String?
   /// There is no self-service path to STAFF or ADMIN. The first ADMIN is
   /// created by the seed script; further staff are invited from the panel.
@@ -910,50 +1359,85 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts       Account[]
-  sessions       Session[]
-  configurations Configuration[]
-  carts          Cart[]
-  orders         Order[]
-  files          UploadedFile[]
-  customDesigns  CustomerDesign[]
+  accounts        Account[]
+  sessions        Session[]
+  configurations  Configuration[]
+  carts           Cart[]
+  orders          Order[]
+  files           UploadedFile[]
+  customDesigns   CustomerDesign[]
+  /// P9 phase 8: support/contact requests this user has filed while logged in.
+  supportRequests SupportRequest[]
+  /// P9 continuation, 2026-08-28: catalogue designs this user has favourited.
+  favoriteDesigns DesignFavorite[]
 }
 
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+/// P9 continuation, 2026-08-28 - "wzory, które dodał do ulubionych" (owner
+/// feedback): favouriting a real catalogue `Design`, distinct from
+/// `CustomerDesign` (a customer's own uploaded file). Login-only by design -
+/// unlike `CustomerDesign`/`Cart`, there is no guest `sessionToken` half:
+/// a favourite is a durable preference tied to an account, not something a
+/// guest checkout flow ever needs to carry across a session boundary.
+model DesignFavorite {
+  userId    String
+  designId  String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  design    Design   @relation(fields: [designId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 
-  @@unique([provider, providerAccountId])
+  @@id([userId, designId])
+  @@index([designId])
+}
+
+/// One row per sign-in method a user has - the credentials ("local")
+/// provider's hashed password lives here (`password`), never on `User`.
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  providerId            String
+  /// "The stable provider-side key used to recognize an account"
+  /// (Better Auth's own doc comment) - [issuer, accountId] together,
+  /// not providerId, is the real natural key.
+  issuer                String
+  accountId             String
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?   @db.Text
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([issuer, accountId])
   @@index([userId])
 }
 
 model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
-model VerificationToken {
+model Verification {
+  id         String   @id @default(cuid())
   identifier String
-  token      String   @unique
-  expires    DateTime
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@unique([identifier, token])
+  @@index([identifier])
 }
 
 // ---------------------------------------------------------------------------
@@ -995,4 +1479,147 @@ model AnalyticsEvent {
 
   @@index([name, createdAt])
   @@index([sessionToken])
+}
+
+// ---------------------------------------------------------------------------
+// Content - FAQ, static pages, customer reviews (P7b)
+// ---------------------------------------------------------------------------
+
+model Faq {
+  id         String   @id @default(cuid())
+  questionPl String
+  answerPl   String   @db.Text
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+/// Generic CMS-lite pages ("o nas", "dostawa i płatność", ...), rendered at
+/// `/strony/[slug]` - deliberately NOT `/[slug]`, already claimed by
+/// categories (`(shop)/[category]/page.tsx`). `Regulamin`/`Polityka
+/// prywatności` stay their own hardcoded routes (real content since P6),
+/// unrelated to this model.
+model StaticPage {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  titlePl    String
+  bodyPl     String   @db.Text
+  seoTitlePl String
+  seoDescPl  String
+  isActive   Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// One real customer testimonial per `Order` (`@unique` below), submitted by
+/// the customer themselves once their order is `COMPLETED` - never authored
+/// or edited by staff (§16A.1 module 9). Staff may only change `status`.
+model Review {
+  id               String       @id @default(cuid())
+  orderId          String       @unique
+  order            Order        @relation(fields: [orderId], references: [id])
+  authorNamePl     String
+  /// 1-5.
+  rating           Int
+  bodyPl           String       @db.Text
+  status           ReviewStatus @default(PENDING)
+  moderatedAt      DateTime?
+  /// Denormalised: survives staff account deletion, same reasoning as
+  /// `AuditLog.actorEmail`/`OrderEvent.actorEmail`.
+  moderatedByEmail String?
+  createdAt        DateTime     @default(now())
+
+  @@index([status, createdAt])
+}
+
+/// True singleton (`id = 1`, same shape as `MachineSettings`): the real
+/// bank-transfer account and the flat shipping rate, both previously
+/// honest placeholders (`site.ts`'s "we'll send the account number
+/// separately" text; `create-order.ts`'s `SHIPPING_FLAT_GROSZE` constant).
+/// Bank fields stay nullable - NULL means "not configured yet," and every
+/// caller keeps showing the same honest placeholder text until an admin
+/// fills them in. `shippingFlatRateGrosze` is NOT nullable: checkout has
+/// always charged a real number, so this column must always hold one too.
+model StoreSettings {
+  id                     Int      @id @default(1)
+  bankAccountNumber      String?
+  bankAccountHolderPl    String?
+  shippingFlatRateGrosze Int
+  /// The shop's own social profiles, shown in the strip above the navigation
+  /// (owner request, 2026-09-04: that strip is for "fb insta itd", not for
+  /// links to our own subpages).
+  ///
+  /// Settings rather than constants because a hard-coded profile URL would
+  /// be a guess about an account that may not exist, and a social icon
+  /// linking nowhere is worse than no icon. `null` means "not configured",
+  /// and the strip renders nothing for it - the same nullable-means-unset
+  /// contract the bank fields above already use.
+  ///
+  /// Validated as absolute https URLs on write (`applyUpdateStoreSettings`):
+  /// these end up as an `href` on every page of the storefront, so anything
+  /// looser is a stored-XSS vector in the most widely rendered place there
+  /// is.
+  facebookUrl            String?
+  instagramUrl           String?
+  tiktokUrl              String?
+  youtubeUrl             String?
+  updatedAt              DateTime @updatedAt
+  updatedByEmail         String?
+}
+
+/// One rolling counter per rate-limited thing - `docs/ARCHITECTURE.md`
+/// §16.1's "rate limits: uploads per session/hour, order creation per IP,
+/// auth attempts", and the storage decision `docs/OPEN_ITEMS.md` §6 left
+/// open (owner chose Postgres over Redis on 2026-08-30: no new
+/// infrastructure, and the counter is already the shape
+/// `OrderNumberCounter` uses).
+///
+/// `key` is the whole identity - `"login:email:ala@example.pl"`,
+/// `"order:ip:1.2.3.4"` - so one table serves every limiter and adding one
+/// needs no migration. It is the primary key precisely so the counter can
+/// be a single atomic `INSERT … ON CONFLICT DO UPDATE … RETURNING`
+/// statement: a read-then-write limiter loses updates under exactly the
+/// concurrent load it exists to stop, which would make it report
+/// protection it does not provide.
+///
+/// `windowStart` is the beginning of the current rolling window, not a
+/// creation timestamp: the same statement resets both count and window
+/// when the old window has elapsed, so an expired row is reused rather
+/// than needing a sweeper. Rows for keys that go quiet are harmless - the
+/// index on `windowStart` is there so a periodic prune can find them
+/// cheaply if the table ever grows enough to care.
+model RateLimit {
+  key         String   @id
+  count       Int
+  windowStart DateTime
+  updatedAt   DateTime @updatedAt
+
+  @@index([windowStart])
+}
+
+/// DB-editable override for `mailer.ts`'s hardcoded subject/body text.
+/// `key` matches `MailTemplate` there ('order-confirmation' |
+/// 'verification-otp') - a fixed, closed set, so this is edit-only, never
+/// create/delete from the panel. Absence of a row for a given key is not an
+/// error: `mailer.ts` falls back to its own hardcoded default, which is
+/// also where these rows' seeded values came from.
+model EmailTemplate {
+  id             String   @id @default(cuid())
+  key            String   @unique
+  subjectPl      String
+  bodyPl         String   @db.Text
+  updatedAt      DateTime @updatedAt
+  updatedByEmail String?
 }

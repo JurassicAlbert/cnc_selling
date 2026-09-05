@@ -1,33 +1,35 @@
 /**
- * The theme's CSS custom properties, as a plain stylesheet — no React, no
+ * The theme's CSS custom properties, as a plain stylesheet - no React, no
  * Emotion, no client JS.
  *
  * Found via a real Lighthouse audit (2026-08-23), not assumed: with
  * `ThemeRegistry` (MUI's `AppRouterCacheProvider` + `ThemeProvider` +
  * `CssBaseline`) wrapping every page from the root layout, mobile
- * performance was 74/100 and LCP was 3.8s on a page — a product detail page
- * — with zero interactive MUI components. ~154KB of JS chunks were the full
+ * performance was 74/100 and LCP was 3.8s on a page - a product detail page
+ * - with zero interactive MUI components. ~154KB of JS chunks were the full
  * MUI + Emotion + React client runtime, shipped to a page that used none of
  * it; every RSC primitive (`Heading`, `Text`, `Container`, `Section`,
  * `Card`, `SiteHeader`) only ever needed the CSS custom properties, which
  * `cssVariables: true` was supposed to make free. Wrapping the whole app in
  * a client provider to get a `<style>` tag defeated that, exactly the R3
  * risk ARCHITECTURE.md §23 names ("MUI is client-side; naive use kills SEO
- * and LCP") — the lint rule stops `@mui/material` imports in server
+ * and LCP") - the lint rule stops `@mui/material` imports in server
  * components, but nothing stopped the theme WRAPPER from shipping to pages
  * that don't need it.
  *
- * `ThemeRegistry` still exists and is still correct — it is what a real
+ * `ThemeRegistry` still exists and is still correct - it is what a real
  * interactive island (P3's configurator, cart, checkout) will need. It is
  * no longer mounted at the root. Wrap it around the specific route or
  * component subtree that first needs a live `@mui/material` component, not
  * around `{children}` in `src/app/layout.tsx` again.
  *
- * Values duplicate `src/ui/theme/theme.ts` deliberately — same convention
+ * Values duplicate `src/ui/theme/theme.ts` deliberately - same convention
  * as `scripts/generate-placeholder-images.mjs`'s palette copy. If the theme
- * changes, update both; the font shorthand values (weight/size/line-height)
- * are MUI's stable default Typography scale, confirmed by reading them off
- * a live page rather than assumed. Font names reference `next/font`'s own
+ * changes, update both. The font shorthands used to be MUI's stock default
+ * Typography scale (read off a live page rather than assumed); as of
+ * 2026-08-30 they are this project's own scale, and `theme.ts`'s
+ * `typography` block is the authority for why each value is what it is.
+ * Font names reference `next/font`'s own
  * `--font-display`/`--font-body` variables (`src/ui/theme/fonts.ts`) rather
  * than repeating "Fraunces"/"Inter" a third time.
  */
@@ -43,32 +45,67 @@
   --mui-palette-error-main: #8c3a2e;
 
   /*
-   * h1-h3 use a fluid clamp() instead of a fixed size — MUI's stable desktop
-   * Typography scale is what's captured above, but the live ThemeProvider
-   * this project intentionally stopped mounting site-wide (see this file's
-   * header) is what normally applies `responsiveFontSizes()` on top of it.
-   * Without it, 6rem (96px) rendered as literal 96px text on a 375px phone
-   * and overflowed the viewport — a real bug found only by actually looking
-   * at a page at mobile width, not by any type-check. Each clamp is tuned so
-   * the MIDDLE (preferred) term equals the original fixed value exactly at
-   * 1200px, the Container's own max-width, so nothing above that width
-   * changes from what §9e already verified via getComputedStyle.
+   * The type scale, mirroring `src/ui/theme/theme.ts` exactly - see that
+   * file's `typography` comment for the reasoning behind every value. These
+   * are what the RSC primitives (`Heading`, `Text`) actually read, since
+   * `ThemeRegistry` is deliberately not mounted site-wide.
+   *
+   * Every heading is a fluid `clamp()`, tuned so the preferred term equals
+   * the desktop value exactly at 1200px (the `Container` max-width). That
+   * is not a nicety: without a live ThemeProvider there is no
+   * `responsiveFontSizes()`, and a fixed 96px `h1` rendered as literal 96px
+   * on a 375px phone and overflowed the viewport - a real bug found by
+   * looking at a page at mobile width, not by any type-check.
+   *
+   * 2026-08-30: rebuilt from MUI's stock Material scale (which was only
+   * ever family-swapped) into a real one - one consistent ratio, weight
+   * rising as size falls, line-height falling as size rises.
    */
-  --mui-font-h1: 300 clamp(2.5rem, calc(2.5rem + (100vw - 375px) * 0.0679), 6rem)/1.167 var(--font-display);
-  --mui-font-h2: 300 clamp(2rem, calc(2rem + (100vw - 375px) * 0.03394), 3.75rem)/1.2 var(--font-display);
-  --mui-font-h3: 400 clamp(1.75rem, calc(1.75rem + (100vw - 375px) * 0.02424), 3rem)/1.167 var(--font-display);
-  --mui-font-h4: 400 2.125rem/1.235 var(--font-display);
-  --mui-font-h5: 400 1.5rem/1.334 var(--font-display);
-  --mui-font-h6: 500 1.25rem/1.6 var(--font-display);
-  --mui-font-body1: 400 1rem/1.5 var(--font-body);
-  --mui-font-body2: 400 0.875rem/1.43 var(--font-body);
+  --mui-font-h1: 400 clamp(2.25rem, calc(2.25rem + (100vw - 375px) * 0.04364), 4.5rem)/1.06 var(--font-display);
+  --mui-font-h2: 400 clamp(1.875rem, calc(1.875rem + (100vw - 375px) * 0.02667), 3.25rem)/1.12 var(--font-display);
+  --mui-font-h3: 500 clamp(1.5rem, calc(1.5rem + (100vw - 375px) * 0.01455), 2.25rem)/1.2 var(--font-display);
+  --mui-font-h4: 500 clamp(1.375rem, calc(1.375rem + (100vw - 375px) * 0.00727), 1.75rem)/1.25 var(--font-display);
+  --mui-font-h5: 600 clamp(1.25rem, calc(1.25rem + (100vw - 375px) * 0.00242), 1.375rem)/1.32 var(--font-display);
+  --mui-font-h6: 600 1.125rem/1.4 var(--font-display);
+  --mui-font-body1: 400 1rem/1.65 var(--font-body);
+  --mui-font-body2: 400 0.875rem/1.55 var(--font-body);
   --mui-font-button: 600 0.875rem/1.75 var(--font-body);
-  --mui-font-subtitle1: 400 1rem/1.75 var(--font-body);
-  --mui-font-subtitle2: 500 0.875rem/1.57 var(--font-body);
-  --mui-font-caption: 400 0.75rem/1.66 var(--font-body);
-  --mui-font-overline: 400 0.75rem/2.66 var(--font-body);
+  --mui-font-subtitle1: 500 1.0625rem/1.5 var(--font-body);
+  --mui-font-subtitle2: 600 0.875rem/1.5 var(--font-body);
+  --mui-font-caption: 400 0.75rem/1.5 var(--font-body);
+  --mui-font-overline: 600 0.6875rem/1.6 var(--font-body);
 
-  /* Spacing scale — shared rhythm for the header/footer/card redesign
+  /*
+   * Letter-spacing has to be its own token: the CSS `font` shorthand above
+   * carries weight, size, line-height and family, but NOT tracking - so a
+   * primitive setting `font: var(--mui-font-h1)` silently gets
+   * `letter-spacing: normal` and loses whatever the theme specified. That
+   * is exactly what used to happen: every RSC heading on the storefront
+   * rendered with default tracking, including the 96px hero.
+   */
+  --mui-letter-spacing-h1: -0.025em;
+  --mui-letter-spacing-h2: -0.02em;
+  --mui-letter-spacing-h3: -0.015em;
+  --mui-letter-spacing-h4: -0.01em;
+  --mui-letter-spacing-h5: -0.005em;
+  --mui-letter-spacing-h6: 0;
+  --mui-letter-spacing-button: 0.01em;
+  --mui-letter-spacing-caption: 0.01em;
+  --mui-letter-spacing-overline: 0.1em;
+
+  /*
+   * Reading measure. Body copy previously ran the full width of the
+   * `Container` - 1200px, about 150 characters per line, against a
+   * comfortable target of 60–75. The eye loses its place returning to the
+   * start of a line long before that.
+   *
+   * `ch` (the width of "0") tracks the font, so this stays correct if the
+   * body face is ever swapped. Applied as a MAXIMUM, so it only ever
+   * narrows a paragraph and never widens or moves anything.
+   */
+  --measure-prose: 68ch;
+
+  /* Spacing scale - shared rhythm for the header/footer/card redesign
      (2026-08-25), so new components stop scattering literal pixel values. */
   --space-1: 4px;
   --space-2: 8px;
@@ -80,7 +117,7 @@
   --space-8: 64px;
 
   /* Warm-tinted shadows (built from the primary ink color at low alpha,
-     not pure black) and a real card radius — the previous `borderRadius: 2`
+     not pure black) and a real card radius - the previous `borderRadius: 2`
      literal was 2px, not a design unit, which is a real part of why cards
      and the header read as flat/unstyled. */
   --shadow-sm: 0 1px 2px rgba(46, 42, 38, 0.06), 0 1px 3px rgba(46, 42, 38, 0.08);
@@ -92,13 +129,13 @@ body {
   background-color: var(--mui-palette-background-default);
   /* Round 3, 2026-08-25: the owner asked to replace the flat background
      with a hexagonal "material tile" motif (per-section, see
-     SectionDecoration.tsx) rather than a sitewide geometric wash — the
+     SectionDecoration.tsx) rather than a sitewide geometric wash - the
      earlier round's blueprint grid (repeating-linear-gradient) is removed
      here since a technical-drawing grid and a honeycomb pattern are two
      different visual languages that would fight each other. The faint
      feTurbulence grain stays: paper-like tactility, not a geometric
      pattern, so it doesn't compete with the hexagons.
-     Deliberately no `background-attachment: fixed` anywhere here — a known
+     Deliberately no `background-attachment: fixed` anywhere here - a known
      mobile-Safari scroll-jank trap, and this project tests on
      mobile-safari in e2e. */
   background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='180'%20height='180'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.85'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23n)'%20opacity='0.06'/%3E%3C/svg%3E");
@@ -109,7 +146,7 @@ body {
 
 /* Responsive density for the hexagon decoration (SectionDecoration.tsx),
    added 2026-08-25 per the owner's brief: full cluster on desktop, only
-   the small `.hex-core` subset on tablet, nothing at all on phones —
+   the small `.hex-core` subset on tablet, nothing at all on phones -
    "never allow the decorative pattern to interfere with readability." */
 @media (max-width: 899px) {
   .hex-extra {
@@ -123,12 +160,15 @@ body {
 }
 
 /*
- * Global utility classes — the only way to express real `:hover`/
+ * Global utility classes - the only way to express real `:hover`/
  * `:focus-visible` states from a Server Component, since every primitive
  * here is RSC-only inline `style={}` with no client JS. Added 2026-08-25
  * alongside the header/footer/card depth pass.
  */
 .nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   color: var(--mui-palette-text-primary);
   text-decoration: none;
   transition: color 0.15s ease;
@@ -136,6 +176,10 @@ body {
 .nav-link:hover,
 .nav-link:focus-visible {
   color: var(--mui-palette-secondary-main);
+}
+/* The nav icon set is decorative - the link text alone is the accessible name. */
+.nav-link svg {
+  flex-shrink: 0;
 }
 
 .cart-link {
@@ -149,6 +193,87 @@ body {
 .cart-link:hover,
 .cart-link:focus-visible {
   color: var(--mui-palette-secondary-main);
+}
+
+/*
+ * 2026-08-29, navbar UX pass: a live count+price badge on the cart icon
+ * ("koło koszyka dodać jakieś ładne UX pokazujące cenę i ilość elementów w
+ * koszyku na bieżąco"). `itemCount`/`totalGrossGrosze` come from
+ * `StorefrontChrome`'s own server-side read (`getCartSummaryForRequest`) -
+ * "na bieżąco" here means "correct on every real navigation", the same
+ * honest live-enough guarantee the header's own login state already relies
+ * on (a Server Action's `redirect()` re-renders this layout), not a
+ * client-side polling loop.
+ */
+.cart-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background-color: var(--mui-palette-secondary-main);
+  color: var(--mui-palette-secondary-contrastText, #fff);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+/*
+ * Navbar dropdowns ("Produkty", account) - native `<details>`/`<summary>`,
+ * zero client JS (2026-08-29, real navbar restructure). `<summary>` gets
+ * the default disclosure triangle suppressed via `list-style: none` on the
+ * element itself (inline, `SiteHeader.tsx`); this block only styles the
+ * panel `<details>` reveals and its items.
+ */
+.nav-dropdown {
+  position: relative;
+}
+.nav-dropdown summary::-webkit-details-marker {
+  display: none;
+}
+/* Chevron flips to point up while the panel is open - `ExpandMoreIcon`, rotated, not a second icon. */
+.nav-dropdown-chevron {
+  transition: transform 0.15s ease;
+}
+.nav-dropdown[open] .nav-dropdown-chevron {
+  transform: rotate(180deg);
+}
+.nav-dropdown-panel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  padding: var(--space-2);
+  background-color: var(--mui-palette-background-paper);
+  border: 1px solid var(--mui-palette-divider);
+  border-radius: 4px;
+  box-shadow: var(--shadow-md);
+}
+.nav-dropdown-item {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  border-radius: 4px;
+  color: var(--mui-palette-text-primary);
+  text-decoration: none;
+  font: var(--mui-font-body2);
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.nav-dropdown-item:hover,
+.nav-dropdown-item:focus-visible {
+  background-color: var(--mui-palette-action-hover, rgba(0, 0, 0, 0.04));
+  color: var(--mui-palette-secondary-main);
+}
+.nav-dropdown-item--button {
+  width: 100%;
+  font-family: inherit;
 }
 
 .category-tile {
@@ -197,7 +322,7 @@ body {
   color: var(--mui-palette-secondary-main);
 }
 
-/* Card badges — the category-icon chip (top-left) and the personalization
+/* Card badges - the category-icon chip (top-left) and the personalization
    pill (top-right), added 2026-08-25 alongside the noise texture above, in
    response to the owner wanting the cards "beautified" with icons/badges. */
 .card-icon-badge {
@@ -232,7 +357,7 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
-/* A small neutral pill for a product card's material fact — distinct from
+/* A small neutral pill for a product card's material fact - distinct from
    `.card-personalization-badge` (which overlays the image) since this one
    sits inline in the text block, alongside the production-time/size facts
    added 2026-08-25. */
@@ -247,7 +372,7 @@ body {
   font: var(--mui-font-caption);
 }
 
-/* Scoped to the homepage hero only — not a sitewide texture, just enough
+/* Scoped to the homepage hero only - not a sitewide texture, just enough
    depth behind the headline that the top of the page doesn't read as a
    flat rectangle. */
 .hero-surface {
@@ -258,11 +383,11 @@ body {
   );
 }
 
-/* Sitewide scrollbar styling, 2026-08-26 — the default OS scrollbar (flat
+/* Sitewide scrollbar styling, 2026-08-26 - the default OS scrollbar (flat
    grey) sat visually outside this warm cream/brown palette. Firefox reads
    `scrollbar-color`/`scrollbar-width` on `html`; every Chromium/WebKit
    browser (including mobile Safari, this project's tested browser) reads
-   the `::-webkit-scrollbar*` pseudo-elements instead — both are declared
+   the `::-webkit-scrollbar*` pseudo-elements instead - both are declared
    so the thumb/track match the theme everywhere. */
 html {
   scrollbar-color: var(--mui-palette-secondary-main) var(--mui-palette-background-default);
@@ -282,4 +407,686 @@ html {
 }
 ::-webkit-scrollbar-thumb:hover {
   background-color: var(--mui-palette-primary-main);
+}
+
+/*
+ * A global, visible keyboard focus ring - 2026-08-30 accessibility pass
+ * (`docs/AUDIT-2026-08-30.md` §11). The storefront chrome is deliberately
+ * MUI-free (see this file's own header), which also means it never
+ * inherited MUI's focus styling: several real controls - the site-wide
+ * search field and button, the order-lookup form's inputs, the category
+ * filter's own controls - were relying on whatever the browser happened to
+ * draw, and Chrome draws nothing at all on an `<input>` styled with a
+ * custom border. A keyboard user genuinely could not tell where they were.
+ *
+ * `:focus-visible`, not `:focus`, so a mouse click never draws a ring the
+ * person who clicked did not ask for. Scoped away from anything MUI renders
+ * (`.MuiButtonBase-root`), which brings its own.
+ */
+:where(a, button, input, select, textarea, summary, [tabindex]):not(.MuiButtonBase-root):focus-visible {
+  outline: 2px solid var(--mui-palette-secondary-main);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/*
+ * Real form controls for the storefront's zero-JS surfaces - 2026-08-30
+ * (`docs/AUDIT-2026-08-30.md` P2-10, and the owner's own "default selects,
+ * raw buttons, browser-default controls" complaint).
+ *
+ * These exist INSTEAD of converting `CategoryFilterForm` and the consent
+ * banner to MUI, not as a poor substitute for it. Both render on the hot
+ * path - the filter on every category page, the banner on a first-time
+ * visitor's very first page - and this file's own header records the real
+ * Lighthouse finding that mounting a client theme provider there cost 3.8s
+ * LCP for components that only ever needed CSS. Styling the native controls
+ * gets the polish at zero JS; converting them would trade a measured
+ * performance property for a cosmetic one.
+ *
+ * `accent-color` is what makes a native radio/checkbox adopt the brand
+ * colour without replacing it with a div - the control stays a real
+ * `<input>`, so keyboard behaviour, form semantics and screen-reader
+ * announcements are the browser's, not a reimplementation's.
+ */
+.form-control-radio,
+.form-control-checkbox {
+  accent-color: var(--mui-palette-secondary-main);
+  inline-size: 18px;
+  block-size: 18px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.form-option-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--mui-font-body2);
+  color: var(--mui-palette-text-primary);
+  /* A 40px row, so the whole label is a comfortable touch target rather
+     than just the 18px control itself (§11: touch target sizes). */
+  min-block-size: 40px;
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-card);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.form-option-label:hover {
+  background-color: color-mix(in srgb, var(--mui-palette-secondary-main) 8%, transparent);
+}
+
+.form-select {
+  font: var(--mui-font-body2);
+  color: var(--mui-palette-text-primary);
+  background-color: var(--mui-palette-background-paper);
+  border: 1px solid var(--mui-palette-divider);
+  border-radius: var(--radius-card);
+  padding: 10px 36px 10px 12px;
+  cursor: pointer;
+  /* The native arrow differs wildly between browsers and is the single
+     biggest "this is an unstyled form" tell. Replaced with one inline SVG
+     chevron so it looks the same everywhere. */
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b655e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  transition: border-color 0.15s ease;
+}
+.form-select:hover {
+  border-color: var(--mui-palette-secondary-main);
+}
+
+.form-button {
+  font: var(--mui-font-button);
+  /* The `font` shorthand does not carry tracking - same reason `Heading`
+     applies it separately. Without this the styled native buttons sit at
+     default spacing while every MUI button on the site carries the theme's. */
+  letter-spacing: var(--mui-letter-spacing-button);
+  text-transform: none;
+  padding: 10px 20px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-card);
+  background-color: var(--mui-palette-primary-main);
+  color: var(--mui-palette-background-paper);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.form-button:hover {
+  background-color: var(--mui-palette-secondary-main);
+}
+.form-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.form-button-outlined {
+  background-color: transparent;
+  color: var(--mui-palette-text-primary);
+  border-color: var(--mui-palette-divider);
+}
+.form-button-outlined:hover {
+  background-color: color-mix(in srgb, var(--mui-palette-secondary-main) 8%, transparent);
+  border-color: var(--mui-palette-secondary-main);
+}
+
+/*
+ * Responsive navigation, added 2026-09-04 at the owner's request ("the navbar
+ * should have a burger, hidden navigation for RWD").
+ *
+ * Zero client JavaScript: a checkbox and its label carry the open state,
+ * because `SiteHeader` is a Server Component and MUI is lint-banned from this
+ * route group (ARCHITECTURE.md §2.1).
+ *
+ * Not the `<details>` the dropdowns inside it use. A closed `<details>` has
+ * its content hidden by the user agent via `::details-content`, which author
+ * CSS cannot reliably override, so the desktop row measured zero pixels wide.
+ *
+ * Everything here fails in the right direction: the panel is a plain flex row
+ * by default and is only hidden under the breakpoint, so a browser that
+ * ignores the media query, or that never loads this file, shows the whole
+ * navigation rather than none of it.
+ */
+.nav-burger-checkbox {
+  /* Off-screen rather than `display: none`, so it stays keyboard-focusable
+     and the label's focus ring below has something to react to. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.nav-burger-toggle {
+  display: none;
+}
+.nav-burger-panel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+@media (max-width: 899px) {
+  .nav-burger-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 44px is the minimum comfortable touch target, not a design flourish. */
+    min-width: 44px;
+    min-height: 44px;
+    margin-inline-start: auto;
+    border-radius: 4px;
+    color: var(--mui-palette-text-primary);
+    cursor: pointer;
+  }
+  .nav-burger-toggle:hover {
+    background-color: var(--mui-palette-action-hover, rgba(0, 0, 0, 0.04));
+  }
+  .nav-burger-checkbox:focus-visible + .nav-burger-toggle {
+    outline: 3px solid var(--mui-palette-secondary-main);
+    outline-offset: 2px;
+  }
+
+  /* One icon at a time: bars when closed, a cross when open. */
+  .nav-burger-close-icon {
+    display: none;
+  }
+  .nav-burger-checkbox:checked + .nav-burger-toggle .nav-burger-open-icon {
+    display: none;
+  }
+  .nav-burger-checkbox:checked + .nav-burger-toggle .nav-burger-close-icon {
+    display: block;
+  }
+
+  .nav-burger-panel {
+    display: none;
+  }
+  .nav-burger-checkbox:checked ~ .nav-burger-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-1);
+    padding: var(--space-3);
+    background-color: var(--mui-palette-background-paper);
+    border-top: 1px solid var(--mui-palette-divider);
+    box-shadow: var(--shadow-md);
+  }
+  /* Inside the panel the sub-dropdowns stack in flow instead of floating over
+     the page: an absolutely positioned panel inside an absolutely positioned
+     panel is unreachable on a phone. */
+  .nav-burger-checkbox:checked ~ .nav-burger-panel .nav-dropdown-panel {
+    position: static;
+    min-width: 0;
+    padding-inline-start: var(--space-4);
+    border: none;
+    box-shadow: none;
+  }
+  .nav-burger-checkbox:checked ~ .nav-burger-panel .nav-link {
+    min-height: 44px;
+  }
+}
+
+/*
+ * UX-23 - the search band, and the slim topbar above the navigation.
+ *
+ * Owner request, 2026-09-04: take the *arrangement* from
+ * `template.getbazaar.io` - a slim strip above the main nav, and a search
+ * field that owns the centre of the header with a category selector attached
+ * to it. Not its CSS, assets, typography or colour: every value below is one
+ * of this project's own tokens, so the band inherits the shop's identity
+ * rather than the template's.
+ *
+ * Plain CSS in this file rather than MUI, for the same measured reason the
+ * rest of the storefront chrome is: it renders on every page, and mounting a
+ * client theme provider for it cost 3.8s LCP the last time it was tried
+ * (ARCHITECTURE.md §2.1, and this file's own header).
+ */
+
+/*
+  The search band: a category menu, a gap, then the search form.
+
+  Owner, 2026-09-04: the category list is no longer a search filter but quick
+  access to a category page, it needs real space between it and the field
+  ("powinien być margines między listą kategorii a paskiem wyszukiwania"),
+  and both should sit closer to the reference layout's softness. So the group
+  is a rounded pill on paper with no hard 1px outline, and the menu beside it
+  matches it exactly - same height, same radius, same border - so the two
+  read as a pair rather than as one control cut in half.
+*/
+.search-band {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+}
+.search-band-form {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.search-form {
+  width: 100%;
+}
+
+.search-quick-access {
+  flex: 0 0 auto;
+}
+.search-quick-access .nav-dropdown {
+  position: relative;
+}
+.search-quick-access-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  /* Matches `.search-group` exactly - see the note above. */
+  min-height: 46px;
+  padding-inline: 18px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  background-color: var(--mui-palette-background-paper);
+  color: var(--mui-palette-text-secondary);
+  font: var(--mui-font-body2);
+  white-space: nowrap;
+  cursor: pointer;
+  /* The UA marker would sit in front of the icon; the chevron is the marker. */
+  list-style: none;
+}
+.search-quick-access-summary::-webkit-details-marker {
+  display: none;
+}
+.search-quick-access-summary:hover {
+  color: var(--mui-palette-text-primary);
+  border-color: rgba(0, 0, 0, 0.16);
+}
+.search-quick-access-summary:focus-visible {
+  outline: 3px solid var(--mui-palette-secondary-main);
+  outline-offset: 2px;
+}
+
+/*
+  One rounded group holding the field and the button, so they read as a
+  single control. The border is on the wrapper, not on each child, which is
+  what stops the seam between them rendering as a doubled 2px line.
+
+  Softer than it was: a fully rounded pill and a hairline instead of a
+  divider-weight outline and a card radius. The reference's field is the
+  lightest thing on its page, and this band renders on every page of ours.
+*/
+.search-group {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  background-color: var(--mui-palette-background-paper);
+  overflow: hidden;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.search-group:hover {
+  border-color: rgba(0, 0, 0, 0.16);
+}
+.search-group:focus-within {
+  border-color: var(--mui-palette-secondary-main);
+  box-shadow: var(--shadow-sm);
+}
+
+.search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px 20px;
+  border: none;
+  background-color: transparent;
+  color: var(--mui-palette-text-primary);
+  font: var(--mui-font-body1);
+}
+.search-input:focus-visible {
+  /* Inset by the pill's own radius, so the ring follows the curve rather
+     than cutting a square corner through it. */
+  outline: 3px solid var(--mui-palette-secondary-main);
+  outline-offset: -3px;
+  border-radius: 999px;
+}
+
+/*
+  Owner, 2026-09-04: "pasek jest za mocny - powinien być bardziej light jak z
+  linku". It was a filled dark block the width of its label, which made the
+  search band the heaviest thing on every page - heavier than the hero, and
+  heavier than the primary action on whatever page you were actually on.
+
+  The reference ends the field with a quiet magnifier instead, and it is
+  right: search is available everywhere, so it should be findable everywhere
+  and shout nowhere. The button keeps a real 44px target and a real focus
+  ring; only its weight is gone.
+*/
+.search-submit {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding-inline: 16px;
+  border: none;
+  background-color: transparent;
+  color: var(--mui-palette-text-secondary);
+  font: var(--mui-font-button);
+  letter-spacing: var(--mui-letter-spacing-button);
+  cursor: pointer;
+}
+.search-submit:hover {
+  background-color: var(--mui-palette-action-hover, rgba(0, 0, 0, 0.04));
+  color: var(--mui-palette-text-primary);
+}
+.search-submit:focus-visible {
+  outline: 3px solid var(--mui-palette-secondary-main);
+  outline-offset: -3px;
+  border-radius: 999px;
+}
+/* The label goes at every width, not only on a phone: the icon carries it,
+   and the `aria-label` carries the name. */
+.search-submit-text {
+  display: none;
+}
+
+@media (max-width: 599px) {
+  /* The category menu takes its own full-width line above the field rather
+     than squeezing two controls into one cramped row. Both stay full size
+     and tappable, and the gap between them becomes vertical. */
+  .search-band {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+  .search-quick-access-summary {
+    justify-content: center;
+  }
+  .search-submit {
+    padding-inline: 12px;
+  }
+}
+
+/*
+ * The topbar: one slim strip above the main navigation.
+ *
+ * Its content is deliberately not a promotional claim. The reference layout
+ * puts a shipping offer here; this shop has no such offer, and inventing one
+ * would be exactly the "fake production behaviour" the project rules forbid.
+ * What it carries instead is true and already stated elsewhere on the site -
+ * that everything is made to order and can be engraved - plus the two links
+ * a customer most often wants from any page.
+ */
+.site-topbar {
+  background-color: var(--mui-palette-primary-main);
+  color: var(--mui-palette-background-paper);
+}
+.site-topbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: 36px;
+  padding-block: var(--space-1);
+  font: var(--mui-font-caption);
+}
+.site-topbar-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.site-topbar-links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex: 0 0 auto;
+}
+.site-topbar-link {
+  color: inherit;
+  text-decoration: none;
+  opacity: 0.9;
+}
+.site-topbar-link:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+.site-topbar-link:focus-visible {
+  outline: 3px solid var(--mui-palette-secondary-main);
+  outline-offset: 2px;
+}
+
+@media (max-width: 599px) {
+  /* The note goes, the links stay. On a phone the strip is worth keeping only
+     for the things a customer taps. */
+  .site-topbar-note {
+    display: none;
+  }
+  .site-topbar-row {
+    justify-content: center;
+  }
+  /*
+    ...and with no profiles configured there is nothing left to tap, so the
+    strip goes too. Without this, a shop that has not filled in its social
+    links gets a bar of solid colour at the top of every page on a phone,
+    containing nothing at all. Found on the browser check, 2026-09-04.
+  */
+  .site-topbar--note-only {
+    display: none;
+  }
+}
+
+/* UX-23: the navigation takes the centre of the header row, with the cart
+   and account controls held to the end. Only above the breakpoint - below
+   it the panel is a dropped-down column and an auto margin would fight the
+   `left: 0; right: 0` that positions it. */
+@media (min-width: 900px) {
+  .nav-burger-panel--centred {
+    margin-inline: auto;
+  }
+}
+
+/* UX-23's category rail, shown on the cart view. One line at any width: it
+   scrolls rather than wrapping, so a long catalogue never pushes the summary
+   panel down the page. */
+.category-rail {
+  margin-block-start: var(--space-7);
+  padding-block: var(--space-5);
+  border-top: 1px solid var(--mui-palette-divider);
+}
+.category-rail-track {
+  display: flex;
+  gap: var(--space-3);
+  margin-block-start: var(--space-3);
+  overflow-x: auto;
+  /* Room for the focus ring, which would otherwise be clipped by the
+     scroll container on the first and last item. */
+  padding-block: 4px;
+  padding-inline: 4px;
+  margin-inline: -4px;
+}
+.category-rail-item {
+  flex: 0 0 auto;
+  padding: 10px 18px;
+  border: 1px solid var(--mui-palette-divider);
+  border-radius: 999px;
+  background-color: var(--mui-palette-background-paper);
+  color: var(--mui-palette-text-primary);
+  font: var(--mui-font-body2);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.category-rail-item:hover {
+  border-color: var(--mui-palette-secondary-main);
+  background-color: var(--mui-palette-action-hover, rgba(0, 0, 0, 0.04));
+}
+.category-rail-item:focus-visible {
+  outline: 3px solid var(--mui-palette-secondary-main);
+  outline-offset: 2px;
+}
+
+/* UX-23. Below 600px the logo, the burger, the cart and the account menu do
+   not fit on one line with their labels, and the header row wrapped onto
+   two. The icons and the cart's count badge stay; the words go.
+ *
+ * Visually hidden, NOT `display: none`. That was the first attempt and it
+ * was a real regression: `display: none` takes the text out of the
+ * accessibility tree as well as off the screen, so the cart link's entire
+ * accessible name became the count badge - a link announced as "1". Checked
+ * with `.cart-link`'s own `innerText`, which is what caught it. Clipped to
+ * 1px instead, the label is gone from the layout and still read out. */
+@media (max-width: 599px) {
+  .header-label-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  /* The gaps were sized for a row of text links. With only icons left, that
+     much space between them reads as a mistake. */
+  .site-header-nav {
+    gap: var(--space-3);
+  }
+}
+
+/*
+ * The checkout step rail - owner request 2026-09-04, "menu przejścia między
+ * etapami płatności", sitting between the search band and the page's own
+ * content.
+ *
+ * Three states, and none of them signalled by colour alone: the current step
+ * carries weight and a filled numeral, a completed one a check-coloured
+ * numeral and its own word („ukończony"), an upcoming one neither. Colour is
+ * the last layer, not the only one.
+ */
+.checkout-steps {
+  background-color: var(--mui-palette-background-paper);
+  border-bottom: 1px solid var(--mui-palette-divider);
+}
+.checkout-steps-track {
+  display: flex;
+  align-items: center;
+  /* Centred, as in the reference. Left-aligned it read as the first item of
+     the page's content rather than as a marker of where you are in a flow. */
+  justify-content: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  padding-block: var(--space-3);
+  list-style: none;
+  /* One line at any width. A wrapped rail stops reading as a sequence. */
+  overflow-x: auto;
+}
+.checkout-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+}
+/* The connector between steps, drawn on the item rather than between them so
+   it never appears before the first one. */
+.checkout-step + .checkout-step::before {
+  content: '';
+  display: block;
+  width: clamp(16px, 6vw, 64px);
+  height: 1px;
+  background-color: var(--mui-palette-divider);
+}
+.checkout-step-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 14px;
+  border-radius: 999px;
+  color: var(--mui-palette-text-secondary);
+  font: var(--mui-font-body2);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.checkout-step-body--link:hover {
+  background-color: var(--mui-palette-action-hover, rgba(0, 0, 0, 0.04));
+  color: var(--mui-palette-text-primary);
+}
+.checkout-step-body--link:focus-visible {
+  outline: 3px solid var(--mui-palette-secondary-main);
+  outline-offset: 2px;
+}
+/*
+  The numeral sits inline in the pill, as in the reference's "1. Cart",
+  rather than in a circle of its own. The circle was a second shape
+  competing with the pill around it, which is a lot of drawing for a
+  three-item rail.
+
+  It keeps a filled circle for the CURRENT step only, below - that one is
+  worth marking, and it is the step whose state the whole rail exists to
+  communicate.
+*/
+.checkout-step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  font: var(--mui-font-caption);
+  color: var(--mui-palette-text-secondary);
+}
+/* The state word is for assistive technology; the numeral and the weight
+   carry it on screen. */
+.checkout-step-state {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.checkout-step--current .checkout-step-body {
+  color: var(--mui-palette-background-paper);
+  background-color: var(--mui-palette-primary-main);
+  font-weight: 600;
+}
+.checkout-step--current .checkout-step-number {
+  /* Inside a filled pill the numeral needs to invert again, or it
+     disappears into the fill. */
+  background-color: rgba(255, 255, 255, 0.22);
+  color: var(--mui-palette-background-paper);
+}
+.checkout-step--current .checkout-step-number {
+  background-color: var(--mui-palette-primary-main);
+  color: var(--mui-palette-background-paper);
+}
+.checkout-step--done .checkout-step-number {
+  background-color: var(--mui-palette-secondary-main);
+  color: var(--mui-palette-background-paper);
+}
+.checkout-step--done .checkout-step-body {
+  color: var(--mui-palette-text-primary);
+}
+
+@media (max-width: 599px) {
+  /* The labels go and the numerals stay: three words plus three connectors
+     do not fit, and a rail that scrolls sideways hides the step you have not
+     reached, which is the one worth seeing. The label is still read out. */
+  .checkout-step-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .checkout-step--current .checkout-step-label {
+    position: static;
+    width: auto;
+    height: auto;
+    clip-path: none;
+  }
+  .checkout-step-body {
+    padding: 8px 10px;
+  }
 }

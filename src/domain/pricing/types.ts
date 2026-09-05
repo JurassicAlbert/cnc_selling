@@ -57,11 +57,11 @@ export type PricingInput = {
   readonly material: MaterialPricing;
   readonly thicknessFactorBp: number;
   /**
-   * `null` for a product with no catalog design at all — `CUSTOM`
+   * `null` for a product with no catalog design at all - `CUSTOM`
    * (customer-uploaded artwork, `ARCHITECTURE.md` §13/P4). Machining
    * time and complexity are genuinely unknown until staff reviews the
    * actual upload, so `machiningGrosze`/`designSurchargeGrosze` are both
-   * zero rather than an invented estimate — see `calculate.ts`. Every
+   * zero rather than an invented estimate - see `calculate.ts`. Every
    * other product type always supplies a real `DesignPricing`.
    */
   readonly design: DesignPricing | null;

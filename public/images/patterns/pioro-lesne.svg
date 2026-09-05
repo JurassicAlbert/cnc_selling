@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Wzór — pióro leśne">
+  <g fill="none" stroke="#3E2A1A" stroke-width="3.5" stroke-linecap="round">
+    <path d="M100,20 C60,45 55,110 100,175 C145,110 140,45 100,20 Z" />
+    <path d="M100,30 L100,168" stroke-width="2.5" stroke-opacity="0.6" />
+    <path d="M100,50 Q80,58 68,72" stroke-width="2.5" />
+    <path d="M100,72 Q76,82 62,98" stroke-width="2.5" />
+    <path d="M100,94 Q74,105 60,122" stroke-width="2.5" />
+    <path d="M100,116 Q78,127 66,142" stroke-width="2.5" />
+    <path d="M100,50 Q120,58 132,72" stroke-width="2.5" />
+    <path d="M100,72 Q124,82 138,98" stroke-width="2.5" />
+    <path d="M100,94 Q126,105 140,122" stroke-width="2.5" />
+    <path d="M100,116 Q122,127 134,142" stroke-width="2.5" />
+  </g>
+</svg>

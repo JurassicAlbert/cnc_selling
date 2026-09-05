@@ -3,7 +3,7 @@
  * Generates on-brand placeholder images for the catalogue.
  *
  * There is no real product photography yet (D5, still open in
- * docs/HANDOVER.md) — nothing was downloaded from the web to stand in for
+ * docs/HANDOVER.md) - nothing was downloaded from the web to stand in for
  * it. A stock photo of someone else's product, presented as if it depicted
  * this shop's actual work, would misrepresent what the business sells; that
  * is a form of the "nothing is faked" violation the project's own rules
@@ -12,7 +12,7 @@
  * sees it knows immediately that it is one.
  *
  * Output: static SVGs under public/images/placeholders/, served by Next.js
- * at /images/placeholders/<slug>.svg — referenced directly from
+ * at /images/placeholders/<slug>.svg - referenced directly from
  * Category.imageUrl / ProductImage.url in prisma/seed.ts.
  */
 
@@ -21,7 +21,7 @@ import { join } from 'node:path';
 
 const OUTPUT_DIR = join(process.cwd(), 'public', 'images', 'placeholders');
 
-// Matches src/ui/theme/theme.ts exactly — this script has no access to the
+// Matches src/ui/theme/theme.ts exactly - this script has no access to the
 // running theme (it's a build-time asset generator, not part of the app),
 // so the palette is duplicated here deliberately. If the theme palette ever
 // changes, update both.
@@ -40,7 +40,7 @@ const PALETTE = {
 function placeholderSvg(labelPl, noticePl) {
   const width = 800;
   const height = 600;
-  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeXml(labelPl)} — ${escapeXml(noticePl)}">
+  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeXml(labelPl)} - ${escapeXml(noticePl)}">
   <rect width="${width}" height="${height}" fill="${PALETTE.backgroundPaper}" />
   <rect x="24" y="24" width="${width - 48}" height="${height - 48}" fill="none" stroke="${PALETTE.divider}" stroke-width="2" />
   <line x1="24" y1="24" x2="104" y2="24" stroke="${PALETTE.secondary}" stroke-width="4" />

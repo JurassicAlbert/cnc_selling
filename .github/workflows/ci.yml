@@ -1,0 +1,180 @@
+# Continuous integration — docs/REVIEW-DETAILED.md ARCH-01.
+#
+# Before this file existed nothing ran automatically: the suite grew to 919
+# tests that only executed when a human remembered to, and playwright.config.ts
+# had branches on `process.env.CI` that nothing ever set.
+#
+# Two jobs on purpose. `verify` is the fast, deterministic one — types, lint,
+# unit + integration, production build — and is what a branch-protection rule
+# should require. `e2e` is slower, drives a real browser, and has a documented
+# history of parallel-contention flakes, so it is kept separate: a flake there
+# must not hide a real failure in `verify`.
+#
+# The database setup mirrors docker-compose.yml exactly, down to the published
+# port and the init script, so "works locally" and "works in CI" mean the same
+# thing. Both databases are created because both are genuinely used: `next
+# build` reads DATABASE_URL (generateStaticParams prerenders 81 catalogue
+# pages), while the integration tier is redirected to TEST_DATABASE_URL by
+# tests/integration/env-setup.ts.
+#
+# Guarded by tests/unit/ci-workflow.test.ts — a workflow only ever runs
+# somewhere else, so the usual write-run-fix loop does not apply to it.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A new push to the same branch makes the previous run's answer irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Every value below is repeated per job rather than hoisted to a workflow-level
+# `env:` block, because GitHub Actions does not support YAML anchors and a
+# reader of one job should not have to scroll to know what it runs with.
+#
+# None of these is or resembles a production secret: the database lives and
+# dies with the runner, and the three strings exist only because `auth.ts`,
+# `guest-session.ts` and `prisma/seed.ts` each throw on a missing value at
+# import time. Real secrets, when there are any, belong in repository secrets
+# and must never appear here.
+
+jobs:
+  verify:
+    name: Types, lint, tests, build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: cnc
+          POSTGRES_PASSWORD: cnc_dev_password
+          POSTGRES_DB: cnc_selling
+          POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U cnc -d cnc_selling"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      DATABASE_URL: postgresql://cnc:cnc_dev_password@127.0.0.1:5433/cnc_selling?schema=public
+      TEST_DATABASE_URL: postgresql://cnc:cnc_dev_password@127.0.0.1:5433/cnc_selling_test?schema=public
+      SESSION_SECRET: ci-only-not-a-secret
+      BETTER_AUTH_SECRET: ci-only-not-a-secret
+      SEED_ADMIN_EMAIL: ci@example.test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # Runs `prisma generate` via postinstall.
+      - run: npm ci
+
+      # The same file the local Docker container runs on first boot: creates
+      # cnc_selling_test and the `unaccent` extension both databases need for
+      # diacritic-insensitive search (ARCHITECTURE.md §17.3). Reusing it
+      # rather than repeating the SQL keeps one source of truth.
+      # PGPASSWORD is set explicitly because the script's `\connect` opens a
+      # second connection, and psql does not reliably carry a URL's password
+      # across one.
+      - name: Create the test database and extensions
+        env:
+          PGPASSWORD: cnc_dev_password
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f docker/postgres-init/01-databases.sql
+
+      - run: npm run db:deploy
+      - run: npm run db:deploy:test
+
+      # Seeded because several integration tests sweep the real catalogue
+      # rather than fixtures of their own — on an empty database they would
+      # iterate nothing and pass vacuously.
+      - run: npm run db:seed
+      - run: npm run db:seed:test
+
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  e2e:
+    name: End-to-end (Playwright)
+    runs-on: ubuntu-latest
+    # Nothing here can pass if the build does not, so do not burn a runner
+    # on it until `verify` is green.
+    needs: verify
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: cnc
+          POSTGRES_PASSWORD: cnc_dev_password
+          POSTGRES_DB: cnc_selling
+          POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U cnc -d cnc_selling"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      DATABASE_URL: postgresql://cnc:cnc_dev_password@127.0.0.1:5433/cnc_selling?schema=public
+      TEST_DATABASE_URL: postgresql://cnc:cnc_dev_password@127.0.0.1:5433/cnc_selling_test?schema=public
+      SESSION_SECRET: ci-only-not-a-secret
+      BETTER_AUTH_SECRET: ci-only-not-a-secret
+      SEED_ADMIN_EMAIL: ci@example.test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      # PGPASSWORD is set explicitly because the script's `\connect` opens a
+      # second connection, and psql does not reliably carry a URL's password
+      # across one.
+      - name: Create the test database and extensions
+        env:
+          PGPASSWORD: cnc_dev_password
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f docker/postgres-init/01-databases.sql
+
+      # The TEST database, not the development one - ARCH-03, 2026-09-05.
+      # `playwright.config.ts` now points DATABASE_URL at TEST_DATABASE_URL
+      # for the whole run, including the `next build && next start` it
+      # launches, so this is the database the suite and the app under test
+      # both use. Seeding matters as much as migrating: several specs
+      # configure a real seeded product, and `tests/e2e/global-setup.ts`
+      # refuses to start against anything that is not a test database.
+      - run: npm run db:deploy:test
+      - run: npm run db:seed:test
+
+      # Only the two browsers playwright.config.ts actually defines projects
+      # for: desktop-chromium and mobile-safari (WebKit).
+      - run: npx playwright install --with-deps chromium webkit
+
+      # playwright.config.ts's own webServer builds and starts the app.
+      - run: npm run e2e
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

@@ -1,15 +1,21 @@
+import { randomUUID } from 'node:crypto';
+
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 
-import { formatPln } from '@/domain/money/money';
 import { SITE } from '@/content/pl/site';
+import { getSession } from '@/server/auth/session';
 import { readGuestSessionToken } from '@/server/session/read-guest-session';
 import { findCartForRequest } from '@/server/repositories/cart';
-import { SHIPPING_FLAT_GROSZE } from '@/server/orders/create-order';
+import { recordAnalyticsEvent } from '@/server/analytics/record-event';
+import { resolveDeliveryMethodsForCart } from '@/server/repositories/delivery-methods';
+import { listActivePaymentMethods } from '@/server/repositories/payment-methods';
+import { getCheckoutPrefill } from '@/server/repositories/checkout-prefill';
+import { CheckoutSteps } from '@/ui/primitives/CheckoutSteps';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
 import { Section } from '@/ui/primitives/Section';
-import { Text } from '@/ui/primitives/Text';
+import { ThemeRegistry } from '@/ui/theme/ThemeRegistry';
 import { CheckoutForm } from '@/ui/islands/checkout/CheckoutForm';
 
 export const metadata: Metadata = {
@@ -17,58 +23,73 @@ export const metadata: Metadata = {
 };
 
 /**
- * A Server Component shell around one client island — the form itself
+ * A Server Component shell around one client island - the form itself
  * needs `useActionState` for inline validation feedback, but the cart read
- * and the order-summary render need no interactivity at all.
+ * needs no interactivity at all.
+ *
+ * 2026-08-29 rewrite, owner feedback: "Formularz zamówienia również ma
+ * bardzo biedne UI/UX" + real weight-based shipping pricing. Delivery
+ * methods are no longer a flat, cart-independent list - `resolveDeliveryMethodsForCart`
+ * (`server/repositories/delivery-methods.ts`) evaluates each one against
+ * THIS cart's real weight/dimensions, so it needs the cart resolved first,
+ * not fetched in parallel with it. The item list itself moved into
+ * `CheckoutForm`'s own real two-column MUI layout (a sticky order-summary
+ * panel) - this page no longer hand-rolls a plain-text item list; the
+ * `@mui/material`-forbidden-in-`(shop)`-Server-Components rule
+ * (`ARCHITECTURE.md` §2.1) means all of that real UI has to live in the
+ * client island anyway.
  */
 export default async function CheckoutPage() {
-  const sessionToken = await readGuestSessionToken();
-  const cart = await findCartForRequest({ userId: null, sessionToken });
+  const [sessionToken, session] = await Promise.all([readGuestSessionToken(), getSession()]);
+  const cart = await findCartForRequest({ userId: session?.userId ?? null, sessionToken });
 
   if (cart.items.length === 0) {
     redirect('/koszyk');
   }
 
-  const totalGrossGrosze = cart.subtotalGrossGrosze + SHIPPING_FLAT_GROSZE;
+  const [deliveryMethods, paymentMethods, prefill] = await Promise.all([
+    resolveDeliveryMethodsForCart(cart),
+    listActivePaymentMethods(),
+    // The buyer details we can honestly offer to fill in, or null for a
+    // guest. Read here rather than in the island: it touches the account and
+    // the customer's most recent order, neither of which belongs in a client
+    // bundle. See `getCheckoutPrefill` for where each field really comes from.
+    session === null ? Promise.resolve(null) : getCheckoutPrefill(session.userId),
+  ]);
+
+  void recordAnalyticsEvent({ name: 'checkout_started', sessionToken, userId: session?.userId ?? null });
 
   return (
-    <Section>
-      <Container>
-        <Heading level={1}>{SITE.checkoutHeadingPl}</Heading>
+    <>
+      <CheckoutSteps current="DETAILS" />
 
-        <div style={{ marginBlockStart: 32, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {cart.items.map((item) => (
-            <div key={item.cartItemId} style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Text muted>
-                {item.productNamePl} × {item.quantity}
-              </Text>
-              <Text muted>
-                {item.priceGrossGrosze !== null ? formatPln(item.priceGrossGrosze * item.quantity) : null}
-              </Text>
-            </div>
-          ))}
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Text muted>{SITE.checkoutShippingLabelPl}</Text>
-            <Text muted>{formatPln(SHIPPING_FLAT_GROSZE)}</Text>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              font: 'var(--mui-font-h5)',
-              paddingBlockStart: 8,
-              borderTop: '1px solid var(--mui-palette-divider)',
-            }}
-          >
-            <span>{SITE.orderTotalLabelPl}</span>
-            <span>{formatPln(totalGrossGrosze)}</span>
-          </div>
-        </div>
+      <Section>
+        <Container>
+          <Heading level={1}>{SITE.checkoutHeadingPl}</Heading>
 
-        <div style={{ marginBlockStart: 32 }}>
-          <CheckoutForm />
-        </div>
-      </Container>
-    </Section>
+          <div style={{ marginBlockStart: 32 }}>
+            <ThemeRegistry>
+              {/**
+               * One id per render of this page, carried into the form as a
+               * hidden field - `docs/AUDIT-2026-08-30.md` P0-2. Every
+               * resubmission of this same rendered form (double click,
+               * retried request, back-and-resubmit) therefore carries the
+               * SAME value, and `createOrder` returns the first attempt's
+               * order instead of creating a second one. Generated here rather
+               * than in the action for exactly that reason: the action runs
+               * once per submission, this runs once per form.
+               */}
+              <CheckoutForm
+                cart={cart}
+                prefill={prefill}
+                deliveryMethods={deliveryMethods}
+                paymentMethods={paymentMethods}
+                idempotencyKey={randomUUID()}
+              />
+            </ThemeRegistry>
+          </div>
+        </Container>
+      </Section>
+    </>
   );
 }

@@ -9,7 +9,7 @@ import type { FontRow, PersonalizationSpecRow } from '@/server/mapping/to-domain
 
 /**
  * The server-side glue between `domain/compatibility` / `domain/pricing` /
- * `domain/feasibility` / `domain/modules` and a real product's rows —
+ * `domain/feasibility` / `domain/modules` and a real product's rows -
  * ARCHITECTURE.md §7.1's `derived` state and §7.2's option resolution.
  * Fixture-driven, exactly like `tests/unit/mapping.test.ts`: no database, a
  * mistake here does not throw, it produces a plausible wrong price or option
@@ -32,8 +32,8 @@ const optionData: ConfiguratorOptionData = {
       isAvailable: true,
       imageUrl: '/images/photos/material-dab.jpg',
       finishes: [
-        { id: 'olejowanie', namePl: 'Olejowanie', isAvailable: true },
-        { id: 'lakierowanie', namePl: 'Lakierowanie', isAvailable: false },
+        { id: 'olejowanie', namePl: 'Olejowanie', isAvailable: true, imageUrl: '/images/photos/material-dab.jpg' },
+        { id: 'lakierowanie', namePl: 'Lakierowanie', isAvailable: false, imageUrl: '/images/photos/material-dab.jpg' },
       ],
     },
     {
@@ -48,7 +48,7 @@ const optionData: ConfiguratorOptionData = {
       namePl: 'Materiał niedostępny',
       isAvailable: false,
       imageUrl: '/images/photos/material-dab.jpg',
-      finishes: [{ id: 'olejowanie', namePl: 'Olejowanie', isAvailable: true }],
+      finishes: [{ id: 'olejowanie', namePl: 'Olejowanie', isAvailable: true, imageUrl: '/images/photos/material-dab.jpg' }],
     },
   ],
   designs: [
@@ -100,6 +100,7 @@ const optionData: ConfiguratorOptionData = {
     },
   ],
   fonts: [{ id: 'inter', namePl: 'Inter', fileUrl: '/fonts/Inter-Variable.ttf' }],
+  presetSizes: [],
 };
 
 describe('resolveOptions', () => {
@@ -153,13 +154,13 @@ describe('resolveOptions', () => {
     expect(result.installVariantCodes).toEqual(['ON_TOP', 'OVERLAY']);
   });
 
-  it('lists every font, unfiltered — no compatibility rule narrows font choice', () => {
+  it('lists every font, unfiltered - no compatibility rule narrows font choice', () => {
     const result = resolveOptions(optionData, EMPTY_SELECTIONS);
     expect(result.fontIds).toEqual(['inter']);
   });
 });
 
-describe('resolveOptionAvailability — every option, annotated, never hidden (§7.2)', () => {
+describe('resolveOptionAvailability - every option, annotated, never hidden (§7.2)', () => {
   it('marks a structurally unavailable material with its own reason', () => {
     const result = resolveOptionAvailability(optionData, EMPTY_SELECTIONS);
     const entry = result.materials.find((m) => m.id === 'unavailable-material');
@@ -364,10 +365,35 @@ describe('priceConfiguration', () => {
     }
   });
 
-  it('flags a blocking feasibility error but still returns a price for the summary', () => {
+  /**
+   * This test used to assert the opposite - that an impossible line width
+   * produced `blockingError: true` and a `LINE_TOO_THIN` finding.
+   *
+   * Reversed deliberately on 2026-08-31, at the owner's instruction: "we
+   * should not measure patterns can be printed on the product - since we
+   * decided we sell product with the pattern already - the client can just
+   * define material, wymiary… there shouldn't be cases where we allow
+   * something but its blocked by system - this is logical issue."
+   *
+   * Pattern selection is off, so the pattern is a property of a product we
+   * already make rather than artwork being scaled to a size the customer
+   * chose - and the metadata these rules read (`referenceWidthMm: 600`,
+   * `minLineWidthUm: 1200`, identical on every seeded design) was seed
+   * scaffolding, never a measurement. The effect was a shop that refused
+   * itself: two products were 100% unbuildable while still being listed and
+   * priced (`docs/AI-CHECKLIST.md` BUG-35).
+   *
+   * The rules themselves are untouched and still fully covered by
+   * `tests/unit/feasibility.test.ts`, which exercises `evaluateFeasibility`
+   * directly. What changed is one flag in `price-configuration.ts`
+   * (`PATTERN_FEASIBILITY_ENABLED`), and this test now pins that decision so
+   * it cannot be reverted by accident. Recorded, not quietly deleted.
+   */
+  it('no longer blocks on a pattern that the material could not hold, now that patterns are not customer-scaled', () => {
     const thinLineData: ConfiguratorPricingData = {
       ...pricingData,
-      // The material demands a much wider line than this design ever produces.
+      // The material demands a far wider line than this design could ever
+      // produce - previously an immediate hard block.
       material: { ...pricingData.material, minLineWidthUm: 50_000 }, // 50 mm
     };
     const result = priceConfiguration(
@@ -377,9 +403,24 @@ describe('priceConfiguration', () => {
     );
     expect(result.status).toBe('priced');
     if (result.status === 'priced') {
-      expect(result.blockingError).toBe(true);
-      expect(result.feasibility.some((f) => f.code === 'LINE_TOO_THIN')).toBe(true);
+      expect(result.blockingError).toBe(false);
+      expect(result.feasibility.some((f) => f.code === 'LINE_TOO_THIN')).toBe(false);
       expect(result.priceBreakdown).toBeDefined();
+    }
+  });
+
+  /**
+   * The other half of the same decision: only the three DESIGN-derived
+   * findings were switched off. Every constraint on something the customer
+   * genuinely chooses still blocks - this is the machine's real Z-axis
+   * limit, and the test below it covers the same for module splitting.
+   */
+  it('still blocks on a real machine limit, which is not a pattern question', () => {
+    const result = priceConfiguration(pricingData, selections({ widthMm: 600, heightMm: 400, thicknessMm: 150 }), 1);
+    expect(result.status).toBe('priced');
+    if (result.status === 'priced') {
+      expect(result.feasibility.some((f) => f.code === 'THICKNESS_EXCEEDS_MACHINE')).toBe(true);
+      expect(result.blockingError).toBe(true);
     }
   });
 
@@ -408,7 +449,7 @@ describe('priceConfiguration', () => {
 });
 
 // ---------------------------------------------------------------------------
-// priceConfiguration — personalization (§7.1, domain/personalization)
+// priceConfiguration - personalization (§7.1, domain/personalization)
 // ---------------------------------------------------------------------------
 
 const personalizationSpecFixture: PersonalizationSpecRow = {
@@ -420,7 +461,7 @@ const personalizationSpecFixture: PersonalizationSpecRow = {
   pricePerCharGrosze: 50,
 };
 
-// Basic Latin + Latin-1 Supplement + Latin Extended-A — covers every Polish
+// Basic Latin + Latin-1 Supplement + Latin Extended-A - covers every Polish
 // diacritic (ó sits in Latin-1 Supplement, the rest in Latin Extended-A) but
 // nothing outside those three blocks, so an em dash is a real gap to test.
 const fontFixture: FontRow = {
@@ -433,13 +474,13 @@ const fontFixture: FontRow = {
   ],
 };
 
-describe('priceConfiguration — personalization', () => {
+describe('priceConfiguration - personalization', () => {
   const base: ConfiguratorPricingData = {
     ...pricingData,
     personalizationSpec: personalizationSpecFixture,
   };
 
-  it('has no personalization issues when no text is entered — it is optional', () => {
+  it('has no personalization issues when no text is entered - it is optional', () => {
     const result = priceConfiguration(base, selections({ widthMm: 600, heightMm: 400 }), 1);
     expect(result.status).toBe('priced');
     if (result.status === 'priced') {
@@ -477,16 +518,22 @@ describe('priceConfiguration — personalization', () => {
     }
   });
 
-  it('reports a character genuinely outside the font\'s cmap as a blocking issue — the mistake an engraving cannot undo', () => {
+  it('reports a character genuinely outside the font\'s cmap as a blocking issue - the mistake an engraving cannot undo', () => {
+    // U+2014, by code point: this is the one place in the repository that
+    // needs a literal em-dash, because it is the *subject* of the test - a
+    // character the engraving font genuinely has no glyph for. A hyphen IS
+    // in the cmap, so writing one here makes the test assert nothing, which
+    // is exactly what happened when the owner's no-em-dash sweep first ran.
+    const notInTheFont = String.fromCharCode(0x2014);
     const result = priceConfiguration(
       { ...base, font: fontFixture },
-      selections({ widthMm: 600, heightMm: 400, personalizationText: 'Ala—Ola' }),
+      selections({ widthMm: 600, heightMm: 400, personalizationText: `Ala${notInTheFont}Ola` }),
       1,
     );
     expect(result.status).toBe('priced');
     if (result.status === 'priced') {
       expect(result.personalizationIssues).toEqual([
-        { code: 'UNSUPPORTED_CHARACTER', character: '—' },
+        { code: 'UNSUPPORTED_CHARACTER', character: notInTheFont },
       ]);
       expect(result.blockingError).toBe(true);
     }

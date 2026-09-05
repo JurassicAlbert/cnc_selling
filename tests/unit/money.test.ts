@@ -29,7 +29,7 @@ describe('divRoundHalfUp', () => {
     expect(divRoundHalfUp(14, 10)).toBe(1);
   });
 
-  it('rounds UP exactly at the half — this is the boundary that decides invoices', () => {
+  it('rounds UP exactly at the half - this is the boundary that decides invoices', () => {
     expect(divRoundHalfUp(15, 10)).toBe(2);
     expect(divRoundHalfUp(5, 10)).toBe(1);
     expect(divRoundHalfUp(25, 10)).toBe(3);
@@ -150,7 +150,7 @@ describe('formatting', () => {
     expect(normalizeSpaces(formatPln(123_456))).toBe('1234,56 zł');
   });
 
-  it('does NOT group four-digit amounts — Polish CLDR sets minimumGroupingDigits to 2', () => {
+  it('does NOT group four-digit amounts - Polish CLDR sets minimumGroupingDigits to 2', () => {
     // This surprises people who expect "1 234,56 zł". It is correct for pl-PL:
     // the thousands separator only appears from five digits.
     expect(normalizeSpaces(formatPln(99_999))).toBe('999,99 zł');

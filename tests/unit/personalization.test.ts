@@ -46,7 +46,7 @@ function codes(
   );
 }
 
-describe('validatePersonalization — valid text', () => {
+describe('validatePersonalization - valid text', () => {
   it('accepts plain text', () => {
     expect(codes('Anna i Piotr')).toEqual([]);
   });
@@ -73,7 +73,7 @@ describe('validatePersonalization — valid text', () => {
   });
 });
 
-describe('validatePersonalization — the engraving font trap', () => {
+describe('validatePersonalization - the engraving font trap', () => {
   it('rejects ł when the chosen decorative face does not contain it', () => {
     // The whole reason this module exists. "Michał" on a script face without
     // ł would otherwise be engraved as "Micha" or a fallback glyph.
@@ -106,7 +106,7 @@ describe('validatePersonalization — the engraving font trap', () => {
   });
 });
 
-describe('validatePersonalization — length and structure', () => {
+describe('validatePersonalization - length and structure', () => {
   it('rejects text one character over the limit', () => {
     expect(codes('A'.repeat(41))).toEqual(['TEXT_TOO_LONG']);
   });
@@ -142,7 +142,7 @@ describe('validatePersonalization — length and structure', () => {
   });
 });
 
-describe('validatePersonalization — emoji', () => {
+describe('validatePersonalization - emoji', () => {
   it('rejects an emoji, which no engraving font can carve', () => {
     expect(codes('Anna 😀')).toContain('EMOJI_NOT_SUPPORTED');
   });
@@ -157,7 +157,7 @@ describe('validatePersonalization — emoji', () => {
   });
 });
 
-describe('validatePersonalization — text height', () => {
+describe('validatePersonalization - text height', () => {
   it('rejects text below the font legibility floor', () => {
     expect(codes('Anna', 5, DECORATIVE_FONT)).toContain('TEXT_TOO_SMALL_FOR_FONT');
   });

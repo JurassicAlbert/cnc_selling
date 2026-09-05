@@ -1,11 +1,11 @@
 /**
- * Compatibility resolution — §7.2 of the architecture doc.
+ * Compatibility resolution - §7.2 of the architecture doc.
  *
  * For every configurator step, the server returns the option set already
  * filtered by compatibility. These functions ARE that filter: pure, no I/O,
  * operating on rows the mapper has already fetched from the database. An
  * unavailable option is shown disabled with a Polish reason (that copy lives
- * in `src/content/pl`, not here) — never silently hidden and never silently
+ * in `src/content/pl`, not here) - never silently hidden and never silently
  * included.
  */
 
@@ -18,7 +18,7 @@ export type MaterialOption = {
  * `availableMaterials(product) = ProductMaterial ∩ Material.isAvailable
  *                                ∩ (design.materials if design narrows)`
  *
- * `designNarrowing` is the chosen design's own `DesignMaterial` rows — NOT a
+ * `designNarrowing` is the chosen design's own `DesignMaterial` rows - NOT a
  * per-material lookup. An empty (or omitted) array means the design does not
  * narrow materials at all: the schema's comment on `Design.materials` is
  * explicit that "no rows means every material the product allows", so empty
@@ -55,7 +55,7 @@ export function availableFinishes(materialFinishes: readonly FinishOption[]): st
 
 /**
  * Only these two rights statuses are ever sellable (brief §12). A design can
- * be catalogued — for internal reference, or pending permission — without
+ * be catalogued - for internal reference, or pending permission - without
  * ever appearing in a customer-facing option list.
  */
 const SELLABLE_RIGHTS_STATUSES: ReadonlySet<string> = new Set([
