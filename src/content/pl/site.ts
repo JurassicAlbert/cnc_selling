@@ -221,10 +221,16 @@ export const SITE = {
   cartShippingAtCheckoutPl: 'Koszt dostawy poznasz w kolejnym kroku, po wybraniu sposobu wysyłki.',
   cartKeepShoppingHeadingPl: 'Przeglądaj dalej',
   cartQuantityLabelPl: 'Ilość',
-  cartUpdateQuantityPl: 'Aktualizuj',
   cartRemovePl: 'Usuń',
-  cartDuplicatePl: 'Duplikuj',
-  cartEditPl: 'Edytuj',
+  /*
+    „Aktualizuj", „Duplikuj" and „Edytuj" were removed here on 2026-09-05
+    (UX-05/BUG-09), after the owner's 2026-09-04 instruction took the three
+    controls off the cart card and left the constants behind unused.
+    Deliberately deleted rather than kept "in case": a label still sitting in
+    the content file is how a removed control gets re-added by someone who
+    finds it and assumes it belongs somewhere. `CartContents.tsx`'s header
+    records what the removal cost.
+  */
   // 2026-08-29, cart UI/UX pass - real MUI stepper + a hard per-line cap
   // ("żeby nie było sytuacji w której klient kupuje 10000 sztuk produktu").
   cartQuantityDecreasePl: 'Zmniejsz ilość',

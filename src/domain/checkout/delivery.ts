@@ -37,7 +37,22 @@ export type DeliveryPriceInfo = {
 };
 
 export type DeliveryEvaluation =
-  | { readonly feasible: true; readonly priceGrosze: number; readonly matchedTierLabelPl: string | null }
+  | {
+      readonly feasible: true;
+      readonly priceGrosze: number;
+      readonly matchedTierLabelPl: string | null;
+      /**
+       * UX-07. True only when this costs nothing *because the cart crossed
+       * the free-shipping threshold* - not merely because the price is zero.
+       *
+       * Two different zeroes were being reported as one. A cart that crosses
+       * the threshold has earned free delivery and saying so is worth doing;
+       * `Odbiór osobisty` is zero because nothing is being shipped at all, so
+       * „Twoje zamówienie kwalifikuje się do darmowej wysyłki" is simply
+       * untrue of it - it costs nothing at 10 zł and nothing at 10 000 zł.
+       */
+      readonly freeShippingApplied: boolean;
+    }
   | { readonly feasible: false; readonly reason: 'TOO_HEAVY' | 'ITEM_TOO_LARGE' };
 
 /**
@@ -90,7 +105,7 @@ export function evaluateDeliveryMethod(
     Pinned by `tests/unit/delivery-pricing.test.ts`.
   */
   if (method.freeShippingThresholdGrosze !== null && cart.subtotalGrossGrosze >= method.freeShippingThresholdGrosze) {
-    return { feasible: true, priceGrosze: 0, matchedTierLabelPl: null };
+    return { feasible: true, priceGrosze: 0, matchedTierLabelPl: null, freeShippingApplied: true };
   }
   return carriage;
 }
@@ -107,7 +122,7 @@ function resolveCarriage(
   cart: { readonly subtotalGrossGrosze: number; readonly items: readonly CartWeightItem[] },
 ): DeliveryEvaluation {
   if (method.weightTiers.length === 0) {
-    return { feasible: true, priceGrosze: method.priceGrosze, matchedTierLabelPl: null };
+    return { feasible: true, priceGrosze: method.priceGrosze, matchedTierLabelPl: null, freeShippingApplied: false };
   }
 
   const cartWeightGrams = computeCartWeightGrams(cart.items);
@@ -126,7 +141,7 @@ function resolveCarriage(
       continue;
     }
     if (tier.maxWidthMm === null || tier.maxHeightMm === null || tier.maxDepthMm === null) {
-      return { feasible: true, priceGrosze: tier.priceGrosze, matchedTierLabelPl: tier.labelPl };
+      return { feasible: true, priceGrosze: tier.priceGrosze, matchedTierLabelPl: tier.labelPl, freeShippingApplied: false };
     }
     const opening = { openingWidthMm: tier.maxWidthMm, openingHeightMm: tier.maxHeightMm, maxDepthMm: tier.maxDepthMm };
     const everyItemFits = cart.items.every((item) => {
@@ -137,7 +152,7 @@ function resolveCarriage(
       return fitsLockerOpening({ widthMm: item.widthMm, heightMm: item.heightMm, thicknessMm }, opening);
     });
     if (everyItemFits) {
-      return { feasible: true, priceGrosze: tier.priceGrosze, matchedTierLabelPl: tier.labelPl };
+      return { feasible: true, priceGrosze: tier.priceGrosze, matchedTierLabelPl: tier.labelPl, freeShippingApplied: false };
     }
     sawWeightCapacityWithoutFit = true;
   }

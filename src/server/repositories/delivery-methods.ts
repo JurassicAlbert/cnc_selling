@@ -35,6 +35,14 @@ export type ActiveDeliveryMethod = {
   readonly feasible: boolean;
   readonly infeasibleReasonPl: string | null;
   readonly matchedTierLabelPl: string | null;
+  /**
+   * UX-07. True only when the cart crossed this method's free-shipping
+   * threshold - not merely when the price is zero. `Odbiór osobisty` is free
+   * because nothing is shipped, and telling a customer their order
+   * "qualifies for free delivery" of a collection they are driving to
+   * themselves is a sentence about nothing.
+   */
+  readonly freeShippingApplied: boolean;
 };
 
 function toCartWeightItems(items: readonly CartItemView[]): readonly CartWeightItem[] {
@@ -110,6 +118,7 @@ export async function resolveDeliveryMethodsForCart(cart: {
       feasible: evaluation.feasible,
       infeasibleReasonPl: evaluation.feasible ? null : infeasibleReasonMessage(evaluation.reason),
       matchedTierLabelPl: evaluation.feasible ? evaluation.matchedTierLabelPl : null,
+      freeShippingApplied: evaluation.feasible && evaluation.freeShippingApplied,
     };
   });
 }

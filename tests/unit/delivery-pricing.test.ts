@@ -15,6 +15,7 @@ describe('evaluateDeliveryMethod - free-shipping threshold', () => {
       feasible: true,
       priceGrosze: 1_500,
       matchedTierLabelPl: null,
+      freeShippingApplied: false,
     });
   });
 
@@ -40,6 +41,7 @@ describe('evaluateDeliveryMethod - free-shipping threshold', () => {
       feasible: true,
       priceGrosze: 0,
       matchedTierLabelPl: null,
+      freeShippingApplied: true,
     });
   });
 });
@@ -51,6 +53,10 @@ describe('evaluateDeliveryMethod - no weight tiers (flat-rate fallback, e.g. Odb
       feasible: true,
       priceGrosze: 0,
       matchedTierLabelPl: null,
+      // Zero, and NOT free shipping - this is `Odbiór osobisty`, which is
+      // free because nothing is shipped rather than because the cart earned
+      // it. UX-07, and the reason the flag exists at all.
+      freeShippingApplied: false,
     });
   });
 });
@@ -69,13 +75,13 @@ describe('evaluateDeliveryMethod - real weight tiers', () => {
   it('picks the cheapest tier the cart weight clears', () => {
     // SMALL_ITEM: 0.2*0.15*0.01*750*1000 = 225g, well under 1kg
     const result = evaluateDeliveryMethod(method, { subtotalGrossGrosze: 10_000, items: [SMALL_ITEM] });
-    expect(result).toEqual({ feasible: true, priceGrosze: 1_649, matchedTierLabelPl: 'do 1 kg' });
+    expect(result).toEqual({ feasible: true, priceGrosze: 1_649, matchedTierLabelPl: 'do 1 kg', freeShippingApplied: false });
   });
 
   it('escalates to a heavier tier for a heavier cart', () => {
     const heavyItem: CartWeightItem = { widthMm: 300, heightMm: 300, thicknessMm: 40, materialDensityKgPerM3: 750, quantity: 1 }; // 2700g
     const result = evaluateDeliveryMethod(method, { subtotalGrossGrosze: 10_000, items: [heavyItem] });
-    expect(result).toEqual({ feasible: true, priceGrosze: 1_849, matchedTierLabelPl: 'do 5 kg' });
+    expect(result).toEqual({ feasible: true, priceGrosze: 1_849, matchedTierLabelPl: 'do 5 kg', freeShippingApplied: false });
   });
 
   it('is infeasible (TOO_HEAVY) once the cart exceeds every tier - never silently charges the heaviest tier’s price', () => {
@@ -140,7 +146,7 @@ describe('evaluateDeliveryMethod - which subtotal the free-shipping threshold co
   it('is free at exactly the threshold, measured gross', () => {
     const evaluation = evaluateDeliveryMethod(method, { subtotalGrossGrosze: 50_000, items: [] });
 
-    expect(evaluation).toEqual({ feasible: true, priceGrosze: 0, matchedTierLabelPl: null });
+    expect(evaluation).toEqual({ feasible: true, priceGrosze: 0, matchedTierLabelPl: null, freeShippingApplied: true });
   });
 
   it('is not free one grosz below it', () => {
@@ -226,6 +232,7 @@ describe('evaluateDeliveryMethod - free shipping never rescues a method that can
       feasible: true,
       priceGrosze: 0,
       matchedTierLabelPl: null,
+      freeShippingApplied: true,
     });
   });
 
@@ -234,6 +241,60 @@ describe('evaluateDeliveryMethod - free shipping never rescues a method that can
       feasible: true,
       priceGrosze: 1_149,
       matchedTierLabelPl: 'XS',
+      freeShippingApplied: false,
     });
+  });
+});
+
+/**
+ * UX-07 - „Odbiór osobisty" announced „Darmowa dostawa", and there is no
+ * shipping to be free of.
+ *
+ * Two different zeroes were being reported as one. A cart that crosses the
+ * free-shipping threshold has *earned* free delivery, and telling the
+ * customer so is worth doing. Personal collection is zero because nothing is
+ * being shipped at all - it costs nothing at 10 zł and nothing at 10 000 zł,
+ * and „Twoje zamówienie kwalifikuje się do darmowej wysyłki" is simply untrue
+ * of it. The same false note would appear on any method a shop prices at zero
+ * flat.
+ *
+ * So the evaluation now says *why* it is free, and the checkout only
+ * celebrates the threshold. The method's own description already explains
+ * collection („Bezpłatny odbiór osobisty po wcześniejszym umówieniu terminu").
+ */
+describe('evaluateDeliveryMethod - why a delivery is free (UX-07)', () => {
+  it('reports free shipping as applied when the cart crossed the threshold', () => {
+    const method: DeliveryPriceInfo = { priceGrosze: 1_500, freeShippingThresholdGrosze: 40_000, weightTiers: [] };
+    const result = evaluateDeliveryMethod(method, { subtotalGrossGrosze: 40_000, items: [SMALL_ITEM] });
+
+    expect(result).toEqual({ feasible: true, priceGrosze: 0, matchedTierLabelPl: null, freeShippingApplied: true });
+  });
+
+  it('does not claim free shipping for a method that is simply free - personal collection', () => {
+    // `Odbiór osobisty` exactly as seeded: no price, no threshold, no tiers.
+    const collection: DeliveryPriceInfo = { priceGrosze: 0, freeShippingThresholdGrosze: null, weightTiers: [] };
+    const result = evaluateDeliveryMethod(collection, { subtotalGrossGrosze: 1_000, items: [SMALL_ITEM] });
+
+    expect(result).toEqual({ feasible: true, priceGrosze: 0, matchedTierLabelPl: null, freeShippingApplied: false });
+  });
+
+  it('does not claim free shipping below the threshold', () => {
+    const method: DeliveryPriceInfo = { priceGrosze: 1_500, freeShippingThresholdGrosze: 40_000, weightTiers: [] };
+    const result = evaluateDeliveryMethod(method, { subtotalGrossGrosze: 39_999, items: [SMALL_ITEM] });
+
+    expect(result.feasible && result.freeShippingApplied).toBe(false);
+  });
+
+  it('does not claim free shipping for a real weight tier that happens to cost nothing', () => {
+    // A shop can price a tier at zero as a promotion. It is still carriage,
+    // and it is still not the threshold that made it free.
+    const method: DeliveryPriceInfo = {
+      priceGrosze: 1_500,
+      freeShippingThresholdGrosze: null,
+      weightTiers: [{ labelPl: 'do 1 kg', maxWeightGrams: 10_000, priceGrosze: 0, maxWidthMm: null, maxHeightMm: null, maxDepthMm: null }],
+    };
+    const result = evaluateDeliveryMethod(method, { subtotalGrossGrosze: 1_000, items: [SMALL_ITEM] });
+
+    expect(result).toEqual({ feasible: true, priceGrosze: 0, matchedTierLabelPl: 'do 1 kg', freeShippingApplied: false });
   });
 });
