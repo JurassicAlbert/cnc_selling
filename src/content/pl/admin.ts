@@ -610,6 +610,15 @@ export const ADMIN = {
   auditLogFilterEntityPl: 'Encja',
   auditLogFilterActionPl: 'Akcja',
   auditLogFilterSearchPl: 'E-mail osoby lub identyfikator rekordu',
+  /*
+    ADMIN-01. A list showing a subset has to say so on screen - the panel's
+    three biggest lists silently returned the newest N rows, which is how 66
+    of 166 orders were unreachable without anything looking wrong.
+  */
+  adminPageSummaryPl: (from: number, to: number, total: number) => `Pokazano ${from}-${to} z ${total}`,
+  adminPageEmptySummaryPl: (total: number) => `Brak wyników do pokazania (łącznie: ${total})`,
+  adminPagePreviousPl: 'Poprzednia strona',
+  adminPageNextPl: 'Następna strona',
   auditLogEmptyPl: 'Brak zdarzeń spełniających kryteria.',
   auditLogColumnDatePl: 'Data',
   auditLogColumnActorPl: 'Kto',

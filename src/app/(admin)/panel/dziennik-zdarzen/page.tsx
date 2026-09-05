@@ -2,12 +2,20 @@ import { Button, MenuItem, Table, TableBody, TableCell, TableHead, TableRow, Tex
 
 import { ADMIN, adminAuditActionLabel } from '@/content/pl/admin';
 import { listAuditLogEntities, listAuditLogs } from '@/server/repositories/admin-audit-log';
+import { parsePagination } from '@/domain/pagination/page';
+import { AdminPageSummary, AdminPager } from '@/ui/primitives/AdminPageSummary';
 import type { AuditAction } from '@/server/audit/write-audit-log';
 
 const ACTIONS: readonly AuditAction[] = ['create', 'update', 'delete', 'transition', 'export'];
 
 type AuditLogPageProps = {
-  readonly searchParams: Promise<{ readonly entity?: string; readonly action?: string; readonly search?: string }>;
+  readonly searchParams: Promise<{
+    readonly entity?: string;
+    readonly action?: string;
+    readonly search?: string;
+    readonly page?: string;
+    readonly perPage?: string;
+  }>;
 };
 
 export default async function AdminAuditLogPage({ searchParams }: AuditLogPageProps) {
@@ -16,7 +24,14 @@ export default async function AdminAuditLogPage({ searchParams }: AuditLogPagePr
   const action = params.action !== undefined && params.action.length > 0 ? params.action : undefined;
   const search = params.search !== undefined && params.search.length > 0 ? params.search : undefined;
 
-  const [logs, entities] = await Promise.all([listAuditLogs({ entity, action, search }), listAuditLogEntities()]);
+  // ADMIN-01, and the one that mattered most: this took the newest 200
+  // entries and stopped, so the §16A.2 record of who changed what silently
+  // forgot everything older. A log that forgets is not a record.
+  const page = parsePagination(params);
+  const [logs, entities] = await Promise.all([
+    listAuditLogs({ entity, action, search }, page),
+    listAuditLogEntities(),
+  ]);
 
   return (
     <>
@@ -47,9 +62,11 @@ export default async function AdminAuditLogPage({ searchParams }: AuditLogPagePr
         </Button>
       </form>
 
-      {logs.length === 0 ? (
+      {logs.total === 0 ? (
         <Typography color="text.secondary">{ADMIN.auditLogEmptyPl}</Typography>
       ) : (
+        <>
+        <AdminPageSummary skip={page.skip} take={page.take} total={logs.total} />
         <Table size="small">
           <TableHead>
             <TableRow>
@@ -61,7 +78,7 @@ export default async function AdminAuditLogPage({ searchParams }: AuditLogPagePr
             </TableRow>
           </TableHead>
           <TableBody>
-            {logs.map((log) => (
+            {logs.items.map((log) => (
               <TableRow key={log.id} hover>
                 <TableCell sx={{ whiteSpace: 'nowrap' }}>{log.createdAt.toLocaleString('pl-PL')}</TableCell>
                 <TableCell>{log.actorEmail}</TableCell>
@@ -91,6 +108,17 @@ export default async function AdminAuditLogPage({ searchParams }: AuditLogPagePr
             ))}
           </TableBody>
         </Table>
+        {/* A plain `<Table>` has no pager of its own, unlike the two grids.
+            Server-rendered links, so every page of the compliance record is a
+            real URL and none of it needs client JavaScript to reach. */}
+        <AdminPager
+          basePath="/panel/dziennik-zdarzen"
+          params={params}
+          pageIndex={page.pageIndex}
+          pageSize={page.pageSize}
+          total={logs.total}
+        />
+        </>
       )}
     </>
   );

@@ -42,6 +42,7 @@ import type { GridCellParams, GridColDef, GridRowParams, GridRowSelectionModel }
 
 import { ADMIN, bulkSelectionCountMessage } from '@/content/pl/admin';
 import { useGridPreferences } from '@/ui/islands/admin/useGridPreferences';
+import { useServerPagination } from '@/ui/islands/admin/useServerPagination';
 
 export type EntityBulkAction = {
   readonly label: string;
@@ -55,6 +56,7 @@ export function EntityDataGrid<T extends { readonly id: string }>({
   processRowUpdate,
   onProcessRowUpdateError,
   bulkActions,
+  serverPagination,
 }: {
   readonly rows: readonly T[];
   readonly columns: GridColDef<T>[];
@@ -64,9 +66,21 @@ export function EntityDataGrid<T extends { readonly id: string }>({
   readonly onProcessRowUpdateError?: (error: unknown) => void;
   /** Enables checkbox selection + the selection toolbar (P7c bulk-actions slice). */
   readonly bulkActions?: readonly EntityBulkAction[];
+  /**
+   * ADMIN-01. Present means the rows are one server-side page of a longer
+   * list and the grid must page by navigating; absent keeps the client-side
+   * paging every other list here still uses, because those lists are short
+   * and bounded and moving them would be churn for nothing.
+   */
+  readonly serverPagination?: { readonly page: number; readonly pageSize: number; readonly total: number };
 }) {
   const router = useRouter();
   const gridPreferences = useGridPreferences(basePath);
+  const pagination = useServerPagination({
+    pageIndex: serverPagination?.page ?? 0,
+    pageSize: serverPagination?.pageSize ?? 25,
+    total: serverPagination?.total ?? rows.length,
+  });
   const [selection, setSelection] = useState<GridRowSelectionModel>({ type: 'include', ids: new Set() });
   const [running, setRunning] = useState(false);
   const selectedIds = [...selection.ids].map((id) => String(id));
@@ -123,8 +137,9 @@ export function EntityDataGrid<T extends { readonly id: string }>({
         processRowUpdate={processRowUpdate}
         onProcessRowUpdateError={onProcessRowUpdateError}
         sx={{ cursor: 'pointer', border: 'none' }}
-        initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
-        pageSizeOptions={[25, 50, 100]}
+        {...(serverPagination === undefined
+          ? { initialState: { pagination: { paginationModel: { pageSize: 25 } } }, pageSizeOptions: [25, 50, 100] }
+          : pagination)}
         {...gridPreferences}
       />
     </Box>

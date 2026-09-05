@@ -154,6 +154,45 @@ describe('listOrderModuleManifest', () => {
     expect(manifest[0]?.modules[0]?.code).toBe('A1');
   });
 
+  it('survives an order item whose snapshot predates moduleLayout', async () => {
+    /*
+      Found 2026-09-05 while the full suite was running: `listProductionQueue`
+      read `snapshot.moduleLayout.totalModules` with no guard, so one item
+      whose stored JSON lacks the field crashed the whole queue - every
+      order's row, for every member of staff, from one bad row.
+
+      `OrderItem.snapshot` is `Json` and deliberately immutable: it is what
+      the customer actually bought, frozen at checkout, so an order placed
+      before a field existed genuinely does not have it. The two functions
+      beside this one (`itemAreaM2`, `itemMachineMinutes`) already guard for
+      exactly that and say so in their comments; `moduleLayout` was the one
+      left out.
+    */
+    const { moduleLayout: _dropped, ...withoutModuleLayout } = buildSnapshot();
+    await seedOrder('IN_PRODUCTION', [withoutModuleLayout as OrderItemSnapshot]);
+
+    const queue = await listProductionQueue();
+    const row = queue.find((entry) => entry.orderNumber.startsWith(PREFIX));
+
+    // Counted as zero modules rather than crashing - and the area, which the
+    // snapshot does carry, is still real.
+    expect(row?.moduleCount).toBe(0);
+    expect(row?.areaM2).toBeCloseTo(0.5, 5);
+  });
+
+  it('lists an empty module manifest rather than throwing on the same old snapshot', async () => {
+    // `listOrderModuleManifest` read `snapshot.moduleLayout.modules` with the
+    // same missing guard, and it renders on the order detail page - so one
+    // such item broke that page too, not only the queue.
+    const { moduleLayout: _dropped, ...withoutModuleLayout } = buildSnapshot();
+    const order = await seedOrder('IN_PRODUCTION', [withoutModuleLayout as OrderItemSnapshot]);
+
+    const manifest = await listOrderModuleManifest(order.orderNumber);
+
+    expect(manifest).toHaveLength(1);
+    expect(manifest[0]?.modules).toEqual([]);
+  });
+
   it('returns an empty array for a nonexistent order', async () => {
     expect(await listOrderModuleManifest('does-not-exist')).toEqual([]);
   });

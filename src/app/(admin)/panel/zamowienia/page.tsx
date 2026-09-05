@@ -3,6 +3,8 @@ import { Button, MenuItem, TextField, Typography } from '@mui/material';
 import { ADMIN, adminOrderStatusLabel } from '@/content/pl/admin';
 import { ORDER_STATUSES } from '@/domain/order-status/transitions';
 import { listOrdersForAdmin } from '@/server/repositories/admin-orders';
+import { parsePagination } from '@/domain/pagination/page';
+import { AdminPageSummary } from '@/ui/primitives/AdminPageSummary';
 import { OrdersDataGrid } from '@/ui/islands/admin/OrdersDataGrid';
 import type { OrderStatus, PaymentStatus } from '@/generated/prisma/enums';
 
@@ -15,6 +17,8 @@ type OrdersPageProps = {
     readonly search?: string;
     readonly dateFrom?: string;
     readonly dateTo?: string;
+    readonly page?: string;
+    readonly perPage?: string;
   }>;
 };
 
@@ -38,7 +42,10 @@ export default async function AdminOrdersPage({ searchParams }: OrdersPageProps)
   const dateToRaw = parseDateParam(params.dateTo);
   const dateTo = dateToRaw === undefined ? undefined : new Date(dateToRaw.getTime() + 24 * 60 * 60 * 1000 - 1);
 
-  const orders = await listOrdersForAdmin({ status, paymentStatus, search, dateFrom, dateTo });
+  // ADMIN-01: the page comes from the URL, so it survives a reload and is
+  // shareable, and the filters above the grid page with it.
+  const page = parsePagination(params);
+  const orders = await listOrdersForAdmin({ status, paymentStatus, search, dateFrom, dateTo }, page);
 
   return (
     <>
@@ -92,10 +99,18 @@ export default async function AdminOrdersPage({ searchParams }: OrdersPageProps)
         </Button>
       </form>
 
-      {orders.length === 0 ? (
+      {orders.total === 0 ? (
         <Typography color="text.secondary">{ADMIN.ordersEmptyPl}</Typography>
       ) : (
-        <OrdersDataGrid rows={orders} />
+        <>
+          <AdminPageSummary skip={page.skip} take={page.take} total={orders.total} />
+          <OrdersDataGrid
+            rows={orders.items}
+            page={page.pageIndex}
+            pageSize={page.pageSize}
+            total={orders.total}
+          />
+        </>
       )}
     </>
   );

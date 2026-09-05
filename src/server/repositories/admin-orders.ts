@@ -7,6 +7,8 @@
 
 import { prisma } from '@/server/db/client';
 import type { OrderStatus, PaymentMethod, PaymentStatus } from '@/generated/prisma/enums';
+import type { PageRequest } from '@/domain/pagination/page';
+import type { Page } from '@/server/repositories/page';
 import type { OrderConfirmationItemView } from '@/server/repositories/orders';
 
 export type AdminOrderListFilters = {
@@ -28,48 +30,71 @@ export type AdminOrderListItem = {
   readonly customerName: string;
 };
 
-const ADMIN_ORDER_LIST_LIMIT = 100;
+/**
+ * ADMIN-01. This took `take: 100` and stopped - no cursor, no total, and
+ * nothing on screen saying so, which left 66 of the dev database's 166 orders
+ * unreachable. The page now comes from the caller, and the count comes back
+ * with it.
+ *
+ * The `where` is built once and used for both halves on purpose: a count
+ * built from a second, separately-written filter is how a list ends up
+ * offering six pages of a one-row result.
+ */
+export async function listOrdersForAdmin(
+  filters: AdminOrderListFilters,
+  page: Pick<PageRequest, 'skip' | 'take'>,
+): Promise<Page<AdminOrderListItem>> {
+  const where = {
+    status: filters.status,
+    paymentStatus: filters.paymentStatus,
+    createdAt:
+      filters.dateFrom !== undefined || filters.dateTo !== undefined
+        ? { gte: filters.dateFrom, lte: filters.dateTo }
+        : undefined,
+    ...(filters.search !== undefined && filters.search.length > 0
+      ? {
+          OR: [
+            { orderNumber: { startsWith: filters.search, mode: 'insensitive' as const } },
+            { email: { equals: filters.search, mode: 'insensitive' as const } },
+          ],
+        }
+      : {}),
+  };
 
-export async function listOrdersForAdmin(filters: AdminOrderListFilters): Promise<readonly AdminOrderListItem[]> {
-  const orders = await prisma.order.findMany({
-    where: {
-      status: filters.status,
-      paymentStatus: filters.paymentStatus,
-      createdAt:
-        filters.dateFrom !== undefined || filters.dateTo !== undefined
-          ? { gte: filters.dateFrom, lte: filters.dateTo }
-          : undefined,
-      ...(filters.search !== undefined && filters.search.length > 0
-        ? {
-            OR: [
-              { orderNumber: { startsWith: filters.search, mode: 'insensitive' } },
-              { email: { equals: filters.search, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
-    },
-    orderBy: { createdAt: 'desc' },
-    take: ADMIN_ORDER_LIST_LIMIT,
-    select: {
-      orderNumber: true,
-      status: true,
-      paymentStatus: true,
-      totalGrossGrosze: true,
-      createdAt: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-    },
-  });
-  return orders.map((order) => ({
-    orderNumber: order.orderNumber,
-    status: order.status,
-    paymentStatus: order.paymentStatus,
-    totalGrossGrosze: order.totalGrossGrosze,
-    createdAt: order.createdAt,
-    email: order.email,
-    customerName: `${order.firstName} ${order.lastName}`,
-  }));
+  // One round trip for both. Counting after fetching would be a second
+  // sequential wait on the busiest screen in the panel.
+  const [orders, total] = await Promise.all([
+    prisma.order.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: page.skip,
+      take: page.take,
+      select: {
+        orderNumber: true,
+        status: true,
+        paymentStatus: true,
+        totalGrossGrosze: true,
+        createdAt: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+      },
+    }),
+    prisma.order.count({ where }),
+  ]);
+
+  return {
+    items: orders.map((order) => ({
+      orderNumber: order.orderNumber,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      totalGrossGrosze: order.totalGrossGrosze,
+      createdAt: order.createdAt,
+      email: order.email,
+      customerName: `${order.firstName} ${order.lastName}`,
+    })),
+    total,
+  };
 }
 
 export type AdminOrderEventView = {

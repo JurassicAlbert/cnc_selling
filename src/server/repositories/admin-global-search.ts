@@ -41,21 +41,24 @@ export async function searchGlobal(query: string): Promise<GlobalSearchResults> 
   }
 
   const [orders, customers, designs, products] = await Promise.all([
-    listOrdersForAdmin({ search: trimmed }),
-    listCustomersForAdmin(trimmed),
+    // Global search shows a handful of hits per type, so it asks for exactly
+    // that many rather than a page - it was relying on the old `take: 100`
+    // and slicing five out of a hundred rows it had already paid to fetch.
+    listOrdersForAdmin({ search: trimmed }, { skip: 0, take: RESULTS_PER_TYPE }),
+    listCustomersForAdmin(trimmed, { skip: 0, take: RESULTS_PER_TYPE }),
     listDesignsForAdmin({ search: trimmed }),
     listProductsForAdmin({ search: trimmed }),
   ]);
 
   return {
-    orders: orders.slice(0, RESULTS_PER_TYPE).map((order) => ({
+    orders: orders.items.map((order) => ({
       type: 'order',
       id: order.orderNumber,
       label: order.orderNumber,
       sublabel: order.customerName,
       href: `/panel/zamowienia/${encodeURIComponent(order.orderNumber)}`,
     })),
-    customers: customers.slice(0, RESULTS_PER_TYPE).map((customer) => ({
+    customers: customers.items.map((customer) => ({
       type: 'customer',
       id: customer.id,
       label: customer.name,

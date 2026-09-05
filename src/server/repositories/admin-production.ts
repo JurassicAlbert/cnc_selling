@@ -12,6 +12,26 @@ import type { OrderItemSnapshot } from '@/server/orders/snapshot';
 
 export const PRODUCTION_STATUSES: readonly OrderStatus[] = ['CONFIRMED', 'IN_PRODUCTION', 'FINISHING', 'READY_TO_SHIP'];
 
+/**
+ * How many modules an item is cut into, or zero when its snapshot does not
+ * say.
+ *
+ * Same reasoning as `itemMachineMinutes` below, and the same shape of guard:
+ * `OrderItem.snapshot` is `Json` and deliberately immutable - it is what the
+ * customer actually bought, frozen at checkout - so an order placed before a
+ * field existed genuinely does not carry it.
+ *
+ * Added 2026-09-05. This one read `snapshot.moduleLayout.totalModules`
+ * unguarded, so a single item without the field threw while the queue was
+ * being built, and the whole production page failed for every order and
+ * every member of staff. A missing count is worth showing as zero; it is not
+ * worth an outage.
+ */
+function itemModules(snapshot: OrderItemSnapshot, quantity: number): number {
+  const total = snapshot.moduleLayout?.totalModules;
+  return typeof total === 'number' ? total * quantity : 0;
+}
+
 function itemAreaM2(snapshot: OrderItemSnapshot, quantity: number): number {
   if (typeof snapshot.widthMm !== 'number' || typeof snapshot.heightMm !== 'number') {
     return 0;
@@ -56,7 +76,7 @@ export async function listProductionQueue(): Promise<readonly ProductionQueueIte
     let areaM2 = 0;
     for (const item of order.items) {
       const snapshot = item.snapshot as unknown as OrderItemSnapshot;
-      moduleCount += snapshot.moduleLayout.totalModules * item.quantity;
+      moduleCount += itemModules(snapshot, item.quantity);
       areaM2 += itemAreaM2(snapshot, item.quantity);
     }
     return {
@@ -117,6 +137,9 @@ export async function listOrderModuleManifest(orderNumber: string): Promise<read
   }
   return order.items.map((item) => {
     const snapshot = item.snapshot as unknown as OrderItemSnapshot;
-    return { productNamePl: snapshot.productNamePl, modules: snapshot.moduleLayout.modules };
+    // Same guard as `itemModules` above, for the same reason: a snapshot
+    // written before `moduleLayout` existed has no modules to list, and an
+    // order detail page that throws is worse than one showing none.
+    return { productNamePl: snapshot.productNamePl, modules: snapshot.moduleLayout?.modules ?? [] };
   });
 }

@@ -23,9 +23,27 @@ import { comparePl } from '@/domain/text/collation';
 import { formatPln } from '@/domain/money/money';
 import type { AdminOrderListItem } from '@/server/repositories/admin-orders';
 import { useGridPreferences } from '@/ui/islands/admin/useGridPreferences';
+import { useServerPagination } from '@/ui/islands/admin/useServerPagination';
 
-export function OrdersDataGrid({ rows }: { readonly rows: readonly AdminOrderListItem[] }) {
+/**
+ * ADMIN-01: the page is server-side now. `page`/`pageSize`/`total` come from
+ * the Server Component above, and changing page navigates rather than
+ * slicing an array the browser already holds - which it could not do, because
+ * the browser never held more than one page.
+ */
+export function OrdersDataGrid({
+  rows,
+  page,
+  pageSize,
+  total,
+}: {
+  readonly rows: readonly AdminOrderListItem[];
+  readonly page: number;
+  readonly pageSize: number;
+  readonly total: number;
+}) {
   const router = useRouter();
+  const pagination = useServerPagination({ pageIndex: page, pageSize, total });
   const gridPreferences = useGridPreferences('orders');
 
   const columns: GridColDef<AdminOrderListItem>[] = [
@@ -98,8 +116,7 @@ export function OrdersDataGrid({ rows }: { readonly rows: readonly AdminOrderLis
       disableColumnMenu={false}
       onRowClick={(params: GridRowParams<AdminOrderListItem>) => router.push(`/panel/zamowienia/${encodeURIComponent(params.row.orderNumber)}`)}
       sx={{ cursor: 'pointer', border: 'none' }}
-      initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
-      pageSizeOptions={[25, 50, 100]}
+      {...pagination}
       {...gridPreferences}
     />
   );

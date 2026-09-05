@@ -3,6 +3,13 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { listAuditLogEntities, listAuditLogs, listAuditLogsForEntity } from '@/server/repositories/admin-audit-log';
 import { prisma } from '@/server/db/client';
 
+/**
+ * These assert filtering, not paging - ADMIN-01 gave every admin list an
+ * explicit page, so they ask for one wide enough to hold whatever they seed
+ * and go on checking exactly what they always did.
+ */
+const FIRST_PAGE = { skip: 0, take: 100 };
+
 const PREFIX = 'test-admin-audit-log-';
 
 function uid(): string {
@@ -32,17 +39,17 @@ describe('listAuditLogs', () => {
     const seeded = await seedLog({ entity: 'TestEntityA', action: 'create', actorEmail, entityId: targetId });
     await seedLog({ entity: 'TestEntityB', action: 'delete' });
 
-    const byEntity = await listAuditLogs({ entity: 'TestEntityA' });
+    const byEntity = (await listAuditLogs({ entity: 'TestEntityA' }, FIRST_PAGE)).items;
     expect(byEntity.some((l) => l.id === seeded.id)).toBe(true);
     expect(byEntity.every((l) => l.entity === 'TestEntityA')).toBe(true);
 
-    const byAction = await listAuditLogs({ action: 'create' });
+    const byAction = (await listAuditLogs({ action: 'create' }, FIRST_PAGE)).items;
     expect(byAction.some((l) => l.id === seeded.id)).toBe(true);
 
-    const bySearchEmail = await listAuditLogs({ search: actorEmail });
+    const bySearchEmail = (await listAuditLogs({ search: actorEmail }, FIRST_PAGE)).items;
     expect(bySearchEmail.map((l) => l.id)).toEqual([seeded.id]);
 
-    const bySearchEntityId = await listAuditLogs({ search: targetId });
+    const bySearchEntityId = (await listAuditLogs({ search: targetId }, FIRST_PAGE)).items;
     expect(bySearchEntityId.map((l) => l.id)).toEqual([seeded.id]);
   });
 });

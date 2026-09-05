@@ -13,6 +13,8 @@
 
 import { prisma } from '@/server/db/client';
 import type { UploadKind } from '@/generated/prisma/enums';
+import type { PageRequest } from '@/domain/pagination/page';
+import type { Page } from '@/server/repositories/page';
 import { listOrdersForUser } from '@/server/repositories/orders';
 import type { OrderSummaryView } from '@/server/repositories/orders';
 import { listConfigurationsForUser } from '@/server/repositories/cart';
@@ -27,28 +29,45 @@ export type AdminCustomerListItem = {
   readonly anonymizedAt: Date | null;
 };
 
-const ADMIN_CUSTOMER_LIST_LIMIT = 100;
+/** ADMIN-01 - see `listOrdersForAdmin`'s comment for what this replaced. */
+export async function listCustomersForAdmin(
+  search: string | undefined,
+  page: Pick<PageRequest, 'skip' | 'take'>,
+): Promise<Page<AdminCustomerListItem>> {
+  const where = {
+    role: 'CUSTOMER' as const,
+    ...(search !== undefined && search.length > 0
+      ? {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' as const } },
+            { email: { contains: search, mode: 'insensitive' as const } },
+          ],
+        }
+      : {}),
+  };
 
-export async function listCustomersForAdmin(search?: string): Promise<readonly AdminCustomerListItem[]> {
-  const customers = await prisma.user.findMany({
-    where: {
-      role: 'CUSTOMER',
-      ...(search !== undefined && search.length > 0
-        ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { email: { contains: search, mode: 'insensitive' } }] }
-        : {}),
-    },
-    orderBy: { createdAt: 'desc' },
-    take: ADMIN_CUSTOMER_LIST_LIMIT,
-    select: { id: true, name: true, email: true, createdAt: true, anonymizedAt: true, _count: { select: { orders: true } } },
-  });
-  return customers.map((customer) => ({
-    id: customer.id,
-    name: customer.name,
-    email: customer.email,
-    createdAt: customer.createdAt,
-    orderCount: customer._count.orders,
-    anonymizedAt: customer.anonymizedAt,
-  }));
+  const [customers, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: page.skip,
+      take: page.take,
+      select: { id: true, name: true, email: true, createdAt: true, anonymizedAt: true, _count: { select: { orders: true } } },
+    }),
+    prisma.user.count({ where }),
+  ]);
+
+  return {
+    items: customers.map((customer) => ({
+      id: customer.id,
+      name: customer.name,
+      email: customer.email,
+      createdAt: customer.createdAt,
+      orderCount: customer._count.orders,
+      anonymizedAt: customer.anonymizedAt,
+    })),
+    total,
+  };
 }
 
 export type AdminCustomerDetail = {

@@ -157,11 +157,11 @@ describe('listCustomersForAdmin / findCustomerForAdmin', () => {
     const customer = await seedCustomer();
     const staffUser = await prisma.user.create({ data: { email: `${uid()}@example.test`, name: 'Test Staff Person', role: 'STAFF' } });
 
-    const byName = await listCustomersForAdmin(customer.name);
+    const byName = (await listCustomersForAdmin(customer.name, { skip: 0, take: 100 })).items;
     expect(byName.some((c) => c.id === customer.id)).toBe(true);
     expect(byName.some((c) => c.id === staffUser.id)).toBe(false);
 
-    const byEmail = await listCustomersForAdmin(customer.email);
+    const byEmail = (await listCustomersForAdmin(customer.email, { skip: 0, take: 100 })).items;
     expect(byEmail.some((c) => c.id === customer.id)).toBe(true);
 
     expect(await findCustomerForAdmin(customer.id)).not.toBeNull();

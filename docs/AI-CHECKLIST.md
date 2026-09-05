@@ -19,11 +19,11 @@
 | **Last reviewed** | 2026-08-30 (audit) · **2026-08-31 (P0 fixes + SEC-05 implemented)** |
 | **Commit reviewed** | `e774e40` "Eliminate every duplicate a customer can create" (`main`) |
 | **Review status** | Independent full-repository audit complete. **All four P0s fixed and verified** - the three from the audit, plus BUG-35 found and closed during remediation. **SEC-05 (security headers + CSP) closed 2026-08-31.** |
-| **Overall implementation status** | Feature-complete against `ARCHITECTURE.md` P0–P9. All P0s closed, **every listed product can actually be configured and ordered** (T-16 holds the line), §16.1's header half exists, and there is CI. **The e2e suite is green (70/70, both browsers)** - see T-23, T-24 and T-25. Remaining: 0 P0, 1 P1, 32 P2, 14 P3. |
-| **Current highest-priority issue** | **ADMIN-01** - 66 real orders are unreachable in the panel today. |
-| **Recommended next task** | **ADMIN-01**, then **BUG-04 + BUG-19**. **Still outstanding: open the PR and watch the CI workflow run** - the branch is pushed but the workflow has never executed on GitHub. It has a much better chance of being green than it did: T-23 fixed four reasons it could not have been. |
+| **Overall implementation status** | Feature-complete against `ARCHITECTURE.md` P0–P9. All P0s closed, **every listed product can actually be configured and ordered** (T-16 holds the line), §16.1's header half exists, and there is CI. **The e2e suite is green (70/70, both browsers)** - see T-23, T-24 and T-25. Remaining: **0 P0, 0 P1**, 32 P2, 14 P3. |
+| **Current highest-priority issue** | **ARCH-03** - e2e runs against the development database, and the resulting parallel contention is the only thing keeping the suite from being reliably green. |
+| **Recommended next task** | **ARCH-03**, then **BUG-04 + BUG-19**. **Still outstanding: open the PR and watch the CI workflow run** - the branch is pushed but the workflow has never executed on GitHub. It has a much better chance of being green than it did: T-23 fixed four reasons it could not have been. |
 | **Blocking issue** | None. `OPEN_ITEMS.md` §6 (rate-limit storage) is **resolved** - the owner chose Postgres on 2026-08-30 and it is built. |
-| **Last completed area** | **UX-26** (2026-09-05). Before it: UX-25 + T-25, and UX-23. Before it: UX-21, and SEC-11 + T-23 found while verifying it. Before them: the warehouse tool, the burger nav, the em-dash sweep, PERF-02 + PERF-05, BUG-05, BUG-06, BUG-07, SEC-04, SEC-10, ARCH-01, SEC-05, SEC-01, SEC-02, SEC-03, BUG-02, BUG-03, BUG-24, BUG-35 and the carried-forward P1-8. |
+| **Last completed area** | **ADMIN-01** (2026-09-05), which closed the last P1. Before it: UX-26. Before it: UX-25 + T-25, and UX-23. Before it: UX-21, and SEC-11 + T-23 found while verifying it. Before them: the warehouse tool, the burger nav, the em-dash sweep, PERF-02 + PERF-05, BUG-05, BUG-06, BUG-07, SEC-04, SEC-10, ARCH-01, SEC-05, SEC-01, SEC-02, SEC-03, BUG-02, BUG-03, BUG-24, BUG-35 and the carried-forward P1-8. |
 | **Ready for the next implementation step?** | **Yes.** 1090/1090 unit + integration tests (four consecutive clean runs), **68/68 e2e across both browser projects** (two consecutive), typecheck clean, lint clean, production build succeeds. |
 
 **Verified baseline after the P0 fixes, SEC-05 and ARCH-01** (all actually run):
@@ -189,17 +189,14 @@ affected spec passed in isolation last session).
 
 ### Admin
 
-- [ ] **ADMIN-01 · P1 · admin/scalability - Order, customer and audit lists truncate silently**
-  - **Files:** `src/server/repositories/admin-orders.ts` (100), `admin-customers.ts` (100), `admin-audit-log.ts` (200)
-  - **Routes:** `/panel/zamowienia`, `/panel/klienci`, `/panel/dziennik-zdarzen`
-  - **Current:** `take: N` with client-side `DataGrid` pagination, no cursor, no total, no indicator. **The dev database holds 166 orders; 66 are unreachable right now.** The audit log - the §16A.2 compliance record - silently forgets past 200 entries.
-  - **Expected:** server-side pagination (`paginationMode="server"` + `rowCount`, `skip`/`take` + a `count` in one `Promise.all`).
-  - **Test:** T-08 - 150 seeded orders; page 2 returns 101-150; `total === 150`.
-  - **Acceptance:** every order is reachable · counts are real totals · the audit log is fully navigable. Stopgap until then: render „Pokazano 100 z 166".
-  - **Evidence:** `REVIEW-DETAILED.md` ADMIN-01
-  - **Status:** TODO
-
-### Security
+- [x] **ADMIN-01 · P1 · admin/scalability - Order, customer and audit lists truncated silently** - **DONE 2026-09-05.**
+  - **Was:** `take: 100` / `take: 200` with client-side `DataGrid` paging, no cursor, no total, and **nothing on screen saying a subset was being shown**. That last part is what made it a bug rather than a limit: the development database now holds **259 orders**, so 159 were unreachable and the screen looked entirely normal. The audit log - §16A.2's record of who changed what - forgot everything past its 200th entry, which is not a record.
+  - **Fix:** server-side pagination on all three. The page lives in the URL (`?page=&perPage=`), so it survives a reload, is shareable, and pages *with* the filters above the grid rather than losing them. `findMany` and `count` go out in one `Promise.all` off a single shared `where` - a count built from a separately-written filter is how a list ends up offering six pages of a one-row result. Every page carries „Pokazano 1-25 z 259".
+  - **`parsePagination` is a domain function**, tested on its own, because every value in it arrives in a URL: `?perPage=100000` and `?page=-1` reach the database as readily as `2` does. Page size is capped at 100 and the skip is bounded, so `?page=999999999` cannot make Postgres walk an index for nothing.
+  - **Two real bugs found while doing it**, both in `admin-production.ts`, both the same shape: `snapshot.moduleLayout.totalModules` and `snapshot.moduleLayout.modules` were read unguarded. `OrderItem.snapshot` is `Json` and deliberately immutable, so an order placed before that field existed genuinely lacks it - **one such row threw while the queue was being built and took down the whole production page**, and the order detail page with it. The two functions beside them already guarded for exactly this and said so in their comments; `moduleLayout` was the one left out. Found because a parallel test file wrote such an order, which is the shared-database contention working in our favour for once.
+  - **Not done, and deliberately:** sorting stays client-side and therefore within the current page. Server-side sort means a validated mapping from every sortable column to a Prisma `orderBy`, and these lists are newest-first, which is the order staff actually want. Recorded rather than hidden.
+  - **Evidence:** `tests/unit/pagination.test.ts` (18) · `tests/integration/admin-pagination.test.ts` (7, including T-08's "150 seeded orders, page 2 returns 101-150, total === 150" and a sweep proving **no row is unreachable**) · two regression tests for the `moduleLayout` crash · `tests/e2e/admin-pagination.spec.ts` reaches row 101+ through the grid's own next-page control. Browser-verified against the real dev database: orders **251-259 of 259**, customers **351-375 of 379**, audit **1-25 of 188** with a working pager. **1106 → 1133 unit/integration.**
+  - **Status:** DONE
 
 - [x] **SEC-04 · P1 · security/authorization - `STAFF` can change the bank account and irreversibly anonymize customers** - **DONE 2026-08-31.**
   - **Files:** `src/server/operations/admin-only.ts` (new), `admin-store-settings.ts`, `admin-customers.ts`, `admin-email-templates.ts`, `panel/ustawienia/**`, `panel/klienci/[id]/page.tsx`, `AdminSidebarNav.tsx`, `panel/layout.tsx`
@@ -433,10 +430,9 @@ easier once it is green.
 
 | # | ID | Pri | Why now | Prerequisite |
 |---|---|---|---|---|
-| 1 | **ADMIN-01** | P1 | 66 real orders are unreachable in the panel today, and it needs no owner decision. | none |
+| 1 | **ARCH-03** | P2 | Point e2e at `TEST_DATABASE_URL`. Now the top item: it is the only thing left keeping the suite from being reliably green, and three runs on 2026-09-05 each failed one different `mobile-safari` test that passed in isolation. | none |
 | 2 | **BUG-04 + BUG-19** | P1/P2 | Both touch the order snapshot and the order views; one pass, no migration. | none |
-| 3 | **ARCH-03** | P2 | Point e2e at `TEST_DATABASE_URL`. The suite is green now, and this is the last known source of flakiness in it - the `fillReliably`/`checkReliably` timeouts under parallel workers that CI works around with `workers: 1`. | none |
-| 4 | **UX-22** | P3 | A second confirmation on the bank-account field, split out of SEC-04. Small, and the last UX item outstanding. | none |
+| 3 | **UX-22** | P3 | A second confirmation on the bank-account field, split out of SEC-04. Small, and the last UX item outstanding. | none |
 
 **PERF-01 is not in this list any more.** Every one of its three steps now
 needs an owner decision - steps 2-3 because of SEC-05's nonce, step 1 because

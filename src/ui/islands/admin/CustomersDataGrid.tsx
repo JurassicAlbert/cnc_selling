@@ -9,7 +9,18 @@ import { comparePl } from '@/domain/text/collation';
 import type { AdminCustomerListItem } from '@/server/repositories/admin-customers';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
 
-export function CustomersDataGrid({ rows }: { readonly rows: readonly AdminCustomerListItem[] }) {
+/** ADMIN-01: one server-side page of customers, not the newest hundred. */
+export function CustomersDataGrid({
+  rows,
+  page,
+  pageSize,
+  total,
+}: {
+  readonly rows: readonly AdminCustomerListItem[];
+  readonly page: number;
+  readonly pageSize: number;
+  readonly total: number;
+}) {
   const columns: GridColDef<AdminCustomerListItem>[] = [
     {
       field: 'name',
@@ -49,5 +60,12 @@ export function CustomersDataGrid({ rows }: { readonly rows: readonly AdminCusto
     },
   ];
 
-  return <EntityDataGrid rows={rows} columns={columns} basePath="/panel/klienci" />;
+  return (
+    <EntityDataGrid
+      rows={rows}
+      columns={columns}
+      basePath="/panel/klienci"
+      serverPagination={{ page, pageSize, total }}
+    />
+  );
 }

@@ -2322,3 +2322,75 @@ that does nothing. One real race fixed on the way: the configurator's
 `router.replace` interrupted a `page.goto` in
 `stale-configuration-link.spec.ts` under WebKit, now waited out by the
 appearance of the rewritten query rather than by a timeout.
+
+---
+
+## ADMIN-01 - The admin lists truncated silently
+
+- **Status:** **RESOLVED 2026-09-05** · CONFIRMED BUG
+- **Severity:** P1
+- **Area:** admin / scalability
+- **Files:** [src/domain/pagination/page.ts](src/domain/pagination/page.ts), [src/server/repositories/admin-orders.ts](src/server/repositories/admin-orders.ts), [src/server/repositories/admin-customers.ts](src/server/repositories/admin-customers.ts), [src/server/repositories/admin-audit-log.ts](src/server/repositories/admin-audit-log.ts)
+
+`listOrdersForAdmin` took the newest hundred rows and stopped. So did the
+customer list; the audit log stopped at two hundred. No cursor, no total, and
+**nothing on screen saying a subset was being shown** - which is the part that
+made it a bug rather than a documented limit. The development database now
+holds 259 orders, so 159 of them were unreachable and the page looked
+entirely normal.
+
+The audit log is the worse half. §16A.2 keeps it as the record of who changed
+what, and a record that forgets everything past its two-hundredth entry is not
+a record.
+
+**Fix.** Server-side pagination on all three, with the page in the URL
+(`?page=&perPage=`). That choice matters: these lists already take their
+filters from `searchParams`, so the page belongs in the same place - it
+survives a reload, it is shareable, and paging keeps the filters instead of
+dropping them. `findMany` and `count` go out together in one `Promise.all`
+built from a single shared `where`; a count assembled from a
+separately-written filter is how a list ends up offering six pages of a
+one-row result.
+
+**`parsePagination` is a domain function with its own tests**, for the same
+reason `clampCartQuantity` is: every value in it arrives in a URL. `?page=-1`,
+`?perPage=100000` and `?page=1e3` reach the database exactly as readily as
+`2`. Page size is capped at 100, the skip is bounded, and anything malformed
+shows the first page rather than an error - a truncated link is a normal thing
+to receive.
+
+**Two real bugs found on the way**, both in `admin-production.ts` and both the
+same shape: `snapshot.moduleLayout.totalModules` and
+`snapshot.moduleLayout.modules` were read with no guard. `OrderItem.snapshot`
+is `Json` and deliberately immutable - it is what the customer actually
+bought, frozen at checkout - so an order placed before that field existed
+genuinely does not carry it, and **one such row threw while the production
+queue was being assembled, taking down the whole page for every order and
+every member of staff**. The order detail page had the same crash through
+`listOrderModuleManifest`.
+
+The two functions immediately beside them, `itemAreaM2` and
+`itemMachineMinutes`, already guard for precisely this and explain why in
+their own comments. `moduleLayout` was simply the one left out. Found because
+a parallel test file wrote such an order into the shared database - the
+contention that usually costs time, working in our favour for once.
+
+**Not done, deliberately.** Sorting stays client-side and therefore sorts
+within the current page. Making it server-side means a validated mapping from
+every sortable column to a Prisma `orderBy`, and these lists are newest-first,
+which is the order staff actually want. Recorded rather than quietly left as
+a surprise.
+
+**Evidence.** `pagination.test.ts` (18) and `admin-pagination.test.ts` (7),
+both written first - including T-08's "150 seeded orders, page 2 returns
+101-150, total === 150" and a sweep asserting that **no row is unreachable**,
+which is the assertion the old code would have failed. Two regression tests
+for the `moduleLayout` crash. `admin-pagination.spec.ts` reaches row 101 and
+beyond through the grid's own next-page control, and asserts on the shape of
+the count line rather than a number read from the database - other specs place
+real orders while it runs, which is how its first version failed.
+
+Browser-verified against the real development data: orders **251-259 of 259**,
+customers **351-375 of 379**, audit log **1-25 of 188** with a working
+previous/next pager, and the grid's own next button keeping the active filter
+in the URL.

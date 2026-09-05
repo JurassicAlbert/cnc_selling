@@ -8,6 +8,8 @@
 
 import { prisma } from '@/server/db/client';
 import type { Prisma } from '@/generated/prisma/client';
+import type { PageRequest } from '@/domain/pagination/page';
+import type { Page } from '@/server/repositories/page';
 
 export type AdminAuditLogListFilters = {
   readonly entity?: string;
@@ -26,22 +28,40 @@ export type AdminAuditLogListItem = {
   readonly createdAt: Date;
 };
 
-const ADMIN_AUDIT_LOG_LIMIT = 200;
+/**
+ * ADMIN-01, and the most consequential of the three. This took the newest 200
+ * entries and stopped - so the §16A.2 record of who changed what silently
+ * forgot everything older, which is not a record.
+ */
+export async function listAuditLogs(
+  filters: AdminAuditLogListFilters,
+  page: Pick<PageRequest, 'skip' | 'take'>,
+): Promise<Page<AdminAuditLogListItem>> {
+  const where = {
+    entity: filters.entity,
+    action: filters.action,
+    ...(filters.search !== undefined && filters.search.length > 0
+      ? {
+          OR: [
+            { actorEmail: { contains: filters.search, mode: 'insensitive' as const } },
+            { entityId: filters.search },
+          ],
+        }
+      : {}),
+  };
 
-export async function listAuditLogs(filters: AdminAuditLogListFilters): Promise<readonly AdminAuditLogListItem[]> {
-  const logs = await prisma.auditLog.findMany({
-    where: {
-      entity: filters.entity,
-      action: filters.action,
-      ...(filters.search !== undefined && filters.search.length > 0
-        ? { OR: [{ actorEmail: { contains: filters.search, mode: 'insensitive' } }, { entityId: filters.search }] }
-        : {}),
-    },
-    orderBy: { createdAt: 'desc' },
-    take: ADMIN_AUDIT_LOG_LIMIT,
-    select: { id: true, actorEmail: true, entity: true, entityId: true, action: true, diff: true, createdAt: true },
-  });
-  return logs;
+  const [items, total] = await Promise.all([
+    prisma.auditLog.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: page.skip,
+      take: page.take,
+      select: { id: true, actorEmail: true, entity: true, entityId: true, action: true, diff: true, createdAt: true },
+    }),
+    prisma.auditLog.count({ where }),
+  ]);
+
+  return { items, total };
 }
 
 /** Populates the entity filter dropdown from what's actually been written - self-updating as new slices add new entities, never a hardcoded list that drifts. */
