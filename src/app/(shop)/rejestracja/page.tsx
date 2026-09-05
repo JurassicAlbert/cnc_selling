@@ -13,6 +13,12 @@ import { RegisterForm } from '@/ui/islands/auth/RegisterForm';
 
 export const metadata: Metadata = {
   title: SITE.authRegisterHeadingPl,
+  /*
+    BUG-17. `robots.txt` asks crawlers not to fetch this; that alone does not
+    keep it out of an index, because a disallowed URL something links to can
+    still be listed without a snippet. This is the half that removes it.
+  */
+  robots: { index: false },
 };
 
 /** 2026-08-28 redesign - same `AuthPanel`/decorative treatment as `/logowanie`, see that page's own header comment. */

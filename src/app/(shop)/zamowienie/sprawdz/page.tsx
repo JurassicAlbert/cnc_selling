@@ -10,6 +10,12 @@ import { OrderLookupForm } from '@/ui/islands/OrderLookupForm';
 
 export const metadata: Metadata = {
   title: SITE.orderLookupHeadingPl,
+  /*
+    BUG-17. `robots.txt` asks crawlers not to fetch this; that alone does not
+    keep it out of an index, because a disallowed URL something links to can
+    still be listed without a snippet. This is the half that removes it.
+  */
+  robots: { index: false },
 };
 
 /**
