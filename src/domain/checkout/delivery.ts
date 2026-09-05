@@ -58,7 +58,26 @@ export function evaluateDeliveryMethod(
   method: DeliveryPriceInfo,
   cart: { readonly subtotalGrossGrosze: number; readonly items: readonly CartWeightItem[] },
 ): DeliveryEvaluation {
+  const carriage = resolveCarriage(method, cart);
+  if (!carriage.feasible) {
+    return carriage;
+  }
+
   /*
+    Feasibility is physical; the threshold is commercial. `resolveCarriage`
+    above has already decided whether this carrier will take this parcel at
+    all, and only then does the shop decide what to charge for it.
+
+    That ordering is the fix, not decoration. This used to test the
+    threshold **first** and return immediately, so a cart over it was handed
+    a locker method at 0,00 zł with the locker never measured - while the
+    same physical parcel one grosz below the threshold was correctly refused
+    as ITEM_TOO_LARGE. No discount makes a 30 kg parcel fit a 25 kg service.
+    Found 2026-09-05 while lowering the threshold to 400 zł on the owner's
+    instruction that "the method is still decide by the size - like we can't
+    use paczkomat for to big package", which is what turned a latent
+    ordering mistake into one that fires on more carts.
+
     Gross, deliberately, and stated here because BUG-08 was entirely a
     disagreement about this line. The schema comment and the admin form both
     said the threshold was net while this compared gross, so free shipping
@@ -66,13 +85,27 @@ export function evaluateDeliveryMethod(
     zł" while the shop absorbed a real 51,61 zł InPost tier.
 
     Fixed by correcting those two descriptions, not this comparison: „wydaj
-    500 zł" should mean the number on the customer's cart, and moving the
+    400 zł" should mean the number on the customer's cart, and moving the
     code to net would have raised the real threshold by 23% on a live shop.
     Pinned by `tests/unit/delivery-pricing.test.ts`.
   */
   if (method.freeShippingThresholdGrosze !== null && cart.subtotalGrossGrosze >= method.freeShippingThresholdGrosze) {
     return { feasible: true, priceGrosze: 0, matchedTierLabelPl: null };
   }
+  return carriage;
+}
+
+/**
+ * Can this carrier take this parcel, and at what published price?
+ *
+ * Everything here is a fact about the parcel and the carrier's own rate
+ * card. Nothing the shop decides belongs in it - see the threshold in
+ * `evaluateDeliveryMethod`, which applies on top of the answer.
+ */
+function resolveCarriage(
+  method: DeliveryPriceInfo,
+  cart: { readonly subtotalGrossGrosze: number; readonly items: readonly CartWeightItem[] },
+): DeliveryEvaluation {
   if (method.weightTiers.length === 0) {
     return { feasible: true, priceGrosze: method.priceGrosze, matchedTierLabelPl: null };
   }

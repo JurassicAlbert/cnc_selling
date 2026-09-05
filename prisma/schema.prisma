@@ -916,18 +916,21 @@ model DeliveryMethod {
   /// Said gross, and was wrong: this comment read "net" while
   /// `evaluateDeliveryMethod` had always compared `subtotalGrossGrosze`, so
   /// free shipping began 23% earlier than the documented policy - at 406,50 zł
-  /// on the seeded 500 zł threshold. `docs/REVIEW-DETAILED.md` BUG-08.
+  /// on the then-seeded 500 zł threshold. `docs/REVIEW-DETAILED.md` BUG-08.
   ///
   /// Resolved by correcting the description rather than the comparison.
-  /// Gross is the better rule - "wydaj 500 zł" should mean the number on the
+  /// Gross is the better rule - "wydaj 400 zł" should mean the number on the
   /// customer's cart, not a figure they would have to divide by 1.23 to
   /// recognise - and switching the code to net would have quietly raised the
   /// real threshold by 23% on a live shop. That is a pricing change, not a
   /// bug fix.
   ///
-  /// Whether a flat threshold is right at all is a separate, open question
-  /// for the owner (BUG-08's second half): it means the weight-tier
-  /// machinery almost never fires.
+  /// Set to 400 zł on 2026-09-05, the owner's answer to BUG-08's second
+  /// half ("free above 400 zł"). The weight-tier machinery still prices
+  /// every delivery below it, and still decides which methods are offered
+  /// at all: a threshold makes a feasible carriage free, it never makes an
+  /// impossible one happen. `evaluateDeliveryMethod` resolves feasibility
+  /// first for exactly that reason.
   freeShippingThresholdGrosze Int?
   estimatedDaysMin            Int
   estimatedDaysMax            Int

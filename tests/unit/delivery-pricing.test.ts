@@ -18,10 +18,23 @@ describe('evaluateDeliveryMethod - free-shipping threshold', () => {
     });
   });
 
-  it('is free once the subtotal meets the threshold - wins over any weight tier', () => {
+  it('is free once the subtotal meets the threshold - wins over a tier that would have charged', () => {
+    /*
+      Rewritten 2026-09-05, and the change of intent is the point. This used
+      to assert that the threshold wins over a weight ceiling too: the tier
+      below carried `maxWeightGrams: 1`, which no real cart clears, and the
+      old code returned free anyway because it tested the threshold before
+      it measured anything.
+
+      That is no longer the rule. Feasibility is physical and the threshold
+      is commercial, so the tier here now has a ceiling the cart genuinely
+      clears, and what is pinned is what the threshold is actually for:
+      overriding a real, payable price with zero. The refusals it must NOT
+      override have their own block at the bottom of this file.
+    */
     const withTiers: DeliveryPriceInfo = {
       ...method,
-      weightTiers: [{ labelPl: 'ciężka', maxWeightGrams: 1, priceGrosze: 99_999, maxWidthMm: null, maxHeightMm: null, maxDepthMm: null }],
+      weightTiers: [{ labelPl: 'ciężka', maxWeightGrams: 50_000, priceGrosze: 99_999, maxWidthMm: null, maxHeightMm: null, maxDepthMm: null }],
     };
     expect(evaluateDeliveryMethod(withTiers, { subtotalGrossGrosze: 30_000, items: [OVERSIZED_ITEM] })).toEqual({
       feasible: true,
@@ -156,5 +169,71 @@ describe('evaluateDeliveryMethod - which subtotal the free-shipping threshold co
     );
 
     expect(evaluation.feasible && evaluation.priceGrosze).toBe(1_500);
+  });
+});
+
+/**
+ * Owner decision, 2026-09-05: free delivery above 400 zl gross, and "the
+ * method is still decide by the size - like we can't use paczkomat for to
+ * big package".
+ *
+ * That second half was already true for a paying cart and quietly false for
+ * a free one. `evaluateDeliveryMethod` tested the threshold **first** and
+ * returned immediately, so a cart over the threshold was handed a locker
+ * method at 0,00 zl without the locker ever being measured - and the same
+ * cart one grosz below the threshold was correctly refused as
+ * ITEM_TOO_LARGE. Lowering the threshold from 500 to 400 zl makes it fire
+ * on more carts, which is what turned a latent ordering mistake into
+ * something worth fixing now.
+ *
+ * The rule these pin: **feasibility is physical, price is commercial.**
+ * Whether a carrier will take the parcel is a fact about the parcel; the
+ * threshold only decides what the shop charges for a carriage that can
+ * actually happen. No discount makes a 30 kg parcel fit a 25 kg service.
+ */
+describe('evaluateDeliveryMethod - free shipping never rescues a method that cannot carry the cart', () => {
+  const locker: DeliveryPriceInfo = {
+    priceGrosze: 1_500,
+    freeShippingThresholdGrosze: 40_000,
+    weightTiers: [
+      { labelPl: 'XS', maxWeightGrams: 3_000, priceGrosze: 1_149, maxWidthMm: 380, maxHeightMm: 640, maxDepthMm: 40 },
+      { labelPl: 'C', maxWeightGrams: 25_000, priceGrosze: 2_049, maxWidthMm: 380, maxHeightMm: 640, maxDepthMm: 410 },
+    ],
+  };
+
+  it('still refuses an oversized panel when the cart is over the threshold', () => {
+    // The exact case the owner named. Below the threshold this already
+    // answered ITEM_TOO_LARGE; above it, the same physical parcel was
+    // offered free.
+    expect(evaluateDeliveryMethod(locker, { subtotalGrossGrosze: 40_000, items: [OVERSIZED_ITEM] })).toEqual({
+      feasible: false,
+      reason: 'ITEM_TOO_LARGE',
+    });
+  });
+
+  it('still refuses a cart heavier than every tier when it is over the threshold', () => {
+    const heavy: CartWeightItem = { ...SMALL_ITEM, quantity: 400 };
+    expect(evaluateDeliveryMethod(locker, { subtotalGrossGrosze: 40_000, items: [heavy] })).toEqual({
+      feasible: false,
+      reason: 'TOO_HEAVY',
+    });
+  });
+
+  it('is still free for a cart the method can actually carry', () => {
+    // The override itself is untouched - this is the guard that fixing the
+    // ordering did not quietly disable free delivery.
+    expect(evaluateDeliveryMethod(locker, { subtotalGrossGrosze: 40_000, items: [SMALL_ITEM] })).toEqual({
+      feasible: true,
+      priceGrosze: 0,
+      matchedTierLabelPl: null,
+    });
+  });
+
+  it('charges the real tier one grosz below the threshold', () => {
+    expect(evaluateDeliveryMethod(locker, { subtotalGrossGrosze: 39_999, items: [SMALL_ITEM] })).toEqual({
+      feasible: true,
+      priceGrosze: 1_149,
+      matchedTierLabelPl: 'XS',
+    });
   });
 });

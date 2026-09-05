@@ -266,7 +266,10 @@ affected spec passed in isolation last session).
   - **Fixed the descriptions, not the comparison, and that is a deliberate disagreement with the item.** The item says "fix the mismatch (code, schema comment and admin label must agree)" without saying which way, so the direction was a real decision rather than a transcription. Gross is the right rule: it is the number the customer sees in the cart, the number every Polish shop states a free-delivery threshold against, and the only one a buyer can check for themselves. Changing the **code** to net would agree with the comment and silently raise the real threshold by 23% on a live shop - carts between 406,50 zł and 500 zł that qualify today would stop qualifying, with no announcement. That is a pricing change, not a bug fix, and it is not one to make on a comment's authority.
   - **So:** `prisma/schema.prisma`'s comment now says GROSS and says why; `src/content/pl/admin.ts`'s helper text reads „(brutto, czyli kwoty widocznej w koszyku)" rather than „(netto)"; `src/domain/checkout/delivery.ts` carries the reasoning above the comparison so the next reader does not re-open it.
   - **The observation in the item is not a bug either, on inspection.** All four methods showing „0,00 zł" on a 709,16 zł cart is correct: 709,16 is over 500 whichever way it is read. What the item is really pointing at is that the shop absorbs a real 51,61 zł InPost tier at that point, which is the owner decision it names.
-  - **Still an owner decision:** whether a flat 500 zł threshold is right at all. Left open, unchanged.
+  - **Owner decided the second half, 2026-09-05:** „free above 400 zł the method is still decide by the size - like we can't use paczkomat for to big package". The threshold moves 500 → 400 zł gross in the seed and in every already-seeded row (migration `20260905000000_free_shipping_above_400`, conditional on the old value so a figure an admin set by hand at `/panel/dostawa` survives). The weight-aware variant was offered and not taken; a plain threshold is easier to state on the page and the tiers still price every paid delivery.
+  - **And the size half turned out to be half true, which is the real find.** Method eligibility by parcel size already worked for a paying cart: `DeliveryWeightTier` carries per-tier dimension limits and an oversized panel got `ITEM_TOO_LARGE`. But `evaluateDeliveryMethod` tested the free-shipping threshold **first and returned immediately**, so a cart over the threshold was offered a locker at „0,00 zł" with the locker never measured, while the identical parcel one grosz below the threshold was correctly refused. Lowering the threshold is what would have made it fire on more carts.
+  - **The rule now: feasibility is physical, price is commercial.** `resolveCarriage` answers whether the carrier will take this parcel; only then does the threshold decide what the shop charges. No discount makes a 30 kg parcel fit a 25 kg service.
+  - **Evidence:** four more cases in `tests/unit/delivery-pricing.test.ts`, written first and failing for the right reason. One pre-existing test pinned the old ordering („wins over any weight tier", with a 1 g ceiling no cart clears) and was **rewritten rather than deleted**, since its intent is superseded on purpose and a silently removed assertion is how a rule change loses its record.
   - **Evidence:** four cases in `tests/unit/delivery-pricing.test.ts`, written first, pinning that the comparison is against gross - including the band between the net-equivalent and the stated threshold, which is exactly where the two readings differ and where a future "tidy-up" would break it silently.
 - [ ] **BUG-13 · P2 · ecommerce/concurrency** - a quantity changed in another tab between the cart read and the transaction is charged at the **old** value; `createOrder` claims rows by id only. Widen the claim predicate to include the priced quantity and reuse `CART_CHANGED`.
 - [x] **BUG-19 · P2 · ecommerce - the order snapshot omitted fields §6.8 requires** - **DONE 2026-09-05.**
@@ -432,9 +435,10 @@ affected spec passed in isolation last session).
   - **Status:** DONE
 - [ ] **WAREHOUSE-01 · P2 · admin - consume stock when an order is produced** - the half deliberately not built on 2026-09-04.
   - **Current:** `MaterialStock` records what arrived and what it cost, and `/panel/magazyn` answers "what can I make from this board and what does the material cost". Nothing decrements a batch when a piece is actually cut: `applyAdjustStockQuantity` exists and is called by nothing.
-  - **Why it stopped there:** linking consumption to production means deciding which batch a given order drew from, and that is a real business rule (oldest first, cheapest first, or the operator picks) that the owner has not been asked yet. Guessing it would put wrong numbers into a cost report, which is worse than having no report.
-  - **Expected:** a decision on batch selection, then a hook from the production status transition, then the cost-per-order view that becomes possible once consumption is recorded.
-  - **Status:** TODO (needs an owner decision first)
+  - **Why it stopped there:** linking consumption to production means deciding which batch a given order drew from, and that is a real business rule that the owner had not been asked. Guessing it would put wrong numbers into a cost report, which is worse than having no report.
+  - **Decided 2026-09-05: oldest batch first.** FIFO, which is the standard for sheet material, needs no operator input, and matches how a physical stack is actually worked through - so the recorded cost per order reflects what was really on the shelf when the piece was cut. Cheapest-first was offered and refused precisely because it detaches the report from that reality.
+  - **Expected:** consumption hooked off the production status transition, drawing from the oldest batch with stock remaining, then the cost-per-order view that becomes possible once consumption is recorded.
+  - **Status:** TODO (unblocked)
 - [x] **UX-22 · P3 · UX/security - no second confirmation on the bank-account field** - **DONE 2026-09-05.**
   - **Was:** `StoreSettings.bankAccountNumber` saved as a plain text field with the rest of the form. It is the number every bank-transfer customer is told to pay into, printed on the confirmation page and in the confirmation email, so a transposed digit sends real money elsewhere - and nothing about the wrong number looks wrong.
   - **The suggested fix was a confirm dialog** (reusing `CustomerAnonymizeForm`'s pattern). **Deliberately not that.** A dialog is right for a destructive action and useless here: pressing „na pewno?" does not catch a typo, because the person confirming has the same wrong number in their head. What catches it is the checksum, and re-typing.
@@ -492,13 +496,19 @@ easier once it is green.
 
 | # | ID | Pri | Why now | Prerequisite |
 |---|---|---|---|---|
-| 1 | **WAREHOUSE-01** | P2 | Stock is recorded but never consumed. Needs one owner decision first: which batch an order draws from (oldest, cheapest, or the operator picks). | owner decision |
-| 2 | **PERF-01** | P2 | All three steps hinge on the nonce-vs-static call SEC-05 created. | owner decision |
+| 1 | **P2-9** | P2 | **Decided 2026-09-05: STAFF is read-only.** 84 operations move to `requireAdminSession()` and their controls come off the STAFF view. Mechanical, large, and unblocked. | none |
+| 2 | **WAREHOUSE-01** | P2 | **Decided 2026-09-05: oldest batch first (FIFO).** Consumption hooks off the production status transition. | none |
+| 3 | **INSURANCE-01** | P2 | **Decided 2026-09-05:** build the opt-in mechanism and its admin screen, leave it inactive until the owner supplies the real InPost/DPD declared-value rate cards. | carrier rate card, for activation only |
+| 4 | **PERF-01** | P2 | **Decided 2026-09-05: keep the nonce, park PERF-01.** Not a TODO any more - a recorded hold. | reopens only if page speed becomes a priority |
 | 3 | **ARCH-02's neighbours** | P3 | `ConfiguratorPreview.tsx` (247) is now the largest file under `islands/configurator`. Nothing forces it yet; noted so the next reader does not have to measure. | none |
 
-**PERF-01 is not in this list any more.** Every one of its three steps now
-needs an owner decision - steps 2-3 because of SEC-05's nonce, step 1 because
-its invalidation could not be demonstrated. It returns once that call is made.
+**PERF-01 is a deliberate hold, not a TODO.** The owner chose on 2026-09-05
+to keep the nonce-based CSP and accept that the storefront stays dynamic:
+there is no measured page-speed problem today, and the nonce plus
+`'strict-dynamic'` is the strongest part of SEC-05. Step 1 is separately
+parked because its invalidation could not be demonstrated. It reopens only if
+page speed becomes a priority, and the way back in is Next's experimental
+`sri` hash path, not `'unsafe-inline'` - that option was offered and refused.
 
 After those, work P2 in the order listed; the UX items cluster naturally
 (UX-04 fixes UX-10 and most of UX-14 with it).
