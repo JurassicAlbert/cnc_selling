@@ -10,7 +10,7 @@ import { revalidatePath } from 'next/cache';
 
 
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 
@@ -55,7 +55,7 @@ export async function applyCreateProductCollection(staff: CurrentSession, input:
 }
 
 export async function createProductCollection(input: ProductCollectionFormInput): Promise<ProductCollectionMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyCreateProductCollection(staff, input);
   if (result.ok) {
     revalidatePath('/panel/kolekcje-produktow');
@@ -90,7 +90,7 @@ export async function applyUpdateProductCollection(
 }
 
 export async function updateProductCollection(id: string, input: ProductCollectionFormInput): Promise<ProductCollectionMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyUpdateProductCollection(staff, id, input);
   if (result.ok) {
     revalidatePath('/panel/kolekcje-produktow');
@@ -115,7 +115,7 @@ export async function applySetProductCollectionActive(staff: CurrentSession, id:
 }
 
 export async function setProductCollectionActive(id: string, isActive: boolean): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applySetProductCollectionActive(staff, id, isActive);
   revalidatePath('/panel/kolekcje-produktow');
   revalidatePath('/kolekcje');
@@ -150,7 +150,7 @@ export async function applySetProductCollectionItem(
 }
 
 export async function setProductCollectionItem(collectionId: string, productId: string, sortOrder: number): Promise<ProductCollectionItemResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applySetProductCollectionItem(staff, collectionId, productId, sortOrder);
   if (result.ok) {
     revalidatePath(`/panel/kolekcje-produktow/${collectionId}`);
@@ -165,7 +165,7 @@ export async function applyRemoveProductCollectionItem(staff: CurrentSession, co
 }
 
 export async function removeProductCollectionItem(collectionId: string, productId: string): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applyRemoveProductCollectionItem(staff, collectionId, productId);
   revalidatePath(`/panel/kolekcje-produktow/${collectionId}`);
   revalidatePath('/kolekcje');

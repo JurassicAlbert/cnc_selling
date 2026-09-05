@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 
@@ -50,7 +50,7 @@ export async function applyCreateStaticPage(staff: CurrentSession, input: Static
 }
 
 export async function createStaticPage(input: StaticPageFormInput): Promise<StaticPageMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyCreateStaticPage(staff, input);
   if (result.ok) {
     revalidatePath('/panel/strony');
@@ -90,7 +90,7 @@ export async function applyUpdateStaticPage(
 }
 
 export async function updateStaticPage(id: string, input: StaticPageFormInput): Promise<StaticPageMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyUpdateStaticPage(staff, id, input);
   if (result.ok) {
     revalidatePath('/panel/strony');
@@ -116,7 +116,7 @@ export async function applySetStaticPageActive(staff: CurrentSession, id: string
 }
 
 export async function setStaticPageActive(id: string, isActive: boolean): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const current = await prisma.staticPage.findUnique({ where: { id }, select: { slug: true } });
   await applySetStaticPageActive(staff, id, isActive);
   revalidatePath('/panel/strony');

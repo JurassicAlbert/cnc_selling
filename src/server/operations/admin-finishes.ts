@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 import { savePublicImage } from '@/server/storage/public-images';
@@ -84,7 +84,7 @@ export async function applyCreateFinish(staff: CurrentSession, formData: FormDat
 }
 
 export async function createFinish(formData: FormData): Promise<FinishMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyCreateFinish(staff, formData);
   if (result.ok) {
     revalidatePath('/panel/wykonczenia');
@@ -131,7 +131,7 @@ export async function applyUpdateFinish(staff: CurrentSession, id: string, formD
 }
 
 export async function updateFinish(id: string, formData: FormData): Promise<FinishMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyUpdateFinish(staff, id, formData);
   if (result.ok) {
     revalidatePath('/panel/wykonczenia');
@@ -175,14 +175,14 @@ export async function applySetFinishSortOrder(staff: CurrentSession, id: string,
 }
 
 export async function setFinishSortOrder(id: string, sortOrder: number): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applySetFinishSortOrder(staff, id, sortOrder);
   revalidatePath('/panel/wykonczenia');
   revalidatePath(`/panel/wykonczenia/${id}`);
 }
 
 export async function setFinishAvailable(id: string, isAvailable: boolean): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applySetFinishAvailable(staff, id, isAvailable);
   revalidatePath('/panel/wykonczenia');
   revalidatePath(`/panel/wykonczenia/${id}`);
@@ -196,7 +196,7 @@ export async function applyBulkSetFinishAvailable(staff: CurrentSession, ids: re
 }
 
 export async function bulkSetFinishAvailable(ids: readonly string[], isAvailable: boolean): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applyBulkSetFinishAvailable(staff, ids, isAvailable);
   revalidatePath('/panel/wykonczenia');
 }

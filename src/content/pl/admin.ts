@@ -614,6 +614,14 @@ export const ADMIN = {
   // Shown to STAFF in place of the form (SEC-04). Says who can do it rather
   // than only that they cannot, so the reader knows what to do next.
   customerAnonymizeAdminOnlyPl: 'Anonimizację konta może wykonać tylko administrator.',
+  /*
+    P2-9, 2026-09-05. Shown once at the top of every panel screen to a STAFF
+    account, because the owner's standing rule is that nothing may be offered
+    and then refused by the system. The forms are still on the page - a STAFF
+    account is meant to see everything - so this says plainly what will happen
+    if one is submitted, rather than letting it fail as a 404.
+  */
+  staffReadOnlyNoticePl: 'Masz dostęp tylko do odczytu. Wszystko tu zobaczysz, ale zapisywanie zmian jest zarezerwowane dla administratora.',
 
   auditLogHeadingPl: 'Dziennik zdarzeń',
   auditLogFilterEntityPl: 'Encja',

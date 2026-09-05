@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 
@@ -36,7 +36,7 @@ export async function applyCreateFaq(staff: CurrentSession, input: FaqFormInput)
 }
 
 export async function createFaq(input: FaqFormInput): Promise<FaqMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyCreateFaq(staff, input);
   if (result.ok) {
     revalidatePath('/panel/faq');
@@ -60,7 +60,7 @@ export async function applyUpdateFaq(staff: CurrentSession, id: string, input: F
 }
 
 export async function updateFaq(id: string, input: FaqFormInput): Promise<FaqMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyUpdateFaq(staff, id, input);
   if (result.ok) {
     revalidatePath('/panel/faq');
@@ -85,7 +85,7 @@ export async function applySetFaqActive(staff: CurrentSession, id: string, isAct
 }
 
 export async function setFaqActive(id: string, isActive: boolean): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applySetFaqActive(staff, id, isActive);
   revalidatePath('/panel/faq');
   revalidatePath('/faq');

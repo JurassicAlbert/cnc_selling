@@ -18,29 +18,66 @@
  * contains both gates, because `simulatePricingDraft` is a read and reads
  * are `STAFF`. A file-level rule would have had to be either wrong or
  * weakened to accommodate that.
+ *
+ * **Rewritten 2026-09-05 for P2-9**, when the owner settled the question
+ * `OPEN_ITEMS.md` §7 had been holding open since 2026-08-29: "admin is the
+ * only person doing changes on admin panel we dont have superadmin for now".
+ * `ARCHITECTURE.md` §16.3 had always said `STAFF` gets the catalogue
+ * read-only and §16.2's matrix listed "`STAFF` → catalogue write → 403";
+ * the code gave `STAFF` 84 of the 95 mutating wrappers. The docs were right.
+ *
+ * The rule below is now **discovered rather than listed**. A hand-maintained
+ * allowlist of 8 was reasonable when 8 was the exception; as the rule for
+ * all 95 it would be a list nobody updates, and the operation somebody adds
+ * next month is exactly the one that would be missing from it. So the test
+ * finds the wrappers itself - an exported non-`apply` function in
+ * `operations/admin-*.ts` that calls an `apply*` is a mutating wrapper by
+ * construction - and requires every one of them to gate on
+ * `requireAdminSession()`.
+ *
+ * Reads keep `requireStaffSession()`, which is the whole content of
+ * "read-only": a `STAFF` account can still open every panel screen and see
+ * everything on it. `admin-global-search.ts` is the clearest case and stays
+ * exactly as it is.
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const OPERATIONS_DIR = fileURLToPath(new URL('../../src/server/operations', import.meta.url));
 
 /**
- * Every mutating wrapper `ARCHITECTURE.md` §16.3 assigns to `ADMIN`, with
- * the reason recorded so a future reader can weigh a change rather than
- * guess at one.
+ * Every mutating wrapper in `operations/admin-*.ts`, found rather than
+ * listed: an exported function that is not itself an `apply*` and that calls
+ * one is the thin wrapper a Server Action reaches, and it is the gate a real
+ * request meets.
+ *
+ * Deliberately not a curated list. See this file's header: the operation
+ * added next month is the one a list would be missing.
  */
-const ADMIN_ONLY_WRAPPERS = [
-  ['admin-store-settings.ts', 'updateStoreSettings', 'writes the bank account customers are told to pay into'],
-  ['admin-customers.ts', 'anonymizeCustomer', 'irreversibly anonymizes a customer and revokes their sign-in'],
-  ['admin-email-templates.ts', 'updateEmailTemplate', 'rewrites customer-facing email, verification-otp included'],
-  ['admin-staff.ts', 'inviteStaffUser', 'creates staff accounts'],
-  ['admin-staff.ts', 'changeStaffRole', 'grants and revokes ADMIN'],
-  ['admin-pricing.ts', 'createPricingDraft', 'writes the pricing every order is priced against'],
-  ['admin-pricing.ts', 'publishPricingVersion', 'makes a pricing draft live for every customer'],
-  ['admin-analytics.ts', 'pruneAnalyticsEvents', 'permanently deletes analytics history'],
-] as const;
+function mutatingWrappers(): readonly (readonly [string, string])[] {
+  const found: (readonly [string, string])[] = [];
+
+  for (const fileName of readdirSync(OPERATIONS_DIR).sort()) {
+    if (!fileName.startsWith('admin-') || !fileName.endsWith('.ts')) {
+      continue;
+    }
+    const source = withoutComments(readFileSync(`${OPERATIONS_DIR}/${fileName}`, 'utf8'));
+
+    for (const declaration of source.split(/(?=\nexport (?:async )?function )/)) {
+      const name = /^\nexport (?:async )?function (\w+)/.exec(declaration)?.[1];
+      if (name === undefined || name.startsWith('apply')) {
+        continue;
+      }
+      if (/\bapply[A-Z]\w*\s*\(/.test(declaration)) {
+        found.push([fileName, name] as const);
+      }
+    }
+  }
+
+  return found;
+}
 
 /** Comments are prose about the gate, not the gate. Strip them before matching. */
 function withoutComments(source: string): string {
@@ -57,8 +94,19 @@ function bodyOf(fileName: string, functionName: string): string {
   return source.slice(start, next === -1 ? source.length : next);
 }
 
-describe('mutating operations that §16.3 assigns to ADMIN', () => {
-  it.each(ADMIN_ONLY_WRAPPERS)('%s → %s() gates on requireAdminSession - it %s', (file, fn, _why) => {
+describe('every mutating panel operation is ADMIN-only (P2-9)', () => {
+  const wrappers = mutatingWrappers();
+
+  it('finds the wrappers at all - a rule that matched nothing would pass silently', () => {
+    // The failure mode of a discovered rule: a refactor renames `apply*` or
+    // moves the files, the scan returns an empty list, and 95 assertions
+    // quietly become zero while the suite stays green. There were 95 on
+    // 2026-09-05; the floor is deliberately well below that so ordinary
+    // additions and removals do not trip it.
+    expect(wrappers.length).toBeGreaterThan(80);
+  });
+
+  it.each(wrappers)('%s → %s() gates on requireAdminSession', (file, fn) => {
     const body = bodyOf(file, fn);
 
     expect(body).toMatch(/requireAdminSession\s*\(/);

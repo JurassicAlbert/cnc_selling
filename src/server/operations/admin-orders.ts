@@ -16,7 +16,7 @@ import type { OrderStatus } from '@/domain/order-status/transitions';
 import { orderStatusMessage } from '@/content/pl/messages';
 import { ADMIN } from '@/content/pl/admin';
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 import { mailer } from '@/server/mail/mailer';
@@ -121,7 +121,7 @@ export async function transitionOrderStatus(
   toStatus: OrderStatus,
   notePl: string | null,
 ): Promise<TransitionOrderStatusResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyOrderStatusTransition(staff, orderNumber, toStatus, notePl);
   if (result.ok) {
     revalidatePath(`/panel/zamowienia/${orderNumber}`);
@@ -205,7 +205,7 @@ export async function applyMarkOrderPaid(staff: CurrentSession, orderNumber: str
 }
 
 export async function markOrderPaid(orderNumber: string): Promise<MarkOrderPaidResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyMarkOrderPaid(staff, orderNumber);
   if (result.ok) {
     revalidatePath(`/panel/zamowienia/${orderNumber}`);

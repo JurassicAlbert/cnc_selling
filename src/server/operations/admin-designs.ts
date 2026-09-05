@@ -18,7 +18,7 @@ import { redirect } from 'next/navigation';
 import Papa from 'papaparse';
 
 import { prisma } from '@/server/db/client';
-import { requireStaffSession } from '@/server/auth/session';
+import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
 import { savePublicImage } from '@/server/storage/public-images';
@@ -66,7 +66,7 @@ export async function applyCreateCollection(staff: CurrentSession, input: Collec
 }
 
 export async function createCollection(input: CollectionFormInput): Promise<CollectionMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyCreateCollection(staff, input);
   if (result.ok) {
     revalidatePath('/panel/kolekcje');
@@ -100,7 +100,7 @@ export async function applyUpdateCollection(
 }
 
 export async function updateCollection(id: string, input: CollectionFormInput): Promise<CollectionMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyUpdateCollection(staff, id, input);
   if (result.ok) {
     revalidatePath('/panel/kolekcje');
@@ -125,7 +125,7 @@ export async function applySetCollectionActive(staff: CurrentSession, id: string
 }
 
 export async function setCollectionActive(id: string, isActive: boolean): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applySetCollectionActive(staff, id, isActive);
   revalidatePath('/panel/kolekcje');
   revalidatePath(`/panel/kolekcje/${id}`);
@@ -139,7 +139,7 @@ export async function applyBulkSetCollectionActive(staff: CurrentSession, ids: r
 }
 
 export async function bulkSetCollectionActive(ids: readonly string[], isActive: boolean): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applyBulkSetCollectionActive(staff, ids, isActive);
   revalidatePath('/panel/kolekcje');
 }
@@ -163,7 +163,7 @@ export async function applySetCollectionSortOrder(staff: CurrentSession, id: str
 }
 
 export async function setCollectionSortOrder(id: string, sortOrder: number): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applySetCollectionSortOrder(staff, id, sortOrder);
   revalidatePath('/panel/kolekcje');
   revalidatePath(`/panel/kolekcje/${id}`);
@@ -220,7 +220,7 @@ export async function applyImportCollectionsFromCsv(staff: CurrentSession, csvTe
 }
 
 export async function importCollectionsFromCsv(formData: FormData): Promise<ImportCollectionsResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const file = formData.get('file');
   if (!(file instanceof File) || file.size === 0) {
     return { ok: false, detail: 'Wybierz plik CSV.' };
@@ -370,7 +370,7 @@ export async function applyCreateDesign(staff: CurrentSession, formData: FormDat
 }
 
 export async function createDesign(formData: FormData): Promise<DesignMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyCreateDesign(staff, formData);
   if (result.ok) {
     revalidatePath('/panel/wzory');
@@ -429,7 +429,7 @@ export async function applyUpdateDesign(staff: CurrentSession, id: string, formD
 }
 
 export async function updateDesign(id: string, formData: FormData): Promise<DesignMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyUpdateDesign(staff, id, formData);
   if (result.ok) {
     revalidatePath('/panel/wzory');
@@ -454,7 +454,7 @@ export async function applySetDesignActive(staff: CurrentSession, id: string, is
 }
 
 export async function setDesignActive(id: string, isActive: boolean): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applySetDesignActive(staff, id, isActive);
   revalidatePath('/panel/wzory');
   revalidatePath(`/panel/wzory/${id}`);
@@ -468,7 +468,7 @@ export async function applyBulkSetDesignActive(staff: CurrentSession, ids: reado
 }
 
 export async function bulkSetDesignActive(ids: readonly string[], isActive: boolean): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applyBulkSetDesignActive(staff, ids, isActive);
   revalidatePath('/panel/wzory');
 }
@@ -492,7 +492,7 @@ export async function applySetDesignSortOrder(staff: CurrentSession, id: string,
 }
 
 export async function setDesignSortOrder(id: string, sortOrder: number): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   await applySetDesignSortOrder(staff, id, sortOrder);
   revalidatePath('/panel/wzory');
   revalidatePath(`/panel/wzory/${id}`);
@@ -566,7 +566,7 @@ export async function applyDuplicateDesign(staff: CurrentSession, id: string): P
 }
 
 export async function duplicateDesign(id: string): Promise<DesignMutationResult> {
-  const staff = await requireStaffSession();
+  const staff = await requireAdminSession();
   const result = await applyDuplicateDesign(staff, id);
   if (result.ok) {
     revalidatePath('/panel/wzory');

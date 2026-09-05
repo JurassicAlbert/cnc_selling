@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AppBar, Box, Button, Stack, Toolbar, Typography } from '@mui/material';
+import { Alert, AppBar, Box, Button, Stack, Toolbar, Typography } from '@mui/material';
 
 import { ADMIN } from '@/content/pl/admin';
 import { requireStaffSession } from '@/server/auth/session';
@@ -77,6 +77,24 @@ export default async function PanelLayout({ children }: { readonly children: Rea
             </Toolbar>
           </AppBar>
           <Box component="main" sx={{ flex: 1, p: 3 }}>
+            {/*
+              P2-9: STAFF is read-only across the whole panel, so the notice
+              belongs here rather than beside each of the 84 controls it
+              applies to. One place cannot go stale the way 84 can, and the
+              rule it states is genuinely panel-wide.
+
+              The controls are deliberately left on the page. A STAFF account
+              is meant to see everything - that is the whole content of
+              "read-only" - and hiding every form would also hide what the
+              settings currently are. What the owner's rule forbids is a
+              control that fails without warning, which this answers by
+              saying up front what will happen.
+            */}
+            {staff.role !== 'ADMIN' ? (
+              <Alert severity="info" sx={{ mb: 3 }}>
+                {ADMIN.staffReadOnlyNoticePl}
+              </Alert>
+            ) : null}
             {children}
           </Box>
         </Box>

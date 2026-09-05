@@ -475,7 +475,15 @@ Preserved verbatim in status. These were raised, deliberately not fixed,
 and are **not** superseded by this review.
 
 - [x] **P1-8 · rate limits on order creation** - **DONE 2026-08-31**, alongside SEC-01 as planned. `consumeOrderAttempt` in `server/rate-limit/auth-throttle.ts`, called from `submitCheckout` **after** field validation so correcting a typo never burns an attempt. 10 per IP per hour - a guard against a script, not against someone ordering twice; duplicate *submissions* remain `Order.idempotencyKey`'s job. Skipped entirely when there is no IP, so local development and the e2e suite are never blocked. Refusal says plainly that nothing was charged. **+2 tests.**
-- [ ] **P2-9 · may `STAFF` write the catalogue?** - §16.3 and §16.2 say read-only; ~20 actions use `requireStaffSession()`. **BLOCKED - owner's decision** (`OPEN_ITEMS.md` §7). Deliberately *not* merged with SEC-04, which is narrower and needs no decision.
+- [x] **P2-9 · may `STAFF` write the catalogue? - no, `STAFF` is read-only everywhere** - **DONE 2026-09-05.**
+  - **Owner's answer:** "admin is the only person doing changes on admin panel we dont have superadmin for now". §16.3 and §16.2's matrix had said read-only since the start; the code had not. The docs were right, so the code moved.
+  - **It was 84 operations, not the ~20 this entry estimated.** Measured before touching anything, because the number changes what the work is: 95 mutating wrappers exist, 11 were already `ADMIN`, and 0 were ungated. Six of the 84 are not catalogue at all but day-to-day production work - order status transitions, marking an order paid, recording a shipment, deciding a design review, answering a support request, moderating a review - so the owner was asked about those specifically rather than swept along with the catalogue.
+  - **The test is discovered, not listed.** `admin-only-operations.test.ts` used to name 8 admin-only wrappers by hand. An allowlist is reasonable when 8 is the exception and useless when 95 is the rule, because the operation somebody adds next month is exactly the one missing from it. It now finds the wrappers itself - an exported non-`apply` function in `operations/admin-*.ts` that calls an `apply*` is a mutating wrapper by construction - and requires the `ADMIN` gate on every one. It also asserts the scan **found** something, since a rule that silently matches nothing is the failure mode of writing it this way.
+  - **Reads keep `requireStaffSession()`**, which is the entire content of "read-only": a `STAFF` account still opens every screen and sees everything on it, `admin-global-search.ts` included.
+  - **The UI half, and where it deliberately stops.** The owner's standing rule is that nothing may be offered and then blocked by the system, so the panel now tells a `STAFF` account up front that saving is not theirs - one notice in `panel/layout.tsx`, not 84 controls hidden individually. One place cannot go stale the way 84 can, and the rule really is panel-wide. The forms stay on the page on purpose: hiding them would also hide what the settings currently *are*, which is the thing a read-only role exists to see.
+  - **Nobody holds `STAFF` today** and there is no tier above `ADMIN`, so this costs nothing now. Handing an operator back the six operational writes later is one line each, and which six is written down in `ARCHITECTURE.md` §16.3 rather than left to be re-derived.
+  - **Evidence:** 102 cases in `tests/unit/admin-only-operations.test.ts` (84 of them newly failing before the change, which is the whole set that moved), plus two e2e cases for the half no Vitest test can reach - `requireAdminSession()` reads `next/headers`, so only a browser meets the gate a real request meets.
+  - **Status:** DONE
 - [ ] **P2-11 · the pickup-point dataset ships to the browser** - `CheckoutForm.tsx` imports it as a runtime value. Harmless at 16 entries; a real payload problem the day it becomes a live directory (`OPEN_ITEMS.md` §3).
 
 ---
@@ -496,10 +504,9 @@ easier once it is green.
 
 | # | ID | Pri | Why now | Prerequisite |
 |---|---|---|---|---|
-| 1 | **P2-9** | P2 | **Decided 2026-09-05: STAFF is read-only.** 84 operations move to `requireAdminSession()` and their controls come off the STAFF view. Mechanical, large, and unblocked. | none |
-| 2 | **WAREHOUSE-01** | P2 | **Decided 2026-09-05: oldest batch first (FIFO).** Consumption hooks off the production status transition. | none |
-| 3 | **INSURANCE-01** | P2 | **Decided 2026-09-05:** build the opt-in mechanism and its admin screen, leave it inactive until the owner supplies the real InPost/DPD declared-value rate cards. | carrier rate card, for activation only |
-| 4 | **PERF-01** | P2 | **Decided 2026-09-05: keep the nonce, park PERF-01.** Not a TODO any more - a recorded hold. | reopens only if page speed becomes a priority |
+| 1 | **WAREHOUSE-01** | P2 | **Decided 2026-09-05: oldest batch first (FIFO).** Consumption hooks off the production status transition. | none |
+| 2 | **INSURANCE-01** | P2 | **Decided 2026-09-05:** build the opt-in mechanism and its admin screen, leave it inactive until the owner supplies the real InPost/DPD declared-value rate cards. | carrier rate card, for activation only |
+| 3 | **PERF-01** | P2 | **Decided 2026-09-05: keep the nonce, park PERF-01.** Not a TODO any more - a recorded hold. | reopens only if page speed becomes a priority |
 | 3 | **ARCH-02's neighbours** | P3 | `ConfiguratorPreview.tsx` (247) is now the largest file under `islands/configurator`. Nothing forces it yet; noted so the next reader does not have to measure. | none |
 
 **PERF-01 is a deliberate hold, not a TODO.** The owner chose on 2026-09-05
@@ -524,7 +531,7 @@ After those, work P2 in the order listed; the UX items cluster naturally
 | ~~Where rate-limit state lives (`OPEN_ITEMS.md` §6)~~ | ~~SEC-01, P1-8, SEC-08~~ | **RESOLVED 2026-08-30** - owner chose Postgres. `RateLimit` table built and in use. SEC-08 is now a small follow-on rather than a blocked item |
 | ~~What the placeholder design should be called~~ | ~~BUG-03~~ | **RESOLVED 2026-08-31** - owner chose to show an already-existing pattern, so the placeholder was retired rather than renamed |
 | Real per-design production measurements (`referenceWidthMm`, `minLineWidthUm`, and router vs laser) | Nothing today - **BUG-35 is closed** | **Not blocking.** Only needed if patterns become customer-selectable again, since `PATTERN_FEASIBILITY_ENABLED` would then have to go back on. §R4 says these are DB values precisely so they can be corrected from real production; 1,2 mm looks like a router-bit figure and small items would realistically be laser-engraved |
-| May `STAFF` write the catalogue? (`OPEN_ITEMS.md` §7) | P2-9 only | Genuinely the owner's call. **Does not block SEC-04**, which is narrower and needs no decision |
+| ~~May `STAFF` write the catalogue? (`OPEN_ITEMS.md` §7)~~ | ~~P2-9~~ | **RESOLVED 2026-09-05** - owner chose read-only. 84 wrappers moved to `requireAdminSession()`; `STAFF` is a viewing role |
 
 Blocked on the owner and **not** implementable by any agent - all nine are
 real, working code waiting on an external thing. See `docs/OPEN_ITEMS.md`:
