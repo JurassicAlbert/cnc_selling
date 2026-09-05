@@ -40,8 +40,6 @@ import { findCartForRequest } from '@/server/repositories/cart';
 import type { CartItemView } from '@/server/repositories/cart';
 import { priceAndValidateSelections } from '@/server/configurator/validate-and-price';
 import type { ValidatedPricing } from '@/server/configurator/validate-and-price';
-import { recordAnalyticsEvent } from '@/server/analytics/record-event';
-import { mailer } from '@/server/mail/mailer';
 import { resolveDeliveryMethodsForCart } from '@/server/repositories/delivery-methods';
 import { findPickupPointById } from '@/server/delivery/pickup-points';
 import { SITE } from '@/content/pl/site';
@@ -82,7 +80,33 @@ export type CreateOrderInput = {
 };
 
 export type CreateOrderResult =
-  | { readonly ok: true; readonly orderNumber: string; readonly accessToken: string }
+  | {
+      readonly ok: true;
+      readonly orderNumber: string;
+      readonly accessToken: string;
+      /**
+       * What `actions/checkout.ts` needs to send the confirmation email and
+       * record the purchase - **or `null` when this call placed no new
+       * order**.
+       *
+       * BUG-12 moved both side effects to the action, because they must be
+       * scheduled with `after()` and that throws outside a request scope.
+       * Moving them made an existing subtlety load-bearing: the two
+       * idempotent-replay paths below return an order that a *previous*
+       * request created and already emailed, and they used to reach their
+       * `return` before the `void mailer` line ever ran. A caller that
+       * emailed on every `ok: true` would send a second confirmation to
+       * anyone who double-clicked.
+       *
+       * So the absence is modelled rather than left to a comment: `null`
+       * means "already dealt with", and there is no boolean for a caller to
+       * misread.
+       */
+      readonly confirmation: {
+        readonly totalGrossGrosze: number;
+        readonly paymentMethod: 'BANK_TRANSFER' | 'CONTACT_ARRANGED';
+      } | null;
+    }
   | { readonly ok: false; readonly code: 'CART_EMPTY' }
   /** Another checkout - a second tab, a second device - consumed this cart while this one was being submitted. Nothing was charged twice; the customer is told to check their orders. */
   | { readonly ok: false; readonly code: 'CART_CHANGED' }
@@ -141,7 +165,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   // would race); this just avoids doing all the pricing work again.
   const alreadyPlaced = await findOrderByIdempotencyKey(input.idempotencyKey);
   if (alreadyPlaced !== null) {
-    return { ok: true, ...alreadyPlaced };
+    return { ok: true, ...alreadyPlaced, confirmation: null };
   }
 
   const cart = await findCartForRequest({
@@ -384,7 +408,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     if (error instanceof CartAlreadyClaimedError || isUniqueConstraintViolation(error)) {
       const winner = await findOrderByIdempotencyKey(input.idempotencyKey);
       if (winner !== null) {
-        return { ok: true, ...winner };
+        return { ok: true, ...winner, confirmation: null };
       }
       if (error instanceof CartAlreadyClaimedError) {
         return { ok: false, code: 'CART_CHANGED' };
@@ -401,34 +425,38 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   // tests hit exactly that). Same split the `apply*`/wrapper pairs already
   // use: real logic here, framework side effects in the action.
 
-  // After commit, never inside the transaction - network I/O must not hold
-  // a pooled DB connection open, and a mailer failure must never undo an
-  // order that has already, correctly, been created (§15.3 note 3: "no fake
-  // email delivery... the order still succeeds").
-  void mailer
-    .send('order-confirmation', input.email, {
-      orderNumber,
+  /*
+    BUG-12: the confirmation email and the purchase event are NOT sent here.
+
+    They used to be, as `void mailer.send(...)` - a promise started and
+    forgotten. On a long-lived Node server that settles; on the serverless
+    target §18 names, the invocation can be frozen the moment the response is
+    written, so the email a customer is waiting for may never be sent and
+    nothing is logged either way, because the code that would log it never
+    ran. Next 16's `after()` is the fix, and it throws outside a request
+    scope - so it belongs in `actions/checkout.ts`, exactly where
+    `revalidatePath` was moved for the same reason (see the note above).
+
+    Still after commit and never inside the transaction, which was the
+    original point of the `void` and is preserved by the move: network I/O
+    must not hold a pooled DB connection open, and a mailer failure must
+    never undo an order that has already, correctly, been created (§15.3
+    note 3: "no fake email delivery... the order still succeeds").
+  */
+  return {
+    ok: true,
+    orderNumber,
+    accessToken,
+    confirmation: {
       totalGrossGrosze,
       // Safe today: only BANK_TRANSFER/CONTACT_ARRANGED are ever seeded
       // `isConnected: true`, so `paymentMethodConfig` (checked above) can
-      // never resolve to anything else in practice. Revisit this cast the
-      // day a real third provider actually goes connected - the mailer
-      // template itself would need a real Przelewy24/card/PayPal copy
-      // block first, which is out of this phase's scope.
+      // never resolve to anything else in practice. Revisit this cast the day
+      // a real third provider actually goes connected - the mailer template
+      // itself would need a real Przelewy24/card/PayPal copy block first.
       paymentMethod: paymentMethodConfig.provider as 'BANK_TRANSFER' | 'CONTACT_ARRANGED',
-    })
-    .catch(() => {
-      // Logged inside the mailer itself; nothing else to do here.
-    });
-
-  void recordAnalyticsEvent({
-    name: 'purchase',
-    sessionToken: input.sessionToken,
-    userId: input.userId,
-    payload: { totalGrossGrosze },
-  });
-
-  return { ok: true, orderNumber, accessToken };
+    },
+  };
 }
 
 function buildOrderItemInput(entry: RevalidatedItem) {

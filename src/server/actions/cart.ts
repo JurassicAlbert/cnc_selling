@@ -21,6 +21,9 @@
  */
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
+
+import { recordAnalyticsEvent } from '@/server/analytics/record-event';
 
 import type { Selections } from '@/domain/configuration/steps';
 import {
@@ -59,6 +62,15 @@ export async function addToCart(
   const { owner, sessionToken } = await actor();
   const result = await applyAddToCart(owner, sessionToken, productSlug, selections, acknowledgedWarnings, quantity);
   if (result.ok) {
+    // BUG-12: scheduled, not abandoned. `after()` keeps a serverless
+    // invocation alive until the write settles; `void` let it be dropped the
+    // moment the response was written.
+    if (result.track !== undefined) {
+      const track = result.track;
+      after(async () => {
+        await recordAnalyticsEvent({ name: 'add_to_cart', ...track });
+      });
+    }
     revalidateCart();
   }
   return result;

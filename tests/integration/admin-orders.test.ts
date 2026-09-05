@@ -89,10 +89,22 @@ describe('applyOrderStatusTransition', () => {
     const staff = staffActor();
 
     const result = await applyOrderStatusTransition(staff, order.orderNumber, 'CONFIRMED', null);
-    // `stockWarningPl` is part of the success shape since WAREHOUSE-01, and
-    // null here is a real assertion rather than noise: this order has no
-    // material linked, so nothing was drawn and nothing was missing.
-    expect(result).toEqual({ ok: true, stockWarningPl: null });
+    /*
+      Three fields, and each is a real assertion rather than noise.
+
+      `stockWarningPl` null: WAREHOUSE-01 - this order has no material linked,
+      so nothing was drawn and nothing was missing.
+
+      `notify` present: BUG-12 - the status email is no longer sent from
+      inside this `apply*` but handed back for the wrapper to schedule with
+      `after()`. Asserting the handover here is the only place a test can
+      reach it, since the wrapper itself needs a request scope.
+    */
+    expect(result).toEqual({
+      ok: true,
+      stockWarningPl: null,
+      notify: { email: order.email, statusPl: expect.any(String) },
+    });
 
     const updated = await prisma.order.findUniqueOrThrow({ where: { id: order.id } });
     expect(updated.status).toBe('CONFIRMED');

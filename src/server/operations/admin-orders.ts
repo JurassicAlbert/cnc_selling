@@ -10,6 +10,7 @@
  */
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 
 import { checkOrderStatusTransition } from '@/domain/order-status/transitions';
 import type { OrderStatus } from '@/domain/order-status/transitions';
@@ -35,6 +36,11 @@ export type TransitionOrderStatusResult =
        * quietly wrong.
        */
       readonly stockWarningPl: string | null;
+      /**
+       * The status email this transition owes the customer, for the wrapper
+       * to schedule - BUG-12. Absent when there is nothing to send.
+       */
+      readonly notify?: { readonly email: string; readonly statusPl: string };
     }
   | { readonly ok: false; readonly detail: string };
 
@@ -134,16 +140,21 @@ export async function applyOrderStatusTransition(
     diff: { fromStatus: order.status, toStatus, notePl },
   });
 
-  // Fire-and-forget, after the transaction has committed - same reasoning
-  // as `create-order.ts`'s own order-confirmation send: a mailer failure
-  // must never undo a status change that has already, correctly, happened.
-  void mailer
-    .send('order-status-update', order.email, { orderNumber, statusPl: orderStatusMessage(toStatus) })
-    .catch(() => {
-      // Logged inside the mailer itself; nothing else to do here.
-    });
+  /*
+    BUG-12: the customer's status email is scheduled by the wrapper below, not
+    started and forgotten here. `after()` throws outside a request scope and
+    this `apply*` is called directly by the integration suite, so it belongs
+    in the wrapper - the same split the gate itself uses.
 
-  return { ok: true, stockWarningPl: describeStockShortfall(applied.consumption) };
+    Still after the transaction has committed, which was the original point:
+    a mailer failure must never undo a status change that has already,
+    correctly, happened.
+  */
+  return {
+    ok: true,
+    stockWarningPl: describeStockShortfall(applied.consumption),
+    notify: { email: order.email, statusPl: orderStatusMessage(toStatus) },
+  };
 }
 
 /**
@@ -172,6 +183,19 @@ export async function transitionOrderStatus(
   const staff = await requireAdminSession();
   const result = await applyOrderStatusTransition(staff, orderNumber, toStatus, notePl);
   if (result.ok) {
+    // BUG-12: scheduled through `after()` so a serverless invocation is kept
+    // alive until it settles, rather than `void`, which drops it silently.
+    if (result.notify !== undefined) {
+      const notify = result.notify;
+      after(async () => {
+        await mailer
+          .send('order-status-update', notify.email, { orderNumber, statusPl: notify.statusPl })
+          .catch(() => {
+            // Logged inside the mailer itself. Caught rather than left to
+            // reject, so a failed email is not reported as a failed request.
+          });
+      });
+    }
     revalidatePath(`/panel/zamowienia/${orderNumber}`);
     revalidatePath('/panel/zamowienia');
   }

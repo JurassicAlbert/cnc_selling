@@ -366,10 +366,29 @@ describe('createOrder - idempotency and concurrency', () => {
     const second = await createOrder(input);
 
     expect(first.ok).toBe(true);
-    // Not merely "the second one failed" - the customer who hit submit
-    // twice must still land on their real order, with the same number and
-    // the same access token, not on an error page.
-    expect(second).toEqual(first);
+    expect(second.ok).toBe(true);
+    if (!first.ok || !second.ok) {
+      throw new Error('both submissions must succeed');
+    }
+
+    // Not merely "the second one failed" - the customer who hit submit twice
+    // must still land on their real order, with the same number and the same
+    // access token, not on an error page.
+    expect(second.orderNumber).toBe(first.orderNumber);
+    expect(second.accessToken).toBe(first.accessToken);
+
+    /*
+      And the one thing that must NOT be the same - BUG-12. The first call
+      owes a confirmation email; the replay does not, because that email has
+      already been sent. Before BUG-12 this was implicit in a `return`
+      placed above the `void mailer` line; now the caller schedules the
+      email, so "already dealt with" has to be something the caller can see.
+      A replay that reported a confirmation would email a second copy to
+      everyone who double-clicks.
+    */
+    expect(first.confirmation).not.toBeNull();
+    expect(second.confirmation).toBeNull();
+
     expect(await prisma.order.count({ where: { deliveryMethodId: delivery.id } })).toBe(1);
   });
 
@@ -384,7 +403,19 @@ describe('createOrder - idempotency and concurrency', () => {
     expect(await prisma.order.count({ where: { deliveryMethodId: delivery.id } })).toBe(1);
     expect(first.ok).toBe(true);
     expect(second.ok).toBe(true);
-    expect(second).toEqual(first);
+    if (!first.ok || !second.ok) {
+      throw new Error('both submissions must succeed');
+    }
+
+    expect(second.orderNumber).toBe(first.orderNumber);
+    expect(second.accessToken).toBe(first.accessToken);
+
+    // BUG-12: exactly one of the two owes the confirmation email - whichever
+    // won the race - and the loser replays without one. Asserted as a count
+    // rather than by position, because which request wins is genuinely
+    // undetermined here.
+    const owing = [first.confirmation, second.confirmation].filter((c) => c !== null);
+    expect(owing).toHaveLength(1);
   });
 
   it('two concurrent submissions from two DIFFERENT checkout renders still create exactly one order', { retry: 1 }, async () => {

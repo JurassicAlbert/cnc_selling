@@ -14,12 +14,15 @@ import { randomUUID } from 'node:crypto';
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { after } from 'next/server';
 
 import { validateNip, validatePhone, validatePostalCode } from '@/domain/checkout/validate';
 import { isPlausibleEmail } from '@/domain/text/email';
 import type { CheckoutFieldIssueCode } from '@/content/pl/messages';
 import { getSession } from '@/server/auth/session';
 import { consumeOrderAttempt } from '@/server/rate-limit/auth-throttle';
+import { mailer } from '@/server/mail/mailer';
+import { recordAnalyticsEvent } from '@/server/analytics/record-event';
 import { readGuestSessionToken } from '@/server/session/read-guest-session';
 import { requestIpAddress } from '@/server/session/request-ip';
 import { createOrder } from '@/server/orders/create-order';
@@ -182,6 +185,55 @@ export async function submitCheckout(
   // Lives here rather than in `createOrder` because only this layer is
   // guaranteed to run inside a request scope (2026-08-30).
   revalidatePath('/', 'layout');
+
+  /*
+    BUG-12. The confirmation email and the purchase event, scheduled rather
+    than abandoned.
+
+    They were `void mailer.send(...)` inside `createOrder` - a promise
+    started and forgotten. On a long-lived Node server that settles; on the
+    serverless target §18 names, the invocation can be frozen the moment the
+    response is written, so the email a customer is waiting for may never be
+    sent, and nothing is logged either way because the code that would log it
+    never ran. `after()` extends the invocation through the platform's
+    `waitUntil` until the work settles.
+
+    Here rather than in `createOrder` for the same reason `revalidatePath` is:
+    `after()` throws outside a request scope (it looks for Next's work store
+    and throws E468 when there is none), and `createOrder` is called directly
+    by the integration suite. Same split the `apply*`/wrapper pairs use -
+    real logic in the operation, framework side effects in the action.
+    `tests/unit/after-response.test.ts` enforces it.
+
+    `confirmation === null` means this call placed no new order: it is an
+    idempotent replay of a submission that already succeeded and was already
+    emailed. Emailing on every `ok: true` would send a second confirmation to
+    anyone who double-clicks.
+  */
+  const { confirmation } = result;
+  if (confirmation !== null) {
+    after(async () => {
+      await mailer
+        .send('order-confirmation', email, {
+          orderNumber: result.orderNumber,
+          totalGrossGrosze: confirmation.totalGrossGrosze,
+          paymentMethod: confirmation.paymentMethod,
+        })
+        .catch(() => {
+          // Logged inside the mailer itself; nothing else to do here. Still
+          // caught rather than left to reject: an unhandled rejection inside
+          // `after` would be reported as a request failure for a request
+          // that succeeded.
+        });
+
+      await recordAnalyticsEvent({
+        name: 'purchase',
+        sessionToken,
+        userId: session?.userId ?? null,
+        payload: { totalGrossGrosze: confirmation.totalGrossGrosze },
+      });
+    });
+  }
 
   // `orderNumber` ("2026/08/0042") contains real slashes - encoded here so
   // it lands as ONE path segment; Next.js decodes `params.orderNumber`
