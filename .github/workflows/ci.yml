@@ -85,13 +85,20 @@ jobs:
       # cnc_selling_test and the `unaccent` extension both databases need for
       # diacritic-insensitive search (ARCHITECTURE.md §17.3). Reusing it
       # rather than repeating the SQL keeps one source of truth.
+      #
+      # Explicit flags rather than "$DATABASE_URL", which ends in
+      # `?schema=public`. That is Prisma's parameter, and libpq parses a
+      # connection URI strictly: the first CI run ever to execute failed here
+      # with `psql: error: invalid URI query parameter: "schema"`. It had
+      # never failed locally because locally this file is applied by the
+      # Postgres container's own init directory, not by this command.
+      #
       # PGPASSWORD is set explicitly because the script's `\connect` opens a
-      # second connection, and psql does not reliably carry a URL's password
-      # across one.
+      # second connection, and psql does not carry a password across one.
       - name: Create the test database and extensions
         env:
           PGPASSWORD: cnc_dev_password
-        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f docker/postgres-init/01-databases.sql
+        run: psql -h 127.0.0.1 -p 5433 -U cnc -d cnc_selling -v ON_ERROR_STOP=1 -f docker/postgres-init/01-databases.sql
 
       - run: npm run db:deploy
       - run: npm run db:deploy:test
@@ -147,13 +154,15 @@ jobs:
 
       - run: npm ci
 
+      # Explicit flags, not "$DATABASE_URL" - see the identical step in the
+      # verify job above for why psql cannot parse a Prisma URL.
+      #
       # PGPASSWORD is set explicitly because the script's `\connect` opens a
-      # second connection, and psql does not reliably carry a URL's password
-      # across one.
+      # second connection, and psql does not carry a password across one.
       - name: Create the test database and extensions
         env:
           PGPASSWORD: cnc_dev_password
-        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f docker/postgres-init/01-databases.sql
+        run: psql -h 127.0.0.1 -p 5433 -U cnc -d cnc_selling -v ON_ERROR_STOP=1 -f docker/postgres-init/01-databases.sql
 
       # The TEST database, not the development one - ARCH-03, 2026-09-05.
       # `playwright.config.ts` now points DATABASE_URL at TEST_DATABASE_URL

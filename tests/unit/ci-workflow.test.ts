@@ -204,6 +204,38 @@ describe('CI workflow - the database the tests actually need', () => {
     expect(order.indexOf('db:deploy:test')).toBeLessThan(order.indexOf('db:seed:test'));
   });
 
+  it('never hands a Prisma connection URL to psql', () => {
+    /*
+      The first CI run ever to execute, 2026-09-05, failed on its very first
+      database step:
+
+          psql: error: invalid URI query parameter: "schema"
+
+      `DATABASE_URL` ends in `?schema=public`, which is Prisma's own
+      parameter. libpq parses a connection URI strictly and rejects anything
+      it does not recognise, so `psql "$DATABASE_URL"` cannot work - and no
+      local run had ever executed that line, because locally the same SQL is
+      applied by the Postgres container's own init directory on first boot.
+
+      This is precisely the class of bug this file exists for: a workflow step
+      that only ever runs somewhere else. Reproduced before fixing, with the
+      real client:
+
+          docker exec cnc_selling_db psql "postgresql://.../cnc_selling?schema=public" -c "select 1"
+          -> psql: error: invalid URI query parameter: "schema"
+          docker exec cnc_selling_db psql "postgresql://.../cnc_selling"      -c "select 1"
+          -> 1 row
+    */
+    const psqlLines = Object.values(workflow.jobs)
+      .flatMap((job) => runLinesOf(job))
+      .filter((line) => line.includes('psql'));
+
+    expect(psqlLines.length).toBeGreaterThan(0);
+    for (const line of psqlLines) {
+      expect(line, `psql cannot parse a Prisma URL: ${line}`).not.toMatch(/\$\{?(TEST_)?DATABASE_URL/);
+    }
+  });
+
   it('sets the secrets the app refuses to start without', () => {
     // `auth.ts` and `guest-session.ts` throw on a missing value, and
     // `prisma/seed.ts` throws without SEED_ADMIN_EMAIL - all at import or
