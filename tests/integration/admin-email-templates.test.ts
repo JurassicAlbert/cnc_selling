@@ -1,9 +1,10 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { applyUpdateEmailTemplate } from '@/server/operations/admin-email-templates';
 import { findEmailTemplate, listEmailTemplates } from '@/server/repositories/admin-email-templates';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';
+import { acquireSingletonLock } from './singleton-lock';
 
 const PREFIX = 'test-admin-email-templates-';
 
@@ -33,6 +34,25 @@ afterEach(async () => {
     snapshot = null;
   }
   await prisma.auditLog.deleteMany({ where: { actorEmail: { startsWith: PREFIX } } });
+});
+
+
+/*
+  Serialised against every other file that writes these shared singleton rows
+  - see `singleton-lock.ts`. Held for the whole file rather than per test:
+  the requirement is that no other file writes the row while this one is
+  reading its own value back, and a per-test lock would leave the gaps
+  between them open.
+*/
+let releaseSingletonLock: (() => Promise<void>) | null = null;
+
+beforeAll(async () => {
+  releaseSingletonLock = await acquireSingletonLock();
+});
+
+afterAll(async () => {
+  await releaseSingletonLock?.();
+  releaseSingletonLock = null;
 });
 
 describe('listEmailTemplates / findEmailTemplate', () => {

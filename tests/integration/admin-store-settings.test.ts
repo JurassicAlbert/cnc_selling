@@ -1,9 +1,10 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { applyUpdateStoreSettings } from '@/server/operations/admin-store-settings';
 import { getStoreSettings } from '@/server/repositories/store-settings';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';
+import { acquireSingletonLock } from './singleton-lock';
 
 const PREFIX = 'test-admin-store-settings-';
 
@@ -72,6 +73,25 @@ const BLANK_SOCIALS = {
  * test.
  */
 const CONFIRMING = (bankAccountNumber: string) => ({ bankAccountNumberConfirmation: bankAccountNumber });
+
+
+/*
+  Serialised against every other file that writes these shared singleton rows
+  - see `singleton-lock.ts`. Held for the whole file rather than per test:
+  the requirement is that no other file writes the row while this one is
+  reading its own value back, and a per-test lock would leave the gaps
+  between them open.
+*/
+let releaseSingletonLock: (() => Promise<void>) | null = null;
+
+beforeAll(async () => {
+  releaseSingletonLock = await acquireSingletonLock();
+});
+
+afterAll(async () => {
+  await releaseSingletonLock?.();
+  releaseSingletonLock = null;
+});
 
 describe('getStoreSettings', () => {
   it('returns the real singleton row', async () => {

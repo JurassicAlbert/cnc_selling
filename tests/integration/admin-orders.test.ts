@@ -89,7 +89,10 @@ describe('applyOrderStatusTransition', () => {
     const staff = staffActor();
 
     const result = await applyOrderStatusTransition(staff, order.orderNumber, 'CONFIRMED', null);
-    expect(result).toEqual({ ok: true });
+    // `stockWarningPl` is part of the success shape since WAREHOUSE-01, and
+    // null here is a real assertion rather than noise: this order has no
+    // material linked, so nothing was drawn and nothing was missing.
+    expect(result).toEqual({ ok: true, stockWarningPl: null });
 
     const updated = await prisma.order.findUniqueOrThrow({ where: { id: order.id } });
     expect(updated.status).toBe('CONFIRMED');

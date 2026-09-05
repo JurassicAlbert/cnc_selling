@@ -19,10 +19,23 @@ import { prisma } from '@/server/db/client';
 import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
+import { consumeStockForOrder } from '@/server/stock/consume-for-order';
+import type { OrderConsumption } from '@/server/stock/consume-for-order';
 import { mailer } from '@/server/mail/mailer';
 
 export type TransitionOrderStatusResult =
-  | { readonly ok: true }
+  | {
+      readonly ok: true;
+      /**
+       * WAREHOUSE-01. Set when entering production drew down less material
+       * than the order needs, because the recorded batches could not cover
+       * it. The transition still succeeded - production happens whether or
+       * not a delivery has been entered - so this is a warning to the
+       * operator, not a failure, and saying nothing would leave the shelf
+       * quietly wrong.
+       */
+      readonly stockWarningPl: string | null;
+    }
   | { readonly ok: false; readonly detail: string };
 
 export async function applyOrderStatusTransition(
@@ -78,7 +91,7 @@ export async function applyOrderStatusTransition(
       data: { status: toStatus },
     });
     if (updated.count === 0) {
-      return false;
+      return null;
     }
     await tx.orderEvent.create({
       data: {
@@ -91,9 +104,26 @@ export async function applyOrderStatusTransition(
         notePl,
       },
     });
-    return true;
+
+    /*
+      WAREHOUSE-01: the shelf is drawn down at the moment the order actually
+      goes on the machine, inside this same transaction - so an order cannot
+      be in production with no record of what it took, or the reverse.
+
+      Entering production is the right hook and it fires exactly once:
+      `transitions.ts` allows only CONFIRMED -> IN_PRODUCTION and nothing
+      returns to it, and the `updateMany` above has already refused a second
+      concurrent transition. `StockConsumption`'s unique index on (order item,
+      batch) is the belt to that pair of braces.
+
+      Consumption never blocks the transition. It returns a shortfall rather
+      than throwing when the recorded stock cannot cover the order, because
+      production happens whether or not a delivery has been entered.
+    */
+    const consumption = toStatus === 'IN_PRODUCTION' ? await consumeStockForOrder(tx, order.id) : null;
+    return { consumption };
   });
-  if (!applied) {
+  if (applied === null) {
     return { ok: false, detail: 'Status tego zamówienia zmienił się w międzyczasie - odśwież stronę i spróbuj ponownie.' };
   }
   await writeAuditLog({
@@ -113,7 +143,25 @@ export async function applyOrderStatusTransition(
       // Logged inside the mailer itself; nothing else to do here.
     });
 
-  return { ok: true };
+  return { ok: true, stockWarningPl: describeStockShortfall(applied.consumption) };
+}
+
+/**
+ * The operator-facing sentence for a shortfall, or `null` when there is none.
+ *
+ * Square metres rather than mm², because that is the unit a delivery is
+ * bought and thought about in. Rounded to two places: a figure like
+ * "0,42 m² dębu" is actionable, and the exact millimetre count is in
+ * `StockConsumption` for anyone who needs it.
+ */
+function describeStockShortfall(consumption: OrderConsumption | null): string | null {
+  if (consumption === null || consumption.shortfalls.length === 0) {
+    return null;
+  }
+  const missing = consumption.shortfalls
+    .map((shortfall) => `${shortfall.materialNamePl}: ${(shortfall.areaMm2 / 1_000_000).toFixed(2)} m²`)
+    .join(', ');
+  return `${ADMIN.orderStockShortfallPl} ${missing}`;
 }
 
 export async function transitionOrderStatus(

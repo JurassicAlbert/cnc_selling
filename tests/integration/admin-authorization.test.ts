@@ -42,10 +42,11 @@
  * file is doing.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';
+import { acquireSingletonLock } from './singleton-lock';
 import { applyAnonymizeCustomer } from '@/server/operations/admin-customers';
 import { applyUpdateEmailTemplate } from '@/server/operations/admin-email-templates';
 import { applyUpdateStoreSettings } from '@/server/operations/admin-store-settings';
@@ -106,6 +107,25 @@ async function auditRowsByTestActors(): Promise<number> {
   return prisma.auditLog.count({ where: { actorEmail: { startsWith: PREFIX } } });
 }
 
+
+/*
+  Serialised against every other file that writes these shared singleton rows
+  - see `singleton-lock.ts`. Held for the whole file rather than per test:
+  the requirement is that no other file writes the row while this one is
+  reading its own value back, and a per-test lock would leave the gaps
+  between them open.
+*/
+let releaseSingletonLock: (() => Promise<void>) | null = null;
+
+beforeAll(async () => {
+  releaseSingletonLock = await acquireSingletonLock();
+});
+
+afterAll(async () => {
+  await releaseSingletonLock?.();
+  releaseSingletonLock = null;
+});
+
 describe('applyUpdateStoreSettings - the bank account every customer is told to pay into', () => {
   const INPUT = {
     bankAccountNumber: 'PL61109010140000071219812874',
@@ -122,16 +142,46 @@ describe('applyUpdateStoreSettings - the bank account every customer is told to 
     youtubeUrl: '',
   };
 
-  it.each(REFUSED)('refuses a %s actor and changes nothing', async (_role, who) => {
-    const before = await readStoreSettings();
+  /**
+   * Values no other test writes, so "did the refused call land?" can be
+   * answered without reading any other writer's value as a failure.
+   *
+   * Rewritten 2026-09-05. This used to snapshot the whole row, call the
+   * refused operation and assert the row was unchanged - which is the right
+   * *idea* and the wrong *assertion*, because `StoreSettings` is a singleton
+   * that `admin-store-settings.test.ts` legitimately writes, Vitest runs
+   * files in parallel, and a value that arrives between the two reads fails
+   * this test for a reason that has nothing to do with authorization. Run
+   * together, the two files failed four times out of four.
+   *
+   * This file's own header already warned about exactly that hazard and
+   * prescribed reading immediately before and comparing immediately after.
+   * That narrows the window; it cannot close it, because the other file's
+   * write can land inside it. Asserting on values only this block uses
+   * removes the window instead of shrinking it.
+   */
+  const REFUSED_INPUT = {
+    ...INPUT,
+    bankAccountNumber: 'PL27114020040000300201355387',
+    bankAccountNumberConfirmation: 'PL27114020040000300201355387',
+    bankAccountHolderPl: 'Test SEC-04 odmowa',
+    shippingFlatRateGrosze: 4_321,
+  };
 
-    const result = await applyUpdateStoreSettings(who, INPUT);
+  it.each(REFUSED)('refuses a %s actor and changes nothing', async (_role, who) => {
+    const result = await applyUpdateStoreSettings(who, REFUSED_INPUT);
 
     expect(result.ok).toBe(false);
 
     // The assertion that matters: a check placed *after* the write would
     // still return ok:false while having redirected every incoming payment.
-    expect(await readStoreSettings()).toEqual(before);
+    // So what is asserted is that this call's own values are nowhere in the
+    // row - true no matter what any other file has written to it meanwhile.
+    const after = await readStoreSettings();
+    expect(after.bankAccountNumber).not.toBe(REFUSED_INPUT.bankAccountNumber);
+    expect(after.bankAccountHolderPl).not.toBe(REFUSED_INPUT.bankAccountHolderPl);
+    expect(after.shippingFlatRateGrosze).not.toBe(REFUSED_INPUT.shippingFlatRateGrosze);
+    expect(after.updatedByEmail).not.toBe(who.email);
   });
 
   it('writes no audit-log entry for a refused attempt', async () => {

@@ -456,6 +456,13 @@ export const ADMIN = {
     order's own timeline - so payment, the event a customer is most likely to
     ask about, was invisible on the page staff actually read to answer them.
   */
+  /*
+    WAREHOUSE-01. Shown when an order goes into production and the warehouse
+    does not hold enough recorded material to cover it. The order moves either
+    way - the shop cuts what it has - so this reports a gap in the bookkeeping
+    rather than refusing the transition.
+  */
+  orderStockShortfallPl: 'Zamówienie trafiło do produkcji, ale w magazynie zabrakło materiału na pokrycie całości. Brakuje:',
   orderEventPaymentRecordedPl: 'Płatność zaksięgowana (przelew)',
   deliveryMethodFieldDaysMinPl: 'Czas dostawy od (dni)',
   deliveryMethodFieldDaysMaxPl: 'Czas dostawy do (dni)',
@@ -984,6 +991,14 @@ export const WAREHOUSE = {
   columnChargedPerM2Pl: 'Cena katalogowa za m²',
   columnMarginPl: 'Marża',
   noStockPl: 'Brak płyt na stanie',
+  /*
+    WAREHOUSE-01. The board count is now two numbers: what was bought and
+    what is left after production has cut into it. Shown as "3 z 4" rather
+    than only the remainder, because the operator orders against what was
+    bought and cuts against what is left, and one number without the other
+    invites the wrong reorder.
+  */
+  boardsRemainingOfHeldPl: (remaining: string, held: number): string => `${remaining} z ${held}`,
   marginUnknownPl: 'Nie wiadomo',
   marginNegativeNotePl: 'Poniżej kosztu zakupu',
 

@@ -484,6 +484,25 @@ function buildOrderItemInput(entry: RevalidatedItem) {
     snapshotVersion: 1,
     pricingVersion: priceBreakdown.pricingVersion,
     customerDesignId: item.customDesignId,
+    /*
+      WAREHOUSE-01. An operational pointer to the live catalogue material,
+      recorded beside a snapshot that deliberately holds no foreign keys.
+
+      The two answer different questions and both are needed. The snapshot is
+      what was *sold* and must never be resolved back to a row - that is the
+      whole reason it exists. Stock, by contrast, is only meaningful live: to
+      take material off the shelf when this line goes into production, the
+      shelf has to be found, and matching `snapshot.materialNamePl` back to a
+      `Material` would be exactly the catalogue lookup the snapshot forbids.
+
+      Free: the id is already on the selection, and `selectedMaterial` is
+      already resolved above from the rows this checkout validated the price
+      against. Both are used: the id is what gets stored, and the resolved
+      row is the proof it still exists - `materialsById` is built from the
+      live query, so a miss means the material is not in the validated set
+      and a foreign key to it would fail.
+    */
+    materialId: selectedMaterial === null ? null : item.selections.materialId,
     productionMethod,
     moduleCount: moduleLayout.totalModules,
   };
