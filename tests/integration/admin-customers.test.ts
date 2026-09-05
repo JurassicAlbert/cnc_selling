@@ -143,10 +143,25 @@ describe('applyAnonymizeCustomer', () => {
     expect(await prisma.session.count({ where: { userId: customer.id } })).toBe(0);
     expect(await prisma.account.count({ where: { userId: customer.id } })).toBe(0);
 
+    /*
+      SEC-07. Every personal field the order keeps, not a sample of three.
+
+      The owner decided on 2026-09-05 to retain order data and correct the
+      wording instead - the confirmation dialog used to promise „dane osobowe
+      klienta zostaną trwale usunięte", which was untrue of exactly these
+      columns. The copy now names them, so the test names them too: a copy
+      change and a behaviour change must not be able to drift apart, and if
+      someone later "completes" the scrub by clearing these, the accounting
+      record breaks here rather than in an audit.
+    */
     const preservedOrder = await prisma.order.findUniqueOrThrow({ where: { id: order.id } });
     expect(preservedOrder.email).toBe(order.email);
     expect(preservedOrder.firstName).toBe('Jan');
     expect(preservedOrder.lastName).toBe('Testowy');
+    expect(preservedOrder.phone).toBe(order.phone);
+    expect(preservedOrder.street).toBe(order.street);
+    expect(preservedOrder.postalCode).toBe(order.postalCode);
+    expect(preservedOrder.city).toBe(order.city);
 
     expect(await prisma.auditLog.count({ where: { entity: 'User', entityId: customer.id, actorEmail: staff.email } })).toBe(1);
   });
