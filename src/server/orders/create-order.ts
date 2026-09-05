@@ -33,6 +33,7 @@ import { randomBytes } from 'node:crypto';
 import { sumGrosze } from '@/domain/money/money';
 import { checkOrderStatusTransition } from '@/domain/order-status/transitions';
 import type { OrderStatus } from '@/domain/order-status/transitions';
+import { formatOrderNumber, orderNumberCounterKey, orderNumberYearMonth } from '@/domain/orders/order-number';
 import { prisma } from '@/server/db/client';
 import type { Prisma } from '@/generated/prisma/client';
 import { findCartForRequest } from '@/server/repositories/cart';
@@ -269,7 +270,15 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
         throw new CartAlreadyClaimedError();
       }
 
-      const counterYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      /*
+        BUG-23: Warsaw's calendar, not the server's. `now.getFullYear()` /
+        `getMonth()` read the host timezone, so on a UTC host an order placed
+        at 00:30 on 1 September in Warsaw would be filed as `2026/08/…` - and
+        the same value keys the counter, so the sequence would jump back into
+        August's series and collide with numbers already issued.
+      */
+      const yearMonth = orderNumberYearMonth(now);
+      const counterYearMonth = orderNumberCounterKey(yearMonth);
       const counterRows = await tx.$queryRaw<{ lastValue: number }[]>`
       INSERT INTO "OrderNumberCounter" ("yearMonth", "lastValue")
       VALUES (${counterYearMonth}, 1)
@@ -281,7 +290,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       if (counterValue === undefined) {
         throw new Error('createOrder: order-number counter upsert returned no row');
       }
-      const number = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(counterValue).padStart(4, '0')}`;
+      const number = formatOrderNumber(yearMonth, counterValue);
 
       const order = await tx.order.create({
         data: {

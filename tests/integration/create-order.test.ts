@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { Selections } from '@/domain/configuration/steps';
 import { createOrder } from '@/server/orders/create-order';
@@ -441,6 +441,58 @@ describe('createOrder - idempotency and concurrency', () => {
  * Driven through `createOrder`, not by writing a snapshot by hand: the
  * question is whether the real checkout path captures these.
  */
+/**
+ * BUG-23 - the order number is filed under Warsaw's calendar, not the host's.
+ *
+ * `tests/unit/order-number.test.ts` pins the calendar arithmetic. This proves
+ * the real `createOrder` uses it, which is the half that actually regressed:
+ * the formatting was inline, so nothing stopped it being written back as
+ * `now.getFullYear()`.
+ *
+ * Only `Date` is faked. Faking every timer would stop the Postgres driver's
+ * own timeouts and turn a clock test into a hang.
+ */
+describe('createOrder - which month an order is filed under (BUG-23)', () => {
+  const realTimezone = process.env.TZ;
+
+  afterEach(() => {
+    vi.useRealTimers();
+    process.env.TZ = realTimezone;
+  });
+
+  it('files a Warsaw-September order in September even when the host says August', async () => {
+    /*
+      The host clock is forced to UTC, and that is what makes this a
+      regression test rather than a tautology. Written without it, it passed
+      against the *old* inline `now.getMonth()` too - this machine runs in
+      Europe/Warsaw, so the buggy code and the fixed code agree here and the
+      test proved nothing. The bug only exists on a host that is not Warsaw,
+      so the test has to be one.
+    */
+    process.env.TZ = 'UTC';
+
+    // 22:30 UTC on 31 August is 00:30 on 1 September in Warsaw (CEST). A UTC
+    // host - every serverless platform this could deploy to - would have
+    // numbered this `2026/08/…` and pushed the counter back into August's
+    // series, colliding with numbers already issued.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-08-31T22:30:00Z'));
+
+    const { sessionToken } = await seedPriceableGuestCart();
+    const delivery = await seedDeliveryMethod();
+    const payment = await seedPaymentMethodConfig();
+
+    const result = await createOrder(
+      baseInput({ sessionToken, deliveryMethodId: delivery.id, paymentMethodConfigId: payment.id }),
+    );
+
+    if (!result.ok) {
+      throw new Error(`expected the order to be placed, got ${JSON.stringify(result)}`);
+    }
+    expect(result.orderNumber).toMatch(/^2026\/09\/\d{4,}$/);
+  });
+});
+
 describe('the order snapshot, as ARCHITECTURE.md §6.8 specifies it', () => {
   /*
     One order for all six assertions, placed once.
