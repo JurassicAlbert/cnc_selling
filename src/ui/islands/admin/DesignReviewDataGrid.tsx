@@ -7,7 +7,18 @@ import { ADMIN } from '@/content/pl/admin';
 import type { PendingDesignReviewItem } from '@/server/repositories/admin-design-review';
 import { EntityDataGrid } from '@/ui/islands/admin/EntityDataGrid';
 
-export function DesignReviewDataGrid({ rows }: { readonly rows: readonly PendingDesignReviewItem[] }) {
+/** PERF-03: one server-side page of a list that grows with the business. */
+export function DesignReviewDataGrid({
+  rows,
+  page,
+  pageSize,
+  total,
+}: {
+  readonly rows: readonly PendingDesignReviewItem[];
+  readonly page: number;
+  readonly pageSize: number;
+  readonly total: number;
+}) {
   const columns: GridColDef<PendingDesignReviewItem>[] = [
     {
       field: 'originalName',
@@ -30,5 +41,12 @@ export function DesignReviewDataGrid({ rows }: { readonly rows: readonly Pending
     },
   ];
 
-  return <EntityDataGrid rows={rows} columns={columns} basePath="/panel/weryfikacja" />;
+  return (
+    <EntityDataGrid
+      rows={rows}
+      columns={columns}
+      basePath="/panel/weryfikacja"
+      serverPagination={{ page, pageSize, total }}
+    />
+  );
 }

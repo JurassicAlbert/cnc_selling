@@ -62,7 +62,15 @@ describe('listSupportRequestsForAdmin', () => {
     const request = await seedRequest();
     await applyUpdateSupportRequest(staff, request.id, 'RESOLVED', null);
 
-    expect((await listSupportRequestsForAdmin({ status: 'RESOLVED' })).some((r) => r.id === request.id)).toBe(true);
-    expect((await listSupportRequestsForAdmin({ status: 'NEW' })).some((r) => r.id === request.id)).toBe(false);
+    // A page wide enough to hold everything this test could have seeded:
+    // PERF-03 gave every unbounded admin list an explicit page, and this
+    // case is about the status filter, not about paging.
+    const wide = { skip: 0, take: 100 };
+    expect(
+      (await listSupportRequestsForAdmin({ status: 'RESOLVED' }, wide)).items.some((r) => r.id === request.id),
+    ).toBe(true);
+    expect(
+      (await listSupportRequestsForAdmin({ status: 'NEW' }, wide)).items.some((r) => r.id === request.id),
+    ).toBe(false);
   });
 });

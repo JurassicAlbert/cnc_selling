@@ -2,10 +2,19 @@ import { Typography } from '@mui/material';
 
 import { ADMIN } from '@/content/pl/admin';
 import { listPendingDesignReviews } from '@/server/repositories/admin-design-review';
+import { parsePagination } from '@/domain/pagination/page';
+import { AdminPageSummary } from '@/ui/primitives/AdminPageSummary';
 import { DesignReviewDataGrid } from '@/ui/islands/admin/DesignReviewDataGrid';
 
-export default async function AdminDesignReviewQueuePage() {
-  const designs = await listPendingDesignReviews();
+type PageProps = {
+  readonly searchParams: Promise<{ readonly page?: string; readonly perPage?: string }>;
+};
+
+export default async function AdminDesignReviewQueuePage({ searchParams }: PageProps) {
+  // PERF-03. The largest of the four: 212 rows in the development database
+  // today, and one more per custom upload from here on.
+  const page = parsePagination(await searchParams);
+  const designs = await listPendingDesignReviews(page);
 
   return (
     <>
@@ -13,10 +22,18 @@ export default async function AdminDesignReviewQueuePage() {
         {ADMIN.designReviewHeadingPl}
       </Typography>
 
-      {designs.length === 0 ? (
+      {designs.total === 0 ? (
         <Typography color="text.secondary">{ADMIN.designReviewEmptyPl}</Typography>
       ) : (
-        <DesignReviewDataGrid rows={designs} />
+        <>
+          <AdminPageSummary skip={page.skip} take={page.take} total={designs.total} />
+          <DesignReviewDataGrid
+            rows={designs.items}
+            page={page.pageIndex}
+            pageSize={page.pageSize}
+            total={designs.total}
+          />
+        </>
       )}
     </>
   );

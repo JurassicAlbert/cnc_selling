@@ -19,8 +19,21 @@ import { comparePl } from '@/domain/text/collation';
 import { setReviewStatus } from '@/server/actions/admin-reviews';
 import type { AdminReviewListItem } from '@/server/repositories/admin-reviews';
 import { useGridPreferences } from '@/ui/islands/admin/useGridPreferences';
+import { useServerPagination } from '@/ui/islands/admin/useServerPagination';
 
-export function OpinieDataGrid({ rows }: { readonly rows: readonly AdminReviewListItem[] }) {
+/** PERF-03: one server-side page of a list that grows with the business. */
+export function OpinieDataGrid({
+  rows,
+  page,
+  pageSize,
+  total,
+}: {
+  readonly rows: readonly AdminReviewListItem[];
+  readonly page: number;
+  readonly pageSize: number;
+  readonly total: number;
+}) {
+  const pagination = useServerPagination({ pageIndex: page, pageSize, total });
   const gridPreferences = useGridPreferences('opinie');
   const columns: GridColDef<AdminReviewListItem>[] = [
     { field: 'orderNumber', headerName: ADMIN.reviewsColumnOrderPl, flex: 0.8, minWidth: 130 },
@@ -84,8 +97,7 @@ export function OpinieDataGrid({ rows }: { readonly rows: readonly AdminReviewLi
       showToolbar
       slots={{ toolbar: GridToolbar }}
       sx={{ border: 'none' }}
-      initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
-      pageSizeOptions={[25, 50, 100]}
+      {...pagination}
       {...gridPreferences}
     />
   );

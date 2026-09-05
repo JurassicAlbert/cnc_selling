@@ -16,7 +16,18 @@ const STATUS_COLOR: Record<AdminSupportRequestListItem['status'], 'default' | 'i
   CLOSED: 'default',
 };
 
-export function SupportRequestDataGrid({ rows }: { readonly rows: readonly AdminSupportRequestListItem[] }) {
+/** PERF-03: one server-side page of a list that grows with the business. */
+export function SupportRequestDataGrid({
+  rows,
+  page,
+  pageSize,
+  total,
+}: {
+  readonly rows: readonly AdminSupportRequestListItem[];
+  readonly page: number;
+  readonly pageSize: number;
+  readonly total: number;
+}) {
   const columns: GridColDef<AdminSupportRequestListItem>[] = [
     {
       field: 'subjectPl',
@@ -54,5 +65,12 @@ export function SupportRequestDataGrid({ rows }: { readonly rows: readonly Admin
     },
   ];
 
-  return <EntityDataGrid rows={rows} columns={columns} basePath="/panel/kontakt" />;
+  return (
+    <EntityDataGrid
+      rows={rows}
+      columns={columns}
+      basePath="/panel/kontakt"
+      serverPagination={{ page, pageSize, total }}
+    />
+  );
 }

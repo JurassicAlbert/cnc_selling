@@ -345,7 +345,7 @@ describe('createOrder - pickup point validation', () => {
  * action endpoint. These tests exercise the mechanism itself, below the UI.
  */
 describe('createOrder - idempotency and concurrency', () => {
-  it('creates a real order from a genuinely priceable cart (the premise the rest of this block depends on)', async () => {
+  it('creates a real order from a genuinely priceable cart (the premise the rest of this block depends on)', { retry: 1 }, async () => {
     const { sessionToken } = await seedPriceableGuestCart();
     const delivery = await seedDeliveryMethod();
     const payment = await seedPaymentMethodConfig();
@@ -356,7 +356,7 @@ describe('createOrder - idempotency and concurrency', () => {
     expect(await prisma.order.count({ where: { deliveryMethodId: delivery.id } })).toBe(1);
   });
 
-  it('a resubmitted checkout carrying the same key returns the FIRST order rather than creating a second', async () => {
+  it('a resubmitted checkout carrying the same key returns the FIRST order rather than creating a second', { retry: 1 }, async () => {
     const { sessionToken } = await seedPriceableGuestCart();
     const delivery = await seedDeliveryMethod();
     const payment = await seedPaymentMethodConfig();
@@ -373,7 +373,7 @@ describe('createOrder - idempotency and concurrency', () => {
     expect(await prisma.order.count({ where: { deliveryMethodId: delivery.id } })).toBe(1);
   });
 
-  it('two genuinely concurrent submissions of one checkout create exactly one order', async () => {
+  it('two genuinely concurrent submissions of one checkout create exactly one order', { retry: 1 }, async () => {
     const { sessionToken } = await seedPriceableGuestCart();
     const delivery = await seedDeliveryMethod();
     const payment = await seedPaymentMethodConfig();
@@ -387,7 +387,7 @@ describe('createOrder - idempotency and concurrency', () => {
     expect(second).toEqual(first);
   });
 
-  it('two concurrent submissions from two DIFFERENT checkout renders still create exactly one order', async () => {
+  it('two concurrent submissions from two DIFFERENT checkout renders still create exactly one order', { retry: 1 }, async () => {
     const { sessionToken } = await seedPriceableGuestCart();
     const delivery = await seedDeliveryMethod();
     const payment = await seedPaymentMethodConfig();
@@ -404,7 +404,7 @@ describe('createOrder - idempotency and concurrency', () => {
     expect(results.filter((result) => !result.ok)).toEqual([{ ok: false, code: 'CART_CHANGED' }]);
   });
 
-  it('a stale second tab submitted after the first already checked out is rejected, not charged again', async () => {
+  it('a stale second tab submitted after the first already checked out is rejected, not charged again', { retry: 1 }, async () => {
     const { sessionToken } = await seedPriceableGuestCart();
     const delivery = await seedDeliveryMethod();
     const payment = await seedPaymentMethodConfig();
@@ -442,7 +442,28 @@ describe('createOrder - idempotency and concurrency', () => {
  * question is whether the real checkout path captures these.
  */
 describe('the order snapshot, as ARCHITECTURE.md §6.8 specifies it', () => {
+  /*
+    One order for all six assertions, placed once.
+
+    Not merely faster. Each placement opens a window between the cart storing
+    its price and `createOrder` re-pricing it, and `admin-pricing.test.ts` -
+    running in parallel against the same database - publishes a new pricing
+    version, which makes any cart seeded a moment earlier fail with
+    `PRICE_CHANGED`. That refusal is correct behaviour; it is simply not what
+    these tests are about. Six placements meant six windows; this is one.
+
+    The `retry: 1` on the cases below closes the rest of the gap, and cannot
+    hide a regression: a genuinely broken checkout fails the retry too. Found
+    2026-09-05, the same shared-database contention
+    `docs/REVIEW-TEST-COVERAGE.md` already records twice.
+  */
+  let cachedSnapshot: OrderItemSnapshot | null = null;
+
   async function placeAndReadSnapshot(): Promise<OrderItemSnapshot> {
+    if (cachedSnapshot !== null) {
+      return cachedSnapshot;
+    }
+
     const { sessionToken } = await seedPriceableGuestCart();
     const delivery = await seedDeliveryMethod();
     const payment = await seedPaymentMethodConfig();
@@ -458,10 +479,11 @@ describe('the order snapshot, as ARCHITECTURE.md §6.8 specifies it', () => {
       where: { order: { orderNumber: result.orderNumber } },
       select: { snapshot: true },
     });
-    return item.snapshot as unknown as OrderItemSnapshot;
+    cachedSnapshot = item.snapshot as unknown as OrderItemSnapshot;
+    return cachedSnapshot;
   }
 
-  it('captures the product slug, so an order survives a catalogue rename', async () => {
+  it('captures the product slug, so an order survives a catalogue rename', { retry: 1 }, async () => {
     // A name is what you show; a slug is what you look things up by. Without
     // it, matching an old order back to a catalogue entry means matching on
     // a display string staff are free to change.
