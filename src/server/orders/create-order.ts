@@ -125,6 +125,36 @@ type RevalidatedItem = {
   readonly lineGrossGrosze: number;
 };
 
+/**
+ * The rows this checkout priced, addressed by id **and by the quantity they
+ * were priced at** - `docs/AI-CHECKLIST.md` BUG-13.
+ *
+ * The claim used to be `id IN (...)` alone, which asks "are these lines still
+ * here" and not "are they still what I charged for". A quantity changed in a
+ * second tab between the pricing read and this transaction was therefore
+ * claimed happily and the customer was charged the old amount for the new
+ * cart - two of a thing they had just reduced to one, or one of a thing they
+ * had just made three.
+ *
+ * A disjunction of exact (id, quantity) pairs, so a row whose quantity moved
+ * matches nothing, the count falls short, and the existing
+ * `CartAlreadyClaimedError` path turns it into `CART_CHANGED` - the message
+ * that already tells the customer their cart changed and to look again.
+ * Nothing new to explain to them, and the same rollback.
+ *
+ * Exported for its test: the race it guards cannot be driven deterministically
+ * end to end, but the predicate can be, and this is the part that regresses.
+ */
+export function cartClaimWhere(
+  cartId: string,
+  items: readonly { readonly cartItemId: string; readonly quantity: number }[],
+): Prisma.CartItemWhereInput {
+  return {
+    cartId,
+    OR: items.map((item) => ({ id: item.cartItemId, quantity: item.quantity })),
+  };
+}
+
 function toJsonInput<T>(value: T): Prisma.InputJsonValue {
   return value as unknown as Prisma.InputJsonValue;
 }
@@ -287,8 +317,11 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       // this transaction commits, then finds nothing left to delete. Coming up
       // short means someone else already bought this cart, so this whole
       // transaction rolls back rather than creating a second order for it.
+      //
+      // BUG-13: the predicate matches on quantity too, so "still here" is not
+      // mistaken for "still what I priced". See `cartClaimWhere`.
       const claimed = await tx.cartItem.deleteMany({
-        where: { id: { in: cartItemIds }, cartId: cart.cartId },
+        where: cartClaimWhere(cart.cartId, cart.items),
       });
       if (claimed.count !== cartItemIds.length) {
         throw new CartAlreadyClaimedError();
