@@ -21,7 +21,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { computeDefaultSelections } from '@/ui/islands/configurator/Configurator';
+import { computeDefaultSelections } from '@/ui/islands/configurator/selections';
 import { findSelectionOutsideProductType, stepsForProductType } from '@/domain/configuration/steps';
 import type { ProductTypeCode } from '@/domain/configuration/steps';
 import type { ConfiguratorOptionData } from '@/server/configurator/resolve-options';

@@ -20,10 +20,10 @@
 | **Commit reviewed** | `e774e40` "Eliminate every duplicate a customer can create" (`main`) |
 | **Review status** | Independent full-repository audit complete. **All four P0s fixed and verified** - the three from the audit, plus BUG-35 found and closed during remediation. **SEC-05 (security headers + CSP) closed 2026-08-31.** |
 | **Overall implementation status** | Feature-complete against `ARCHITECTURE.md` P0–P9. All P0s closed, **every listed product can actually be configured and ordered** (T-16 holds the line), §16.1's header half exists, and there is CI. **The e2e suite is green (70/70, both browsers)** - see T-23, T-24 and T-25. Remaining: **0 P0, 0 P1**, 32 P2, 14 P3. |
-| **Current highest-priority issue** | **ARCH-02** - `Configurator.tsx` is the largest file in the repository with no test of its own except through e2e. CI's first-ever run was red (CI-01, fixed 2026-09-05); `main` stays red until that fix lands. |
-| **Recommended next task** | **ARCH-02**, then **UX-22**. **The PR was opened and merged on 2026-09-05, and CI ran for the first time - red, on its first database step (CI-01).** That is fixed and the whole pipeline reproduced locally against virgin databases, but `main` carries the red run until the fix is merged. |
+| **Current highest-priority issue** | **UX-22** - a second confirmation on the bank-account field. CI's first-ever run was red (CI-01, fixed 2026-09-05); `main` stays red until that fix lands. |
+| **Recommended next task** | **UX-22**, then **PERF-03**. **The PR was opened and merged on 2026-09-05, and CI ran for the first time - red, on its first database step (CI-01).** That is fixed and the whole pipeline reproduced locally against virgin databases, but `main` carries the red run until the fix is merged. |
 | **Blocking issue** | None. `OPEN_ITEMS.md` §6 (rate-limit storage) is **resolved** - the owner chose Postgres on 2026-08-30 and it is built. |
-| **Last completed area** | **BUG-04 + BUG-19 + T-26** (2026-09-05). Before them: **CI-01**, the first real CI run's failure. Before it: **ARCH-03** the same day. Before it: **ADMIN-01** the same day, which closed the last P1. Before it: UX-26. Before it: UX-25 + T-25, and UX-23. Before it: UX-21, and SEC-11 + T-23 found while verifying it. Before them: the warehouse tool, the burger nav, the em-dash sweep, PERF-02 + PERF-05, BUG-05, BUG-06, BUG-07, SEC-04, SEC-10, ARCH-01, SEC-05, SEC-01, SEC-02, SEC-03, BUG-02, BUG-03, BUG-24, BUG-35 and the carried-forward P1-8. |
+| **Last completed area** | **ARCH-02** (2026-09-05, partial). Before it: **BUG-04 + BUG-19 + T-26**. Before them: **CI-01**, the first real CI run's failure. Before it: **ARCH-03** the same day. Before it: **ADMIN-01** the same day, which closed the last P1. Before it: UX-26. Before it: UX-25 + T-25, and UX-23. Before it: UX-21, and SEC-11 + T-23 found while verifying it. Before them: the warehouse tool, the burger nav, the em-dash sweep, PERF-02 + PERF-05, BUG-05, BUG-06, BUG-07, SEC-04, SEC-10, ARCH-01, SEC-05, SEC-01, SEC-02, SEC-03, BUG-02, BUG-03, BUG-24, BUG-35 and the carried-forward P1-8. |
 | **Ready for the next implementation step?** | **Yes.** 1090/1090 unit + integration tests (four consecutive clean runs), **68/68 e2e across both browser projects** (two consecutive), typecheck clean, lint clean, production build succeeds. |
 
 **Verified baseline after the P0 fixes, SEC-05 and ARCH-01** (all actually run):
@@ -328,7 +328,14 @@ affected spec passed in isolation last session).
   - **The real repair is still fewer workers per server**, which CI already does with `workers: 1`. This makes the local suite honest in the meantime.
   - **Evidence:** two consecutive full runs at **74/74**.
   - **Status:** DONE
-- [ ] **ARCH-02 · P2** - `Configurator.tsx` is 1 525 lines (3× the next largest) with no test of its own except through e2e, and ships as one client component on the busiest page. Extract along existing seams; do not restructure the state model.
+- [x] **ARCH-02 · P2 · architecture - `Configurator.tsx` was the largest file in the repository** - **PARTIALLY DONE 2026-09-05.**
+  - **1 632 → 1 252 lines.** Four seams extracted verbatim: `selections.ts` (the pure helpers), `StickyPriceBar.tsx`, `SizeFields.tsx`, `CustomUploadStep.tsx`. Same bodies, same props, same behaviour - the state model stays exactly where it was, which is what the item asks.
+  - **The pure extraction was the point, not the line count.** `computeDefaultSelections` was exported from a `'use client'` module purely so a unit test could reach it, and Next treats every export of such a file as a client reference - so a client component was part of the test surface. In `selections.ts` these are plain functions.
+  - **New tests for what the move exposed.** `mergeWithDefaults` encodes a rule nothing else stated: five fields (`thicknessMm`, `installationVariant`, `personalizationText`, `fontId`, `customUploadId`) are taken from the URL and **never** defaulted, because guessing a thickness can contradict an installation variant, and inventing personalization text is authorship rather than a default. Reversing that looks like a tidy-up, which is why it is now a test rather than a comment.
+  - **Still to do:** `SummaryStep` (189 lines), `ConfigSection`, `OptionStep`, the three menu-item components and the crumb link. The same mechanical move; stopped here because the four largest seams are out and every further one is smaller than the last.
+  - **One process note worth keeping.** `biome check --write` was used first and reformatted the whole file - 253 insertions where the refactor needed 4. Formatting is not enforced by `npm run lint` here (`biome format` is a separate script nothing runs), so that would have buried a pure extraction in unrelated churn. Reset and redone with targeted edits: the final diff is **6 insertions, 386 deletions**.
+  - **Evidence:** `tests/unit/configurator-selections.test.ts` (8, written first) · `configurator-defaults.test.ts` repointed at the new module, unchanged otherwise · **1164 unit/integration, e2e 74/74**, and the configurator browser-checked on both a catalogue product and the custom-upload product.
+  - **Status:** PARTIALLY DONE
 - [x] **ARCH-03 · P2 · tests - e2e ran against the development database** - **DONE 2026-09-05.**
   - **Was:** `playwright.config.ts` started the app with `npm run start` and nothing overrode `DATABASE_URL`, so every local run wrote real rows into the data the owner also browses. That database had reached **284 orders and 778 users** by the time this was fixed, plus a leftover `test-e2e-wzor` design.
   - **Fix:** the override lives in `playwright.config.ts` itself, not in `globalSetup` - Playwright loads the config in every worker process, and each worker's specs import `src/server/db/client` for themselves, which a global setup running in its own process could never reach. `webServer.env` hands the same value to `next start`; `process.env` beats `.env` in Next's own load order, verified in `node_modules/next/dist/docs`.
@@ -456,8 +463,7 @@ easier once it is green.
 
 | # | ID | Pri | Why now | Prerequisite |
 |---|---|---|---|---|
-| 1 | **ARCH-02** | P2 | `Configurator.tsx` is the largest file in the repository and has no test of its own except through e2e. Extract along existing seams; do not restructure the state model. | none |
-| 2 | **UX-22** | P3 | A second confirmation on the bank-account field, split out of SEC-04. Small, and the last UX item outstanding. | none |
+| 1 | **UX-22** | P3 | A second confirmation on the bank-account field, split out of SEC-04. Small, and the last UX item outstanding. | none |
 | 3 | **PERF-03** | P2 | 22 admin repositories still use unbounded `findMany`. ADMIN-01 built the pagination helper they would reuse. | none |
 
 **PERF-01 is not in this list any more.** Every one of its three steps now

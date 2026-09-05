@@ -95,34 +95,23 @@ import Typography from '@mui/material/Typography';
 
 import {
   checkConfigurationComplete,
-  EMPTY_SELECTIONS,
   isStepSatisfied,
-  stepsForProductType,
   type ProductTypeCode,
   type Selections,
   type StepCode,
 } from '@/domain/configuration/steps';
-import type { DimensionIssue } from '@/domain/dimensions/dimensions';
 import type { FeasibilityCode } from '@/domain/feasibility/rules';
 import { formatPln } from '@/domain/money/money';
 import { formatMmAsCentimetres, parseCentimetresToMm } from '@/domain/text/numeric-input';
 import {
   COPY,
-  customerDesignStatusMessage,
   dimensionMessage,
   feasibilityMessage,
   numericInputMessage,
   personalizationMessage,
   unavailabilityReasonMessage,
-  uploadErrorMessage,
-  uploadWarningMessage,
 } from '@/content/pl/messages';
-import type { UploadErrorCode } from '@/content/pl/messages';
 import { SITE } from '@/content/pl/site';
-import { FileInputButton } from '@/ui/islands/FileInputButton';
-import { UPLOAD } from '@/content/pl/upload';
-import { maxUploadSizeBytes } from '@/domain/upload/inspect';
-import type { UploadWarning } from '@/domain/upload/inspect';
 import { DisabledExplanation } from '@/ui/primitives/DisabledExplanation';
 import { Text } from '@/ui/primitives/Text';
 import type {
@@ -133,16 +122,18 @@ import type {
 // Node built-ins), so it is safe to import as a real value into this client
 // island. That is what lets the default selection be filtered by exactly the
 // same rules the server enforces, rather than by a second copy of them.
-import { findUnavailableSelection, resolveOptions } from '@/server/configurator/resolve-options';
+import { findUnavailableSelection } from '@/server/configurator/resolve-options';
 import { getConfiguratorSnapshot } from '@/server/actions/configurator';
 import type { ConfiguratorSnapshot } from '@/server/actions/configurator';
 import { addToCart, updateCartItemConfiguration } from '@/server/actions/cart';
 import type { PricingRejectionCode } from '@/server/configurator/validate-and-price';
-import { uploadCustomDesign } from '@/server/actions/upload';
 import type { OwnedCustomerDesignListItem } from '@/server/repositories/customer-designs';
-import type { UploadCustomDesignResult } from '@/server/actions/upload';
 import type { SwatchEntry } from './ImageSwatchGroup';
 import { readSelectionsFromSearch, writeSelectionsToSearch } from './selections-url';
+import { cmInputFor, computeDefaultSelections, mergeWithDefaults } from './selections';
+import { CustomUploadStep } from './CustomUploadStep';
+import { SizeFields } from './SizeFields';
+import { StickyPriceBar } from './StickyPriceBar';
 
 const STEP_LABEL: Record<StepCode, string> = {
   DESIGN: SITE.configuratorStepDesignPl,
@@ -180,88 +171,6 @@ const BREADCRUMB_STEPS: readonly StepCode[] = ['DESIGN', 'MATERIAL', 'FINISH', '
  * re-enable path, no further code changes needed.
  */
 const PATTERN_SELECTION_ENABLED = false;
-
-function cmInputFor(mm: number | null): string {
-  return mm === null ? '' : formatMmAsCentimetres(mm);
-}
-
-/**
- * A real, immediately-priceable starting configuration - the product's own
- * first catalogue design, first material, that material's first available
- * finish, and a preset size (empty when the product has none, e.g.
- * `requiresExactSize` floor elements, which genuinely need the customer's
- * own measurement). Every field it fills stays a real breadcrumb the
- * customer can still change; this only removes the "nothing chosen yet"
- * starting state, never removes the choice itself.
- *
- * The size default prefers the MIDDLE preset ("Średni"), not the smallest
- * - found live, not assumed: the smallest preset on a real product
- * (`obraz-drewniany-z-grawerem`, 20×20 cm) is genuinely too small for that
- * design's minimum line width, so defaulting to it landed a first-time
- * visitor on an immediate, correct-but-unwelcoming feasibility warning.
- * The middle preset is the far more likely to be feasible starting point
- * for a product's own real dimension envelope.
- */
-export function computeDefaultSelections(
-  options: ConfiguratorOptionData,
-  productTypeCode: ProductTypeCode,
-): Selections {
-  // Never choose on the customer's behalf a field this product type has no
-  // step for. Added 2026-08-31 with BUG-06, which made the write path
-  // refuse exactly that: JEWELRY has no FINISH step (§5), the seeded
-  // bracelet's oak offers oiling, and the default therefore carried a
-  // finishId the product is not allowed to have - a page that priced fine
-  // and then refused to add to the cart. Tested in
-  // `tests/unit/configurator-defaults.test.ts`.
-  const steps = stepsForProductType(productTypeCode);
-  // Filtered through the same §7.2 rules the picker and the server-side
-  // gate use (`docs/REVIEW-DETAILED.md` BUG-03). This used to take
-  // `options.designs[0]` and `options.materials[0]` raw, so a deactivated
-  // material - or a design that was catalogued but never cleared for sale -
-  // could become the default nobody chose. With pattern selection currently
-  // hidden, that default is also the design that ends up in the order
-  // snapshot and on the production sheet, which makes it the one selection
-  // least able to afford being wrong.
-  const selectableOptions = resolveOptions(options, EMPTY_SELECTIONS);
-  const selectableDesigns = new Set(selectableOptions.designIds);
-  const selectableMaterials = new Set(selectableOptions.materialIds);
-
-  const defaultMaterial = options.materials.find((material) => selectableMaterials.has(material.id)) ?? null;
-  const defaultDesign = options.designs.find((design) => selectableDesigns.has(design.id)) ?? null;
-  const defaultFinish = defaultMaterial?.finishes.find((finish) => finish.isAvailable) ?? null;
-  const defaultPreset =
-    options.presetSizes[Math.floor(options.presetSizes.length / 2)] ?? options.presetSizes[0] ?? null;
-  return {
-    ...EMPTY_SELECTIONS,
-    designId: steps.includes('DESIGN') ? (defaultDesign?.id ?? null) : null,
-    materialId: defaultMaterial?.id ?? null,
-    finishId: steps.includes('FINISH') ? (defaultFinish?.id ?? null) : null,
-    widthMm: defaultPreset?.widthMm ?? null,
-    heightMm: defaultPreset?.heightMm ?? null,
-  };
-}
-
-/**
- * The URL is still the source of truth wherever it says something (a
- * shared link, a cart "Edytuj" link, a `/wzory` deep link) - `defaults`
- * only fills in whatever the URL left unset, so an explicit link (which
- * always carries every field a saved `Configuration` needs) is a no-op
- * here, and a bare product-page landing gets a fully real starting price.
- */
-function mergeWithDefaults(fromUrl: Selections, defaults: Selections): Selections {
-  return {
-    designId: fromUrl.designId ?? defaults.designId,
-    customUploadId: fromUrl.customUploadId,
-    materialId: fromUrl.materialId ?? defaults.materialId,
-    widthMm: fromUrl.widthMm ?? defaults.widthMm,
-    heightMm: fromUrl.heightMm ?? defaults.heightMm,
-    thicknessMm: fromUrl.thicknessMm,
-    finishId: fromUrl.finishId ?? defaults.finishId,
-    installationVariant: fromUrl.installationVariant,
-    personalizationText: fromUrl.personalizationText,
-    fontId: fromUrl.fontId,
-  };
-}
 
 type ConfiguratorProps = {
   readonly productSlug: string;
@@ -1107,156 +1016,7 @@ function PersonalizationStub({ maxCharacters }: { readonly maxCharacters: number
  * pricing (§10.2) is unchanged - the server round-trip fires the moment a
  * real value is typed and the field loses focus, exactly as before.
  */
-function SizeFields({
-  widthInput,
-  heightInput,
-  widthError,
-  heightError,
-  dimensionEnvelope,
-  onWidthChange,
-  onHeightChange,
-  onCommitWidth,
-  onCommitHeight,
-  dimensionIssues,
-}: {
-  readonly widthInput: string;
-  readonly heightInput: string;
-  readonly widthError: string | null;
-  readonly heightError: string | null;
-  readonly dimensionEnvelope: {
-    readonly minWidthMm: number;
-    readonly maxWidthMm: number;
-    readonly minHeightMm: number;
-    readonly maxHeightMm: number;
-  };
-  readonly onWidthChange: (value: string) => void;
-  readonly onHeightChange: (value: string) => void;
-  readonly onCommitWidth: () => void;
-  readonly onCommitHeight: () => void;
-  readonly dimensionIssues: readonly DimensionIssue[];
-}) {
-  const minWidthCm = Number(formatMmAsCentimetres(dimensionEnvelope.minWidthMm));
-  const maxWidthCm = Number(formatMmAsCentimetres(dimensionEnvelope.maxWidthMm));
-  const minHeightCm = Number(formatMmAsCentimetres(dimensionEnvelope.minHeightMm));
-  const maxHeightCm = Number(formatMmAsCentimetres(dimensionEnvelope.maxHeightMm));
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <TextField
-        label={SITE.configuratorWidthLabelPl}
-        value={widthInput}
-        onChange={(e) => onWidthChange(e.target.value)}
-        onBlur={onCommitWidth}
-        error={widthError !== null}
-        helperText={widthError ?? `${minWidthCm}–${maxWidthCm} cm`}
-        size="small"
-      />
-      <TextField
-        label={SITE.configuratorHeightLabelPl}
-        value={heightInput}
-        onChange={(e) => onHeightChange(e.target.value)}
-        onBlur={onCommitHeight}
-        error={heightError !== null}
-        helperText={heightError ?? `${minHeightCm}–${maxHeightCm} cm`}
-        size="small"
-      />
-
-      {dimensionIssues.length > 0 && (
-        <Alert severity="error">
-          {dimensionIssues.map((issue) => (
-            <div key={issue.code}>{dimensionMessage(issue)}</div>
-          ))}
-        </Alert>
-      )}
-    </div>
-  );
-}
-
-/**
- * Pinned to the viewport bottom throughout - the running price is always
- * visible while configuring, the same pattern Bazaar/NextMerce use for
- * their PDP add-to-cart bar (this session's redesign reference,
- * `docs/HANDOVER.md` §9g). `position: fixed` rather than `sticky`: the
- * page's content height varies a lot depending on the product's own step
- * list, and `sticky` only pins once the element would otherwise scroll past
- * its normal flow position - `fixed` is unconditional on both mobile and
- * desktop. The outer `<div>`'s `paddingBottom: 72` above keeps this from
- * covering the page's last section.
- */
-function StickyPriceBar({
-  snapshot,
-  loading,
-  unavailableSelection,
-}: {
-  readonly snapshot: ConfiguratorSnapshot | null;
-  readonly loading: boolean;
-  /** UX-21 - see the parent's own comment. Non-null means: show no figure. */
-  readonly unavailableSelection: keyof Selections | null;
-}) {
-  let valueText: string;
-  if (loading || snapshot === null) {
-    valueText = SITE.configuratorPriceCalculatingPl;
-  } else if (unavailableSelection !== null) {
-    // Ahead of the `priced` branch on purpose. `snapshot.pricing` is a real,
-    // correctly-computed figure - `getConfiguratorSnapshot` prices by map
-    // lookup and does not consult availability - which is exactly why it must
-    // not be rendered. The summary panel below carries the full explanation.
-    valueText = SITE.configuratorPriceWithdrawnPl;
-  } else if (snapshot.pricing.status === 'priced') {
-    valueText = formatPln(snapshot.pricing.priceBreakdown.unitGrossGrosze);
-  } else if (snapshot.pricing.status === 'incomplete') {
-    valueText = SITE.configuratorPriceUnavailablePl;
-  } else {
-    valueText = SITE.configuratorPriceUnavailableGenericPl;
-  }
-
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 10,
-        background: 'var(--mui-palette-background-paper)',
-        borderTop: '1px solid var(--mui-palette-divider)',
-        boxShadow: '0 -2px 12px rgba(0, 0, 0, 0.06)',
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 1200,
-          marginInline: 'auto',
-          paddingInline: 24,
-          paddingBlock: 12,
-          display: 'flex',
-          alignItems: 'baseline',
-          justifyContent: 'space-between',
-          gap: 16,
-        }}
-      >
-        <span style={{ font: 'var(--mui-font-body2)', color: 'var(--mui-palette-text-secondary)' }}>
-          {SITE.configuratorPriceLabelPl}
-        </span>
-        <span style={{ font: 'var(--mui-font-h5)' }}>{valueText}</span>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
-/**
- * Renders EVERY option, never just the selectable ones - ARCHITECTURE.md
- * §7.2: an unavailable option is shown disabled with a Polish reason, not
- * hidden, so the customer learns the rule instead of wondering where an
- * option went. Text-only (`ToggleButtonGroup`) - used for THICKNESS,
- * INSTALLATION_VARIANT, and font choice, the remaining accordion-band
- * steps; DESIGN/MATERIAL/FINISH live in the breadcrumb dropdowns instead
- * (`DesignMenuItem`/`TextMenuItem`, above).
- */
 function OptionStep({
   title,
   entries,
@@ -1301,146 +1061,6 @@ function OptionStep({
  * happens on an existing order past checkout, not inside this pre-purchase
  * configurator.
  */
-function CustomUploadStep({
-  customerDesignId,
-  savedDesigns,
-  onUploaded,
-}: {
-  readonly customerDesignId: string | null;
-  readonly savedDesigns: readonly OwnedCustomerDesignListItem[];
-  readonly onUploaded: (customerDesignId: string) => void;
-}) {
-  const [file, setFile] = useState<File | null>(null);
-  const [ipConsent, setIpConsent] = useState(false);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<UploadErrorCode | null>(null);
-  const [errorParams, setErrorParams] = useState<Record<string, number> | undefined>(undefined);
-  const [warnings, setWarnings] = useState<readonly UploadWarning[]>([]);
-  const [selectedSavedDesignId, setSelectedSavedDesignId] = useState('');
-
-  const handleSubmit = async () => {
-    if (file === null) {
-      setError('NO_FILE');
-      setErrorParams(undefined);
-      return;
-    }
-    setPending(true);
-    setError(null);
-    setErrorParams(undefined);
-    const formData = new FormData();
-    formData.set('file', file);
-    if (ipConsent) {
-      formData.set('ipConsent', 'on');
-    }
-
-    // A file large enough to exceed next.config's own `serverActions.
-    // bodySizeLimit` (26mb - deliberately just above the app's real 25MB
-    // cap, see next.config's own comment) never reaches `uploadCustomDesign`
-    // at all: Next.js rejects the request at the framework boundary and the
-    // call throws instead of resolving `{ok: false}`. Found live while
-    // verifying this exact upload flow - without this catch, `pending`
-    // never clears and the customer is stuck on "Przesyłanie..." forever,
-    // the failure visible only in the browser console. `file.size`/`file.
-    // type` are already known client-side, so the same real-numbers
-    // `FILE_TOO_LARGE` message can be shown immediately, no server
-    // round-trip needed to know what went wrong.
-    let result: UploadCustomDesignResult;
-    try {
-      result = await uploadCustomDesign(formData);
-    } catch {
-      setPending(false);
-      setError('FILE_TOO_LARGE');
-      const maxBytes = maxUploadSizeBytes(file.type);
-      setErrorParams(maxBytes === null ? undefined : { actualBytes: file.size, maxBytes });
-      return;
-    }
-    setPending(false);
-    if (!result.ok) {
-      setError(result.code);
-      setErrorParams(result.params);
-      return;
-    }
-    setWarnings(result.warnings);
-    onUploaded(result.customerDesignId);
-  };
-
-  if (customerDesignId !== null) {
-    // Reusing a design from `savedDesigns` is a real, previously-existing
-    // row - it may already be APPROVED, not "just uploaded and pending."
-    // Showing the hardcoded pending/needs-review copy for an already
-    // -approved reused design would be actively wrong, not just imprecise.
-    const reused = savedDesigns.find((design) => design.id === customerDesignId);
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 480 }}>
-        <Alert severity="success">
-          {reused !== undefined ? SITE.configuratorUploadReuseSuccessPl : SITE.configuratorUploadSuccessPl}
-        </Alert>
-        <Text muted>{reused !== undefined ? customerDesignStatusMessage(reused.status) : COPY.designStatusPending}</Text>
-        {(reused === undefined || reused.status === 'PENDING_REVIEW') && <Text muted>{COPY.customDesignNeedsReview}</Text>}
-        {warnings.map((warning) => (
-          <Alert severity="warning" key={warning.code}>
-            {uploadWarningMessage(warning)}
-          </Alert>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 480 }}>
-      {savedDesigns.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <Text muted>{SITE.configuratorUploadReuseHeadingPl}</Text>
-          <TextField
-            select
-            size="small"
-            label={SITE.configuratorUploadReuseSelectLabelPl}
-            value={selectedSavedDesignId}
-            onChange={(e) => setSelectedSavedDesignId(e.target.value)}
-          >
-            {savedDesigns.map((design) => (
-              <MenuItem key={design.id} value={design.id}>
-                {design.titlePl ?? design.originalName} - {customerDesignStatusMessage(design.status)}
-              </MenuItem>
-            ))}
-          </TextField>
-          <Button
-            variant="outlined"
-            disabled={selectedSavedDesignId === ''}
-            onClick={() => onUploaded(selectedSavedDesignId)}
-            sx={{ alignSelf: 'flex-start' }}
-          >
-            {SITE.configuratorUploadReuseButtonPl}
-          </Button>
-          <Text muted>{SITE.configuratorUploadReuseOrNewPl}</Text>
-        </div>
-      )}
-
-      <FileInputButton
-        accept=".jpg,.jpeg,.png,.svg,.pdf,image/jpeg,image/png,image/svg+xml,application/pdf"
-        label={SITE.configuratorUploadChooseFilePl}
-        chooseLabel={SITE.configuratorUploadChooseFilePl}
-        onFileChange={setFile}
-      />
-
-      <Alert severity="info">{UPLOAD.ipDeclarationTextPl}</Alert>
-      <FormControlLabel
-        control={<Checkbox checked={ipConsent} onChange={(e) => setIpConsent(e.target.checked)} />}
-        label={SITE.configuratorUploadIpConsentLabelPl}
-      />
-
-      {error !== null && <Alert severity="error">{uploadErrorMessage(error, errorParams)}</Alert>}
-
-      <Button
-        variant="contained"
-        disabled={pending || file === null || !ipConsent}
-        onClick={handleSubmit}
-      >
-        {pending ? SITE.configuratorUploadSubmittingPl : SITE.configuratorUploadSubmitPl}
-      </Button>
-    </div>
-  );
-}
 
 function SummaryStep({
   snapshot,
