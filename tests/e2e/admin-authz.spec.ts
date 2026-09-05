@@ -3,48 +3,14 @@
 // because this file is the first e2e spec to talk to Postgres directly.
 import 'dotenv/config';
 
-import type { Locator, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 // Not `@playwright/test`: this spec registers accounts, and SEC-01 allows
 // one IP ten per day - fewer than a full suite run needs. See fixtures.ts.
 import { expect, test } from './fixtures';
+import { fillReliably } from './fill-reliably';
 import { clearLoopbackRateLimits } from './rate-limit-reset';
 
 import { prisma } from '../../src/server/db/client';
-
-/**
- * `docs/CHECKLIST.md`'s "Authorization matrix fully tested" - the real gap
- * this file closes. `requireStaffSession()`/`requireAdminSession()`
- * (`src/server/auth/session.ts`) are the actual gate for every `/panel/*`
- * page and every `admin-*.ts` Server Action: `CUSTOMER` → `notFound()`,
- * `STAFF` on an `ADMIN`-only screen → `notFound()`, unauthenticated →
- * `redirect('/logowanie')` - "don't reveal existence," same rule already
- * applied to owned-resource lookups (`authz.test.ts`). Both functions call
- * `next/headers`, so they can only be exercised inside a real request -
- * confirmed repeatedly this project (`docs/HANDOVER.md` §9) - which rules
- * out a plain Vitest unit/integration test and makes this a genuine
- * Playwright job, not a redundant one: a stale comment in
- * `admin-orders.test.ts` claimed this coverage already existed in a
- * `tests/e2e/admin.spec.ts` file that, checked directly, has never once
- * existed in this repository's git history - this file is what that
- * comment should have pointed at all along.
- *
- * Imports `prisma` directly - the one thing no UI path can do without
- * already being signed in as an `ADMIN` first is promote a fresh account to
- * `STAFF`/`ADMIN` (the real invite flow, already covered elsewhere, needs
- * exactly that). Same "real database, explicit real data" convention this
- * suite already uses (`e2e-*@example.test` emails); e2e's own established
- * practice is to leave this disposable data in the shared dev DB rather
- * than clean it up per run, same as every other spec in this directory.
- */
-
-async function fillReliably(locator: Locator, value: string): Promise<void> {
-  await expect(async () => {
-    await locator.click();
-    await locator.fill('');
-    await locator.pressSequentially(value, { delay: 10 });
-    await expect(locator).toHaveValue(value);
-  }).toPass({ timeout: 10_000 });
-}
 
 async function registerAndPromote(
   page: Page,

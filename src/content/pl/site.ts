@@ -334,6 +334,18 @@ export const SITE = {
   orderItemsHeadingPl: 'Zamówione produkty',
   orderDeliveryMethodHeadingPl: 'Sposób dostawy',
   orderNumberLabelPl: 'Numer zamówienia',
+  /*
+    BUG-04. The confirmation used to show item lines, a divider and „Do
+    zapłaty", with nothing in between - so the lines did not add up to the
+    total and nothing said why.
+
+    Labels reused from the checkout page rather than invented, so the
+    document a customer pays from reads the same as the page they paid on.
+    `orderVatIncludedPl` is stated rather than itemised: every price on this
+    site is gross, and a Polish consumer confirmation has to say so.
+  */
+  orderVatIncludedPl: (vat: string) => `W tym VAT: ${vat}`,
+  orderFreeShippingPl: 'Gratis',
   orderTotalLabelPl: 'Do zapłaty',
   orderBankTransferHeadingPl: 'Dane do przelewu',
   orderBankTransferTitlePl: 'Tytuł przelewu',

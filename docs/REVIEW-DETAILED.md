@@ -451,7 +451,7 @@ T-05.
 
 ## BUG-04 - The order confirmation never shows shipping, VAT or the net subtotal
 
-- **Status:** CONFIRMED BUG · UX/UI
+- **Status:** **RESOLVED 2026-09-05** · CONFIRMED BUG · UX/UI
 - **Severity:** P1
 - **Area:** ecommerce / content / compliance
 - **Files:** [src/server/repositories/orders.ts](src/server/repositories/orders.ts) (`OrderConfirmationView`, `findOrderForConfirmation`, `findOrderForUser`), [src/ui/primitives/OrderSummary.tsx](src/ui/primitives/OrderSummary.tsx)
@@ -1494,7 +1494,7 @@ warning.
 
 ## BUG-19 - The order snapshot omits fields the architecture requires
 
-- **Status:** CONFIRMED · MISSING FUNCTIONALITY
+- **Status:** **RESOLVED 2026-09-05** · CONFIRMED · MISSING FUNCTIONALITY
 - **Severity:** P2
 - **Files:** [src/server/orders/snapshot.ts](src/server/orders/snapshot.ts), [src/server/orders/create-order.ts](src/server/orders/create-order.ts) (`buildOrderItemInput`)
 
@@ -2534,3 +2534,89 @@ step of both jobs in order against them:
 The probe databases were dropped afterwards. Worth noting that CI runs
 Playwright with `workers: 1`, so it is strictly less contended than this
 four-worker local run.
+
+---
+
+## BUG-04 and BUG-19, resolved - what the confirmation now says, and what the snapshot now keeps
+
+- **Status:** **RESOLVED 2026-09-05**
+- **Files:** [src/server/repositories/orders.ts](src/server/repositories/orders.ts), [src/ui/primitives/OrderSummary.tsx](src/ui/primitives/OrderSummary.tsx), [src/server/orders/snapshot.ts](src/server/orders/snapshot.ts), [src/server/orders/create-order.ts](src/server/orders/create-order.ts)
+
+**BUG-04.** `OrderConfirmationView` now carries `subtotalNetGrosze`,
+`vatGrosze` and `shippingGrosze`, and `OrderSummary` renders „Suma produktów
+/ Dostawa / Do zapłaty" with „W tym VAT" underneath. Labels are the checkout
+page's own, so the document a customer pays from reads like the page they paid
+on.
+
+Verified on a real order in the development data - the exact failure the item
+described. Before: item lines summing to **57,39 zł** above a „Do zapłaty" of
+**92,55 zł**, with nothing accounting for the difference. After:
+
+```
+Bransoletka z grawerem × 1 - Dąb, Gałązka oliwna      57,39 zł
+Suma produktów                                        57,39 zł
+Dostawa                                               35,16 zł
+Do zapłaty                                            92,55 zł
+                                        W tym VAT: 10,73 zł
+```
+
+And a free-delivery order reads „Dostawa - Gratis" rather than nothing:
+silence on a payment document reads as an omission, not as a gift.
+
+**One subtlety worth recording.** The subtotal shown is `subtotalNetGrosze +
+vatGrosze`, not `subtotalNetGrosze`. The item lines above it are gross, so
+printing the net figure there would have produced a column that still does not
+reconcile - a different wrong answer rather than a right one. VAT is stated
+underneath instead of added as a third line, because it is already inside both
+numbers.
+
+**BUG-19.** The snapshot now captures `productSlug`, `materialFamilyCode`,
+`productionDaysMin`/`Max`, `materialNotesPl` and the installation variant's
+`namePl`/`receivesPl`. All six come from data the checkout had already fetched
+and validated the price against, so nothing costs an extra query, and
+`ProductRow` was deliberately not widened - it is the pricing subset, and none
+of these price anything.
+
+**They are typed optional, not nullable, and that is the substantive
+decision.** Every order placed before today has these keys genuinely absent
+from its stored JSON, so `undefined` is the truth; `| null` would be a claim
+the data does not support. `machiningMilliMinutesPerM2` is typed `| null` and
+is really `undefined` on old rows - which is precisely how ADMIN-01 found
+`admin-production.ts` crashing on `moduleLayout.totalModules` and taking the
+production queue down for every order. Optional makes TypeScript force each
+reader to handle the absence; `OrderSummary` does, and an order that predates
+the change simply shows one line fewer.
+
+**Evidence.** `order-confirmation-totals.test.ts` (3) asserts T-06 - Σ item
+lines + shipping === `totalGrossGrosze` - at the boundary the page actually
+reads, so a plausible-looking wrong number fails it. Six cases in
+`create-order.test.ts` drive the real `createOrder` rather than hand-writing a
+snapshot, including one asserting that a variant this product does not offer
+stays null rather than becoming an invented label. One of them caught a wrong
+guess on the way: the material family is `SOLID_WOOD`, not `WOOD`.
+
+---
+
+## T-26 - Six copies of `fillReliably`, and a flake that kept moving between them
+
+- **Status:** **RESOLVED 2026-09-05**
+- **Severity:** P2
+- **Area:** tests
+
+Six specs each carried a near-identical private copy of the same typing
+helper, all with the same 10s retry budget. So the contention flake it guards
+against kept reappearing in whichever copy had not been touched: three
+full-suite runs were lost to it on 2026-09-05 alone, in `accounts.spec.ts`,
+`stale-configuration-link.spec.ts` and `admin-authz.spec.ts` - each passing in
+isolation, each looking like a different problem.
+
+Extracted to `tests/e2e/fill-reliably.ts` with a 30s budget. That is a
+**deadline, not a cost**: a field that fills on the first attempt returns
+immediately, so a longer deadline costs nothing except how long a genuinely
+stuck field waits before failing. What it buys is that `mobile-safari` typing
+45 characters into a React-controlled input, while three other workers hammer
+the same Next process, stops reporting "the machine was busy" as a test
+failure - the same argument `vitest.config.ts` records for its own timeout.
+
+The real repair remains fewer workers per server, which CI already does with
+`workers: 1`. Two consecutive full runs at 74/74 afterwards.

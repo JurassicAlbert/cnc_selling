@@ -1,37 +1,13 @@
 import 'dotenv/config';
 
-import type { Locator, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 // Not `@playwright/test`: this spec registers accounts, and SEC-01 allows
 // one IP ten per day - fewer than a full suite run needs. See fixtures.ts.
 import { expect, test } from './fixtures';
+import { fillReliably } from './fill-reliably';
 import { clearLoopbackRateLimits } from './rate-limit-reset';
 
 import { prisma } from '../../src/server/db/client';
-
-/**
- * The warehouse tool, end to end. Owner request, 2026-09-04.
- *
- * A browser is the only place this can be proved. The screens sit behind
- * `requireStaffSession()`, the write behind `requireAdminSession()`, and both
- * read `next/headers`, so no Vitest test can reach either. The arithmetic has
- * its own unit tests (`tests/unit/stock.test.ts`) and the catalogue query has
- * its own integration tests (`tests/integration/what-fits-on-board.test.ts`);
- * what is left, and what this covers, is that an operator can actually record
- * a delivery and see what it can make.
- *
- * Registers its own admin rather than reusing a seeded one, the same approach
- * `admin-authz.spec.ts` takes: promoting an account is the one thing no UI
- * path can do without already being an admin.
- */
-
-async function fillReliably(locator: Locator, value: string): Promise<void> {
-  await expect(async () => {
-    await locator.click();
-    await locator.fill('');
-    await locator.pressSequentially(value, { delay: 10 });
-    await expect(locator).toHaveValue(value);
-  }).toPass({ timeout: 10_000 });
-}
 
 async function signInAsAdmin(page: Page, email: string): Promise<void> {
   const password = 'correcthorse123';

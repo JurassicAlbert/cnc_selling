@@ -6,44 +6,14 @@ import path from 'node:path';
 // `admin-authz.spec.ts` has this same line).
 import 'dotenv/config';
 
-import type { Locator, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 // Not `@playwright/test`: this spec registers accounts, and SEC-01 allows
 // one IP ten per day - fewer than a full suite run needs. See fixtures.ts.
 import { expect, test } from './fixtures';
+import { fillReliably } from './fill-reliably';
 import { clearLoopbackRateLimits } from './rate-limit-reset';
 
 import { prisma } from '../../src/server/db/client';
-
-/**
- * P9 continuation, 2026-08-28 - the full, real NEEDS_CHANGES round trip:
- * a customer uploads a design via `/moje-konto/wzory` (the standalone
- * library, P9 phase 2), a real staff account requests changes on it via
- * the existing admin review panel (`/panel/weryfikacja`, unchanged), and
- * the customer sees the notice, the staff's comment, and a real working
- * reupload form on the new `/moje-konto/wzory/[id]` detail page - closing
- * the gap `docs/CHECKLIST.md` flagged: `reuploadCustomDesign` was real and
- * domain-tested since P7 but had no UI to reach it.
- *
- * `reuploadCustomDesign`/`postCustomerDesignComment` both call
- * `requireOwnedDesignId`/`currentOwner()` internally, which read real
- * `next/headers` - not callable directly from a Vitest integration test
- * (the documented "cookies outside request scope" gotcha), so this is the
- * right level for it, same as `custom-upload.spec.ts`.
- *
- * Talks to Postgres directly (`prisma.user.update` to promote the staff
- * account) - same real, established pattern `admin-authz.spec.ts` set,
- * against the same shared dev database every other e2e spec and this
- * session's own manual verification already writes to.
- */
-
-async function fillReliably(locator: Locator, value: string): Promise<void> {
-  await expect(async () => {
-    await locator.click();
-    await locator.fill('');
-    await locator.pressSequentially(value, { delay: 10 });
-    await expect(locator).toHaveValue(value);
-  }).toPass({ timeout: 10_000 });
-}
 
 async function register(page: Page, params: { readonly name: string; readonly email: string; readonly password: string }) {
   // Immediately before the submit, not merely once per test. Clearing per

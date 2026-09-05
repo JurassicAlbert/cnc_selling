@@ -4,6 +4,7 @@ import type { Selections } from '@/domain/configuration/steps';
 import { createOrder } from '@/server/orders/create-order';
 import { priceAndValidateSelections } from '@/server/configurator/validate-and-price';
 import { getConfiguratorProductData } from '@/server/repositories/configurator';
+import type { OrderItemSnapshot } from '@/server/orders/snapshot';
 import { prisma } from '@/server/db/client';
 
 /**
@@ -414,5 +415,104 @@ describe('createOrder - idempotency and concurrency', () => {
     expect(first.ok).toBe(true);
     expect(stale).toEqual({ ok: false, code: 'CART_EMPTY' });
     expect(await prisma.order.count({ where: { deliveryMethodId: delivery.id } })).toBe(1);
+  });
+});
+
+/**
+ * `docs/REVIEW-DETAILED.md` BUG-19 - the snapshot omits fields §6.8 requires.
+ *
+ * §6.8 specifies it as "product name **and slug**, design code and name,
+ * material name **and family**, dimensions, thickness, finish, installation
+ * variant, personalization text and font, module count and layout, the full
+ * price breakdown with the pricing version, **estimated production days**,
+ * and the customer design file reference". Three of those were missing, plus
+ * two the architecture requires elsewhere: `materialNotesPl` (§12 - the
+ * confirmation has to render it) and the installation variant's `namePl` /
+ * `receivesPl` (§6.5 - the „Co otrzymujesz" line "goes into the summary and
+ * the order snapshot"). Only the bare enum code was stored, so showing it in
+ * Polish meant either a live catalogue lookup - the one thing a snapshot
+ * exists to avoid - or printing `ON_TOP` at a customer.
+ *
+ * **This is the argument for doing it now rather than later.** The snapshot
+ * is what the customer bought, frozen at checkout. A field not captured then
+ * cannot be recovered, because the catalogue row it would have come from has
+ * moved on. Every order placed before this is permanently missing them.
+ *
+ * Driven through `createOrder`, not by writing a snapshot by hand: the
+ * question is whether the real checkout path captures these.
+ */
+describe('the order snapshot, as ARCHITECTURE.md §6.8 specifies it', () => {
+  async function placeAndReadSnapshot(): Promise<OrderItemSnapshot> {
+    const { sessionToken } = await seedPriceableGuestCart();
+    const delivery = await seedDeliveryMethod();
+    const payment = await seedPaymentMethodConfig();
+
+    const result = await createOrder(
+      baseInput({ sessionToken, deliveryMethodId: delivery.id, paymentMethodConfigId: payment.id }),
+    );
+    if (!result.ok) {
+      throw new Error(`expected the order to be placed, got ${JSON.stringify(result)}`);
+    }
+
+    const item = await prisma.orderItem.findFirstOrThrow({
+      where: { order: { orderNumber: result.orderNumber } },
+      select: { snapshot: true },
+    });
+    return item.snapshot as unknown as OrderItemSnapshot;
+  }
+
+  it('captures the product slug, so an order survives a catalogue rename', async () => {
+    // A name is what you show; a slug is what you look things up by. Without
+    // it, matching an old order back to a catalogue entry means matching on
+    // a display string staff are free to change.
+    expect((await placeAndReadSnapshot()).productSlug).toBe(PRICEABLE_PRODUCT_SLUG);
+  });
+
+  it("captures the material's family, not only its name", async () => {
+    // §6.8 asks for both. The family is what production keys off - solid wood
+    // is not ceramic - and it is exactly what a rename would silently lose.
+    // `SOLID_WOOD` is a real `MaterialFamily` member, not a guess: this
+    // product's materials are dąb, świerk, modrzew and sosna.
+    expect((await placeAndReadSnapshot()).materialFamilyCode).toBe('SOLID_WOOD');
+  });
+
+  it('captures the production estimate the customer was actually quoted', async () => {
+    const snapshot = await placeAndReadSnapshot();
+
+    // Reading this live later answers "what do we promise today", which is a
+    // different question from "what did we promise them".
+    expect(typeof snapshot.productionDaysMin).toBe('number');
+    expect(typeof snapshot.productionDaysMax).toBe('number');
+    expect(snapshot.productionDaysMin ?? 0).toBeLessThanOrEqual(snapshot.productionDaysMax ?? 0);
+  });
+
+  it('captures materialNotesPl, which §12 requires the confirmation to render', async () => {
+    // „Produkt obejmuje blat. Nogi nie są w zestawie." and similar. The
+    // confirmation is required to show it and could only have done so by
+    // joining to a live product row.
+    expect(Object.hasOwn(await placeAndReadSnapshot(), 'materialNotesPl')).toBe(true);
+  });
+
+  it('leaves what it genuinely cannot know absent rather than guessed', async () => {
+    // This product has no installation variant, so §6.5's two fields have
+    // nothing to capture. Null, not an empty string and not a fabricated
+    // label - the discipline `machiningMilliMinutesPerM2` already follows
+    // for a CUSTOM product.
+    const snapshot = await placeAndReadSnapshot();
+
+    expect(snapshot.installationVariant).toBeNull();
+    expect(snapshot.installationVariantNamePl ?? null).toBeNull();
+    expect(snapshot.installationVariantReceivesPl ?? null).toBeNull();
+  });
+
+  it('still captures everything it captured before', async () => {
+    // The new fields must not cost the ones already relied on:
+    // `admin-production.ts` reads `moduleLayout`, `OrderSummary` the names.
+    const snapshot = await placeAndReadSnapshot();
+
+    expect(snapshot.productNamePl.length).toBeGreaterThan(0);
+    expect(snapshot.materialNamePl).not.toBeNull();
+    expect(snapshot.moduleLayout.totalModules).toBeGreaterThan(0);
+    expect(snapshot.priceBreakdown.unitGrossGrosze).toBeGreaterThan(0);
   });
 });

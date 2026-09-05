@@ -1,7 +1,8 @@
-import type { Locator, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 // Not `@playwright/test`: this spec registers accounts, and SEC-01 allows
 // one IP ten per day - fewer than a full suite run needs. See fixtures.ts.
 import { expect, test } from './fixtures';
+import { fillReliably, checkReliably } from './fill-reliably';
 import { clearLoopbackRateLimits } from './rate-limit-reset';
 
 /**
@@ -14,52 +15,6 @@ import { clearLoopbackRateLimits } from './rate-limit-reset';
  * jar, but `User.email` is globally unique in the shared dev database this
  * suite writes to, same as `checkout.spec.ts`'s own header comment notes).
  */
-
-/**
- * `LoginForm`/`RegisterForm`/`CheckoutForm` are uncontrolled inputs
- * (`defaultValue`, no `value` - `CheckoutForm.tsx`'s own header explains
- * why: `useActionState` needs a real DOM remount to show echoed server
- * state, which a controlled input would fight). React reasserts an
- * uncontrolled input's SSR'd `defaultValue` once hydration finishes, which
- * silently discards anything typed into it BEFORE that finishes -
- * reproduced directly: `.fill()` immediately after `page.goto()` on
- * `/rejestracja` left the field empty, and the same race hit the checkout
- * form on mobile-safari (a fresh client-component mount, not a full page
- * navigation, is enough to trigger it there - WebKit's slower JS start
- * gives the race a wider window). Real visitors never hit this (hydration
- * is milliseconds on any real connection; a human doesn't start typing
- * before the page has visually settled).
- *
- * A fixed `waitForTimeout` before filling was tried first and was NOT
- * reliable - it passed locally but still flaked once under
- * `--repeat-each` on mobile-safari. `fillReliably` is the actually
- * deterministic fix: fill, read the value back, and retry the whole
- * fill-and-verify step until it genuinely sticks - no timing guess, and it
- * self-heals regardless of how long hydration happens to take on a given
- * run/machine/browser.
- */
-async function fillReliably(locator: Locator, value: string): Promise<void> {
-  await expect(async () => {
-    // Real key-by-key typing (dispatches genuine keyboard events over
-    // time), not `.fill()` (an instant CDP value-set) - confirmed directly
-    // that `.fill()` right after a fresh mount loses the race to React
-    // reasserting the field's SSR'd `defaultValue`, while `pressSequentially`
-    // at the same point does not, on every browser tried including
-    // mobile-safari.
-    await locator.click();
-    await locator.fill('');
-    await locator.pressSequentially(value, { delay: 10 });
-    await expect(locator).toHaveValue(value);
-  }).toPass({ timeout: 10_000 });
-}
-
-/** Same race as `fillReliably`, for a checkbox - verify-and-retry instead of a single `.check()`. */
-async function checkReliably(locator: Locator): Promise<void> {
-  await expect(async () => {
-    await locator.check();
-    await expect(locator).toBeChecked();
-  }).toPass({ timeout: 5000 });
-}
 
 async function register(page: Page, params: { readonly name: string; readonly email: string; readonly password: string }) {
   // Immediately before the submit, not merely once per test. Clearing per

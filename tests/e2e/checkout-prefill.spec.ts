@@ -3,6 +3,7 @@ import 'dotenv/config';
 import type { Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
+import { fillFieldByLabel as fillReliably } from './fill-reliably';
 import { prisma } from '../../src/server/db/client';
 
 /**
@@ -22,15 +23,6 @@ import { prisma } from '../../src/server/db/client';
  */
 
 const PASSWORD = 'correcthorse123';
-
-async function fillReliably(page: Page, label: string, value: string): Promise<void> {
-  const field = page.getByLabel(label, { exact: false }).first();
-  await expect(async () => {
-    await field.fill('');
-    await field.pressSequentially(value, { delay: 10 });
-    await expect(field).toHaveValue(value);
-  }).toPass({ timeout: 10_000 });
-}
 
 async function addSomethingToTheCart(page: Page): Promise<void> {
   await page.goto('/produkt/obraz-drewniany-z-grawerem');

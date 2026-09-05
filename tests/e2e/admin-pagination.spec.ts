@@ -3,6 +3,7 @@ import 'dotenv/config';
 import type { Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
+import { fillFieldByLabel as fillReliably } from './fill-reliably';
 import { prisma } from '../../src/server/db/client';
 
 /**
@@ -38,15 +39,6 @@ const PAGE_SIZE = 25;
 /** Past the old hundred-row cap, so the last page is one that used to be unreachable. */
 const SEEDED_ORDERS = 110;
 const SEEDED_AUDIT_ROWS = 30;
-
-async function fillReliably(page: Page, label: string, value: string): Promise<void> {
-  const field = page.getByLabel(label, { exact: false }).first();
-  await expect(async () => {
-    await field.fill('');
-    await field.pressSequentially(value, { delay: 10 });
-    await expect(field).toHaveValue(value);
-  }).toPass({ timeout: 10_000 });
-}
 
 /**
  * Promoting an account is the one thing no UI path can do for itself - the

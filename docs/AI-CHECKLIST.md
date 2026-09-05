@@ -20,10 +20,10 @@
 | **Commit reviewed** | `e774e40` "Eliminate every duplicate a customer can create" (`main`) |
 | **Review status** | Independent full-repository audit complete. **All four P0s fixed and verified** - the three from the audit, plus BUG-35 found and closed during remediation. **SEC-05 (security headers + CSP) closed 2026-08-31.** |
 | **Overall implementation status** | Feature-complete against `ARCHITECTURE.md` P0–P9. All P0s closed, **every listed product can actually be configured and ordered** (T-16 holds the line), §16.1's header half exists, and there is CI. **The e2e suite is green (70/70, both browsers)** - see T-23, T-24 and T-25. Remaining: **0 P0, 0 P1**, 32 P2, 14 P3. |
-| **Current highest-priority issue** | **BUG-04 + BUG-19**. CI's first-ever run was red (CI-01, fixed 2026-09-05) - `main` stays red until that fix lands. |
-| **Recommended next task** | **BUG-04 + BUG-19**. **The PR was opened and merged on 2026-09-05, and CI ran for the first time - red, on its first database step (CI-01).** That is fixed and the whole pipeline reproduced locally against virgin databases, but `main` carries the red run until the fix is merged. |
+| **Current highest-priority issue** | **ARCH-02** - `Configurator.tsx` is the largest file in the repository with no test of its own except through e2e. CI's first-ever run was red (CI-01, fixed 2026-09-05); `main` stays red until that fix lands. |
+| **Recommended next task** | **ARCH-02**, then **UX-22**. **The PR was opened and merged on 2026-09-05, and CI ran for the first time - red, on its first database step (CI-01).** That is fixed and the whole pipeline reproduced locally against virgin databases, but `main` carries the red run until the fix is merged. |
 | **Blocking issue** | None. `OPEN_ITEMS.md` §6 (rate-limit storage) is **resolved** - the owner chose Postgres on 2026-08-30 and it is built. |
-| **Last completed area** | **CI-01** (2026-09-05), the first real CI run's failure. Before it: **ARCH-03** the same day. Before it: **ADMIN-01** the same day, which closed the last P1. Before it: UX-26. Before it: UX-25 + T-25, and UX-23. Before it: UX-21, and SEC-11 + T-23 found while verifying it. Before them: the warehouse tool, the burger nav, the em-dash sweep, PERF-02 + PERF-05, BUG-05, BUG-06, BUG-07, SEC-04, SEC-10, ARCH-01, SEC-05, SEC-01, SEC-02, SEC-03, BUG-02, BUG-03, BUG-24, BUG-35 and the carried-forward P1-8. |
+| **Last completed area** | **BUG-04 + BUG-19 + T-26** (2026-09-05). Before them: **CI-01**, the first real CI run's failure. Before it: **ARCH-03** the same day. Before it: **ADMIN-01** the same day, which closed the last P1. Before it: UX-26. Before it: UX-25 + T-25, and UX-23. Before it: UX-21, and SEC-11 + T-23 found while verifying it. Before them: the warehouse tool, the burger nav, the em-dash sweep, PERF-02 + PERF-05, BUG-05, BUG-06, BUG-07, SEC-04, SEC-10, ARCH-01, SEC-05, SEC-01, SEC-02, SEC-03, BUG-02, BUG-03, BUG-24, BUG-35 and the carried-forward P1-8. |
 | **Ready for the next implementation step?** | **Yes.** 1090/1090 unit + integration tests (four consecutive clean runs), **68/68 e2e across both browser projects** (two consecutive), typecheck clean, lint clean, production build succeeds. |
 
 **Verified baseline after the P0 fixes, SEC-05 and ARCH-01** (all actually run):
@@ -150,13 +150,12 @@ affected spec passed in isolation last session).
     - [x] **Filtered defaults** - `computeDefaultSelections` now picks through `resolveOptions`, so a deactivated material or a design never cleared for sale can no longer become the default nobody chose. Verified live: with the placeholder retired, the default moved by itself to „Gałązka oliwna".
     - [x] **The placeholder itself - resolved 2026-08-31.** Owner: "we should not have pattern selection for now - its disabled fields in the products - for now we will rather propose ready products or show product with already existing pattern." So the placeholder was **retired** (`isActive: false`) rather than renamed: it is the only design whose artwork still lives in `public/images/placeholders/` while all eleven others are real, so retiring it is precisely "show the product with an already existing pattern". Migration `20260831020000_retire_placeholder_design` + seed. Deactivated, not deleted - §16A.2's soft-delete invariant, and the row keeps the "this was a placeholder" signal. Verified live: the cart line now reads „Dąb · Gałązka oliwna · Olejowanie".
 
-- [ ] **BUG-04 · P1 · ecommerce/content - Order confirmation shows no shipping, VAT or net subtotal**
-  - **Files:** `src/server/repositories/orders.ts` (`OrderConfirmationView` and both queries), `src/ui/primitives/OrderSummary.tsx`
-  - **Current:** only `totalGrossGrosze` is exposed, so item lines do not sum to the total and nothing explains the difference. Checkout already does this correctly.
-  - **Test:** T-06 - Σ item lines + shipping === `totalGrossGrosze`.
-  - **Acceptance:** shipping is a visible line on all three order surfaces · the numbers reconcile · VAT is stated · labels reused from checkout.
-  - **Evidence:** `REVIEW-DETAILED.md` BUG-04
-  - **Status:** TODO
+- [x] **BUG-04 · P1 · ecommerce/content - the order confirmation showed no shipping, VAT or subtotal** - **DONE 2026-09-05.**
+  - **Was:** `OrderConfirmationView` exposed only `totalGrossGrosze`, so the confirmation listed item lines, a divider, then „Do zapłaty" - and the lines did not add up to the number underneath them. Verified on a real order in the development data: lines summed to **57,39 zł** against a total of **92,55 zł**, with nothing on screen explaining the 35,16 zł. For a free-delivery order the customer was never told delivery was free.
+  - **Fix:** the view carries `subtotalNetGrosze`, `vatGrosze` and `shippingGrosze`; `OrderSummary` renders „Suma produktów / Dostawa / Do zapłaty" with „W tym VAT" underneath, reusing the checkout page's own labels so the document a customer pays from reads like the page they paid on. Free delivery says „Gratis" rather than nothing - silence on a payment document reads as an omission, not as a gift.
+  - **One subtlety worth recording:** the subtotal shown is `subtotalNetGrosze + vatGrosze`, not `subtotalNetGrosze`. The item lines above it are gross, so showing the net figure there would produce a column that still does not reconcile. VAT is stated underneath instead of added as a third line, because it is already inside both numbers.
+  - **Evidence:** `tests/integration/order-confirmation-totals.test.ts` (3, written first) asserts Σ item lines + shipping === `totalGrossGrosze` at the boundary the page actually reads - T-06. Browser-verified on two real historical orders: one with paid delivery (57,39 + 35,16 = 92,55) and one with free delivery („Gratis").
+  - **Status:** DONE
 
 - [ ] **BUG-05 · P1 · ecommerce/concurrency - "Duplikuj" reintroduces the P0-3 lost update**
   - **Files:** `src/server/operations/cart.ts:385-398`
@@ -265,7 +264,13 @@ affected spec passed in isolation last session).
 
 - [ ] **BUG-08 · P2 · ecommerce** - free-shipping threshold compares **gross** against a field the schema documents as **net**, so it triggers ~23% early. Observed: all four methods showed „0,00 zł" on a 709,16 zł cart whose real InPost tier is 51,61 zł. Fix the mismatch (code, schema comment and admin label must agree); whether a flat 500 zł threshold is right at all is an **owner decision**. `domain/checkout/delivery.ts`.
 - [ ] **BUG-13 · P2 · ecommerce/concurrency** - a quantity changed in another tab between the cart read and the transaction is charged at the **old** value; `createOrder` claims rows by id only. Widen the claim predicate to include the priced quantity and reuse `CART_CHANGED`.
-- [ ] **BUG-19 · P2 · ecommerce** - the order snapshot omits §6.8-required fields: `productSlug`, material `family`, production days; plus `materialNotesPl` (§12 requires it in the confirmation) and the installation variant's `namePl`/`receivesPl` (§6.5 requires the "Co otrzymujesz" line in the snapshot - only the bare enum code is stored). Impossible to backfill later.
+- [x] **BUG-19 · P2 · ecommerce - the order snapshot omitted fields §6.8 requires** - **DONE 2026-09-05.**
+  - **Added:** `productSlug`, `materialFamilyCode`, `productionDaysMin`/`Max` (§6.8's own list), `materialNotesPl` (§12 requires the confirmation to render it) and the installation variant's `namePl`/`receivesPl` (§6.5: the „Co otrzymujesz" line goes into the snapshot). Only the bare enum code was stored before, so showing it in Polish meant either a live catalogue lookup - the one thing a snapshot exists to prevent - or printing `ON_TOP` at a customer.
+  - **Typed optional, not nullable, and the distinction is the point.** Every order placed before today has these keys genuinely absent, so `undefined` is the truth and `| null` would be a claim the data does not support. `machiningMilliMinutesPerM2` is typed `| null` and is really `undefined` on old rows - which is exactly how ADMIN-01 found `admin-production.ts` crashing on `moduleLayout.totalModules` and taking down the production queue. Optional forces every reader to handle the absence.
+  - **No extra queries:** all six values come from the data the checkout already fetched and validated the price against. `ProductRow` was deliberately not widened - it is the pricing subset, and these are not pricing inputs.
+  - **Evidence:** six cases in `tests/integration/create-order.test.ts`, written first and driven through the real `createOrder` rather than by hand-writing a snapshot, including one asserting that a variant the product does not offer stays null rather than becoming an invented label.
+  - **Status:** DONE
+
 - [ ] **BUG-20 · P2 · ecommerce** - `applyMarkOrderPaid` writes an `AuditLog` but no `OrderEvent`, so payment never appears in the order timeline.
 - [ ] **BUG-21 · P2 · ecommerce** - editing line B into line A's configuration merges the cart lines but leaves a duplicate `Configuration`, hidden by the read-side dedupe in `listConfigurationsForUser`. Delete the redundant row in the merge branch.
 - [ ] **BUG-11 · P2 · uploads** - §13.1's DPI and aspect-mismatch warnings can never fire: both call sites pass `target: null`, so `autoWarnings` is always `[]` and the review queue shows staff an empty list that reads as "checked and fine". Re-inspect at add-to-cart when the size is known; meanwhile say "not yet assessed".
@@ -316,6 +321,12 @@ affected spec passed in isolation last session).
   - **Why nothing caught it:** locally that SQL is applied by the Postgres container's own init directory on first boot, never by this command. The line had therefore never executed anywhere until GitHub ran it - exactly the failure mode `ci-workflow.test.ts`'s own header describes as the reason that file exists.
   - **Fix:** explicit `psql -h 127.0.0.1 -p 5433 -U cnc -d cnc_selling` flags instead of the Prisma URL, in both jobs, plus a `ci-workflow.test.ts` case that fails if a `psql` line is ever handed `$DATABASE_URL`/`$TEST_DATABASE_URL` again.
   - **Verified by reproducing the whole pipeline locally against virgin databases** - the only way to check a workflow without pushing. Two throwaway databases created with the real init script, then every step of both jobs in order: `db:deploy` ×2, `db:seed` ×2, typecheck, lint, **1145 tests**, build, and the **full e2e suite at 74/74** against a database seeded from zero. Both the failing and the fixed `psql` forms were run against a real Postgres first, so the guard test is known to guard something real.
+  - **Status:** DONE
+- [x] **T-26 · P2 · tests - six copies of `fillReliably`, and the flake that kept moving between them** - **DONE 2026-09-05.**
+  - Six specs each held a near-identical private copy with the same 10s budget, so raising it meant editing six files - and the contention flake kept resurfacing in whichever one had not been touched. Three full-suite runs were lost to it on 2026-09-05 alone, each in a different file (`accounts`, `stale-configuration-link`, `admin-authz`).
+  - **Extracted to `tests/e2e/fill-reliably.ts`** with a 30s budget. A **deadline, not a cost**: a field that fills first time returns immediately, so a longer deadline costs nothing but how long a genuinely stuck field waits. What it buys is that `mobile-safari` typing 45 characters into a React-controlled input, while three other workers hammer the same Next process, stops reporting "the machine was busy" as a test failure. `vitest.config.ts` raised its own timeout for the same reason and says so in the same words.
+  - **The real repair is still fewer workers per server**, which CI already does with `workers: 1`. This makes the local suite honest in the meantime.
+  - **Evidence:** two consecutive full runs at **74/74**.
   - **Status:** DONE
 - [ ] **ARCH-02 · P2** - `Configurator.tsx` is 1 525 lines (3× the next largest) with no test of its own except through e2e, and ships as one client component on the busiest page. Extract along existing seams; do not restructure the state model.
 - [x] **ARCH-03 · P2 · tests - e2e ran against the development database** - **DONE 2026-09-05.**
@@ -445,9 +456,9 @@ easier once it is green.
 
 | # | ID | Pri | Why now | Prerequisite |
 |---|---|---|---|---|
-| 1 | **BUG-04 + BUG-19** | P1/P2 | Both touch the order snapshot and the order views; one pass, no migration. | none |
-| 2 | **ARCH-02** | P2 | `Configurator.tsx` is the largest file in the repository and has no test of its own except through e2e. Extract along existing seams. | none |
-| 3 | **UX-22** | P3 | A second confirmation on the bank-account field, split out of SEC-04. Small, and the last UX item outstanding. | none |
+| 1 | **ARCH-02** | P2 | `Configurator.tsx` is the largest file in the repository and has no test of its own except through e2e. Extract along existing seams; do not restructure the state model. | none |
+| 2 | **UX-22** | P3 | A second confirmation on the bank-account field, split out of SEC-04. Small, and the last UX item outstanding. | none |
+| 3 | **PERF-03** | P2 | 22 admin repositories still use unbounded `findMany`. ADMIN-01 built the pagination helper they would reuse. | none |
 
 **PERF-01 is not in this list any more.** Every one of its three steps now
 needs an owner decision - steps 2-3 because of SEC-05's nonce, step 1 because

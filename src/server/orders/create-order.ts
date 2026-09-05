@@ -431,6 +431,19 @@ function buildOrderItemInput(entry: RevalidatedItem) {
       : (validated.data.designsById.get(item.selections.designId) ?? null);
   const productionMethod = selectedDesign?.recommendedMethod ?? null;
 
+  // BUG-19. Everything below is looked up from the data this checkout already
+  // fetched and validated against - the same rows the price was computed
+  // from - so nothing here costs an extra query, and nothing is read at
+  // display time from a catalogue row that may since have changed.
+  const selectedMaterial =
+    item.selections.materialId === null
+      ? null
+      : (validated.data.materialsById.get(item.selections.materialId) ?? null);
+  const selectedInstallVariant =
+    item.selections.installationVariant === null
+      ? null
+      : (validated.data.installVariantsByCode.get(item.selections.installationVariant) ?? null);
+
   const snapshot: OrderItemSnapshot = {
     productNamePl: item.productNamePl,
     designNamePl: item.designNamePl,
@@ -446,6 +459,17 @@ function buildOrderItemInput(entry: RevalidatedItem) {
     moduleLayout,
     priceBreakdown,
     machiningMilliMinutesPerM2: selectedDesign?.machiningMilliMinutesPerM2 ?? null,
+
+    // §6.8's remaining fields, plus §12's and §6.5's. See `snapshot.ts` for
+    // why these are optional on the type and why they could never be
+    // backfilled.
+    productSlug: validated.data.product.slug,
+    materialFamilyCode: selectedMaterial?.familyCode ?? null,
+    productionDaysMin: validated.data.product.productionDaysMin,
+    productionDaysMax: validated.data.product.productionDaysMax,
+    materialNotesPl: validated.data.product.materialNotesPl,
+    installationVariantNamePl: selectedInstallVariant?.namePl ?? null,
+    installationVariantReceivesPl: selectedInstallVariant?.receivesPl ?? null,
   };
 
   return {
