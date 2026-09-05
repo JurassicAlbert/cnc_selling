@@ -38,7 +38,20 @@ export async function findOwnedUploadedFile(fileId: string, owner: Owner): Promi
     return null;
   }
   return prisma.uploadedFile.findFirst({
-    where: { id: fileId, OR: ownerOrClauses(owner) },
+    /*
+      BUG-15: `supersededAt: null` is an authorization condition, not a
+      filter. Ownership is unchanged when a customer replaces their design -
+      it is still their file - so the refusal has to come from the file having
+      been superseded, and it belongs in the same query as the owner check
+      rather than as a second read the caller might forget.
+
+      Staff do not come through here at all (`/api/plik/[fileId]` reads any
+      file directly for a non-CUSTOMER session), which is what makes a
+      superseded upload staff-visible history and nothing more. Deliberately
+      no expiry: the owner was offered one and refused it, so a file stays
+      reachable to staff for as long as it exists.
+    */
+    where: { id: fileId, supersededAt: null, OR: ownerOrClauses(owner) },
     select: { id: true, storageKey: true, mimeType: true, originalName: true },
   });
 }

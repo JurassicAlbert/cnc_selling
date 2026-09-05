@@ -242,6 +242,13 @@ export const ADMIN = {
   designReviewNotFoundPl: 'Nie znaleziono projektu.',
   designReviewOriginalFilePl: 'Pobierz oryginalny plik',
   designReviewWarningsHeadingPl: 'Ostrzeżenia automatyczne',
+  /*
+    BUG-15. Earlier versions of the design, kept when the customer re-uploads.
+    Shown only here: the customer's own link to a replaced file stops working,
+    so this is the one place the history is visible.
+  */
+  designReviewPreviousFilesHeadingPl: 'Wcześniejsze wersje',
+  designReviewPreviousFileLabelPl: (name: string, when: string): string => `${name} - zastąpiony ${when}`,
   designReviewNoWarningsPl: 'Brak ostrzeżeń.',
   /*
     BUG-11. „Brak ostrzeżeń." and „nie sprawdzono" are different facts and were

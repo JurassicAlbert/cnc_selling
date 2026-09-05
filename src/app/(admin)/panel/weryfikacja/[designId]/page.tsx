@@ -58,6 +58,39 @@ export default async function AdminDesignReviewDetailPage({ params }: DesignRevi
         </List>
       )}
 
+      {/*
+        BUG-15. Only rendered when there is history: most designs are uploaded
+        once, and an empty history heading on every one of them is noise that
+        teaches a reviewer to stop reading the page.
+
+        Each is a real link to the file. The customer's own link to it stopped
+        working when they replaced it - this is the only place a superseded
+        upload can still be opened, which is the whole point of keeping it.
+      */}
+      {design.previousFiles.length > 0 && (
+        <>
+          <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>
+            {ADMIN.designReviewPreviousFilesHeadingPl}
+          </Typography>
+          <List dense>
+            {design.previousFiles.map((file) => (
+              <ListItem key={file.fileId} disableGutters>
+                <ListItemText
+                  primary={
+                    <a href={`/api/plik/${file.fileId}`}>
+                      {ADMIN.designReviewPreviousFileLabelPl(
+                        file.originalName,
+                        file.supersededAt.toLocaleDateString('pl-PL'),
+                      )}
+                    </a>
+                  }
+                />
+              </ListItem>
+            ))}
+          </List>
+        </>
+      )}
+
       <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>
         {ADMIN.designReviewCommentsHeadingPl}
       </Typography>

@@ -112,6 +112,23 @@ export async function reuploadCustomDesign(
         previewKey,
       },
     });
+    /*
+      BUG-15: stamp the outgoing file before the design stops pointing at it.
+
+      It used to be simply orphaned - on disk forever, invisible to staff, and
+      still fetchable by the customer who had just replaced it. Now it becomes
+      review history: staff can see every version the customer sent, which is
+      what settles a "but I sent the right one" dispute, and
+      `findOwnedUploadedFile` stops serving it to the customer.
+
+      Inside the same transaction as the swap, so a design can never point at
+      a new file while its predecessor is still marked current.
+    */
+    await tx.uploadedFile.updateMany({
+      where: { design: { id: customerDesignId } },
+      data: { supersededAt: new Date(), supersededForDesignId: customerDesignId },
+    });
+
     await tx.customerDesign.update({
       where: { id: customerDesignId },
       data: {
