@@ -1799,7 +1799,19 @@ async function seedProducts(
   const panele = categories['panele-podlogowe'];
   const obrazy = categories['obrazy-drewniane'];
   const gryPlanszowe = categories['gry-planszowe'];
-  const inne = categories.inne;
+  /*
+    The category the CUSTOM_UPLOAD product lives in. Keyed by slug, and the
+    slug changed on 2026-09-04 when „Inne" became „Zamówienie własne" - see
+    `CATEGORY_SEEDS`. This lookup was not changed with it, so `seedProducts`
+    threw "seedCategories must run before seedProducts" on any database
+    seeded from empty.
+
+    Found 2026-09-05 by ARCH-03's new `npm run db:reset`, which is the first
+    thing in this repository that routinely seeds from zero. Nothing caught
+    it before because every existing database already had the products, and
+    an upsert over an existing row never reaches the lookup that failed.
+  */
+  const zamowienieWlasne = categories['zamowienie-wlasne'];
   if (
     loft === undefined ||
     amulety === undefined ||
@@ -1807,7 +1819,7 @@ async function seedProducts(
     panele === undefined ||
     obrazy === undefined ||
     gryPlanszowe === undefined ||
-    inne === undefined
+    zamowienieWlasne === undefined
   ) {
     throw new Error('seedCategories must run before seedProducts');
   }
@@ -2052,7 +2064,7 @@ async function seedProducts(
   const wlasnyProjekt = await upsertProduct({
     slug: 'wlasny-projekt-z-grawerem',
     typeCode: 'CUSTOM',
-    categoryId: inne.id,
+    categoryId: zamowienieWlasne.id,
     namePl: 'Własny projekt z grawerem',
     shortDescPl: 'Prześlij swój projekt - wykonamy grawer według Twojego pliku.',
     longDescPl:

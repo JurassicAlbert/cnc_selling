@@ -2394,3 +2394,82 @@ Browser-verified against the real development data: orders **251-259 of 259**,
 customers **351-375 of 379**, audit log **1-25 of 188** with a working
 previous/next pager, and the grid's own next button keeping the active filter
 in the URL.
+
+---
+
+## ARCH-03 - The e2e suite ran against the development database
+
+- **Status:** **RESOLVED 2026-09-05**
+- **Severity:** P2
+- **Area:** tests / tooling
+- **Files:** [playwright.config.ts](playwright.config.ts), [tests/e2e/database-guard.ts](tests/e2e/database-guard.ts), [tests/e2e/global-setup.ts](tests/e2e/global-setup.ts), [scripts/reset-test-db.mjs](scripts/reset-test-db.mjs), [prisma/seed.ts](prisma/seed.ts)
+
+`playwright.config.ts` started the app with `npm run build && npm run start`
+and nothing overrode `DATABASE_URL`, so every local run wrote real rows into
+the database the owner also browses. By the time this was fixed that database
+held **284 orders and 778 users**, most of them from test runs, plus a
+leftover `test-e2e-wzor` design and a `test-e2e-material`.
+
+**The override lives in `playwright.config.ts`**, not in `globalSetup`.
+Playwright loads the config in every worker process, and each worker's specs
+import `src/server/db/client` for themselves - a global setup runs in its own
+process and could never reach them. `webServer.env` hands the same value to
+`next start`; `process.env` wins over `.env` in Next's own load order, which
+is stated in `node_modules/next/dist/docs/01-app/02-guides/environment-variables.md`
+rather than assumed.
+
+**A guard, because several specs delete rows.** `admin-pagination.spec.ts`
+removes the accounts it promotes, `warehouse.spec.ts` clears stock batches,
+`global-setup.ts` deletes rate-limit counters. The suite now refuses to start
+unless the database name ends in `_test`, and prints which database it found.
+Deliberately not a substring match: „latest" ends in those four letters, and a
+guard that would accept `contest_live` is worse than no guard because it looks
+like protection. The failure it defends against is entirely mundane - an unset
+`TEST_DATABASE_URL` means the override quietly does nothing, everything falls
+back to the development database, and the suite deletes real rows while
+looking completely normal.
+
+**`npm run db:reset`** drops, migrates and seeds the test database. The seed
+is its own explicit step because **`prisma migrate reset` does not run it
+under Prisma 7.9.1**: `--skip-seed` is rejected as an unknown option and the
+help output no longer mentions seeding at all. Measured rather than assumed -
+the first run reset the schema and left it holding zero products, zero
+categories and zero designs. An unseeded test database is the worst outcome of
+the three, because it does not fail: `offered-is-buildable` and
+`starting-price` sweep the seeded catalogue, so with nothing to sweep they
+iterate nothing and pass.
+
+**It immediately found a real bug: the seed could not run from empty.**
+`seedProducts` still looked up `categories.inne`, a slug the 2026-09-04
+loft/custom-order change had renamed to `zamowienie-wlasne`, so `npm run
+db:seed` threw "seedCategories must run before seedProducts" on any fresh
+database. **CI would have hit this too** - its `verify` job seeds a virgin
+database on every run. Nothing caught it before because every database that
+existed already had the products, and an upsert over an existing row never
+reaches the lookup that failed. This is exactly what a routine reset-from-zero
+is for.
+
+**Two things this did not fix, said plainly.**
+
+The `mobile-safari` contention flake was recorded as ARCH-03's to solve. It
+was not ARCH-03's: the contention is four browsers sharing one Next server,
+and moving the database changes nothing about that. It was fixed separately
+and on its own merits - `accounts.spec.ts`'s two journeys were running out of
+the 30s default at their *last* step, having already registered an account,
+configured a product, checked out and confirmed an order. That is a genuinely
+long journey, so `test.slow()`, the same remedy and reasoning as
+`design-review-customer.spec.ts`.
+
+And the four ADMIN-01 e2e tests **silently skipped** the first time the suite
+ran against a freshly reset database, because they read whatever the database
+happened to hold and skipped when there was too little. Coverage that
+evaporates exactly when the environment gets cleaner is worse than none, so
+they now seed their own 110 orders and 30 audit rows and filter the list to
+them - which also makes every number they assert exact, something reading a
+live count could never be while the rest of the suite places real orders
+alongside them.
+
+**Evidence.** `e2e-database-guard.test.ts` (10, written first). Every run now
+prints „e2e: using cnc_selling_test on 127.0.0.1:5433". **Two consecutive full
+runs at 74/74**, nothing skipped, against a database reset immediately before.
+The development database is untouched by the suite from here on.

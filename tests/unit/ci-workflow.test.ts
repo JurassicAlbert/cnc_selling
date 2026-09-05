@@ -180,6 +180,30 @@ describe('CI workflow - the database the tests actually need', () => {
     expect(order.indexOf('db:deploy:test')).toBeLessThan(order.indexOf('db:seed:test'));
   });
 
+  it('seeds the TEST database in the e2e job, not the development one', () => {
+    /*
+      ARCH-03, 2026-09-05. `playwright.config.ts` points DATABASE_URL at
+      TEST_DATABASE_URL for the whole run, including the `next build && next
+      start` it launches - so the e2e job has to migrate and seed *that*
+      database.
+
+      Worth pinning because reverting it fails in a way that is easy to
+      misread: `tests/e2e/global-setup.ts` would still pass (both URLs are
+      set in CI), and instead every single spec would fail against an empty
+      schema, which reads like the application is broken rather than like the
+      wrong database was prepared.
+    */
+    const [, job] = jobRunning('e2e');
+    const scripts = npmScriptsOf(job);
+
+    expect(scripts).toContain('db:deploy:test');
+    expect(scripts).toContain('db:seed:test');
+
+    const order = npmScriptsOf(job);
+    expect(order.indexOf('db:seed:test')).toBeLessThan(order.indexOf('e2e'));
+    expect(order.indexOf('db:deploy:test')).toBeLessThan(order.indexOf('db:seed:test'));
+  });
+
   it('sets the secrets the app refuses to start without', () => {
     // `auth.ts` and `guest-session.ts` throw on a missing value, and
     // `prisma/seed.ts` throws without SEED_ADMIN_EMAIL - all at import or

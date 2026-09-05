@@ -26,6 +26,7 @@
     "db:seed": "prisma db seed",
     "db:deploy:test": "node scripts/migrate-test-db.mjs",
     "db:seed:test": "node scripts/seed-test-db.mjs",
+    "db:reset": "node scripts/reset-test-db.mjs",
     "prisma:generate": "prisma generate",
     "postinstall": "prisma generate"
   },

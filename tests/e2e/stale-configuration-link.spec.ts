@@ -79,22 +79,34 @@ test('a link naming a retired pattern shows no price and cannot be added to the 
   await expect(addToCart).toBeEnabled();
   await expect(page.getByText(/^Cena: /)).toBeVisible();
 
-  // The configurator writes its resolved selections back into the URL with
-  // `router.replace` once its first snapshot lands, and that rewrite raced
-  // the navigation below - WebKit failed the run with "interrupted by
-  // another navigation". The link carries only `d=`, so the appearance of a
-  // finish is proof the rewrite has already happened rather than a guess
-  // that it has had time to.
-  await page.waitForURL(/[?&]f=/, { timeout: 15_000 });
+  /*
+    The stale link opens in its own page rather than by navigating this one.
 
-  await page.goto(link(retired?.designId ?? ''));
+    The configurator writes its resolved selections back into the URL with
+    `router.replace` whenever a snapshot lands, and one of those rewrites kept
+    interrupting the navigation away - WebKit failed twice with "interrupted
+    by another navigation". Waiting for the rewritten query to appear was not
+    enough, because there is more than one rewrite and the commit lands a
+    moment after the URL changes.
 
-  // The alert comes first for the same reason, in reverse: "no price" and a
-  // missing button are both true of the un-hydrated page, so asserting them
-  // first would pass without proving anything. The alert only ever appears
-  // once the snapshot has been resolved.
-  await expect(page.getByText('Wybrany wzór, materiał lub wykończenie', { exact: false })).toBeVisible();
-  await expect(addToCart).toBeDisabled();
+    A second page removes the race by construction instead of by timing: no
+    amount of activity in the first one can interrupt a load in the second.
+    Same browser context, so it is the same session and the same cart.
+  */
+  const stale = await page.context().newPage();
+  try {
+    await stale.goto(link(retired?.designId ?? ''));
+
+    const staleAddToCart = stale.getByRole('button', { name: 'Dodaj do koszyka' });
+
+    // The alert comes first for the same reason, in reverse: "no price" and a
+    // missing button are both true of the un-hydrated page, so asserting them
+    // first would pass without proving anything. The alert only ever appears
+    // once the snapshot has been resolved.
+    await expect(stale.getByText('Wybrany wzór, materiał lub wykończenie', { exact: false })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(staleAddToCart).toBeDisabled();
 
   // Both price surfaces, not just the summary panel. The summary's figure is
   // gone entirely rather than struck through or greyed: it is real arithmetic
@@ -102,6 +114,9 @@ test('a link naming a retired pattern shows no price and cannot be added to the 
   // is the thing BUG-02 was about. The sticky bar - fixed to the bottom of
   // every screen, so the more prominent of the two on a phone - says why
   // rather than quietly going blank.
-  await expect(page.getByText(/^Cena: /)).toHaveCount(0);
-  await expect(page.getByText('Wariant niedostępny')).toBeVisible();
+    await expect(stale.getByText(/^Cena: /)).toHaveCount(0);
+    await expect(stale.getByText('Wariant niedostępny')).toBeVisible();
+  } finally {
+    await stale.close();
+  }
 });

@@ -110,6 +110,22 @@ async function addSampleConfigurationToCart(page: Page): Promise<void> {
 }
 
 test('guest cart survives registration - no duplicate, no loss', async ({ page }) => {
+  /*
+    A genuinely long journey, not a hang: register, configure a product, add
+    it to the cart, complete checkout, then read the order back. Under four
+    parallel workers on WebKit it repeatedly ran out of the 30s default at
+    the *last* step, having already done all of the work - which carries no
+    information beyond "the machine was busy", and an intermittently red
+    suite is one people learn to ignore.
+
+    `slow()` triples the budget rather than shortening what the test proves.
+    Same remedy and same reasoning as `design-review-customer.spec.ts`.
+    Recorded 2026-09-05 with ARCH-03, which moved the suite onto its own
+    database but does nothing about four browsers sharing one Next server -
+    that contention is what this is.
+  */
+  test.slow();
+
   const email = `e2e-accounts-${Date.now()}@example.test`;
 
   // The cart row's own heading, not any text on the page. A bare
@@ -142,6 +158,22 @@ test('guest cart survives registration - no duplicate, no loss', async ({ page }
 });
 
 test('an order placed while logged in shows up in order history', async ({ page }) => {
+  /*
+    A genuinely long journey, not a hang: register, configure a product, add
+    it to the cart, complete checkout, then read the order back. Under four
+    parallel workers on WebKit it repeatedly ran out of the 30s default at
+    the *last* step, having already done all of the work - which carries no
+    information beyond "the machine was busy", and an intermittently red
+    suite is one people learn to ignore.
+
+    `slow()` triples the budget rather than shortening what the test proves.
+    Same remedy and same reasoning as `design-review-customer.spec.ts`.
+    Recorded 2026-09-05 with ARCH-03, which moved the suite onto its own
+    database but does nothing about four browsers sharing one Next server -
+    that contention is what this is.
+  */
+  test.slow();
+
   const email = `e2e-accounts-order-${Date.now()}@example.test`;
 
   await register(page, { name: 'E2E Order History', email, password: 'correcthorse123' });

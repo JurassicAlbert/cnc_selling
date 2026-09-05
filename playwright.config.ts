@@ -1,4 +1,27 @@
+import 'dotenv/config';
+
 import { defineConfig, devices } from '@playwright/test';
+
+/*
+  ARCH-03: the suite talks to the TEST database, never the development one.
+
+  Set here rather than in `globalSetup` because Playwright loads this config
+  in every worker process as well as the main one, and each worker's specs
+  import `src/server/db/client` for themselves - a global setup runs in its
+  own process and could not reach them. Same override, same reasoning, as
+  `tests/integration/env-setup.ts` does for Vitest.
+
+  Assigned before `defineConfig` runs so `webServer.env` below can hand the
+  same value to `next start`; `process.env` beats `.env` in Next's own load
+  order (`node_modules/next/dist/docs/01-app/02-guides/environment-variables.md`),
+  so the app really does follow.
+
+  Left alone when `TEST_DATABASE_URL` is unset, rather than guessed at -
+  `global-setup.ts` refuses to run in that case and says why.
+*/
+if (process.env.TEST_DATABASE_URL !== undefined && process.env.TEST_DATABASE_URL.length > 0) {
+  process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+}
 
 /**
  * Desktop + mobile, per ARCHITECTURE.md §21.1/§21.4 - every critical journey
@@ -61,5 +84,16 @@ export default defineConfig({
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
+    /*
+      ARCH-03. Without this the app under test would read `.env` and use the
+      development database, which is how that database ended up holding 259
+      orders and a leftover `test-e2e-wzor` design.
+
+      Note the interaction with `reuseExistingServer` above: an already-running
+      server is adopted as-is and keeps whatever database IT was started with.
+      That is the same trap T-25 records - check for `[WebServer]` lines in the
+      run log before trusting a result.
+    */
+    env: { DATABASE_URL: process.env.DATABASE_URL ?? '' },
   },
 });
