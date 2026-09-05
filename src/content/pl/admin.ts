@@ -447,7 +447,16 @@ export const ADMIN = {
   deliveryMethodFieldCarrierPl: 'Przewoźnik (opcjonalnie)',
   deliveryMethodFieldPricePl: 'Cena (zł)',
   deliveryMethodFieldFreeThresholdPl: 'Próg darmowej dostawy (zł, opcjonalnie)',
-  deliveryMethodFieldFreeThresholdHelperPl: 'Powyżej tej wartości zamówienia (netto) dostawa tą metodą jest darmowa. Zostaw puste, jeśli nigdy nie jest darmowa.',
+  // BUG-08: said „netto" while the code had always compared the gross
+  // subtotal, so staff setting 500 here were really setting 406,50 net.
+  deliveryMethodFieldFreeThresholdHelperPl:
+    'Powyżej tej wartości zamówienia (brutto, czyli kwoty widocznej w koszyku) dostawa tą metodą jest darmowa. Zostaw puste, jeśli nigdy nie jest darmowa.',
+  /*
+    BUG-20. Marking an order paid wrote an audit entry but nothing in the
+    order's own timeline - so payment, the event a customer is most likely to
+    ask about, was invisible on the page staff actually read to answer them.
+  */
+  orderEventPaymentRecordedPl: 'Płatność zaksięgowana (przelew)',
   deliveryMethodFieldDaysMinPl: 'Czas dostawy od (dni)',
   deliveryMethodFieldDaysMaxPl: 'Czas dostawy do (dni)',
   deliveryMethodFieldTrackingAvailablePl: 'Śledzenie przesyłki dostępne',

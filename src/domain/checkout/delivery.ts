@@ -58,6 +58,18 @@ export function evaluateDeliveryMethod(
   method: DeliveryPriceInfo,
   cart: { readonly subtotalGrossGrosze: number; readonly items: readonly CartWeightItem[] },
 ): DeliveryEvaluation {
+  /*
+    Gross, deliberately, and stated here because BUG-08 was entirely a
+    disagreement about this line. The schema comment and the admin form both
+    said the threshold was net while this compared gross, so free shipping
+    began 23% early - and a 709,16 zł cart showed all four methods at „0,00
+    zł" while the shop absorbed a real 51,61 zł InPost tier.
+
+    Fixed by correcting those two descriptions, not this comparison: „wydaj
+    500 zł" should mean the number on the customer's cart, and moving the
+    code to net would have raised the real threshold by 23% on a live shop.
+    Pinned by `tests/unit/delivery-pricing.test.ts`.
+  */
   if (method.freeShippingThresholdGrosze !== null && cart.subtotalGrossGrosze >= method.freeShippingThresholdGrosze) {
     return { feasible: true, priceGrosze: 0, matchedTierLabelPl: null };
   }

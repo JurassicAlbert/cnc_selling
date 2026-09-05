@@ -98,3 +98,63 @@ describe('evaluateDeliveryMethod - real locker dimension fit (InPost Paczkomat)'
     expect(result.feasible).toBe(true);
   });
 });
+
+/**
+ * `docs/REVIEW-DETAILED.md` BUG-08 - the free-shipping threshold compared
+ * **gross** against a field the schema, and the admin form, both called
+ * **net**. Free shipping therefore began 23% earlier than the documented
+ * policy: with the seeded 500 zł threshold, at 406,50 zł net.
+ *
+ * Observed live before the fix: a 709,16 zł cart showed all four delivery
+ * methods at „0,00 zł - Darmowa dostawa", while the real InPost tier for its
+ * computed weight is 51,61 zł, absorbed by the shop.
+ *
+ * **Resolved as gross, and that direction is the point.** The review's own
+ * note says gross is the better rule - "wydaj 500 zł" should mean the number
+ * the customer sees on the cart, not a figure they would have to divide by
+ * 1.23 to recognise. So the code was already doing the more defensible
+ * thing; what was wrong was every description of it. Switching the *code* to
+ * net would have quietly raised the real threshold by 23% on a live shop -
+ * a pricing change, not a bug fix, and not one to make on a schema comment's
+ * say-so.
+ *
+ * These pin the unit so the next reader cannot re-open the same question by
+ * reading the comment and trusting it.
+ */
+describe('evaluateDeliveryMethod - which subtotal the free-shipping threshold compares (BUG-08)', () => {
+  const method = { priceGrosze: 1_500, freeShippingThresholdGrosze: 50_000, weightTiers: [] };
+
+  it('is free at exactly the threshold, measured gross', () => {
+    const evaluation = evaluateDeliveryMethod(method, { subtotalGrossGrosze: 50_000, items: [] });
+
+    expect(evaluation).toEqual({ feasible: true, priceGrosze: 0, matchedTierLabelPl: null });
+  });
+
+  it('is not free one grosz below it', () => {
+    // The boundary in the direction that costs the shop money if it is wrong.
+    const evaluation = evaluateDeliveryMethod(method, { subtotalGrossGrosze: 49_999, items: [] });
+
+    expect(evaluation.feasible && evaluation.priceGrosze).toBe(1_500);
+  });
+
+  it('does not become free at the net equivalent of the threshold', () => {
+    /*
+      The regression this exists to catch, in the only direction that can
+      still happen: somebody reads „netto" somewhere and converts the
+      comparison. 50 000 grosze gross is 40 650 net at 23% VAT, and a cart
+      of exactly that must still pay for delivery.
+    */
+    const evaluation = evaluateDeliveryMethod(method, { subtotalGrossGrosze: 40_650, items: [] });
+
+    expect(evaluation.feasible && evaluation.priceGrosze).toBe(1_500);
+  });
+
+  it('never becomes free when no threshold is configured', () => {
+    const evaluation = evaluateDeliveryMethod(
+      { ...method, freeShippingThresholdGrosze: null },
+      { subtotalGrossGrosze: 10_000_000, items: [] },
+    );
+
+    expect(evaluation.feasible && evaluation.priceGrosze).toBe(1_500);
+  });
+});
