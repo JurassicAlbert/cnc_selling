@@ -1004,6 +1004,7 @@ model DeliveryMethod {
   /// prepared but not yet priced) - `priceGrosze`/`freeShippingThresholdGrosze`
   /// above stay the fallback flat rate for exactly that case.
   weightTiers                  DeliveryWeightTier[]
+  insuranceTiers               DeliveryInsuranceTier[]
 
   @@index([isActive, sortOrder])
 }
@@ -1017,6 +1018,28 @@ model DeliveryMethod {
 /// set for a genuine physical-locker constraint (InPost Paczkomat's real
 /// door/compartment dimensions) - `null` for a courier with no such limit
 /// in its own published data.
+/// One declared-value band from a carrier's own published insurance rate
+/// card - `docs/OPEN_ITEMS.md` §10.
+///
+/// **No row is seeded, on purpose.** The owner chose the carrier's real
+/// declared-value table over a flat fee or a percentage, and neither InPost
+/// nor DPD publishes one citably - the same wall `Kurier GEIS` hit for its
+/// weight tiers. A method with no bands offers no insurance and shows no
+/// checkbox, so nothing invents a price nobody published. Adding the real
+/// bands at /panel/dostawa turns it on.
+model DeliveryInsuranceTier {
+  id               String         @id @default(cuid())
+  deliveryMethodId String
+  deliveryMethod   DeliveryMethod @relation(fields: [deliveryMethodId], references: [id], onDelete: Cascade)
+  labelPl          String
+  /// The highest order value this band covers, inclusive.
+  maxValueGrosze   Int
+  priceGrosze      Int
+  sortOrder        Int            @default(0)
+
+  @@index([deliveryMethodId, sortOrder])
+}
+
 model DeliveryWeightTier {
   id               String         @id @default(cuid())
   deliveryMethodId String
@@ -1078,6 +1101,15 @@ model Order {
   subtotalNetGrosze Int
   vatGrosze         Int
   shippingGrosze    Int
+  /// What the customer paid for declared-value cover, and the band they
+  /// bought - `docs/OPEN_ITEMS.md` §10. Zero and null when insurance was not
+  /// offered or not taken, which is every order until a real rate card exists.
+  ///
+  /// Snapshotted like `deliveryMethodNamePl` and `shippingGrosze` beside it:
+  /// a band renamed or repriced later must not change what an old order says
+  /// it bought.
+  insuranceGrosze   Int     @default(0)
+  insuranceLabelPl  String?
   totalGrossGrosze  Int
   currency          String @default("PLN")
 

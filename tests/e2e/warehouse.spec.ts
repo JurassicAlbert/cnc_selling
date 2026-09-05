@@ -80,10 +80,21 @@ test('an admin records a delivery and sees what it can make', async ({ page }) =
 });
 
 test('a staff member can read the warehouse but not write to it', async ({ page }) => {
+  /*
+    Register, promote, sign out, sign back in, then read a panel screen: two
+    scrypt password hashes and five page loads before the assertion. That does
+    not fit `mobile-safari`'s 30s default under four parallel workers, and it
+    died on 2026-09-05 inside the sign-in typing with the assertion still to
+    come - which says the machine was busy and nothing about authorization.
+    Same remedy and reasoning as `accounts.spec.ts`.
+  */
+  test.slow();
+
   // Reads are STAFF because an operator needs to know what is on the shelf;
   // writes are ADMIN because that is where purchase prices and suppliers are
-  // recorded. Nothing in ARCHITECTURE.md §16.3 settles this, so the split is
-  // pinned here rather than left to whoever reads the code next.
+  // recorded. Since P2-9 (2026-09-05) that split is the panel-wide rule
+  // rather than this screen's own judgement call, but it is still worth
+  // pinning here: the warehouse is where it was decided first.
   const stamp = Date.now();
   const email = `e2e-warehouse-staff-${stamp}@example.test`;
   const password = 'correcthorse123';

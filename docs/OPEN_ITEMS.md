@@ -184,20 +184,32 @@ is the part only the owner can do.
   checkout option the customer can select. Asked how it should be priced,
   the owner chose **the carrier's real declared-value table** over a flat
   fee or a percentage.
-- **What exists**: the opt-in mechanism, the admin screen and the order
-  snapshot field are built, and insurance is **inactive** until real rates
-  exist. It cannot be selected at checkout and no customer is shown a
-  price, for the same reason `Kurier GEIS` is seeded `isActive: false` -
-  the owner's own instruction that "you are not allowed to lie" rules out
-  seeding a plausible-looking number and calling it a quote.
+- **What exists so far** (2026-09-05): the data model and the band-selection
+  rule. `DeliveryInsuranceTier` holds a carrier's declared-value bands the
+  same way `DeliveryWeightTier` holds weight brackets, `Order` carries
+  `insuranceGrosze` and `insuranceLabelPl` snapshotted like
+  `shippingGrosze`/`deliveryMethodNamePl` beside them, and
+  `domain/checkout/insurance.ts` picks the cheapest band that covers an order
+  (8 unit tests, written first). **No band is seeded**, so
+  `isInsuranceOffered` is false for every method and nothing appears anywhere
+  in the UI.
+- **Still to build**: the checkout checkbox, adding the premium to the order
+  total at creation, showing it on the confirmation and in the admin order
+  view, and the `/panel/dostawa` screen for entering bands. Deliberately not
+  built ahead of the rates - a checkout control that cannot be priced is a
+  control that cannot be tested end to end, and the shape of the screen
+  depends on what a real rate card turns out to look like (flat bands, or
+  bands per weight tier as well).
 - **What's blocking it**: InPost's and DPD's actual declared-value
   ("ubezpieczenie przesyłki") rate cards - the value bands and what each
   band costs. Both publish these to business account holders; neither has
-  a citable public table, which is the same wall item 2 hit with GEIS.
-- **The remaining step, once supplied**: add the bands as rows the same way
-  `DeliveryWeightTier` holds weight brackets, and flip the method's
-  insurance on. Nothing in checkout, order creation or the snapshot needs
-  to change.
+  a citable public table, which is the same wall item 2 hit with GEIS. The
+  owner chose this over a flat fee or a percentage of order value, both of
+  which could have shipped immediately.
+- **Why nothing is seeded meanwhile**: the same reason `Kurier GEIS` is
+  seeded `isActive: false`. The owner's own instruction is that "you are not
+  allowed to lie", and a plausible-looking premium presented as a quote is
+  exactly that.
 
 ---
 
