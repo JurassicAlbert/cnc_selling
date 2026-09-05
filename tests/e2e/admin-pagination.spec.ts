@@ -3,7 +3,7 @@ import 'dotenv/config';
 import type { Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
-import { fillFieldByLabel as fillReliably } from './fill-reliably';
+import { registerAccount } from './register';
 import { prisma } from '../../src/server/db/client';
 
 /**
@@ -47,12 +47,7 @@ const SEEDED_AUDIT_ROWS = 30;
 async function signInAsAdmin(page: Page): Promise<string> {
   const email = `test-admin-pagination-${crypto.randomUUID()}@example.test`;
 
-  await page.goto('/rejestracja');
-  await fillReliably(page, 'Imię i nazwisko', 'E2E Pagination Admin');
-  await fillReliably(page, 'Adres e-mail', email);
-  await fillReliably(page, 'Hasło', PASSWORD);
-  await page.getByRole('button', { name: 'Załóż konto' }).click();
-  await expect(page).toHaveURL('/moje-konto', { timeout: 15_000 });
+  await registerAccount(page, { name: 'E2E Pagination Admin', email, password: PASSWORD });
 
   await prisma.user.update({ where: { email }, data: { role: 'ADMIN' } });
   return email;

@@ -8,7 +8,7 @@ import type { Page } from '@playwright/test';
 // one IP ten per day - fewer than a full suite run needs. See fixtures.ts.
 import { expect, test } from './fixtures';
 import { fillReliably } from './fill-reliably';
-import { clearLoopbackRateLimits } from './rate-limit-reset';
+import { registerAccount } from './register';
 
 import { prisma } from '../../src/server/db/client';
 
@@ -16,19 +16,7 @@ async function registerAndPromote(
   page: Page,
   params: { readonly name: string; readonly email: string; readonly password: string; readonly role: 'STAFF' | 'ADMIN' },
 ): Promise<void> {
-  // Immediately before the submit, not merely once per test. Clearing per
-  // test leaves a real race under parallel workers: the counter is shared
-  // across all of them, so several tests can each register after the same
-  // clear and blow through SEC-01's ten-per-IP together. Seen on 2026-09-04,
-  // as a registration that silently stayed on `/rejestracja`. Clearing here
-  // shrinks the window to the milliseconds between this call and the click.
-  await clearLoopbackRateLimits();
-  await page.goto('/rejestracja');
-  await fillReliably(page.getByLabel('Imię i nazwisko'), params.name);
-  await fillReliably(page.getByLabel('Adres e-mail'), params.email);
-  await fillReliably(page.getByLabel('Hasło'), params.password);
-  await page.getByRole('button', { name: 'Załóż konto' }).click();
-  await expect(page).toHaveURL('/moje-konto');
+  await registerAccount(page, params);
 
   await prisma.user.update({ where: { email: params.email }, data: { role: params.role } });
 
@@ -55,12 +43,7 @@ test('unauthenticated visitor is redirected to /logowanie, never sees the panel'
 
 test('a CUSTOMER gets a real 404 on /panel, not a redirect or a 403', async ({ page }) => {
   const email = `e2e-authz-customer-${Date.now()}@example.test`;
-  await page.goto('/rejestracja');
-  await fillReliably(page.getByLabel('Imię i nazwisko'), 'E2E Authz Customer');
-  await fillReliably(page.getByLabel('Adres e-mail'), email);
-  await fillReliably(page.getByLabel('Hasło'), 'correcthorse123');
-  await page.getByRole('button', { name: 'Załóż konto' }).click();
-  await expect(page).toHaveURL('/moje-konto');
+  await registerAccount(page, { name: 'E2E Authz Customer', email, password: 'correcthorse123' });
 
   const response = await page.goto('/panel');
   expect(response?.status()).toBe(404);

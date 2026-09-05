@@ -4,6 +4,7 @@ import type { Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
 import { fillReliably } from './fill-reliably';
+import { registerAccount } from './register';
 import { prisma } from '../../src/server/db/client';
 
 /**
@@ -33,12 +34,7 @@ const MISTYPED = 'PL61 1090 1014 0000 0712 1981 2875';
 async function signInAsAdmin(page: Page): Promise<string> {
   const email = `test-ux22-${crypto.randomUUID()}@example.test`;
 
-  await page.goto('/rejestracja');
-  await fillReliably(page.getByLabel('Imię i nazwisko'), 'E2E Bank Admin');
-  await fillReliably(page.getByLabel('Adres e-mail'), email);
-  await fillReliably(page.getByLabel('Hasło'), 'correcthorse123');
-  await page.getByRole('button', { name: 'Załóż konto' }).click();
-  await expect(page).toHaveURL('/moje-konto', { timeout: 15_000 });
+  await registerAccount(page, { name: 'E2E Bank Admin', email, password: 'correcthorse123' });
 
   await prisma.user.update({ where: { email }, data: { role: 'ADMIN' } });
   return email;

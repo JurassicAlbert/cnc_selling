@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 // one IP ten per day - fewer than a full suite run needs. See fixtures.ts.
 import { expect, test } from './fixtures';
 import { fillReliably, checkReliably } from './fill-reliably';
-import { clearLoopbackRateLimits } from './rate-limit-reset';
+import { registerAccount } from './register';
 
 /**
  * P6's real point, per the guest-cart-merge plan: adding to cart as a
@@ -15,22 +15,6 @@ import { clearLoopbackRateLimits } from './rate-limit-reset';
  * jar, but `User.email` is globally unique in the shared dev database this
  * suite writes to, same as `checkout.spec.ts`'s own header comment notes).
  */
-
-async function register(page: Page, params: { readonly name: string; readonly email: string; readonly password: string }) {
-  // Immediately before the submit, not merely once per test. Clearing per
-  // test leaves a real race under parallel workers: the counter is shared
-  // across all of them, so several tests can each register after the same
-  // clear and blow through SEC-01's ten-per-IP together. Seen on 2026-09-04,
-  // as a registration that silently stayed on `/rejestracja`. Clearing here
-  // shrinks the window to the milliseconds between this call and the click.
-  await clearLoopbackRateLimits();
-  await page.goto('/rejestracja');
-  await fillReliably(page.getByLabel('Imię i nazwisko'), params.name);
-  await fillReliably(page.getByLabel('Adres e-mail'), params.email);
-  await fillReliably(page.getByLabel('Hasło'), params.password);
-  await page.getByRole('button', { name: 'Załóż konto' }).click();
-  await expect(page).toHaveURL('/moje-konto');
-}
 
 async function login(page: Page, params: { readonly email: string; readonly password: string }) {
   await page.goto('/logowanie');
@@ -94,7 +78,7 @@ test('guest cart survives registration - no duplicate, no loss', async ({ page }
   await addSampleConfigurationToCart(page);
   await expect(cartRow).toBeVisible();
 
-  await register(page, { name: 'E2E Accounts', email, password: 'correcthorse123' });
+  await registerAccount(page, { name: 'E2E Accounts', email, password: 'correcthorse123' });
 
   // The guest cart's item must show up under the now-logged-in user - the
   // whole point of the merge - with exactly one row, not duplicated.
@@ -131,7 +115,7 @@ test('an order placed while logged in shows up in order history', async ({ page 
 
   const email = `e2e-accounts-order-${Date.now()}@example.test`;
 
-  await register(page, { name: 'E2E Order History', email, password: 'correcthorse123' });
+  await registerAccount(page, { name: 'E2E Order History', email, password: 'correcthorse123' });
   await addSampleConfigurationToCart(page);
 
   await page.getByRole('link', { name: 'Przejdź do zamówienia' }).click();
