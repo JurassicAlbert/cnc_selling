@@ -43,9 +43,13 @@ export function proxy(request: NextRequest): NextResponse {
   const mode = resolveCspMode(process.env.CSP_MODE);
   const isPanel = request.nextUrl.pathname.startsWith('/panel');
   const needsRedirect = isPanel && getSessionCookie(request) === null;
+  const exchange = orderTokenExchange(request);
 
   if (mode === 'off') {
-    return needsRedirect ? redirectToLogin(request) : NextResponse.next();
+    if (needsRedirect) {
+      return redirectToLogin(request);
+    }
+    return exchange ?? NextResponse.next();
   }
 
   const nonce = generateNonce();
@@ -63,6 +67,13 @@ export function proxy(request: NextRequest): NextResponse {
     const response = redirectToLogin(request);
     response.headers.set(headerName, csp);
     return response;
+  }
+
+  // A real response the browser acts on, so it carries the policy too - the
+  // same point SEC-05's own test makes about the `/panel` redirect above.
+  if (exchange !== null) {
+    exchange.headers.set(headerName, csp);
+    return exchange;
   }
 
   // On the REQUEST, so Next can read the nonce back out at render time and
@@ -85,6 +96,77 @@ export function proxy(request: NextRequest): NextResponse {
 
 function redirectToLogin(request: NextRequest): NextResponse {
   return NextResponse.redirect(new URL('/logowanie', request.url));
+}
+
+/**
+ * The cookie the confirmation page reads instead of a query parameter.
+ *
+ * Duplicated from `server/session/order-access.ts` rather than imported:
+ * middleware runs in its own bundle and must not pull in `next/headers`.
+ * `tests/unit/order-access.test.ts` pins that the two agree, because a silent
+ * divergence would mean the emailed link sets a cookie the page never reads -
+ * a failure that looks exactly like a wrong token.
+ */
+const ORDER_ACCESS_COOKIE = 'order-access';
+const ORDER_ACCESS_COOKIE_PATH = '/zamowienie';
+
+/**
+ * Take the guest order token out of the address - `docs/AI-CHECKLIST.md`
+ * BUG-22.
+ *
+ * `/zamowienie/2026-09-0042?token=abc` puts the credential in the address
+ * bar, in browser history, in access logs, and in the `Referer` of anything
+ * the customer clicks from that page. Owner's instruction, 2026-09-05: no
+ * tokens or personal information visible in the address.
+ *
+ * The emailed link still carries it once - that is what makes it one click,
+ * and the owner kept that - so this exchanges it for an `HttpOnly` cookie and
+ * redirects to the clean URL. The token appears in exactly one request
+ * instead of in every address for the rest of the visit.
+ *
+ * **Here rather than in the page** because writing a cookie needs a response,
+ * and a Server Component cannot produce one. The proxy already runs on this
+ * path for the CSP.
+ *
+ * A session cookie, deliberately: the durable credential stays the emailed
+ * link, which re-exchanges whenever it is followed. Nothing needs to persist
+ * on the device.
+ *
+ * Returns `null` when there is nothing to do, which is almost every request -
+ * including the redirected one, so this cannot loop.
+ */
+function orderTokenExchange(request: NextRequest): NextResponse | null {
+  // Narrow on purpose. `?token=` means something specific on this path and
+  // nothing anywhere else; a proxy that harvested every parameter called
+  // "token" into a cookie would be a new problem rather than a fix.
+  if (!request.nextUrl.pathname.startsWith('/zamowienie/')) {
+    return null;
+  }
+
+  const token = request.nextUrl.searchParams.get('token');
+  if (token === null || token.length === 0) {
+    return null;
+  }
+
+  const clean = request.nextUrl.clone();
+  // Only the token. Anything else the address carries - a campaign parameter
+  // on a link from the confirmation email, say - is not ours to discard.
+  clean.searchParams.delete('token');
+
+  const response = NextResponse.redirect(clean);
+  response.cookies.set(ORDER_ACCESS_COOKIE, token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    // Same reasoning as SEC-11's `upgrade-insecure-requests`: a `Secure`
+    // cookie is silently dropped over http, which would break the e2e suite
+    // and any LAN preview while looking like an authorization bug.
+    secure: isSecureRequest({
+      protocol: request.nextUrl.protocol,
+      forwardedProto: request.headers.get('x-forwarded-proto'),
+    }),
+    path: ORDER_ACCESS_COOKIE_PATH,
+  });
+  return response;
 }
 
 export const config = {

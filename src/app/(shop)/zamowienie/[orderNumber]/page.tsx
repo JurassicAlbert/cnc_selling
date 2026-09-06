@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+import { readOrderAccessCookie } from '@/server/session/order-access';
+
 import { SITE } from '@/content/pl/site';
 import { COPY } from '@/content/pl/messages';
 import { findOrderForConfirmation } from '@/server/repositories/orders';
@@ -22,7 +24,6 @@ import { SupportRequestForm } from '@/ui/islands/SupportRequestForm';
 
 type OrderConfirmationPageProps = {
   readonly params: Promise<{ readonly orderNumber: string }>;
-  readonly searchParams: Promise<{ readonly token?: string }>;
 };
 
 export const metadata: Metadata = {
@@ -45,10 +46,28 @@ export const metadata: Metadata = {
  * applied here so an order's existence is never probeable by guessing
  * tokens against a real order number.
  */
-export default async function OrderConfirmationPage({ params, searchParams }: OrderConfirmationPageProps) {
+export default async function OrderConfirmationPage({ params }: OrderConfirmationPageProps) {
   const { orderNumber } = await params;
-  const { token } = await searchParams;
-  if (token === undefined) {
+
+  /*
+    BUG-22. The token comes from an `HttpOnly` cookie, not from `?token=`.
+
+    `src/proxy.ts` takes it out of the address on the way in and puts it here,
+    so the credential appears in exactly one request rather than in the
+    address bar, the history, the access log and the `Referer` of every link
+    the customer clicks from this page. The owner's instruction on 2026-09-05
+    was that no token or personal information should be visible in the
+    address.
+
+    A missing cookie renders the same "not found" as a wrong one, which is the
+    rule this page already followed for a wrong `?token=`: §16.1's "404, not
+    403", so an order's existence is never probeable.
+
+    The emailed link is unchanged and still one click - it carries the token,
+    the proxy exchanges it, and the customer lands on a clean URL.
+  */
+  const token = await readOrderAccessCookie();
+  if (token === null) {
     notFound();
   }
 
