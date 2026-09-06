@@ -114,6 +114,25 @@ export function applicableSteps(data: ConfiguratorProductData, selections: Selec
         return options.thicknessesMm.length > 0;
       case 'INSTALLATION_VARIANT':
         return options.installVariantCodes.length > 0;
+      /*
+        Owner, 2026-09-06: the inscription is for the bracelet and nothing
+        else - "hide the personalization form most of the products and
+        category. Only personalization is picking material and size for now".
+
+        Narrowed on the spec rather than removed from `STEPS_BY_PRODUCT_TYPE`,
+        because the two answer different questions: the type says what a
+        product *may* have, the spec says what this one does. Turning it back
+        on for a product is then a row, not a deployment - and a product
+        without a spec can no longer show a field whose text the write path
+        would refuse anyway.
+
+        That last part is BUG-06's other half. It fixed the write path, so
+        `personalizationText` could not be stored against a product with no
+        spec; the configurator still showed the step and collected the text
+        first.
+      */
+      case 'PERSONALIZATION':
+        return data.personalizationSpec !== null;
       default:
         return true;
     }
