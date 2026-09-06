@@ -1,6 +1,5 @@
 import Link from 'next/link';
 
-import { formatPln } from '@/domain/money/money';
 import {
   CartIcon,
   CloseIcon,
@@ -16,6 +15,7 @@ import {
 import { Container } from '@/ui/primitives/Container';
 import { logout } from '@/server/actions/auth';
 import { SITE } from '@/content/pl/site';
+import { LoginDialog } from '@/ui/islands/auth/LoginDialog';
 
 type CategoryLink = {
   readonly slug: string;
@@ -212,41 +212,30 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
           </div>
 
           {/*
-            The word and the running total are wrapped so they can be dropped
-            on a narrow screen (`theme-vars.css`). Below 600px the logo, the
-            burger, the cart and the account menu do not fit on one line
-            together, and the row wrapped onto two - the icon and the count
-            badge are what a shopper needs at that width; the label and the
-            figure are on the cart page itself, one tap away.
+            Owner request, 2026-09-06, against `template.getbazaar.io`: the
+            cart is an icon and a count and nothing else. The word „Koszyk"
+            and the running total used to sit beside it, clipped away below
+            600px; both are on the cart page itself, one tap away.
 
-            The label is clipped rather than `display: none`, so it stays in
-            the accessibility tree: hiding it the first way left this link
-            announced as „1", its count badge and nothing else.
+            **The whole accessible name now comes from `aria-label`**, because
+            there is no visible text left to build one from. That is not a
+            regression of BUG-27 but the same fix carried over: the badge
+            stays `aria-hidden` - read out on its own it announces a bare „1"
+            in the middle of the name - and the label carries the word and the
+            count together, in Polish's three plural forms.
+            `accessibility.spec.ts` asserts a screen reader still hears how
+            many items are in it.
           */}
-          <Link href="/koszyk" className="cart-link" style={{ font: 'var(--mui-font-body2)' }}>
+          <Link
+            href="/koszyk"
+            className="cart-link nav-icon-link"
+            aria-label={SITE.cartLinkLabelPl(cartSummary.itemCount)}
+          >
             <CartIcon size={20} />
-            <span className="header-label-text">{SITE.cartHeadingPl}</span>
             {cartSummary.itemCount > 0 && (
-              <>
-                {/*
-                  BUG-27. The badge stays `aria-hidden`: it is a decorative
-                  circle repeating a number, and read out it would announce a
-                  bare „1" in the middle of the link's name. What was missing
-                  is the number in a form worth hearing - without it the link
-                  announced only its own label and the total, and a blind
-                  customer could not tell one item from nine.
-                */}
-                <span className="cart-count-badge" aria-hidden="true">
-                  {cartSummary.itemCount}
-                </span>
-                <span className="sr-only">{SITE.cartItemCountPl(cartSummary.itemCount)}</span>
-                <span
-                  className="header-label-text"
-                  style={{ font: 'var(--mui-font-caption)', color: 'var(--mui-palette-text-secondary)' }}
-                >
-                  {formatPln(cartSummary.totalGrossGrosze)}
-                </span>
-              </>
+              <span className="cart-count-badge" aria-hidden="true">
+                {cartSummary.itemCount}
+              </span>
             )}
           </Link>
 
@@ -284,21 +273,19 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
               </div>
             </details>
           ) : (
-            <details className="nav-dropdown">
-              <summary className="nav-link" style={{ font: 'var(--mui-font-body2)', cursor: 'pointer', listStyle: 'none' }}>
-                <PersonIcon size={18} />
-                <span className="header-label-text">{SITE.headerLoginLinkPl}</span>
-                <ExpandMoreIcon size={16} className="nav-dropdown-chevron" style={{ marginInlineStart: 2 }} />
-              </summary>
-              <div className="nav-dropdown-panel" style={{ insetInlineEnd: 0, insetInlineStart: 'auto' }}>
-                <Link href="/logowanie" className="nav-dropdown-item">
-                  {SITE.headerLoginLinkPl}
-                </Link>
-                <Link href="/rejestracja" className="nav-dropdown-item">
-                  {SITE.authSwitchToRegisterPl}
-                </Link>
-              </div>
-            </details>
+            /*
+              Owner request, 2026-09-06: signing in is a dialog and registering
+              is its own page - the arrangement `template.getbazaar.io` uses.
+
+              This replaces a two-item dropdown whose entire job was to offer
+              those same two destinations, so the click that used to open a
+              menu now opens the form itself. `LoginDialog` degrades to a plain
+              link to `/logowanie` when JavaScript is absent or has not
+              hydrated yet, and that page is unchanged: the session gate still
+              redirects to it with `?next=`, and several e2e journeys sign in
+              through it directly.
+            */
+            <LoginDialog />
           )}
         </nav>
       </Container>

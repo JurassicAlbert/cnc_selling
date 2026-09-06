@@ -456,6 +456,20 @@ export const SITE = {
     countPl(count, { one: 'produkt', few: 'produkty', many: 'produktów' }),
   headerAccountLinkPl: 'Moje konto',
   headerLoginLinkPl: 'Zaloguj się',
+  /*
+    Owner request, 2026-09-06: the cart in the navbar is an icon and a
+    count, nothing else - the word and the running total are on the cart
+    page, one tap away. That leaves the link with no visible text at all,
+    so its whole accessible name comes from here.
+
+    Built rather than assembled from two spans, because the name has to
+    read as one phrase: „Koszyk" alone loses the count that BUG-27 added,
+    and the count alone announces a bare number.
+  */
+  cartLinkLabelPl: (count: number): string =>
+    count === 0 ? 'Koszyk (pusty)' : `Koszyk - ${countPl(count, { one: 'produkt', few: 'produkty', many: 'produktów' })}`,
+  /** The close button every dialog needs a name for. */
+  dialogClosePl: 'Zamknij',
   headerLogoutPl: 'Wyloguj się',
   // 2026-08-29, owner request - real navbar restructure: a "Produkty"
   // dropdown (every category) plus real "O nas"/"FAQ" entries.
