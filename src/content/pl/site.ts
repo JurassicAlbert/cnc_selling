@@ -17,9 +17,20 @@
 import { countPl } from '@/domain/text/plural';
 
 export const SITE = {
-  homeSeoTitlePl: 'RYT - meble i akcesoria z grawerem',
+  /*
+    Rewritten 2026-09-07 to describe what the shop sells rather than what
+    it could in principle make. Owner: "we rather sell specific items with
+    wzór and najbardziej wchodzimy w obrazy, linoryt specjalne kolekcje,
+    zrobienie czegoś na zamówienie w drewnie to dodatek."
+
+    „z personalizowanym grawerem" was the specific untruth: the inscription
+    is offered on one product now (UX-28), so promising it in the site's
+    own description advertised something almost nothing here does.
+  */
+  homeSeoTitlePl: 'RYT - obrazy, linoryty i kolekcje z drewna',
+  /** Doubles as the footer paragraph (`Footer.tsx`), so it has to read as prose, not as a meta tag. */
   homeSeoDescPl:
-    'Meble, biżuteria i wykończenia wnętrz z drewna i gresu, z personalizowanym grawerem.',
+    'Obrazy, linoryty i kolekcje specjalne z drewna i gresu, cięte i grawerowane na maszynach CNC. Zamówienia własne w drewnie realizujemy dodatkowo.',
 
   catalogueHomeLinkPl: 'Strona główna',
   catalogueStartingPricePrefixPl: 'od',
@@ -142,15 +153,38 @@ export const SITE = {
   // Homepage hero - real claims about how this business actually operates,
   // not generic retail trust-badge copy. No "free shipping"/"money-back
   // guarantee" claims: nothing has confirmed either exists yet.
-  heroHeadlinePl: 'Meble i dodatki z grawerem, wykonane na wymiar',
+  /*
+    The old headline led with „wykonane na wymiar" and the subcopy with
+    „Projektujemy i wykonujemy unikalne przedmioty" - both selling bespoke
+    work, which the owner puts last: made-to-order in wood is "dodatek".
+
+    The subcopy was also stale in a way nobody had caught: it advertised
+    „od stołków loftowych", and Loft was retired from the catalogue on
+    2026-09-04 at the owner's own request. A homepage naming a category
+    the shop no longer sells is worse than a vague one.
+  */
+  heroHeadlinePl: 'Obrazy, linoryt i kolekcje specjalne',
   heroSubcopyPl:
-    'Projektujemy i wykonujemy unikalne przedmioty z drewna i gresu - od stołków loftowych po biżuterię - z precyzyjnym grawerem CNC i laserowym.',
+    'Sprzedajemy gotowe projekty z naszymi wzorami - cięte i grawerowane na maszynach CNC. Wybierasz materiał i rozmiar, resztę mamy dopracowaną. Zamówienia własne w drewnie realizujemy jako dodatek.',
   heroCtaPl: 'Zobacz kategorie',
 
   trustMadeToOrderTitlePl: 'Wykonanie na zamówienie',
-  trustMadeToOrderDescPl: 'Każdy produkt wykonujemy indywidualnie',
-  trustEngravingTitlePl: 'Personalizacja grawerem',
-  trustEngravingDescPl: 'Twój wzór, Twój tekst',
+  /*
+    „Każdy produkt wykonujemy indywidualnie" read as bespoke design. It is
+    about stock: nothing sits finished on a shelf, each piece is cut once
+    it is ordered. Said that way it stays true and stops competing with the
+    line above it.
+  */
+  trustMadeToOrderDescPl: 'Każdy egzemplarz tniemy po złożeniu zamówienia',
+  /*
+    Was „Personalizacja grawerem" / „Twój wzór, Twój tekst" - the homepage's
+    clearest false promise. Pattern selection has been off since 2026-08-31
+    (`PATTERN_SELECTION_ENABLED`), and since UX-28 the inscription is
+    offered on the bracelet alone. The customer brings neither a wzór nor a
+    tekst to almost anything here; what they get is our pattern, well cut.
+  */
+  trustEngravingTitlePl: 'Nasze wzory',
+  trustEngravingDescPl: 'Gotowe projekty, dopracowane do cięcia',
   trustPaymentTitlePl: 'Płatność przelewem',
   trustPaymentDescPl: 'Bezpieczne rozliczenie bankowe',
   trustContactTitlePl: 'Kontakt bezpośredni',
@@ -393,7 +427,14 @@ export const SITE = {
     elsewhere on the site (`trustMadeToOrderTitlePl`,
     `trustEngravingTitlePl`), in one line.
   */
-  topbarNotePl: 'Wykonujemy na zamówienie, z personalizacją grawerem.',
+  /*
+    The strip above the header, on every page. It said „z personalizacją
+    grawerem" - the same promise the hero was rewritten out of on
+    2026-09-07, and the last place it survived. Found by looking at the
+    rendered homepage rather than by grepping, which is how it had been
+    missed twice.
+  */
+  topbarNotePl: 'Obrazy, linoryty i kolekcje z drewna i gresu. Tniemy po złożeniu zamówienia.',
   /*
     The strip's links, corrected 2026-09-04 on owner feedback: "navbar nad
     navbarem dotyczy mediów fb insta itd nie podstron". It used to carry FAQ
