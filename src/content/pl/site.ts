@@ -625,6 +625,13 @@ export const SITE = {
   notFoundHomeCtaPl: 'Wróć na stronę główną',
   notFoundCollectionsCtaPl: 'Zobacz kolekcje',
   notFoundContactCtaPl: 'Napisz do nas',
+  /*
+    The landmark name for the list of ways onward, not a second heading. It
+    used to be the heading itself, which was already a poor landmark label
+    and became a wrong one when UX-06 made the heading say what kind of
+    thing was missing.
+  */
+  notFoundNavLabelPl: 'Sugerowane strony',
 
   blogHeadingPl: 'Blog',
   blogSeoTitlePl: 'Blog - RYT',
@@ -673,7 +680,15 @@ export const SITE = {
   homeFaqHeadingPl: 'Najczęściej zadawane pytania',
   faqViewAllPl: 'Zobacz wszystkie pytania',
 
-  staticPageNotFoundPl: 'Nie znaleziono takiej strony.',
+  /*
+    `staticPageNotFoundPl` lived here and had no reader. It said „Nie
+    znaleziono takiej strony." - word for word `notFoundHeadingPl` with a
+    full stop, so wiring it up in UX-06 would have added a second copy of a
+    sentence the shared 404 body already says. Deleted rather than
+    connected, on UX-05's rule: an unused label is how a removed thing gets
+    put back by someone who finds it and assumes it belongs somewhere.
+    `/strony/[slug]` uses the generic heading, which is exactly right there.
+  */
 
   homeReviewsHeadingPl: 'Opinie klientów',
   reviewFormHeadingPl: 'Zostaw opinię',

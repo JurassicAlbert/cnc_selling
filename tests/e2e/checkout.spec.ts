@@ -144,14 +144,16 @@ test('a wrong token shows the not-found page and no order details', async ({ bro
 
     **Asserted on what is rendered, not on the status code, and that is a
     finding rather than a shortcut.** This test first expected a 404 and got a
-    200 - so I checked whether that was my doing, and it is not: every
-    `notFound()` on this site answers 200 in a production build, including a
-    completely unmatched path. The page is right, the status line is not.
-    That is a soft 404, it is sitewide, and it is recorded separately as
-    BUG-33 rather than folded in here.
+    200. That is documented Next.js behaviour rather than a defect here: the
+    response is already streaming by the time `notFound()` throws, because
+    `(shop)/loading.tsx` puts every page in this group behind a Suspense
+    boundary, and a status line cannot be changed after the headers are sent
+    (`node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/
+    loading.md`, "Status Codes"). BUG-33 records the measurement and why the
+    fix is not free.
 
-    What matters for this item still holds and is what is pinned: a wrong
-    token renders the not-found page and leaks nothing about the order.
+    What matters for this item is what is pinned: a wrong token renders the
+    not-found page and leaks nothing about the order.
   */
   const order = await prisma.order.findFirstOrThrow({
     orderBy: { createdAt: 'desc' },
@@ -165,13 +167,14 @@ test('a wrong token shows the not-found page and no order details', async ({ bro
 
     await expect(page.getByRole('heading', { name: 'Zamówienie przyjęte' })).toHaveCount(0);
     await expect(page.getByText(order.orderNumber, { exact: false })).toHaveCount(0);
-    // Something rendered rather than the page hanging or erroring. The order
-    // route falls through to the storefront's own not-found body, which says
-    // the page does not exist - it does not carry a literal „404", and the
-    // browser tab still reads „Zamówienie przyjęte" because the route's static
-    // metadata applies either way. Both are cosmetic and both are noted in
-    // BUG-33 with the status code.
-    await expect(page.getByRole('heading', { name: 'Nie znaleziono takiej strony' })).toBeVisible();
+    // Something rendered rather than the page hanging or erroring. Since
+    // UX-06 the order route has its own boundary, so the heading names the
+    // order rather than the page - which says no more than the generic one
+    // did, because a wrong token, a missing cookie and an order number that
+    // was never issued all land here identically.
+    await expect(page.getByRole('heading', { name: 'Nie znaleziono takiego zamówienia' })).toBeVisible();
+    // The tab used to say „Zamówienie przyjęte" here, whatever had happened.
+    expect(await page.title()).toContain('Nie znaleziono takiego zamówienia');
   } finally {
     await context.close();
   }

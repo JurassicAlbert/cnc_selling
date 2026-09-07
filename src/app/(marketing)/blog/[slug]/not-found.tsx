@@ -1,16 +1,12 @@
-import { Container } from '@/ui/primitives/Container';
-import { Heading } from '@/ui/primitives/Heading';
-import { Section } from '@/ui/primitives/Section';
-import { Text } from '@/ui/primitives/Text';
+import { NotFoundContent } from '@/ui/primitives/NotFoundContent';
 import { SITE } from '@/content/pl/site';
 
+/**
+ * UX-06. Reached by an unknown slug and by a real post that is not published
+ * yet - `getPublishedBlogPostBySlug` returns null for both, deliberately, so
+ * a draft shared too early looks exactly like a typo and neither confirms
+ * the other.
+ */
 export default function BlogPostNotFound() {
-  return (
-    <Section>
-      <Container>
-        <Heading level={1}>{SITE.blogPostNotFoundPl}</Heading>
-        <Text muted>404</Text>
-      </Container>
-    </Section>
-  );
+  return <NotFoundContent headingPl={SITE.blogPostNotFoundPl} />;
 }

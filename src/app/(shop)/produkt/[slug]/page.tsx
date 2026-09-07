@@ -350,7 +350,9 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   const { slug } = await params;
   const product = await getActiveProductBySlug(slug);
   if (product === null) {
-    return {};
+    // UX-06 - the tab has to match the boundary's heading; `{}` fell back to
+    // the root layout's „RYT". See `[category]/page.tsx` for the full note.
+    return { title: SITE.catalogueProductNotFoundPl };
   }
   return {
     title: product.seoTitlePl,

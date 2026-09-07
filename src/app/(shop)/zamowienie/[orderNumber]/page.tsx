@@ -26,15 +26,31 @@ type OrderConfirmationPageProps = {
   readonly params: Promise<{ readonly orderNumber: string }>;
 };
 
-export const metadata: Metadata = {
-  title: SITE.orderConfirmationHeadingPl,
-  /*
-    BUG-17. `robots.txt` asks crawlers not to fetch this; that alone does not
-    keep it out of an index, because a disallowed URL something links to can
-    still be listed without a snippet. This is the half that removes it.
-  */
-  robots: { index: false },
-};
+/**
+ * UX-06. This was a static `metadata` saying „Zamówienie przyjęte", which
+ * applies whether or not the page found an order - so a confirmation link
+ * opened without its access cookie produced a browser tab announcing a
+ * confirmed order that had not been found. Small, and a false statement to a
+ * customer about their own order, which is the one thing this project does
+ * not do.
+ *
+ * The lookup is the same call the page makes, memoized per request by
+ * `cache()` in `repositories/orders.ts`, so telling the truth here costs no
+ * extra query. `robots: { index: false }` moved up to
+ * `(shop)/zamowienie/layout.tsx` - BUG-17's rule is unchanged, but a route
+ * cannot export both `metadata` and `generateMetadata`, and that rule is
+ * safer as a static object a unit test can read.
+ */
+export async function generateMetadata({ params }: OrderConfirmationPageProps): Promise<Metadata> {
+  const { orderNumber } = await params;
+  const token = await readOrderAccessCookie();
+  if (token === null) {
+    return { title: SITE.orderNotFoundPl };
+  }
+
+  const order = await findOrderForConfirmation(decodeURIComponent(orderNumber), token);
+  return { title: order === null ? SITE.orderNotFoundPl : SITE.orderConfirmationHeadingPl };
+}
 
 /**
  * `params.orderNumber` arrives already URL-decoded by Next.js - the real

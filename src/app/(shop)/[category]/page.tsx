@@ -124,7 +124,14 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
   const { category: slug } = await params;
   const category = await getActiveCategoryBySlug(slug);
   if (category === null) {
-    return {};
+    /*
+      UX-06. `{}` here left the tab reading „RYT" - the root layout's
+      fallback - so every dead category in a browser history was
+      indistinguishable from the home page. `not-found.tsx` cannot export
+      metadata of its own, so the title for a miss has to come from here,
+      and it says the same thing the boundary's heading does.
+    */
+    return { title: SITE.catalogueCategoryNotFoundPl };
   }
   return {
     title: category.seoTitlePl,
