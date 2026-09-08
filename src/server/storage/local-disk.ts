@@ -1,7 +1,9 @@
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { Readable } from 'node:stream';
 
-import type { FileStorage } from '@/server/storage/file-storage';
+import type { FileStorage, StoredFileStream } from '@/server/storage/file-storage';
 
 /**
  * Dev/MVP implementation of `FileStorage`, writing into `/uploads-dev/`
@@ -22,6 +24,11 @@ const UPLOADS_ROOT = path.resolve(process.cwd(), 'uploads-dev');
  */
 const SAFE_KEY_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
+/** ENOENT is "not there", which every reader here reports as absence rather than as a failure. */
+function isMissing(error: unknown): boolean {
+  return error instanceof Error && 'code' in error && error.code === 'ENOENT';
+}
+
 function resolveKeyPath(key: string): string {
   if (!SAFE_KEY_PATTERN.test(key)) {
     throw new Error(`Refusing to store/read an unsafe storage key: ${JSON.stringify(key)}`);
@@ -39,11 +46,41 @@ class LocalDiskStorage implements FileStorage {
     try {
       return await readFile(resolveKeyPath(key));
     } catch (error) {
-      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      if (isMissing(error)) {
         return null;
       }
       throw error;
     }
+  }
+
+  /**
+   * SEC-09. `stat` first, then a read stream: the size is needed for
+   * `Content-Length` anyway, and it is also how a missing file is detected
+   * before a stream exists to clean up. `createReadStream` on a path that
+   * disappears reports the error asynchronously, on the stream, which is far
+   * harder for a caller to turn into a clean 404.
+   *
+   * `resolveKeyPath` runs before `stat`, so an unsafe key is refused here
+   * exactly as it is for `get` and `put` - the path-resolving layer is where
+   * that check belongs, whatever the caller did first.
+   */
+  async getStream(key: string): Promise<StoredFileStream | null> {
+    const filePath = resolveKeyPath(key);
+    let sizeBytes: number;
+    try {
+      sizeBytes = (await stat(filePath)).size;
+    } catch (error) {
+      if (isMissing(error)) {
+        return null;
+      }
+      throw error;
+    }
+
+    // `Readable.toWeb` gives the `ReadableStream` a `Response` body wants,
+    // and keeps the backpressure - a slow client throttles the disk read
+    // rather than filling memory with what it has not collected yet.
+    const body = Readable.toWeb(createReadStream(filePath)) as ReadableStream<Uint8Array>;
+    return { body, sizeBytes };
   }
 
   async getSignedUrl(): Promise<string> {
@@ -56,8 +93,21 @@ class LocalDiskStorage implements FileStorage {
     await rm(resolveKeyPath(key), { force: true });
   }
 
+  /*
+    `stat`, not `get`. This used to read the entire file and throw the bytes
+    away to answer a yes/no question - the same defect as SEC-09's route, in
+    its silliest form.
+  */
   async exists(key: string): Promise<boolean> {
-    return (await this.get(key)) !== null;
+    try {
+      await stat(resolveKeyPath(key));
+      return true;
+    } catch (error) {
+      if (isMissing(error)) {
+        return false;
+      }
+      throw error;
+    }
   }
 }
 

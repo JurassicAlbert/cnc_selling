@@ -16,9 +16,37 @@
  * something that looks like it works but isn't actually wired to anything.
  */
 
+/**
+ * A file the caller can forward without holding it.
+ *
+ * `sizeBytes` travels with the stream because the only way to learn it
+ * otherwise is to read the whole thing, which is the problem being solved -
+ * and without it a response cannot carry `Content-Length`, so a browser
+ * downloading a 25 MB PDF shows a spinner of unknown length.
+ */
+export type StoredFileStream = {
+  readonly body: ReadableStream<Uint8Array>;
+  readonly sizeBytes: number;
+};
+
 export interface FileStorage {
   put(key: string, data: Buffer): Promise<void>;
   get(key: string): Promise<Buffer | null>;
+  /**
+   * SEC-09, and the one member here that is not in §14's verbatim list.
+   *
+   * §14 names `{ put, get, getSignedUrl, delete, exists }`; §16.1 says the
+   * file route "streams via the storage adapter". Those two cannot both be
+   * satisfied - `get` returns a `Buffer`, so a route built on it reads the
+   * entire file into the process before writing a byte. The interface is what
+   * gives, because §16.1 describes the behaviour a customer gets and §14
+   * describes a shape. `ARCHITECTURE.md` §14 records the addition.
+   *
+   * `null` for a missing key, never a throw: the route turns that into the
+   * same 404 an unauthorised request gets, and a throw would be a 500 that
+   * tells a prober the two apart.
+   */
+  getStream(key: string): Promise<StoredFileStream | null>;
   getSignedUrl(key: string): Promise<string>;
   delete(key: string): Promise<void>;
   exists(key: string): Promise<boolean>;

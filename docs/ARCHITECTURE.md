@@ -993,10 +993,18 @@ Customers see plain status text („Projekt oczekuje na weryfikację." / „Proj
 
 | Service | Interface | MVP implementation | Test double |
 |---|---|---|---|
-| Storage | `FileStorage { put, get, getSignedUrl, delete, exists }` | Local disk (dev) / S3-compatible (prod) | In-memory |
+| Storage | `FileStorage { put, get, getStream, getSignedUrl, delete, exists }` | Local disk (dev) / S3-compatible (prod) | In-memory |
 | Mail | `Mailer { send(template, to, data) }` | Real SMTP/Resend adapter; **if unconfigured, the app logs and marks the notification as not sent** | Recording mock asserting template + recipient |
 | Payment | `PaymentProvider` interface only | **No implementation.** Checkout offers bank transfer / contact | Mock with success/failure/cancel/timeout for future integration tests |
 | Production files | - | **Not built.** No SVG/DXF/G-code generation | - |
+
+> `getStream` was added on 2026-09-08 (SEC-09) and is the one member of that
+> interface this section did not originally list. It had to be: §16.1
+> describes `/api/plik/[fileId]` as a route that "streams via the storage
+> adapter", and `get` returns a `Buffer`, so a route built only on the
+> interface as written reads whole files into memory - which is exactly what
+> it was doing. Recorded here rather than left as a contradiction between two
+> sections for the next reader to trip over.
 
 Per your project rules, three things are explicitly forbidden in this codebase and will be checked in review:
 

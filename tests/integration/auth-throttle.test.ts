@@ -7,6 +7,7 @@ import {
   consumeOrderAttempt,
   consumeOtpRequest,
   consumeRegisterAttempt,
+  consumeUploadAttempt,
 } from '@/server/rate-limit/auth-throttle';
 import { AUTH_RATE_LIMITS } from '@/server/rate-limit/rules';
 
@@ -172,5 +173,49 @@ describe('order creation throttling (ARCHITECTURE.md §16.1, audit P1-8)', () =>
     for (let i = 0; i < AUTH_RATE_LIMITS.orderPerIp.limit + 3; i++) {
       expect((await consumeOrderAttempt({ ip: null })).allowed).toBe(true);
     }
+  });
+});
+
+describe('upload throttling per IP (SEC-08)', () => {
+  /*
+    `isUploadRateLimited` counts this hour's `UploadedFile` rows for the
+    session or the user, which is §16.1's "uploads per session/hour" and is
+    the right rule - but for a guest the session IS a cookie they own.
+    Clearing it hands them a fresh allowance, as many times as they like, and
+    each one of those uploads can be 25 MB of disk.
+
+    The per-IP counter is the dimension a client cannot reset, and it lives in
+    the same `RateLimit` table SEC-01 built, so nothing new runs anywhere.
+    Both dimensions apply: the session rule still catches one signed-in
+    customer looping, this catches the same person emptying their cookie jar.
+  */
+  it('refuses an upload flood from one address, whatever the session says', async () => {
+    const attacker = ip();
+    for (let i = 0; i < AUTH_RATE_LIMITS.uploadPerIp.limit; i++) {
+      expect((await consumeUploadAttempt({ ip: attacker })).allowed).toBe(true);
+    }
+
+    expect((await consumeUploadAttempt({ ip: attacker })).allowed).toBe(false);
+  });
+
+  it('leaves a different address alone - the counter is per IP, not global', async () => {
+    const attacker = ip();
+    for (let i = 0; i < AUTH_RATE_LIMITS.uploadPerIp.limit + 2; i++) {
+      await consumeUploadAttempt({ ip: attacker });
+    }
+
+    expect((await consumeUploadAttempt({ ip: ip() })).allowed).toBe(true);
+  });
+
+  it('is a no-op without an IP, so local development and the e2e suite can still upload', async () => {
+    for (let i = 0; i < AUTH_RATE_LIMITS.uploadPerIp.limit + 3; i++) {
+      expect((await consumeUploadAttempt({ ip: null })).allowed).toBe(true);
+    }
+  });
+
+  it('is set well above the per-session rule, so the session limit stays the one a real customer meets', async () => {
+    // If the IP allowance were the tighter of the two, one household sharing
+    // an address would start hitting a limit meant for an attacker.
+    expect(AUTH_RATE_LIMITS.uploadPerIp.limit).toBeGreaterThan(10);
   });
 });

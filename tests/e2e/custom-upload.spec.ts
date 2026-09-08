@@ -1,6 +1,13 @@
+// This spec now reads the uploaded file's id straight from Postgres, so it
+// needs `.env` the way `admin-authz.spec.ts` does - the Playwright runner
+// process is not the app.
+import 'dotenv/config';
+
 import path from 'node:path';
 
 import { expect, test } from '@playwright/test';
+
+import { prisma } from '../../src/server/db/client';
 
 /**
  * P4's real end-to-end path, checklist's own framing: "Custom upload:
@@ -97,4 +104,52 @@ test('uploads a custom design, completes checkout, and lands in DESIGN_REVIEW', 
 
   await expect(page.getByRole('heading', { name: 'Zamówienie przyjęte' })).toBeVisible();
   await expect(page.getByText('Numer zamówienia:')).toBeVisible();
+
+  /*
+    SEC-09, on the file this test has just genuinely uploaded.
+
+    `/api/plik/[fileId]` stopped reading whole files into memory and now hands
+    the response a `ReadableStream` from the storage adapter. Every page that
+    shows an uploaded design does it through an `<img>`, and a broken `<img>`
+    is invisible to a test that only looks at headings - so the bytes are
+    fetched here and counted. A streamed body that arrives short, or a
+    `Content-Length` that disagrees with what actually arrives, is exactly the
+    failure this change could introduce and nothing else would catch.
+
+    Fetched from the page's own context, so it carries the session cookie the
+    route authorises against.
+  */
+  /*
+    Scoped to THIS browser's guest session, not "the newest design in the
+    database" - which is what the first version asked for, and it failed on
+    desktop-chromium while passing on mobile-safari. The two projects run in
+    parallel against one database, so the newest row was usually the other
+    project's, and the route refused it with a 404. Exactly right of the
+    route, and a test that reads another session's data would have been
+    wrong even on the runs where it happened to pass.
+  */
+  const cookies = await page.context().cookies();
+  const guestSession = cookies.find((cookie) => cookie.name === 'gsid')?.value;
+  expect(guestSession).toBeTruthy();
+  const design = await prisma.customerDesign.findFirstOrThrow({
+    where: { sessionToken: guestSession },
+    orderBy: { createdAt: 'desc' },
+    select: { fileId: true },
+  });
+
+  const served = await page.evaluate(async (fileId) => {
+    const response = await fetch(`/api/plik/${fileId}`);
+    const body = await response.arrayBuffer();
+    return {
+      status: response.status,
+      contentLength: response.headers.get('content-length'),
+      nosniff: response.headers.get('x-content-type-options'),
+      received: body.byteLength,
+    };
+  }, design.fileId);
+
+  expect(served.status).toBe(200);
+  expect(served.received).toBeGreaterThan(0);
+  expect(served.contentLength).toBe(String(served.received));
+  expect(served.nosniff).toBe('nosniff');
 });
