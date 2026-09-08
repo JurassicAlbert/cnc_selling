@@ -1853,12 +1853,6 @@ async function seedProducts(
   await seedProductDesigns(loftStool.id, designs);
   await seedProductPresetSizes(loftStool.id, { minWidthMm: 250, maxWidthMm: 400, minHeightMm: 250, maxHeightMm: 400 });
   await seedProductImage(loftStool.id, STOCK_PHOTO('loft'), 'Stołek loftowy z grawerem - stal i drewno w stylu loft');
-  await seedPersonalizationSpec(loftStool.id, {
-    maxCharacters: 30,
-    maxLines: 2,
-    minTextHeightUm: 8_000,
-    allowedFontIds: [font.id],
-  });
 
   const bransoletka = await upsertProduct({
     slug: 'bransoletka-z-grawerem',
@@ -1888,6 +1882,17 @@ async function seedProducts(
     STOCK_PHOTO('amulety-i-bransoletki'),
     'Drewniana bransoletka z grawerem',
   );
+  /*
+    Owner, 2026-09-06: the engraved inscription is offered on the bracelet and
+    nowhere else - "hide the personalization form most of the products and
+    category. Only personalization is picking material and size for now". The
+    font list only ever made sense for a product the workshop actually sets
+    type for.
+
+    The spec row is what `applicableSteps` narrows on, so removing it here is
+    what takes the step off this product. Adding one back turns it on again
+    with no code change, which is why the narrowing is data-driven.
+  */
   await seedPersonalizationSpec(bransoletka.id, {
     maxCharacters: 20,
     maxLines: 1,
@@ -1995,12 +2000,6 @@ async function seedProducts(
     STOCK_PHOTO('obrazy-drewniane'),
     'Obraz drewniany z grawerem',
   );
-  await seedPersonalizationSpec(obraz.id, {
-    maxCharacters: 40,
-    maxLines: 2,
-    minTextHeightUm: 6_000,
-    allowedFontIds: [font.id],
-  });
 
   /**
    * `gry-planszowe` was seeded active (2026-08-28) but with zero products -
@@ -2040,12 +2039,6 @@ async function seedProducts(
   await seedProductMaterials(szachownica.id, [materials.dab.id, materials.swierk.id, materials.modrzew.id, materials.sosna.id]);
   await seedProductDesigns(szachownica.id, designs);
   await seedProductPresetSizes(szachownica.id, { minWidthMm: 300, maxWidthMm: 600, minHeightMm: 300, maxHeightMm: 600 });
-  await seedPersonalizationSpec(szachownica.id, {
-    maxCharacters: 30,
-    maxLines: 1,
-    minTextHeightUm: 6_000,
-    allowedFontIds: [font.id],
-  });
 
   /**
    * "inne" was deliberately left empty when first seeded (2026-08-24) -
@@ -2085,12 +2078,6 @@ async function seedProducts(
   await seedProductMaterials(wlasnyProjekt.id, [materials.dab.id, materials.swierk.id, materials.modrzew.id, materials.sosna.id]);
   await seedProductPresetSizes(wlasnyProjekt.id, { minWidthMm: 200, maxWidthMm: 1200, minHeightMm: 200, maxHeightMm: 1200 });
   await seedProductImage(wlasnyProjekt.id, STOCK_PHOTO('inne'), 'Dębowy element przygotowany pod własny grawerowany projekt');
-  await seedPersonalizationSpec(wlasnyProjekt.id, {
-    maxCharacters: 40,
-    maxLines: 2,
-    minTextHeightUm: 6_000,
-    allowedFontIds: [font.id],
-  });
 
   console.log(
     'Products: 7 seeded (loft, amulety, gres, panele, obrazy, szachownica, wlasny-projekt) - "inne" now holds the P4 custom-upload product',

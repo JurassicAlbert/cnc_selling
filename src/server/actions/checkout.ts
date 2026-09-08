@@ -16,6 +16,8 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { after } from 'next/server';
 
+import { setOrderAccessCookie } from '@/server/session/order-access';
+
 import { validateNip, validatePhone, validatePostalCode } from '@/domain/checkout/validate';
 import { isPlausibleEmail } from '@/domain/text/email';
 import type { CheckoutFieldIssueCode } from '@/content/pl/messages';
@@ -235,12 +237,28 @@ export async function submitCheckout(
     });
   }
 
+  /*
+    BUG-22. The token goes into the cookie here and never into the address.
+
+    A Server Action can write cookies, so this path does not need the proxy's
+    exchange at all - and must not rely on it. The first attempt did, and it
+    failed the whole guest checkout: `redirect()` from a Server Action is
+    followed by the **client router**, which fetches an RSC payload rather
+    than performing a document navigation, and a `Set-Cookie` on a middleware
+    redirect does not reliably reach the render that follows. The e2e suite
+    caught it immediately - "Zamówienie przyjęte" simply never appeared.
+
+    So the emailed link and this redirect take different routes to the same
+    place: the link carries `?token=` and `src/proxy.ts` exchanges it on a
+    real document navigation, while this sets the cookie directly and sends
+    the customer to a URL that never held the token in the first place.
+  */
+  await setOrderAccessCookie(result.accessToken);
+
   // `orderNumber` ("2026/08/0042") contains real slashes - encoded here so
   // it lands as ONE path segment; Next.js decodes `params.orderNumber`
   // back to the real value automatically on the receiving page.
-  redirect(
-    `/zamowienie/${encodeURIComponent(result.orderNumber)}?token=${encodeURIComponent(result.accessToken)}`,
-  );
+  redirect(`/zamowienie/${encodeURIComponent(result.orderNumber)}`);
 }
 
 /**
@@ -252,5 +270,9 @@ export async function submitCheckout(
 export async function lookupOrder(formData: FormData): Promise<void> {
   const orderNumber = field(formData, 'orderNumber');
   const token = field(formData, 'token');
-  redirect(`/zamowienie/${encodeURIComponent(orderNumber)}?token=${encodeURIComponent(token)}`);
+  // BUG-22, same as the checkout redirect above: the token the customer just
+  // typed into the lookup form goes to the cookie, not into the address they
+  // are about to be sent to.
+  await setOrderAccessCookie(token);
+  redirect(`/zamowienie/${encodeURIComponent(orderNumber)}`);
 }

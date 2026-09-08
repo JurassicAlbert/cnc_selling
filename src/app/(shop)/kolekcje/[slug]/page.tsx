@@ -122,7 +122,9 @@ export async function generateMetadata({ params }: CollectionDetailPageProps): P
   const { slug } = await params;
   const collection = await getActiveCollectionBySlug(slug);
   if (collection === null) {
-    return {};
+    // UX-06 - see `(shop)/[category]/page.tsx` for why the title lives here
+    // rather than in `not-found.tsx`.
+    return { title: SITE.collectionNotFoundPl };
   }
   return {
     title: collection.seoTitlePl,

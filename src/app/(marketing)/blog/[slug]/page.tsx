@@ -24,7 +24,9 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
   const { slug } = await params;
   const post = await getPublishedBlogPostBySlug(slug);
   if (post === null) {
-    return {};
+    // UX-06 - see `(shop)/[category]/page.tsx` for why the title lives here
+    // rather than in `not-found.tsx`.
+    return { title: SITE.blogPostNotFoundPl };
   }
   return {
     title: post.seoTitlePl,

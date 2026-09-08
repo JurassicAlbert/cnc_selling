@@ -242,7 +242,24 @@ export const ADMIN = {
   designReviewNotFoundPl: 'Nie znaleziono projektu.',
   designReviewOriginalFilePl: 'Pobierz oryginalny plik',
   designReviewWarningsHeadingPl: 'Ostrzeżenia automatyczne',
+  /*
+    BUG-15. Earlier versions of the design, kept when the customer re-uploads.
+    Shown only here: the customer's own link to a replaced file stops working,
+    so this is the one place the history is visible.
+  */
+  designReviewPreviousFilesHeadingPl: 'Wcześniejsze wersje',
+  designReviewPreviousFileLabelPl: (name: string, when: string): string => `${name} - zastąpiony ${when}`,
   designReviewNoWarningsPl: 'Brak ostrzeżeń.',
+  /*
+    BUG-11. „Brak ostrzeżeń." and „nie sprawdzono" are different facts and were
+    being shown as the same one. The DPI and aspect checks need a target size,
+    which only exists once the customer has chosen dimensions - so a design
+    uploaded and never configured has genuinely not been assessed, and saying
+    „Brak ostrzeżeń." about it is a false reassurance on the screen where
+    somebody decides whether to cut it.
+  */
+  designReviewNotAssessedPl:
+    'Nie sprawdzono automatycznie - wymiary docelowe nie były jeszcze znane w chwili przesłania pliku. Kontrola rozdzielczości i proporcji uruchamia się po dodaniu projektu do koszyka.',
   designReviewCommentsHeadingPl: 'Komentarze',
   designReviewCommentLabelPl: 'Nowy komentarz (widoczny dla klienta)',
   designReviewProductionMethodLabelPl: 'Metoda produkcji',
@@ -610,12 +627,29 @@ export const ADMIN = {
   customerRodoHeadingPl: 'RODO',
   customerExportLinkPl: 'Pobierz dane (RODO)',
   customerAnonymizeHeadingPl: 'Anonimizacja konta',
+  /*
+    SEC-07. Names what stays, not just that something stays.
+
+    The old text said the order history would be kept, which is true and
+    vague: it reads as "the order list survives" rather than "the buyer's
+    name, telephone and delivery address survive on it". An admin answering
+    a RODO request has to be able to tell the customer precisely what was
+    kept, and support requests were not mentioned at all.
+  */
   customerAnonymizeWarningPl:
-    'Nieodwracalne: dane osobowe klienta zostaną usunięte, a konto nie będzie już dostępne. Historia zamówień pozostanie zachowana zgodnie z przepisami rachunkowymi.',
+    'Nieodwracalne: dane logowania i profil klienta zostaną usunięte, a konto przestanie być dostępne. Zachowane zostaną dane na złożonych zamówieniach (imię i nazwisko, e-mail, telefon, adres dostawy) oraz w zgłoszeniach do obsługi klienta - wymagają tego przepisy rachunkowe.',
   customerAnonymizeNoteLabelPl: 'Notatka (wymagana)',
   customerAnonymizeButtonPl: 'Zanonimizuj konto',
   customerAnonymizeConfirmTitlePl: 'Zanonimizować konto?',
-  customerAnonymizeConfirmMessagePl: 'Tej operacji nie można cofnąć. Dane osobowe klienta zostaną trwale usunięte.',
+  /*
+    SEC-07, and this was the sentence that was actually wrong. It promised a
+    complete erasure the operation does not perform: the buyer's name,
+    e-mail, telephone and delivery address stay on every order and support
+    request. The owner chose on 2026-09-05 to keep that data and correct the
+    wording, so the dialog now says which half goes and which half stays.
+  */
+  customerAnonymizeConfirmMessagePl:
+    'Tej operacji nie można cofnąć. Profil i możliwość zalogowania zostaną trwale usunięte. Dane na zamówieniach i w zgłoszeniach pozostaną - są potrzebne do rozliczeń.',
   customerAnonymizeConfirmButtonPl: 'Tak, zanonimizuj konto',
   customerAnonymizedNoticePl: 'Konto zanonimizowane',
   // Shown to STAFF in place of the form (SEC-04). Says who can do it rather

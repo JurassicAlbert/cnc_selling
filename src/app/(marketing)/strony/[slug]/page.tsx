@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { getActiveStaticPageBySlug } from '@/server/repositories/static-pages';
+import { SITE } from '@/content/pl/site';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
 import { Section } from '@/ui/primitives/Section';
@@ -15,7 +16,12 @@ export async function generateMetadata({ params }: StaticPageProps): Promise<Met
   const { slug } = await params;
   const page = await getActiveStaticPageBySlug(slug);
   if (page === null) {
-    return {};
+    /*
+      UX-06. The generic heading, and no boundary of its own: „Nie znaleziono
+      takiej strony" is exactly what a missing CMS page is, so a per-route
+      one would only repeat the group boundary in a second file.
+    */
+    return { title: SITE.notFoundHeadingPl };
   }
   return { title: page.seoTitlePl, description: page.seoDescPl, alternates: { canonical: `/strony/${slug}` } };
 }

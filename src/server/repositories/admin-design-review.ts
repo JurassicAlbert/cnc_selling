@@ -71,11 +71,31 @@ export type AdminDesignReviewView = {
   readonly id: string;
   readonly status: DesignReviewStatus;
   readonly productionMethod: ProductionMethod | null;
-  readonly autoWarnings: readonly UploadWarning[];
+  /**
+   * `null` means the automatic check has not run yet - BUG-11. It only runs
+   * once a target size exists, which is at add-to-cart, so a design uploaded
+   * and never configured has never been assessed. Collapsing that to `[]`
+   * told staff „Brak ostrzeżeń." about a check that never happened.
+   */
+  readonly autoWarnings: readonly UploadWarning[] | null;
   readonly fileId: string;
   readonly originalName: string;
   readonly mimeType: string;
   readonly comments: readonly AdminDesignReviewComment[];
+  /**
+   * BUG-15: every file this design had before the current one, newest first.
+   *
+   * Staff-only by construction - `findOwnedUploadedFile` refuses a superseded
+   * file to the customer, and this is the only place they are listed. Empty
+   * for a design nobody has re-uploaded, which is most of them.
+   */
+  readonly previousFiles: readonly AdminDesignReviewPreviousFile[];
+};
+
+export type AdminDesignReviewPreviousFile = {
+  readonly fileId: string;
+  readonly originalName: string;
+  readonly supersededAt: Date;
 };
 
 export async function findDesignReviewForAdmin(designId: string): Promise<AdminDesignReviewView | null> {
@@ -92,6 +112,12 @@ export async function findDesignReviewForAdmin(designId: string): Promise<AdminD
         orderBy: { createdAt: 'asc' },
         select: { id: true, authorType: true, bodyPl: true, createdAt: true },
       },
+      // BUG-15. Newest first: the most recent thing the customer replaced is
+      // the one a reviewer is most likely to be comparing against.
+      supersededUploads: {
+        orderBy: { supersededAt: 'desc' },
+        select: { id: true, originalName: true, supersededAt: true },
+      },
     },
   });
   if (design === null) {
@@ -101,7 +127,16 @@ export async function findDesignReviewForAdmin(designId: string): Promise<AdminD
     id: design.id,
     status: design.status,
     productionMethod: design.productionMethod,
-    autoWarnings: (design.autoWarnings as unknown as UploadWarning[] | null) ?? [],
+    autoWarnings: design.autoWarnings as unknown as UploadWarning[] | null,
+    previousFiles: design.supersededUploads.flatMap((file) =>
+      // `supersededAt` is nullable in the schema and never null for a row that
+      // reached this relation. Narrowed rather than asserted, so a future
+      // write that forgets the timestamp drops the row instead of rendering
+      // "Invalid Date" at a reviewer.
+      file.supersededAt === null
+        ? []
+        : [{ fileId: file.id, originalName: file.originalName, supersededAt: file.supersededAt }],
+    ),
     fileId: design.fileId,
     originalName: design.file.originalName,
     mimeType: design.file.mimeType,

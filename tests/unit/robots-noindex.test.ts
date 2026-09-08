@@ -22,13 +22,20 @@ import { metadata as accountMetadata } from '@/app/(shop)/moje-konto/layout';
 import { metadata as cartMetadata } from '@/app/(shop)/koszyk/page';
 import { metadata as loginMetadata } from '@/app/(shop)/logowanie/page';
 import { metadata as orderCheckMetadata } from '@/app/(shop)/zamowienie/sprawdz/page';
-import { metadata as orderMetadata } from '@/app/(shop)/zamowienie/[orderNumber]/page';
+import { metadata as orderMetadata } from '@/app/(shop)/zamowienie/layout';
 import { metadata as panelMetadata } from '@/app/(admin)/panel/layout';
 import { metadata as registerMetadata } from '@/app/(shop)/rejestracja/page';
 import { metadata as searchMetadata } from '@/app/(shop)/szukaj/page';
 
 const PRIVATE_ROUTES = [
-  ['the guest order confirmation - its ?token= query string is the credential', orderMetadata],
+  /*
+    Every route under `/zamowienie`, via the layout. The rule used to sit on
+    the confirmation page itself; UX-06 needed that page's title to depend on
+    whether an order was found, and a route cannot export both `metadata` and
+    `generateMetadata`. Moved up rather than folded into the function, so it
+    stays a plain object this test can read without a request context.
+  */
+  ['the guest order confirmation, whose access cookie is the credential', orderMetadata],
   ['the order lookup form', orderCheckMetadata],
   ['every /moje-konto page, via the layout', accountMetadata],
   ['every /panel page, via the layout', panelMetadata],

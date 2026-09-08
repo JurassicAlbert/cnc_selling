@@ -195,6 +195,37 @@ body {
   color: var(--mui-palette-secondary-main);
 }
 
+/* The two icon-only controls in the navbar - cart and account - after the
+ * 2026-09-06 change that took their words away.
+ *
+ * 40x40 is not decoration. Stripped of their labels these became 20px
+ * targets, and `accessibility.spec.ts` fails an undersized target that has a
+ * neighbour within 24px - which these two are, sitting side by side. A
+ * padded box is the honest fix: the thing you can hit is the thing that looks
+ * hittable, rather than a 20px icon with an invisible 40px hit area or a
+ * 20px target that only passes because it happens to be spaced.
+ *
+ * `position: relative` so the count badge can anchor to the icon rather than
+ * to whatever ancestor happened to be positioned. */
+.nav-icon-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--mui-palette-text-primary);
+  text-decoration: none;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.nav-icon-link:hover,
+.nav-icon-link:focus-visible {
+  color: var(--mui-palette-secondary-main);
+  background-color: var(--mui-palette-action-hover, rgba(0, 0, 0, 0.04));
+}
+
 /*
  * 2026-08-29, navbar UX pass: a live count+price badge on the cart icon
  * ("koło koszyka dodać jakieś ładne UX pokazujące cenę i ilość elementów w
@@ -218,6 +249,16 @@ body {
   font-size: 11px;
   font-weight: 700;
   line-height: 18px;
+}
+
+/* The count rides on the corner of the icon rather than sitting beside it.
+ * Beside it was right when the link also carried the word „Koszyk" and a
+ * total and the whole thing was one flex row; with only an icon left, an
+ * in-flow badge pushes that icon off the centre of its own 40px box. */
+.nav-icon-link .cart-count-badge {
+  position: absolute;
+  top: 2px;
+  inset-inline-end: 2px;
 }
 
 /*

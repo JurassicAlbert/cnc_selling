@@ -7,6 +7,7 @@
  */
 
 import { timingSafeEqual } from 'node:crypto';
+import { cache } from 'react';
 
 import { prisma } from '@/server/db/client';
 import type { OrderStatus, PaymentMethod, ShipmentStatus } from '@/generated/prisma/enums';
@@ -156,7 +157,15 @@ export async function findOrderForUser(orderNumber: string, userId: string): Pro
   };
 }
 
-export async function findOrderForConfirmation(
+/**
+ * The uncached query behind `findOrderForConfirmation`.
+ *
+ * Exported for tests, on the same rule `categories.ts` states: `cache()`
+ * outside a real request has no defined scope to memoize against, so an
+ * integration test asserting through the wrapper would be asserting React's
+ * behaviour rather than this project's.
+ */
+export async function queryOrderForConfirmation(
   orderNumber: string,
   token: string,
 ): Promise<OrderConfirmationView | null> {
@@ -213,3 +222,17 @@ export async function findOrderForConfirmation(
     shipment: order.shipment,
   };
 }
+
+/**
+ * Request-scoped memoization, the same reason `getActiveCategoryBySlug` has
+ * it (PERF-02): the confirmation page's `generateMetadata` and its body both
+ * need the order - metadata to know whether to say the order was accepted or
+ * not found (UX-06), the body to render it - and Next deduplicates `fetch`,
+ * not Prisma. Without this, telling the truth in the tab title would have
+ * cost a second identical query on every confirmation view.
+ *
+ * `cache()` lives and dies with one request, so there is no staleness to
+ * reason about, and the token is part of the key: a second lookup with a
+ * different token is a different call and is checked again.
+ */
+export const findOrderForConfirmation = cache(queryOrderForConfirmation);

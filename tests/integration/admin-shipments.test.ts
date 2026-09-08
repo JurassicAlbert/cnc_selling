@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { applyUpsertShipment } from '@/server/operations/admin-shipments';
 import { findShipmentForOrder } from '@/server/repositories/admin-shipments';
-import { findOrderForUser, findOrderForConfirmation } from '@/server/repositories/orders';
+import { findOrderForUser, queryOrderForConfirmation } from '@/server/repositories/orders';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';
 
@@ -126,11 +126,11 @@ describe('customer-facing order views include shipment data', () => {
     await prisma.user.delete({ where: { id: owner.id } });
   });
 
-  it('findOrderForConfirmation (guest lookup) also returns the real shipment', async () => {
+  it('queryOrderForConfirmation (guest lookup) also returns the real shipment', async () => {
     const order = await seedOrder();
     await applyUpsertShipment(staffActor(), order.id, formData({ status: 'DELIVERED', deliveredAt: '2026-08-25' }));
 
-    const found = await findOrderForConfirmation(order.orderNumber, order.accessToken);
+    const found = await queryOrderForConfirmation(order.orderNumber, order.accessToken);
     expect(found?.shipment?.status).toBe('DELIVERED');
     expect(found?.shipment?.deliveredAt?.toISOString().slice(0, 10)).toBe('2026-08-25');
   });
@@ -139,7 +139,7 @@ describe('customer-facing order views include shipment data', () => {
     const order = await seedOrder();
     await applyUpsertShipment(staffActor(), order.id, formData({ status: 'ISSUE', internalNotesPl: 'Tajna notatka', issueResolutionPl: 'Wewnętrzne rozwiązanie' }));
 
-    const found = await findOrderForConfirmation(order.orderNumber, order.accessToken);
+    const found = await queryOrderForConfirmation(order.orderNumber, order.accessToken);
     expect(found?.shipment).not.toHaveProperty('internalNotesPl');
     expect(found?.shipment).not.toHaveProperty('issueResolutionPl');
   });

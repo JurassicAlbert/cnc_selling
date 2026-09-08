@@ -1378,8 +1378,26 @@ model UploadedFile {
 
   design CustomerDesign?
 
+  /// BUG-15. Set when a customer re-uploads and this file stops being the
+  /// design's current one.
+  ///
+  /// The row used to be simply orphaned: `CustomerDesign.fileId` moved to the
+  /// new upload and nothing pointed here again, so the bytes stayed on disk
+  /// forever, invisible to staff and still fetchable by the customer who had
+  /// just replaced them. The owner chose on 2026-09-05 to keep the file as
+  /// visible review history and to stop the customer's old link working.
+  ///
+  /// Two columns rather than one: `supersededAt` is what the file route
+  /// checks, and `supersededForDesignId` is what the review screen lists. A
+  /// single nullable relation could carry both, but then "is this superseded"
+  /// becomes a join on every file fetch.
+  supersededAt          DateTime?
+  supersededForDesignId String?
+  supersededForDesign   CustomerDesign? @relation("SupersededUploads", fields: [supersededForDesignId], references: [id], onDelete: SetNull)
+
   @@index([userId])
   @@index([sessionToken])
+  @@index([supersededForDesignId])
 }
 
 model CustomerDesign {
@@ -1414,6 +1432,10 @@ model CustomerDesign {
   reviewComments DesignReviewComment[]
   orderItems     OrderItem[]
   configurations Configuration[]
+
+  /// BUG-15: every file this design has had before the current one, newest
+  /// first when read. Staff-only - see `supersededAt`.
+  supersededUploads UploadedFile[] @relation("SupersededUploads")
 
   @@index([status])
   @@index([userId])

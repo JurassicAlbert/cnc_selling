@@ -23,7 +23,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { prisma } from '@/server/db/client';
-import { findOrderForConfirmation } from '@/server/repositories/orders';
+import { queryOrderForConfirmation } from '@/server/repositories/orders';
 
 const PREFIX = 'test-order-totals-';
 const uid = (): string => `${PREFIX}${crypto.randomUUID()}`;
@@ -87,7 +87,7 @@ afterAll(async () => {
   await prisma.order.deleteMany({ where: { orderNumber: { startsWith: PREFIX } } });
 });
 
-describe('findOrderForConfirmation - the numbers a customer is asked to pay from', () => {
+describe('queryOrderForConfirmation - the numbers a customer is asked to pay from', () => {
   it('exposes the parts, and they sum to the total', async () => {
     const { orderNumber, accessToken } = await seedOrder({
       lines: [
@@ -97,7 +97,7 @@ describe('findOrderForConfirmation - the numbers a customer is asked to pay from
       shippingGrosze: 5_200,
     });
 
-    const view = await findOrderForConfirmation(orderNumber, accessToken);
+    const view = await queryOrderForConfirmation(orderNumber, accessToken);
 
     expect(view).not.toBeNull();
     // The assertion BUG-04 is about. Before this, `subtotalNetGrosze`,
@@ -118,7 +118,7 @@ describe('findOrderForConfirmation - the numbers a customer is asked to pay from
       shippingGrosze: 0,
     });
 
-    const view = await findOrderForConfirmation(orderNumber, accessToken);
+    const view = await queryOrderForConfirmation(orderNumber, accessToken);
 
     expect(view?.shippingGrosze).toBe(0);
     expect(view?.totalGrossGrosze).toBe(12_300);
@@ -128,6 +128,6 @@ describe('findOrderForConfirmation - the numbers a customer is asked to pay from
     // Widening the select must not widen who can read it.
     const { orderNumber } = await seedOrder({ lines: [{ net: 100, vat: 23 }], shippingGrosze: 0 });
 
-    expect(await findOrderForConfirmation(orderNumber, uid())).toBeNull();
+    expect(await queryOrderForConfirmation(orderNumber, uid())).toBeNull();
   });
 });

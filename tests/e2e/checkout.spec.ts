@@ -1,4 +1,8 @@
+import 'dotenv/config';
+
 import { expect, test } from '@playwright/test';
+
+import { prisma } from '../../src/server/db/client';
 
 /**
  * The P5 add-to-cart -> cart -> checkout -> confirmation path, end to end,
@@ -68,5 +72,110 @@ test('adds a configuration to the cart and completes checkout as a guest', async
 
   await expect(page.getByRole('heading', { name: 'Zamówienie przyjęte' })).toBeVisible();
   await expect(page.getByText('Numer zamówienia:')).toBeVisible();
-  await expect(page).toHaveURL(/\/zamowienie\/\d{4}%2F\d{2}%2F\d{4}\?token=/);
+  /*
+    BUG-22: the address carries the order number and nothing else.
+
+    This used to assert `?token=` was present, which was the behaviour at the
+    time and is now precisely what must not happen - the token in the address
+    means it is also in the history, the access log and the `Referer` of every
+    link clicked from this page. The assertion is inverted rather than
+    deleted, so the guarantee is still pinned.
+  */
+  await expect(page).toHaveURL(/\/zamowienie\/\d{4}%2F\d{2}%2F\d{4}$/);
+  expect(new URL(page.url()).searchParams.get('token')).toBeNull();
+});
+
+/**
+ * `docs/AI-CHECKLIST.md` BUG-22, the other half.
+ *
+ * The checkout redirect sets the cookie itself and never puts the token in an
+ * address. The **emailed link** cannot do that - it is a plain URL in a mail
+ * client - so it still carries `?token=`, and `src/proxy.ts` exchanges it on
+ * the way in.
+ *
+ * That exchange only works on a real document navigation, which is exactly
+ * why it needs a browser test rather than a unit one: the first attempt at
+ * this fix put the whole thing in the proxy, and it failed because a Server
+ * Action's `redirect()` is followed by the client router instead. The unit
+ * tests passed throughout. Only the browser noticed.
+ *
+ * A fresh context, so nothing is carried over from the checkout above - this
+ * is a customer opening their confirmation email days later on another
+ * device, which is the case the link exists for.
+ */
+test('the emailed order link works once and leaves no token in the address', async ({ browser }) => {
+  test.slow();
+
+  const order = await prisma.order.findFirstOrThrow({
+    orderBy: { createdAt: 'desc' },
+    select: { orderNumber: true, accessToken: true },
+  });
+
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  try {
+    await page.goto(
+      `/zamowienie/${encodeURIComponent(order.orderNumber)}?token=${encodeURIComponent(order.accessToken)}`,
+    );
+
+    // It renders - the exchange handed the token to the page.
+    await expect(page.getByRole('heading', { name: 'Zamówienie przyjęte' })).toBeVisible({ timeout: 15_000 });
+
+    // And the address no longer holds it.
+    expect(new URL(page.url()).searchParams.get('token')).toBeNull();
+
+    // The cookie is HttpOnly, which is the point of moving it off the URL:
+    // a script on the page cannot read it back out.
+    expect(await page.evaluate(() => document.cookie)).not.toContain(order.accessToken);
+
+    // Reloading the clean URL still works, so the customer can stay on the
+    // page, refresh, and navigate back to it without the link.
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Zamówienie przyjęte' })).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});
+
+test('a wrong token shows the not-found page and no order details', async ({ browser }) => {
+  /*
+    §16.1's "not 403", unchanged by BUG-22: an order's existence must never be
+    probeable by guessing tokens against a real order number.
+
+    **Asserted on what is rendered, not on the status code, and that is a
+    finding rather than a shortcut.** This test first expected a 404 and got a
+    200. That is documented Next.js behaviour rather than a defect here: the
+    response is already streaming by the time `notFound()` throws, because
+    `(shop)/loading.tsx` puts every page in this group behind a Suspense
+    boundary, and a status line cannot be changed after the headers are sent
+    (`node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/
+    loading.md`, "Status Codes"). BUG-33 records the measurement and why the
+    fix is not free.
+
+    What matters for this item is what is pinned: a wrong token renders the
+    not-found page and leaks nothing about the order.
+  */
+  const order = await prisma.order.findFirstOrThrow({
+    orderBy: { createdAt: 'desc' },
+    select: { orderNumber: true },
+  });
+
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  try {
+    await page.goto(`/zamowienie/${encodeURIComponent(order.orderNumber)}?token=definitely-not-the-token`);
+
+    await expect(page.getByRole('heading', { name: 'Zamówienie przyjęte' })).toHaveCount(0);
+    await expect(page.getByText(order.orderNumber, { exact: false })).toHaveCount(0);
+    // Something rendered rather than the page hanging or erroring. Since
+    // UX-06 the order route has its own boundary, so the heading names the
+    // order rather than the page - which says no more than the generic one
+    // did, because a wrong token, a missing cookie and an order number that
+    // was never issued all land here identically.
+    await expect(page.getByRole('heading', { name: 'Nie znaleziono takiego zamówienia' })).toBeVisible();
+    // The tab used to say „Zamówienie przyjęte" here, whatever had happened.
+    expect(await page.title()).toContain('Nie znaleziono takiego zamówienia');
+  } finally {
+    await context.close();
+  }
 });

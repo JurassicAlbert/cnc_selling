@@ -32,6 +32,7 @@ import type { Selections } from '@/domain/configuration/steps';
 import { MAX_CART_ITEM_QUANTITY, MIN_CART_ITEM_QUANTITY, clampCartQuantity } from '@/domain/cart/quantity';
 import { cartItemSignature } from '@/domain/cart/signature';
 import { prisma } from '@/server/db/client';
+import { reinspectDesignAgainstTarget } from '@/server/upload/reinspect-design';
 import type { Prisma } from '@/generated/prisma/client';
 import type { InstallationVariantCode } from '@/generated/prisma/enums';
 import { priceAndValidateSelections } from '@/server/configurator/validate-and-price';
@@ -308,6 +309,26 @@ export async function applyAddToCart(
       throw error;
     }
     await addOrMerge();
+  }
+
+  /*
+    BUG-11: the first moment §13.1's DPI and aspect checks can actually run.
+
+    They are skipped at upload, correctly - CUSTOM_UPLOAD comes before SIZE,
+    so there is no target to compare against - which left them unreachable and
+    the review screen reporting „Brak ostrzeżeń." about a check that had never
+    happened. Here the upload and the chosen size finally exist together.
+
+    Awaited rather than scheduled: the warnings are what staff review the
+    design against, and a design that reaches the queue before its own
+    assessment does is the same false-reassurance bug in a new form. It reads
+    one file that is already on disk.
+  */
+  if (selections.customUploadId !== null && selections.widthMm !== null && selections.heightMm !== null) {
+    await reinspectDesignAgainstTarget(selections.customUploadId, {
+      widthMm: selections.widthMm,
+      heightMm: selections.heightMm,
+    });
   }
 
   // BUG-12: handed back for the wrapper to schedule with `after()`, rather

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+import { readOrderAccessCookie } from '@/server/session/order-access';
+
 import { SITE } from '@/content/pl/site';
 import { COPY } from '@/content/pl/messages';
 import { findOrderForConfirmation } from '@/server/repositories/orders';
@@ -22,18 +24,33 @@ import { SupportRequestForm } from '@/ui/islands/SupportRequestForm';
 
 type OrderConfirmationPageProps = {
   readonly params: Promise<{ readonly orderNumber: string }>;
-  readonly searchParams: Promise<{ readonly token?: string }>;
 };
 
-export const metadata: Metadata = {
-  title: SITE.orderConfirmationHeadingPl,
-  /*
-    BUG-17. `robots.txt` asks crawlers not to fetch this; that alone does not
-    keep it out of an index, because a disallowed URL something links to can
-    still be listed without a snippet. This is the half that removes it.
-  */
-  robots: { index: false },
-};
+/**
+ * UX-06. This was a static `metadata` saying „Zamówienie przyjęte", which
+ * applies whether or not the page found an order - so a confirmation link
+ * opened without its access cookie produced a browser tab announcing a
+ * confirmed order that had not been found. Small, and a false statement to a
+ * customer about their own order, which is the one thing this project does
+ * not do.
+ *
+ * The lookup is the same call the page makes, memoized per request by
+ * `cache()` in `repositories/orders.ts`, so telling the truth here costs no
+ * extra query. `robots: { index: false }` moved up to
+ * `(shop)/zamowienie/layout.tsx` - BUG-17's rule is unchanged, but a route
+ * cannot export both `metadata` and `generateMetadata`, and that rule is
+ * safer as a static object a unit test can read.
+ */
+export async function generateMetadata({ params }: OrderConfirmationPageProps): Promise<Metadata> {
+  const { orderNumber } = await params;
+  const token = await readOrderAccessCookie();
+  if (token === null) {
+    return { title: SITE.orderNotFoundPl };
+  }
+
+  const order = await findOrderForConfirmation(decodeURIComponent(orderNumber), token);
+  return { title: order === null ? SITE.orderNotFoundPl : SITE.orderConfirmationHeadingPl };
+}
 
 /**
  * `params.orderNumber` arrives already URL-decoded by Next.js - the real
@@ -45,10 +62,28 @@ export const metadata: Metadata = {
  * applied here so an order's existence is never probeable by guessing
  * tokens against a real order number.
  */
-export default async function OrderConfirmationPage({ params, searchParams }: OrderConfirmationPageProps) {
+export default async function OrderConfirmationPage({ params }: OrderConfirmationPageProps) {
   const { orderNumber } = await params;
-  const { token } = await searchParams;
-  if (token === undefined) {
+
+  /*
+    BUG-22. The token comes from an `HttpOnly` cookie, not from `?token=`.
+
+    `src/proxy.ts` takes it out of the address on the way in and puts it here,
+    so the credential appears in exactly one request rather than in the
+    address bar, the history, the access log and the `Referer` of every link
+    the customer clicks from this page. The owner's instruction on 2026-09-05
+    was that no token or personal information should be visible in the
+    address.
+
+    A missing cookie renders the same "not found" as a wrong one, which is the
+    rule this page already followed for a wrong `?token=`: §16.1's "404, not
+    403", so an order's existence is never probeable.
+
+    The emailed link is unchanged and still one click - it carries the token,
+    the proxy exchanges it, and the customer lands on a clean URL.
+  */
+  const token = await readOrderAccessCookie();
+  if (token === null) {
     notFound();
   }
 

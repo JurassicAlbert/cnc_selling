@@ -143,3 +143,98 @@ describe('proxy - upgrade-insecure-requests follows the request, not the build',
     );
   });
 });
+
+/**
+ * `docs/AI-CHECKLIST.md` BUG-22 - the guest order token travelled in the
+ * query string.
+ *
+ * `/zamowienie/2026-09-0042?token=abc` puts the credential in the address
+ * bar, browser history, server access logs, and the `Referer` of anything
+ * the customer clicks from that page.
+ *
+ * **Owner's instruction, 2026-09-05**, taken as written rather than as the
+ * option button pressed: "we should rather not use get (tokens or any
+ * personal info visible in the address - endpoint - it should use post or
+ * other way to hide it)". So the token is exchanged once and removed from
+ * the address.
+ *
+ * The emailed link still carries it - that is what makes it one click, and
+ * the owner kept that - so the token appears in exactly one request and then
+ * lives in an `HttpOnly` cookie. What it no longer does is sit in the address
+ * for the rest of the visit.
+ *
+ * The proxy is the right place: setting a cookie needs a response, and a
+ * Server Component cannot write one. It already runs on this path.
+ */
+describe('proxy - the order token never stays in the address (BUG-22)', () => {
+  const CONFIRMATION = '/zamowienie/2026-09-0042';
+
+  it('redirects the token out of the URL', () => {
+    delete process.env.CSP_MODE;
+    const response = proxy(request(`${CONFIRMATION}?token=secret-token`));
+
+    expect(response.status).toBe(307);
+    const location = new URL(response.headers.get('location') ?? '', 'http://localhost:3000');
+    expect(location.pathname).toBe(CONFIRMATION);
+    expect(location.search).toBe('');
+  });
+
+  it('carries the token onward in an HttpOnly cookie', () => {
+    delete process.env.CSP_MODE;
+    const response = proxy(request(`${CONFIRMATION}?token=secret-token`));
+
+    const cookie = response.cookies.get('order-access');
+    expect(cookie?.value).toBe('secret-token');
+    // HttpOnly so a script cannot read it, which is the whole reason a cookie
+    // is an improvement on a query string rather than a lateral move.
+    expect(cookie?.httpOnly).toBe(true);
+    expect(cookie?.sameSite).toBe('lax');
+  });
+
+  it('marks the cookie Secure on https and not on plain http', () => {
+    delete process.env.CSP_MODE;
+    // Same reasoning as SEC-11's `upgrade-insecure-requests`: a `Secure`
+    // cookie is simply dropped over http, which would break the local suite
+    // and any LAN preview while looking like an authorization bug.
+    expect(proxy(secureRequest(`${CONFIRMATION}?token=t`)).cookies.get('order-access')?.secure).toBe(true);
+    expect(proxy(request(`${CONFIRMATION}?token=t`)).cookies.get('order-access')?.secure).toBe(false);
+  });
+
+  it('keeps the other query parameters a page might need', () => {
+    delete process.env.CSP_MODE;
+    const response = proxy(request(`${CONFIRMATION}?token=secret&utm_source=email`));
+
+    const location = new URL(response.headers.get('location') ?? '', 'http://localhost:3000');
+    expect(location.searchParams.get('token')).toBeNull();
+    expect(location.searchParams.get('utm_source')).toBe('email');
+  });
+
+  it('leaves a request without a token alone', () => {
+    delete process.env.CSP_MODE;
+    // The ordinary case after the exchange: the page reads the cookie and the
+    // proxy must not bounce it in a loop.
+    const response = proxy(request(CONFIRMATION));
+
+    expect(response.status).toBe(200);
+    expect(response.cookies.get('order-access')).toBeUndefined();
+  });
+
+  it('does not exchange tokens on other routes', () => {
+    delete process.env.CSP_MODE;
+    // Narrow on purpose. `?token=` means something specific on this path and
+    // nothing anywhere else, and a proxy that harvests any parameter called
+    // "token" into a cookie would be a new problem rather than a fix.
+    const response = proxy(request('/szukaj?token=not-an-order-token'));
+
+    expect(response.status).toBe(200);
+    expect(response.cookies.get('order-access')).toBeUndefined();
+  });
+
+  it('still sends the CSP on the exchange redirect', () => {
+    delete process.env.CSP_MODE;
+    // The redirect is a real response the browser acts on, and SEC-05's own
+    // test makes the same point about the /panel redirect.
+    const response = proxy(request(`${CONFIRMATION}?token=secret`));
+    expect(response.headers.get('content-security-policy')).toContain("default-src 'self'");
+  });
+});

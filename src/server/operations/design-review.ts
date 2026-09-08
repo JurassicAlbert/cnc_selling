@@ -17,7 +17,7 @@ import type { DesignReviewTransitionIssueCode } from '@/domain/design-review/tra
 import { sanitizeFilenameForDisplay } from '@/domain/upload/inspect';
 import type { UploadWarning } from '@/domain/upload/inspect';
 import { prisma } from '@/server/db/client';
-import type { Prisma } from '@/generated/prisma/client';
+import { Prisma } from '@/generated/prisma/client';
 import { findOwnedDesignId, requireOwnedDesignId } from '@/server/repositories/design-review';
 import type { Owner } from '@/server/session/ownership';
 import { currentOwner } from '@/server/session/ownership';
@@ -112,12 +112,38 @@ export async function reuploadCustomDesign(
         previewKey,
       },
     });
+    /*
+      BUG-15: stamp the outgoing file before the design stops pointing at it.
+
+      It used to be simply orphaned - on disk forever, invisible to staff, and
+      still fetchable by the customer who had just replaced it. Now it becomes
+      review history: staff can see every version the customer sent, which is
+      what settles a "but I sent the right one" dispute, and
+      `findOwnedUploadedFile` stops serving it to the customer.
+
+      Inside the same transaction as the swap, so a design can never point at
+      a new file while its predecessor is still marked current.
+    */
+    await tx.uploadedFile.updateMany({
+      where: { design: { id: customerDesignId } },
+      data: { supersededAt: new Date(), supersededForDesignId: customerDesignId },
+    });
+
     await tx.customerDesign.update({
       where: { id: customerDesignId },
       data: {
         fileId: uploadedFile.id,
         status: 'PENDING_REVIEW',
-        autoWarnings: toJsonInput(inspected.warnings),
+        /*
+          BUG-11: `null`, not `[]`. `target` is null here on purpose -
+          CUSTOM_UPLOAD comes before SIZE, so there is no size to check
+          against yet - which means the inspector returned an empty list
+          without having assessed anything. Storing that as `[]` made the
+          review screen say „Brak ostrzeżeń." about a check that never ran.
+          `null` records the truth: not assessed. `reinspect-design.ts` fills
+          it in at add-to-cart, where the target size finally exists.
+        */
+        autoWarnings: inspected.warnings.length === 0 ? Prisma.JsonNull : toJsonInput(inspected.warnings),
       },
     });
   });
