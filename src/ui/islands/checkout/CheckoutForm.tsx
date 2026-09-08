@@ -327,7 +327,27 @@ export function CheckoutForm({
               {deliveryMethods.length === 0 ? (
                 <Alert severity="warning">{SITE.checkoutNoDeliveryMethodsPl}</Alert>
               ) : (
-                <RadioGroup name="deliveryMethodId" value={selectedDeliveryId} onChange={(e) => setSelectedDeliveryId(e.target.value)}>
+                <RadioGroup
+                  name="deliveryMethodId"
+                  value={selectedDeliveryId}
+                  onChange={(e) => {
+                    /*
+                      UX-08 / BUG-14. Changing the method used to set only the
+                      method: a locker chosen for InPost stayed selected after
+                      a switch to DPD, the hidden field kept submitting the
+                      InPost id, and the customer's order was refused at the
+                      last step of checkout.
+
+                      A pickup point belongs to one carrier's network, so it
+                      cannot survive a change of carrier - and neither can the
+                      search box, since a query typed against one network is
+                      not a query against another's.
+                    */
+                    setSelectedDeliveryId(e.target.value);
+                    setSelectedPickupPointId(null);
+                    setPickupPointQuery('');
+                  }}
+                >
                   <Stack spacing={1.5}>
                     {deliveryMethods.map((method) => (
                       <Paper
@@ -558,8 +578,18 @@ export function CheckoutForm({
 
               <Box sx={{ mt: 3 }}>
                 <SubmitButton
+                  /*
+                    Gated on the RESOLVED point, not on the id - the second
+                    half of BUG-14, and the half that holds even when the
+                    reset above does not run. `selectedPickupPointId` comes
+                    back from `state.values` after a refused submission, and
+                    an id that belonged to another carrier is not `null`; only
+                    `findPickupPointById` can say whether it means anything
+                    for the carrier now selected. Asking the id was asking the
+                    wrong question, which is why a stale value passed.
+                  */
                   disabledReason={
-                    selectedDelivery?.requiresPickupPoint === true && selectedPickupPointId === null
+                    selectedDelivery?.requiresPickupPoint === true && selectedPickupPoint === null
                       ? 'pickup'
                       : selectedDelivery === null || !selectedDelivery.feasible
                         ? 'delivery'

@@ -5,7 +5,13 @@ import 'dotenv/config';
 
 import path from 'node:path';
 
-import { expect, test } from '@playwright/test';
+// Not `@playwright/test`: this spec uploads, and SEC-08 added a per-IP upload
+// limit on 2026-09-08. A per-session limit could never bite here (each test
+// gets a fresh cookie jar); a per-IP one accumulates across every run on this
+// machine, so without the fixture's reset the suite would start refusing
+// uploads after enough runs in an hour - silently, the way SEC-01's
+// registration limit did. See `fixtures.ts` and `rate-limit-reset.ts`.
+import { expect, test } from './fixtures';
 
 import { prisma } from '../../src/server/db/client';
 
