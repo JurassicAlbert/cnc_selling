@@ -799,6 +799,14 @@ export const ADMIN = {
   pricingSimulatorUnpriceablePl: 'nie udało się wycenić',
   pricingPublishPl: 'Publikuj tę wersję',
   pricingPublishBlockedHintPl: 'Poczekaj na wynik symulacji przed publikacją.',
+  /*
+    Shown instead of the „poczekaj" hint when the simulation failed, where
+    waiting is not the advice. BUG-34: the server refuses to publish a
+    version with no recorded simulation, and a failed run records nothing,
+    so this says what is actually true rather than leaving a disabled
+    button with no explanation.
+  */
+  pricingPublishBlockedErrorHintPl: 'Publikacja jest zablokowana, dopóki symulacja się nie powiedzie.',
   pricingPublishConfirmTitlePl: 'Opublikować tę wersję cennika?',
   pricingPublishConfirmPl: 'Ta zmiana natychmiast wpłynie na ceny w całym sklepie. Tej operacji nie można cofnąć - poprzednio aktywna wersja przestanie obowiązywać.',
   pricingPublishConfirmButtonPl: 'Tak, opublikuj',

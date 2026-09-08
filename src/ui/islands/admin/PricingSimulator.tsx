@@ -3,14 +3,24 @@
 /**
  * Runs on mount, no separate "simulate" button - the "publish blocked until
  * simulation viewed" rule (`docs/ARCHITECTURE.md` §16A.1 module 7) means
- * there must be no path to Publish that skips ever seeing this table. The
- * Publish button below only becomes enabled once this fetch has resolved
- * (success or error - an error is still "reviewed," it just means don't
- * publish yet). A real `ConfirmSubmitButton` dialog gates the actual publish
- * call - this changes every price on the site, and is genuinely
- * irreversible (publishing flips the previously-active version inactive in
- * the same atomic transaction, no path back). Replaced a `window.confirm()`
- * placeholder - see `ConfirmSubmitButton`'s own doc comment.
+ * there must be no path to Publish that skips ever seeing this table.
+ *
+ * **This component is no longer where that rule lives.** Until 2026-09-08 it
+ * was the only place: `publishPricingVersion` is a server action, every
+ * export of a `'use server'` module is a public endpoint, and a direct call
+ * published without any of this (BUG-34). The simulation now records itself
+ * against the version and the server refuses to publish without that record,
+ * so what is left here is the part a UI should do - not offering a button
+ * that would be refused.
+ *
+ * The disabled rule tightened with it. It used to enable Publish on an error
+ * too, reasoning that an error is still "reviewed". It is not: an admin who
+ * saw a red alert has seen no prices, which is the exact situation R14 is
+ * about, and the server now declines it anyway. A `ConfirmSubmitButton`
+ * dialog still gates the call itself - this changes every price on the site
+ * and is genuinely irreversible (publishing flips the previously-active
+ * version inactive in the same atomic transaction, no path back). Replaced a
+ * `window.confirm()` placeholder - see `ConfirmSubmitButton`'s own doc.
  */
 
 import { useEffect, useState } from 'react';
@@ -124,13 +134,13 @@ export function PricingSimulator({ version, alreadyActive }: { readonly version:
             confirmLabel={ADMIN.pricingPublishConfirmButtonPl}
             cancelLabel={ADMIN.cancelPl}
             color="warning"
-            disabled={result === null}
+            disabled={result === null || !result.ok}
             pending={publishState.pending}
             onConfirm={handlePublish}
           />
-          {result === null && (
+          {(result === null || !result.ok) && (
             <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>
-              {ADMIN.pricingPublishBlockedHintPl}
+              {result === null ? ADMIN.pricingPublishBlockedHintPl : ADMIN.pricingPublishBlockedErrorHintPl}
             </Typography>
           )}
         </>

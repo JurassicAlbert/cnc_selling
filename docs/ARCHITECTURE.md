@@ -1126,7 +1126,7 @@ CRUD with availability toggles, price per m², sheet size limits, min line width
 Machine rates, module surcharge, packaging tiers, VAT rate, material and finish rates, product base and minimum price, all per-relation factors. **Highest-risk screen in the application** - a mistyped rate changes every price on the site. Therefore:
 
 - Every save creates a **new `PricingSettings` version**; nothing is edited in place.
-- A **price simulator** shows before/after for a fixed set of reference configurations, and the change cannot be published without viewing it.
+- A **price simulator** shows before/after for a set of reference configurations, and the change cannot be published without viewing it. **Enforced in the database since 2026-09-08** (BUG-34): a simulation stamps `PricingSettings.simulatedAt`/`simulatedByEmail`, and `applyPublishPricingVersion` refuses a version that has none. Before that the rule lived only in `PricingSimulator.tsx`, so a direct call to the server action skipped it. The reference set is no longer "fixed" either - it is read from the live catalogue (`listPricingReferenceProducts`, one product per type), because the hard-coded list of three slugs had silently gone two-thirds stale as categories were retired.
 - Existing orders are pinned to their version and never reprice.
 - Every change is audit-logged with a full diff.
 

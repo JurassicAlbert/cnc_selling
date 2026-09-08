@@ -743,6 +743,14 @@ model PricingSettings {
   publishedAt            DateTime?
   /// Who published it and why - this table changes every price on the site.
   publishedByEmail       String?
+  /// When an admin actually ran the price simulator against this version.
+  /// §16A.1 module 7 says a change "cannot be published without viewing it",
+  /// and until 2026-09-08 that rule lived only in the client component, so a
+  /// direct call to `publishPricingVersion` skipped it (BUG-34). Null here is
+  /// what `applyPublishPricingVersion` refuses on. Versions are never edited
+  /// in place, so a review of version N can never go stale.
+  simulatedAt            DateTime?
+  simulatedByEmail       String?
   notePl                 String?   @db.Text
   createdAt              DateTime  @default(now())
 
