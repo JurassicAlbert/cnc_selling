@@ -542,8 +542,35 @@ export async function applyUpdateCartItemConfiguration(
       select: { id: true, cartId: true, quantity: true },
     });
     if (edited === null) {
-      // A saved configuration edited from `/moje-konto/projekty` with no
-      // cart line behind it - nothing to re-key or merge.
+      /*
+        A saved configuration edited from `/moje-konto/projekty` with no cart
+        line behind it. Nothing to re-key - and this used to stop there, on
+        the grounds that there was nothing to merge either. True of the cart,
+        false of the projects list: the row that was just rewritten can now be
+        an exact copy of another saved project, and `listConfigurationsForUser`
+        hides the second one on read.
+
+        BUG-21's other door, found while closing the first one. Fixing only
+        the merge branch would have left the read-side filter still masking
+        duplicates this code creates, which is precisely what that branch's
+        own comment objects to.
+
+        The edited row is the one that goes, matching the merge branch: the
+        survivor is the project that was already this shape. `edited === null`
+        is exactly "no `CartItem` references this configuration", so nothing
+        is being pulled out from under a live cart line.
+      */
+      const alreadySaved = await tx.configuration.findFirst({
+        where: {
+          id: { not: configurationId },
+          ...selectionMatch(data.productId, selections),
+          OR: ownerOrClauses(owner),
+        },
+        select: { id: true },
+      });
+      if (alreadySaved !== null) {
+        await tx.configuration.delete({ where: { id: configurationId } });
+      }
       return;
     }
     const twin = await tx.cartItem.findUnique({
@@ -556,6 +583,33 @@ export async function applyUpdateCartItemConfiguration(
         where: { id: twin.id },
         data: { quantity: clampCartQuantity(twin.quantity + edited.quantity) },
       });
+      /*
+        BUG-21. The line merged away, and until 2026-09-08 its `Configuration`
+        did not: an exact duplicate of the survivor's, owned by the same
+        customer, referenced by nothing. It never showed up on
+        `/moje-konto/projekty` because `listConfigurationsForUser`
+        deduplicates on read - a filter added for the rows that predated the
+        write-side fix, which then quietly absorbed the ones this very branch
+        kept producing. A read-side filter hiding a write-side bug is how a
+        bug survives a year.
+
+        Conditional on nothing referencing the row rather than assumed from
+        having reached this branch. `mergeGuestCartIntoUser` can leave a
+        configuration reachable from a line this operation never looked at,
+        and deleting one out from under a live cart line - a row describing
+        what a customer is about to buy - would be far worse than the
+        duplicate being fixed. Inside the same transaction, so the count
+        cannot go stale between reading it and acting on it.
+
+        Safe to delete outright, on `applyDeleteConfiguration`'s own
+        reasoning: `CartItem` is the only real reference, and `OrderItem`
+        keeps an immutable snapshot that never joins back, so no past order
+        can change because of this.
+      */
+      const stillReferenced = await tx.cartItem.count({ where: { configurationId } });
+      if (stillReferenced === 0) {
+        await tx.configuration.delete({ where: { id: configurationId } });
+      }
       return;
     }
     await tx.cartItem.update({ where: { id: edited.id }, data: { configurationSignature: signature } });
