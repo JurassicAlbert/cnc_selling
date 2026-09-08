@@ -89,6 +89,19 @@ test('uploads a custom design, completes checkout, and lands in DESIGN_REVIEW', 
   // flake (2026-09-04).
   await expect(page.getByRole('heading', { name: 'Własny projekt z grawerem' })).toBeVisible();
 
+  /*
+    UX-13. This line's design is `PENDING_REVIEW`, and that is not a property
+    of the line - it holds the WHOLE order in `DESIGN_REVIEW` after checkout.
+    Until 2026-09-08 the cart said nothing about it, so the one line that
+    changes what happens to the order looked exactly like any other.
+
+    Asserted here rather than in `cart-line-notices.spec.ts` because this is
+    the spec that genuinely uploads a file, and a real pending design is the
+    only honest way to reach this state.
+  */
+  await expect(page.getByText('Projekt oczekuje na weryfikację')).toBeVisible();
+  await expect(page.getByText('Zamówienie trafi do weryfikacji', { exact: false })).toBeVisible();
+
   await page.getByRole('link', { name: 'Przejdź do zamówienia' }).click();
   await expect(page).toHaveURL('/koszyk/zamowienie');
   // The real bug this test guards: a stale cart-repository mapping used

@@ -29,12 +29,13 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Box, Button, IconButton, Paper, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, IconButton, Paper, Stack, Typography } from '@mui/material';
 
 import { formatPln } from '@/domain/money/money';
 import { formatMmAsCentimetres } from '@/domain/text/numeric-input';
 import { MAX_CART_ITEM_QUANTITY } from '@/domain/cart/quantity';
 import { SITE } from '@/content/pl/site';
+import { customerDesignStatusMessage, feasibilityMessage } from '@/content/pl/messages';
 import type { CartItemView, CartView } from '@/server/repositories/cart';
 import { adjustCartItemQuantity, removeCartItem } from '@/server/actions/cart';
 import { AddIcon, DeleteIcon, RemoveIcon } from '@/ui/icons';
@@ -188,6 +189,17 @@ function CartSummary({ subtotalGrossGrosze }: { readonly subtotalGrossGrosze: nu
  * orders eleven without pressing a button eleven times. It is quieter now,
  * not gone.
  */
+/**
+ * Severity for each design-review state, as a table rather than a chain of
+ * ternaries: the four states are a closed set and the mapping is data.
+ */
+const DESIGN_STATUS_SEVERITY = {
+  PENDING_REVIEW: 'info',
+  APPROVED: 'success',
+  NEEDS_CHANGES: 'warning',
+  REJECTED: 'error',
+} as const satisfies Record<NonNullable<CartItemView['customDesignStatus']>, 'info' | 'success' | 'warning' | 'error'>;
+
 function CartRow({ item }: { readonly item: CartItemView }) {
   const atMax = item.quantity >= MAX_CART_ITEM_QUANTITY;
 
@@ -258,6 +270,69 @@ function CartRow({ item }: { readonly item: CartItemView }) {
             <Text muted>„{item.personalizationText}”</Text>
           )}
           {!item.isComplete && <Text muted>{SITE.cartIncompleteNoticePl}</Text>}
+
+          {/*
+            UX-13, first half. A `PENDING_REVIEW` design is not a property of
+            this line - it holds the WHOLE order in `DESIGN_REVIEW` after
+            checkout, so the consequence is spelled out rather than left for
+            the customer to infer from a status word.
+
+            `APPROVED` is shown too, quietly and in green. It could have been
+            hidden as "nothing to report", but a customer who had a design
+            sent back and fixed it has no other way to see that it cleared,
+            and this is the screen where they decide to pay.
+          */}
+          {item.customDesignStatus !== null && (
+            <Alert severity={DESIGN_STATUS_SEVERITY[item.customDesignStatus]} sx={{ py: 0.25, mt: 0.5 }}>
+              {customerDesignStatusMessage(item.customDesignStatus)}
+              {item.customDesignStatus === 'PENDING_REVIEW' && ` ${SITE.cartDesignReviewHoldPl}`}
+            </Alert>
+          )}
+
+          {/*
+            UX-13, second half. The notices a customer read and accepted while
+            configuring disappeared the moment they added the item - including
+            the ones that describe what the finished object will actually be
+            like: that the wood is natural and varies piece to piece, or that
+            the panel arrives as several joined modules. Those are the notes
+            someone re-reads before paying.
+
+            Closed by default, and a native `<details>` rather than an MUI
+            accordion: the cart's job here is the total, a note already read
+            should not shout a second time, and the disclosure costs no client
+            JS even inside an island that has some.
+          */}
+          {item.warnings.length > 0 && (
+            <Box component="details" sx={{ mt: 0.5 }}>
+              {/*
+                `paddingBlock` is not decoration: as a bare text line this
+                summary was a ~17px-tall tap target sitting inside the row's
+                other controls, and `accessibility.spec.ts` caught it as a
+                WCAG 2.5.8 failure on `/koszyk` the first time the full suite
+                ran after this was added. Padding takes it past 24px without
+                touching `display`, which would take the disclosure triangle
+                with it.
+              */}
+              <Box
+                component="summary"
+                sx={{
+                  cursor: 'pointer',
+                  color: 'text.secondary',
+                  font: 'var(--mui-font-body2)',
+                  paddingBlock: 0.75,
+                }}
+              >
+                {SITE.cartLineNotesSummaryPl} ({item.warnings.length})
+              </Box>
+              <Stack spacing={0.5} sx={{ mt: 0.5 }}>
+                {item.warnings.map((finding) => (
+                  <Text key={finding.code} muted>
+                    {feasibilityMessage(finding)}
+                  </Text>
+                ))}
+              </Stack>
+            </Box>
+          )}
         </Stack>
 
         {/*

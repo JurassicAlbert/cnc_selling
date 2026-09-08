@@ -257,6 +257,16 @@ export const SITE = {
   cartShippingAtCheckoutPl: 'Koszt dostawy poznasz w kolejnym kroku, po wybraniu sposobu wysyłki.',
   cartKeepShoppingHeadingPl: 'Przeglądaj dalej',
   cartQuantityLabelPl: 'Ilość',
+  /*
+    UX-13. The cart used to say nothing about a line's uploaded design, so the
+    one line that changes what happens to the whole order looked like every
+    other line. The existing status sentences (`COPY.designStatus*`) say what
+    state the design is in; neither of them says what that means for the
+    order, which is the part a customer standing at the checkout needs.
+  */
+  cartDesignReviewHoldPl: 'Zamówienie trafi do weryfikacji projektu, zanim ruszy produkcja.',
+  /** The closed label of the per-line notes disclosure. The count follows in brackets, which needs no plural form. */
+  cartLineNotesSummaryPl: 'Uwagi do tej pozycji',
   cartRemovePl: 'Usuń',
   /*
     „Aktualizuj", „Duplikuj" and „Edytuj" were removed here on 2026-09-05
