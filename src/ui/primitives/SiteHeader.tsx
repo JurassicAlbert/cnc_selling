@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
 import {
@@ -10,7 +11,6 @@ import {
   InfoIcon,
   MenuIcon,
   PersonIcon,
-  PrecisionManufacturingIcon,
 } from '@/ui/icons';
 import { Container } from '@/ui/primitives/Container';
 import { logout } from '@/server/actions/auth';
@@ -105,19 +105,32 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
             flexWrap: 'wrap',
           }}
         >
-          <Link
-            href="/"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-2)',
-              font: 'var(--mui-font-h6)',
-              color: 'var(--mui-palette-text-primary)',
-              textDecoration: 'none',
-            }}
-          >
-            <PrecisionManufacturingIcon size={22} style={{ color: 'var(--mui-palette-secondary-main)' }} />
-            RYT
+          {/*
+            The owner's carved wordmark, 2026-09-08, replacing the machine
+            icon plus the word set in the body face. The icon goes with it
+            rather than sitting beside it: a mark and a wordmark that both
+            say "this is RYT" is one of them too many, and the carving is
+            already the thing the shop sells.
+
+            `alt="RYT"` gives the home link its accessible name - the image
+            IS the name, so a decorative empty alt here would leave the only
+            link to the home page unlabelled.
+
+            Sized in CSS with the intrinsic ratio declared, so the browser
+            reserves the right box before the file arrives; `preload` because
+            it is above the fold on every page (`priority` is deprecated in
+            Next 16 - see this component's neighbours, which still use it).
+          */}
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+            <Image
+              src="/images/brand/ryt-wordmark.png"
+              alt="RYT"
+              width={900}
+              height={356}
+              sizes="140px"
+              preload
+              className="site-logo"
+            />
           </Link>
 
           {/*

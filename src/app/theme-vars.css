@@ -207,6 +207,30 @@ body {
  *
  * `position: relative` so the count badge can anchor to the icon rather than
  * to whatever ancestor happened to be positioned. */
+/*
+ * The carved RYT wordmark in the header (2026-09-08, owner's artwork).
+ *
+ * Height-driven with `width: auto` because the header is a flex row measured
+ * in height, and the intrinsic 900x356 is declared on the element so the box
+ * is reserved before the file lands - a logo that resizes on load shoves the
+ * whole navigation sideways.
+ *
+ * Smaller under 900px, where the burger takes over and the row is tight. The
+ * carving is dense, so it is not shrunk below 28px: past that the trees and
+ * the ridge line turn to noise and it stops reading as anything.
+ */
+.site-logo {
+  height: 34px;
+  width: auto;
+  display: block;
+}
+
+@media (min-width: 900px) {
+  .site-logo {
+    height: 44px;
+  }
+}
+
 .nav-icon-link {
   position: relative;
   display: inline-flex;

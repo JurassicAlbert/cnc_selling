@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
 import { Container } from '@/ui/primitives/Container';
@@ -57,9 +58,26 @@ export function Footer({ categories }: FooterProps) {
           `}</style>
 
           <div>
-            <div style={{ font: 'var(--mui-font-h6)', color: 'var(--mui-palette-text-primary)' }}>
-              RYT
-            </div>
+            {/*
+              The same carved wordmark the header uses (2026-09-08). Not a
+              link and not preloaded, unlike the header's: this one is below
+              the fold on every page and the home link is already three rows
+              down in the footer's own list, so a second one here would only
+              add a duplicate destination to the tab order.
+
+              `alt=""` for exactly that reason - it is decorative here. The
+              name is not lost to a screen reader: the tagline and the
+              description sit right under it, and the header's copy of the
+              same image carries the real name.
+            */}
+            <Image
+              src="/images/brand/ryt-wordmark.png"
+              alt=""
+              width={900}
+              height={356}
+              sizes="120px"
+              style={{ height: 38, width: 'auto', display: 'block' }}
+            />
             <div
               style={{
                 marginBlockStart: 'var(--space-1)',
