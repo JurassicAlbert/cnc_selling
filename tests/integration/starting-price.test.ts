@@ -8,6 +8,17 @@ import { getConfiguratorProductData } from '@/server/repositories/configurator';
 import { resolveOptions } from '@/server/configurator/resolve-options';
 import { stepsForProductType } from '@/domain/configuration/steps';
 import type { Selections } from '@/domain/configuration/steps';
+import { readsActivePricing } from './pricing-fixture';
+
+/*
+  T-32. This file prices against whichever `PricingSettings` version is live,
+  so it must not run while `admin-pricing.test.ts` or
+  `pricing-version-swap.test.ts` has a throwaway version published. A shared
+  lock, so it still runs in parallel with every other reader - see
+  `pricing-fixture.ts` for why an exclusive one would have serialised the
+  suite.
+*/
+readsActivePricing();
 
 /**
  * `docs/REVIEW-DETAILED.md` BUG-02.

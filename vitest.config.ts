@@ -30,6 +30,10 @@ export default defineConfig({
     // (`starting-price.test.ts`, 60s, for a deliberately exhaustive sweep).
     testTimeout: 20_000,
     setupFiles: ['./tests/integration/env-setup.ts'],
+    // Runs once around the whole run, in the main process, when no worker is
+    // still touching the database - which is the only safe moment to delete a
+    // row the rest of the suite reads. See T-32 and the file's own header.
+    globalSetup: ['./tests/integration/global-setup.ts'],
   },
   resolve: {
     alias: {

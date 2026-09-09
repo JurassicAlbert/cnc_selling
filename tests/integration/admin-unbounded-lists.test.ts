@@ -41,6 +41,7 @@ const SEEDED = 7;
 
 let orderId: string;
 let userId: string;
+let seededIds: string[] = [];
 
 beforeAll(async () => {
   const user = await prisma.user.create({
@@ -83,6 +84,10 @@ beforeAll(async () => {
       createdAt: new Date(Date.UTC(2026, 0, 1) + index * 60_000),
     })),
   });
+
+  seededIds = (
+    await prisma.supportRequest.findMany({ where: { subjectPl: { startsWith: PREFIX } }, select: { id: true } })
+  ).map((row) => row.id);
 });
 
 afterAll(async () => {
@@ -102,20 +107,49 @@ describe('listSupportRequestsForAdmin', () => {
     expect(page.total).toBeGreaterThanOrEqual(SEEDED);
   });
 
-  it('makes every row reachable', async () => {
-    // The assertion PERF-03 exists for: the old code returned everything in
-    // one payload, which works until it does not, and then loses rows
-    // silently rather than loudly.
+  it('makes every row reachable, even while other rows are arriving', async () => {
+    /*
+      The assertion PERF-03 exists for: the old code returned everything in
+      one payload, which works until it does not, and then loses rows
+      silently rather than loudly.
+
+      **T-32, 2026-09-09.** This used to read the total once and then assert
+      `seen.size === total`, which is not a property of the code under test.
+      `SupportRequest` is written by two other files as well
+      (`admin-support-requests`, `support-requests`) and Vitest runs files in
+      parallel against one database, so a row arriving mid-walk made the walk
+      see one more than the total it had captured: `expected 8 to be 7`, on a
+      commit that had touched nothing but CSS. The insert below is that
+      other worker, made deterministic - it is placed exactly where the real
+      one landed, between reading the total and fetching the first page.
+
+      What is asserted instead is what PERF-03 actually promises and what
+      stays true with other writers about: **every row this file created is
+      reachable by paging.** Naming the rows is also stronger than counting
+      them, because a count matches even when the walk returned the wrong
+      ones.
+    */
     const seen = new Set<string>();
-    const total = (await listSupportRequestsForAdmin({}, { skip: 0, take: 1 })).total;
+    let total = (await listSupportRequestsForAdmin({}, { skip: 0, take: 1 })).total;
+    const totalAtStart = total;
+
+    await prisma.supportRequest.create({
+      data: { subjectPl: `${PREFIX}intruder`, messagePl: 'test', email: `${PREFIX}buyer@example.test`, status: 'NEW' },
+    });
 
     for (let skip = 0; skip < total; skip += 3) {
-      for (const item of (await listSupportRequestsForAdmin({}, { skip, take: 3 })).items) {
+      const page = await listSupportRequestsForAdmin({}, { skip, take: 3 });
+      for (const item of page.items) {
         seen.add(item.id);
       }
+      total = page.total;
     }
 
-    expect(seen.size).toBe(total);
+    expect(seededIds).toHaveLength(SEEDED);
+    expect(seededIds.filter((id) => !seen.has(id))).toEqual([]);
+    // And the walk legitimately ends up holding more than it set out to find,
+    // which is precisely why the old equality was the wrong assertion.
+    expect(seen.size).toBeGreaterThan(totalAtStart);
   });
 
   it('counts what matches the filter, not the whole table', async () => {

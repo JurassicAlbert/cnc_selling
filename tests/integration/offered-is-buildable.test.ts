@@ -9,6 +9,17 @@ import { getConfiguratorProductData } from '@/server/repositories/configurator';
 import type { ConfiguratorProductData } from '@/server/repositories/configurator';
 import { applyAddToCart } from '@/server/operations/cart';
 import { findCartForRequest } from '@/server/repositories/cart';
+import { readsActivePricing } from './pricing-fixture';
+
+/*
+  T-32. This file prices against whichever `PricingSettings` version is live,
+  so it must not run while `admin-pricing.test.ts` or
+  `pricing-version-swap.test.ts` has a throwaway version published. A shared
+  lock, so it still runs in parallel with every other reader - see
+  `pricing-fixture.ts` for why an exclusive one would have serialised the
+  suite.
+*/
+readsActivePricing();
 
 /**
  * **The invariant, in the owner's own words (2026-08-31): "there shouldn't

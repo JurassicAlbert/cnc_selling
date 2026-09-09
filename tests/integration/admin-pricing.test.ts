@@ -5,6 +5,7 @@ import type { PricingDraftInput } from '@/server/operations/admin-pricing';
 import { getActivePricingVersion, getPricingVersionByNumber } from '@/server/repositories/admin-pricing';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';
+import { TEST_PRICING_NOTE_PREFIX, publishesPricingVersions, restoreActivePricingVersion } from './pricing-fixture';
 
 const PREFIX = 'test-admin-pricing-';
 
@@ -26,12 +27,10 @@ function draftInput(overrides: Partial<PricingDraftInput> = {}): PricingDraftInp
       { maxAreaM2: 0.5, maxModules: 1, priceGrosze: 1_500 },
       { maxAreaM2: null, maxModules: null, priceGrosze: 9_000 },
     ],
-    notePl: 'test draft',
+    notePl: `${TEST_PRICING_NOTE_PREFIX}admin-pricing`,
     ...overrides,
   };
 }
-
-const createdVersions: number[] = [];
 
 /**
  * Which version was live before this file ran anything.
@@ -41,11 +40,21 @@ const createdVersions: number[] = [];
  * republish the real one on the last line - which never runs when an earlier
  * assertion throws. On 2026-09-08 a failing test did exactly that, the
  * `afterEach` below then deleted the throwaway row, and the test database was
- * left with NO active pricing version at all: every later test in the file
+ * left with NO active pricing version at all (the deletion is gone as of
+ * T-32; capturing the version once, up here, is what fixed this): every later test in the file
  * failed with "no active PricingSettings row - seed first", which reads like
  * a missing seed rather than like the previous test's wreckage.
  */
 let originallyActiveVersion: number | null = null;
+
+/*
+  T-32. This file publishes pricing versions, which moves every price on the
+  site for as long as one of them is live, so it runs with nothing else
+  pricing anything. Declared before the hook below on purpose: Vitest's
+  default hook order is "stack", so the lock is taken before the active
+  version is read and given back after it has been restored.
+*/
+publishesPricingVersions();
 
 beforeAll(async () => {
   originallyActiveVersion = (await getActivePricingVersion())?.version ?? null;
@@ -55,19 +64,31 @@ afterEach(async () => {
   await prisma.orderItem.deleteMany({ where: { order: { email: { startsWith: PREFIX } } } });
   await prisma.order.deleteMany({ where: { email: { startsWith: PREFIX } } });
   await prisma.auditLog.deleteMany({ where: { actorEmail: { startsWith: PREFIX } } });
-  if (createdVersions.length > 0) {
-    await prisma.pricingSettings.deleteMany({ where: { version: { in: createdVersions } } });
-    createdVersions.length = 0;
-  }
-  // Last, and directly rather than through `applyPublishPricingVersion`:
-  // publishing now demands a simulation stamp, and this is cleanup, not a
-  // thing under test.
+  /*
+    T-32, and both halves of this are about the rest of the suite rather than
+    about this file. Measured, not reasoned about - `pricing-fixture.ts`
+    carries the numbers.
+
+    **The swap back is one transaction now.** It used to be two statements,
+    and between them the database had no active pricing version at all: 13
+    such windows in a 90 000-read probe of this file running alone. That is
+    exactly what `getConfiguratorProductData` refuses to price against, so
+    any file loading a product inside one failed with "No
+    `obraz-drewniany-z-grawerem` in this database", which reads like a
+    missing seed.
+
+    **And the versions this file published are no longer deleted here.** One
+    of them was seen active by another connection 180 times and then removed,
+    which is `Configuration_pricingVersion_fkey`. A row another worker has
+    already read is not this file's to delete; `global-setup.ts` sweeps them
+    once the run is over and nothing else is looking.
+
+    Still directly rather than through `applyPublishPricingVersion`:
+    publishing demands a simulation stamp, and this is cleanup, not a thing
+    under test.
+  */
   if (originallyActiveVersion !== null) {
-    await prisma.pricingSettings.updateMany({
-      where: { isActive: true, version: { not: originallyActiveVersion } },
-      data: { isActive: false },
-    });
-    await prisma.pricingSettings.update({ where: { version: originallyActiveVersion }, data: { isActive: true } });
+    await restoreActivePricingVersion(originallyActiveVersion);
   }
 });
 
@@ -79,7 +100,6 @@ describe('applyCreatePricingDraft', () => {
     const result = await applyCreatePricingDraft(admin, draftInput());
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error('setup failed');
-    createdVersions.push(result.version);
 
     const draft = await getPricingVersionByNumber(result.version);
     expect(draft?.isActive).toBe(false);
@@ -115,7 +135,6 @@ describe('applyPublishPricingVersion', () => {
     const before = await getActivePricingVersion();
     const created = await applyCreatePricingDraft(admin, draftInput({ machineRateCncGrosze: 99_999 }));
     if (!created.ok) throw new Error('setup failed');
-    createdVersions.push(created.version);
     // BUG-34: publishing now requires a recorded simulation. Part of the
     // setup here rather than the subject - the subject is the atomic swap.
     await applySimulatePricingDraft(admin, created.version);
@@ -201,7 +220,6 @@ describe('applyPublishPricingVersion', () => {
       draftInput({ machineRateCncGrosze: 999_999, machineRateLaserGrosze: 999_999, moduleSurchargeGrosze: 999_999 }),
     );
     if (!created.ok) throw new Error('setup failed');
-    createdVersions.push(created.version);
     await applySimulatePricingDraft(admin, created.version);
     /*
       Asserted, not fired and forgotten. This line used to ignore its result,
@@ -235,7 +253,6 @@ describe('the simulator is the interlock, so it has to be real', () => {
     const admin = adminActor();
     const created = await applyCreatePricingDraft(admin, draftInput());
     if (!created.ok) throw new Error('setup failed');
-    createdVersions.push(created.version);
 
     const result = await applyPublishPricingVersion(admin, created.version);
     expect(result.ok).toBe(false);
@@ -248,7 +265,6 @@ describe('the simulator is the interlock, so it has to be real', () => {
     const admin = adminActor();
     const created = await applyCreatePricingDraft(admin, draftInput());
     if (!created.ok) throw new Error('setup failed');
-    createdVersions.push(created.version);
 
     const simulated = await applySimulatePricingDraft(admin, created.version);
     expect(simulated.ok).toBe(true);
@@ -262,7 +278,6 @@ describe('the simulator is the interlock, so it has to be real', () => {
     const second = adminActor();
     const created = await applyCreatePricingDraft(first, draftInput());
     if (!created.ok) throw new Error('setup failed');
-    createdVersions.push(created.version);
 
     expect((await getPricingVersionByNumber(created.version))?.simulatedAt).toBeNull();
 
@@ -291,7 +306,6 @@ describe('the simulator is the interlock, so it has to be real', () => {
     // state this one created.
     const created = await applyCreatePricingDraft(admin, draftInput());
     if (!created.ok) throw new Error('setup failed');
-    createdVersions.push(created.version);
 
     const result = await applySimulatePricingDraft(admin, created.version);
     expect(result.ok).toBe(true);
@@ -335,7 +349,6 @@ describe('the simulator is the interlock, so it has to be real', () => {
       }),
     );
     if (!created.ok) throw new Error('setup failed');
-    createdVersions.push(created.version);
 
     const result = await applySimulatePricingDraft(admin, created.version);
     expect(result.ok).toBe(true);
