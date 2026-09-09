@@ -35,6 +35,7 @@ export function RegisterForm() {
         <TextField
           label={SITE.authNameLabelPl}
           name="name"
+          autoComplete="name"
           defaultValue={state.values.name}
           error={state.fieldErrors.name !== undefined}
           helperText={state.fieldErrors.name !== undefined ? authIssueMessage(state.fieldErrors.name) : undefined}
@@ -44,6 +45,7 @@ export function RegisterForm() {
         <TextField
           label={SITE.authEmailLabelPl}
           name="email"
+          autoComplete="email"
           type="email"
           defaultValue={state.values.email}
           error={state.fieldErrors.email !== undefined}
@@ -55,6 +57,7 @@ export function RegisterForm() {
           label={SITE.authPasswordLabelPl}
           name="password"
           type="password"
+          autoComplete="new-password"
           error={state.fieldErrors.password !== undefined}
           helperText={state.fieldErrors.password !== undefined ? authIssueMessage(state.fieldErrors.password) : undefined}
           size="small"

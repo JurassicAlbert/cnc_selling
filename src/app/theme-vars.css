@@ -208,6 +208,37 @@ body {
  * `position: relative` so the count badge can anchor to the icon rather than
  * to whatever ancestor happened to be positioned. */
 /*
+ * Space reserved at the very end of the document for anything pinned to the
+ * bottom of the viewport - RWD-01.
+ *
+ * The product page's `StickyPriceBar` is `position: fixed; bottom: 0`, 51 px
+ * tall, and nothing reserved room for it. Scrolled to the end of a product
+ * page on a 375x812 screen, `document.elementFromPoint` over the footer's
+ * last line returned the price bar: „© 2026 RYT" was underneath it. Only the
+ * copyright was lost in practice, but the mechanism does not care what ends
+ * up in those pixels, and every product page has that bar.
+ *
+ * On the footer rather than on `body`, and unconditional rather than scoped
+ * to the product page, for one reason each: the footer is genuinely the last
+ * thing in the document, so padding there is the only padding that lands
+ * BELOW everything; and a page cannot set a class on a layout it does not
+ * own, so a conditional version would have needed plumbing that buys nothing.
+ * The cost is ~56 px of extra whitespace under a footer that already has
+ * generous padding.
+ *
+ * Sized from a variable because there will be a second occupant: RWD-05's
+ * mobile bottom navigation goes in the same band, and whichever lands second
+ * needs this number rather than a new one.
+ */
+:root {
+  --sticky-bottom-space: 56px;
+}
+
+footer {
+  padding-block-end: var(--sticky-bottom-space);
+}
+
+/*
  * The carved RYT wordmark in the header (2026-09-08, owner's artwork).
  *
  * Height-driven with `width: auto` because the header is a flex row measured

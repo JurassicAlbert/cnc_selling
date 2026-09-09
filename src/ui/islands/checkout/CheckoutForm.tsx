@@ -229,11 +229,22 @@ export function CheckoutForm({
               <GuestAccountPanel />
             )}
 
+            {/*
+              RWD-02. `autoComplete` on every field, which none of them had.
+              It is what a phone keyboard and a password manager read: without
+              it a saved address is nine fields of thumb-typing on the screen
+              where a customer is deciding whether to bother.
+
+              `nip` deliberately has none - there is no standard token for a
+              tax identifier, and inventing one would either do nothing or
+              invite a browser to fill it with something else.
+            */}
             <SectionCard heading={SITE.checkoutBuyerSectionHeadingPl}>
               <TextField
                 label={SITE.checkoutEmailLabelPl}
                 name="email"
                 type="email"
+                autoComplete="email"
                 required
                 defaultValue={v.email}
                 error={state.fieldErrors.email !== undefined}
@@ -245,6 +256,7 @@ export function CheckoutForm({
                 label={SITE.checkoutPhoneLabelPl}
                 name="phone"
                 type="tel"
+                autoComplete="tel"
                 required
                 defaultValue={v.phone}
                 error={state.fieldErrors.phone !== undefined}
@@ -255,6 +267,7 @@ export function CheckoutForm({
               <TextField
                 label={SITE.checkoutFirstNameLabelPl}
                 name="firstName"
+                autoComplete="given-name"
                 required
                 defaultValue={v.firstName}
                 error={state.fieldErrors.firstName !== undefined}
@@ -265,6 +278,7 @@ export function CheckoutForm({
               <TextField
                 label={SITE.checkoutLastNameLabelPl}
                 name="lastName"
+                autoComplete="family-name"
                 required
                 defaultValue={v.lastName}
                 error={state.fieldErrors.lastName !== undefined}
@@ -275,7 +289,7 @@ export function CheckoutForm({
             </SectionCard>
 
             <SectionCard heading={SITE.checkoutInvoiceSectionHeadingPl}>
-              <TextField label={SITE.checkoutCompanyNameLabelPl} name="companyName" defaultValue={v.companyName} size="small" fullWidth />
+              <TextField label={SITE.checkoutCompanyNameLabelPl} name="companyName" autoComplete="organization" defaultValue={v.companyName} size="small" fullWidth />
               <TextField
                 label={SITE.checkoutNipLabelPl}
                 name="nip"
@@ -291,6 +305,7 @@ export function CheckoutForm({
               <TextField
                 label={SITE.checkoutStreetLabelPl}
                 name="street"
+                autoComplete="street-address"
                 required
                 defaultValue={v.street}
                 error={state.fieldErrors.street !== undefined}
@@ -302,6 +317,7 @@ export function CheckoutForm({
                 <TextField
                   label={SITE.checkoutPostalCodeLabelPl}
                   name="postalCode"
+                  autoComplete="postal-code"
                   placeholder="00-001"
                   required
                   defaultValue={v.postalCode}
@@ -313,6 +329,7 @@ export function CheckoutForm({
                 <TextField
                   label={SITE.checkoutCityLabelPl}
                   name="city"
+                  autoComplete="address-level2"
                   required
                   defaultValue={v.city}
                   error={state.fieldErrors.city !== undefined}

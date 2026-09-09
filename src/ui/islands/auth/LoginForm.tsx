@@ -45,6 +45,7 @@ export function LoginForm() {
         <TextField
           label={SITE.authEmailLabelPl}
           name="email"
+          autoComplete="email"
           type="email"
           defaultValue={state.values.email}
           error={state.fieldErrors.email !== undefined}
@@ -56,6 +57,7 @@ export function LoginForm() {
           label={SITE.authPasswordLabelPl}
           name="password"
           type="password"
+          autoComplete="current-password"
           error={state.fieldErrors.password !== undefined}
           helperText={state.fieldErrors.password !== undefined ? authIssueMessage(state.fieldErrors.password) : undefined}
           size="small"
