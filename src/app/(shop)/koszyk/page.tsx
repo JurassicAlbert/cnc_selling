@@ -6,7 +6,9 @@ import { getSession } from '@/server/auth/session';
 import { readGuestSessionToken } from '@/server/session/read-guest-session';
 import { findCartForRequest } from '@/server/repositories/cart';
 import { listActiveCategories } from '@/server/repositories/categories';
+import { readCartUndo } from '@/server/session/cart-undo';
 import { CartContents } from '@/ui/islands/cart/CartContents';
+import { CartUndoBar } from '@/ui/primitives/CartUndoBar';
 import { CategoryRail } from '@/ui/primitives/CategoryRail';
 import { CheckoutSteps } from '@/ui/primitives/CheckoutSteps';
 import { Container } from '@/ui/primitives/Container';
@@ -53,6 +55,10 @@ export default async function CartPage() {
     listActiveCategories(),
   ]);
   const cart = await findCartForRequest({ userId: session?.userId ?? null, sessionToken });
+  // UX-11. Read here rather than inside `CartContents`, because the bar has
+  // to survive the empty-cart branch below - removing your only line is the
+  // removal most worth being able to take back.
+  const undo = await readCartUndo();
 
   return (
     <>
@@ -65,6 +71,8 @@ export default async function CartPage() {
       <Section>
         <Container>
           <Heading level={1}>{SITE.cartHeadingPl}</Heading>
+
+          {undo !== null && <CartUndoBar />}
 
           {cart.items.length === 0 ? (
             <div style={{ marginBlockStart: 24 }}>

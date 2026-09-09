@@ -343,7 +343,10 @@ async function findOwnedCartItem(cartItemId: string, owner: Owner) {
   }
   return prisma.cartItem.findFirst({
     where: { id: cartItemId, cart: { OR: ownerOrClauses(owner) } },
-    select: { id: true, configurationId: true, cartId: true },
+    // `quantity` and `configurationSignature` are here for UX-11's undo: the
+    // removal has to be able to say what it took, and the signature is the
+    // line's identity in its cart, so restoring never has to re-derive it.
+    select: { id: true, configurationId: true, cartId: true, quantity: true, configurationSignature: true },
   });
 }
 
@@ -395,16 +398,100 @@ export async function applyAdjustCartItemQuantity(owner: Owner, cartItemId: stri
   });
 }
 
-export async function applyRemoveCartItem(owner: Owner, cartItemId: string): Promise<void> {
+/**
+ * What a removal took, so it can be offered back - UX-11.
+ *
+ * Not a soft delete and not a tombstone: a removal only ever deleted the
+ * `CartItem`, and the `Configuration` behind it survives untouched as a saved
+ * project. Nothing about the item is destroyed by removing it from the cart,
+ * so undo needs the line's identity for half a minute and nothing else.
+ */
+export type RemovedCartLine = {
+  readonly configurationId: string;
+  readonly configurationSignature: string;
+  readonly quantity: number;
+};
+
+export async function applyRemoveCartItem(owner: Owner, cartItemId: string): Promise<RemovedCartLine | null> {
   const owned = await findOwnedCartItem(cartItemId, owner);
   if (owned === null) {
-    return;
+    return null;
   }
   // `deleteMany`, not `delete`: a concurrent removal of the same row (two
   // tabs, a double-clicked bin icon) would make the second `delete` throw
   // "record not found" and surface as a server error, for an outcome the
   // customer already got.
-  await prisma.cartItem.deleteMany({ where: { id: cartItemId } });
+  const { count } = await prisma.cartItem.deleteMany({ where: { id: cartItemId } });
+  // Nothing deleted means the other tab got there first, and that removal
+  // owns the undo. Reporting a line this call did not remove would offer a
+  // „Cofnij" that races the one already on screen.
+  if (count === 0) {
+    return null;
+  }
+
+  return {
+    configurationId: owned.configurationId,
+    configurationSignature: owned.configurationSignature,
+    quantity: owned.quantity,
+  };
+}
+
+/**
+ * UX-11's „Cofnij". Puts a removed line back exactly as it was.
+ *
+ * **Deliberately not `applyAddToCart`.** That re-prices and re-validates from
+ * selections, which is right for adding something but wrong for undoing: it
+ * could refuse (an option withdrawn in the meantime), or come back at a
+ * different price. „Cofnij" promises the previous state, so this re-creates
+ * the line from the `Configuration` that never went anywhere.
+ *
+ * Returns whether anything was restored. `false` covers a configuration this
+ * owner does not own - the undo travels in an `HttpOnly` cookie, but a cookie
+ * is still something a client holds, and this is the check that makes that
+ * not matter.
+ */
+export async function applyRestoreCartItem(
+  owner: Owner,
+  sessionToken: string,
+  line: RemovedCartLine,
+): Promise<boolean> {
+  if (!(await ownsConfiguration(line.configurationId, owner))) {
+    return false;
+  }
+
+  const cart = await ensureCart(owner, sessionToken);
+
+  await prisma.$transaction(async (tx) => {
+    /*
+      The customer removes a line, adds the same product again in another tab,
+      and only then presses „Cofnij". `CartItem` is unique on
+      (cartId, configurationSignature), so a plain insert is a 500 for a
+      sequence a real person can produce in ten seconds. Merge, exactly as
+      `applyAddToCart` does for the same collision.
+    */
+    const existing = await tx.cartItem.findUnique({
+      where: { cartId_configurationSignature: { cartId: cart.id, configurationSignature: line.configurationSignature } },
+      select: { id: true, quantity: true },
+    });
+    if (existing !== null) {
+      await tx.cartItem.update({
+        where: { id: existing.id },
+        data: { quantity: clampCartQuantity(existing.quantity + line.quantity) },
+      });
+      return;
+    }
+
+    await tx.cartItem.create({
+      data: {
+        cartId: cart.id,
+        configurationId: line.configurationId,
+        configurationSignature: line.configurationSignature,
+        quantity: clampCartQuantity(line.quantity),
+      },
+    });
+  });
+
+  return true;
 }
 
 /**

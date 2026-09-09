@@ -267,6 +267,14 @@ export const SITE = {
   cartDesignReviewHoldPl: 'Zamówienie trafi do weryfikacji projektu, zanim ruszy produkcja.',
   /** The closed label of the per-line notes disclosure. The count follows in brackets, which needs no plural form. */
   cartLineNotesSummaryPl: 'Uwagi do tej pozycji',
+  /*
+    UX-11. The bar shown after a removal, for thirty seconds. It names no
+    product deliberately: the message is about the action, and looking the
+    name up would cost a query on every cart render to say something the
+    customer watched happen a moment ago.
+  */
+  cartUndoRemovedPl: 'Pozycja została usunięta z koszyka.',
+  cartUndoActionPl: 'Cofnij',
   cartRemovePl: 'Usuń',
   /*
     „Aktualizuj", „Duplikuj" and „Edytuj" were removed here on 2026-09-05

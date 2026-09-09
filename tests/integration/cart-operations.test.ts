@@ -14,6 +14,7 @@ import {
   applyDeleteConfiguration,
   applyDuplicateCartItem,
   applyRemoveCartItem,
+  applyRestoreCartItem,
   applyUpdateCartItemConfiguration,
 } from '@/server/operations/cart';
 import type { Owner } from '@/server/session/ownership';
@@ -329,7 +330,12 @@ describe('cart ownership (audit - §16.1 re-derives the actor, never trusts an i
     if (cartItemId === undefined) throw new Error('setup failed');
 
     await applyRemoveCartItem(guestOwner(sessionToken), cartItemId);
-    await expect(applyRemoveCartItem(guestOwner(sessionToken), cartItemId)).resolves.toBeUndefined();
+    /*
+      `null`, not `undefined`, since UX-11 gave this a return value: the second
+      call removed nothing and says so. That is what stops a double-click from
+      arming a second „Cofnij" for a line the first click already took.
+    */
+    await expect(applyRemoveCartItem(guestOwner(sessionToken), cartItemId)).resolves.toBeNull();
 
     expect((await readCart(sessionToken)).items).toHaveLength(0);
   });
@@ -715,5 +721,114 @@ describe('deleting a saved project', () => {
 
     expect(await applyDeleteConfiguration(guestOwner(mine), configurationId)).toBe(false);
     expect(await prisma.configuration.count({ where: { sessionToken: theirs } })).toBe(1);
+  });
+});
+
+/**
+ * `docs/AI-CHECKLIST.md` UX-11 - removing a line was instant and
+ * irreversible.
+ *
+ * `ARCHITECTURE.md` §16A.5 states the rule the panel already follows:
+ * "optimistic updates with undo ... rather than a confirmation dialog before
+ * every action", and dialogs reserved for what genuinely cannot be taken
+ * back. A cart removal is not one of those - the `Configuration` survives the
+ * removal untouched, because `applyRemoveCartItem` only ever deleted the
+ * `CartItem`. So the item was never really destroyed; there was simply no way
+ * back to it.
+ *
+ * That is what makes undo cheap here and worth doing properly: nothing needs
+ * a soft delete, a tombstone or a retention policy. It needs the line's own
+ * identity kept for half a minute.
+ */
+describe('undoing a cart removal', () => {
+  it('reports what it removed, so something can offer it back', async () => {
+    const sessionToken = uid();
+    const selections = await priceableSelections();
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 3);
+    const line = (await readCart(sessionToken)).items[0];
+    if (line === undefined) throw new Error('setup failed');
+
+    const removed = await applyRemoveCartItem(guestOwner(sessionToken), line.cartItemId);
+
+    expect(removed).not.toBeNull();
+    expect(removed?.configurationId).toBe(line.configurationId);
+    expect(removed?.quantity).toBe(3);
+    expect((await readCart(sessionToken)).items).toHaveLength(0);
+  });
+
+  it('puts the line back with the quantity it had, not with one', async () => {
+    const sessionToken = uid();
+    const selections = await priceableSelections();
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 4);
+    const line = (await readCart(sessionToken)).items[0];
+    if (line === undefined) throw new Error('setup failed');
+
+    const removed = await applyRemoveCartItem(guestOwner(sessionToken), line.cartItemId);
+    if (removed === null) throw new Error('setup failed');
+
+    expect(await applyRestoreCartItem(guestOwner(sessionToken), sessionToken, removed)).toBe(true);
+
+    const after = await readCart(sessionToken);
+    expect(after.items).toHaveLength(1);
+    expect(after.items[0]?.quantity).toBe(4);
+    // The same configuration, not a fresh copy of it - re-pricing on the way
+    // back would be a different item at a possibly different price, which is
+    // not what „Cofnij" promises.
+    expect(after.items[0]?.configurationId).toBe(line.configurationId);
+  });
+
+  it('merges rather than throwing when the same thing is already back in the cart', async () => {
+    /*
+      The customer removes a line, adds the same product again from another
+      tab, and only then presses „Cofnij". `CartItem` has a unique index on
+      (cartId, configurationSignature), so a naive re-insert is a 500 for a
+      sequence a real person can produce in ten seconds.
+    */
+    const sessionToken = uid();
+    const selections = await priceableSelections();
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 2);
+    const line = (await readCart(sessionToken)).items[0];
+    if (line === undefined) throw new Error('setup failed');
+
+    const removed = await applyRemoveCartItem(guestOwner(sessionToken), line.cartItemId);
+    if (removed === null) throw new Error('setup failed');
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 1);
+
+    expect(await applyRestoreCartItem(guestOwner(sessionToken), sessionToken, removed)).toBe(true);
+
+    const after = await readCart(sessionToken);
+    expect(after.items).toHaveLength(1);
+    expect(after.items[0]?.quantity).toBe(3);
+  });
+
+  it('refuses a configuration the asker does not own', async () => {
+    // The undo token is an `HttpOnly` cookie, but a cookie is still something
+    // a client holds, and this is the check that makes that not matter.
+    const owner = uid();
+    const stranger = uid();
+    const selections = await priceableSelections();
+    await applyAddToCart(guestOwner(owner), owner, PRODUCT_SLUG, selections, [], 1);
+    const line = (await readCart(owner)).items[0];
+    if (line === undefined) throw new Error('setup failed');
+    const removed = await applyRemoveCartItem(guestOwner(owner), line.cartItemId);
+    if (removed === null) throw new Error('setup failed');
+
+    expect(await applyRestoreCartItem(guestOwner(stranger), stranger, removed)).toBe(false);
+    expect((await readCart(stranger)).items).toHaveLength(0);
+  });
+
+  it('never restores past the per-line maximum', async () => {
+    const sessionToken = uid();
+    const selections = await priceableSelections();
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], MAX_CART_ITEM_QUANTITY);
+    const line = (await readCart(sessionToken)).items[0];
+    if (line === undefined) throw new Error('setup failed');
+    const removed = await applyRemoveCartItem(guestOwner(sessionToken), line.cartItemId);
+    if (removed === null) throw new Error('setup failed');
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 2);
+
+    await applyRestoreCartItem(guestOwner(sessionToken), sessionToken, removed);
+
+    expect((await readCart(sessionToken)).items[0]?.quantity).toBe(MAX_CART_ITEM_QUANTITY);
   });
 });
