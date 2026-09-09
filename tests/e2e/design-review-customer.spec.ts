@@ -23,9 +23,9 @@ import { prisma } from '../../src/server/db/client';
  */
 async function login(page: Page, params: { readonly email: string; readonly password: string }) {
   await page.goto('/logowanie');
-  const passwordForm = page.locator('form').filter({ has: page.getByLabel('Hasło') });
+  const passwordForm = page.locator('form').filter({ has: page.getByLabel('Hasło', { exact: true }) });
   await fillReliably(passwordForm.getByLabel('Adres e-mail'), params.email);
-  await fillReliably(passwordForm.getByLabel('Hasło'), params.password);
+  await fillReliably(passwordForm.getByLabel('Hasło', { exact: true }), params.password);
   await passwordForm.getByRole('button', { name: 'Zaloguj się' }).click();
   await expect(page).not.toHaveURL('/logowanie');
 }

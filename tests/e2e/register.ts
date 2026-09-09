@@ -56,7 +56,15 @@ export async function registerAccount(
   await page.goto('/rejestracja');
   await fillReliably(page.getByLabel('Imię i nazwisko'), params.name);
   await fillReliably(page.getByLabel('Adres e-mail'), params.email);
-  await fillReliably(page.getByLabel('Hasło'), params.password);
+  /*
+    `exact` since RWD-03 put a „Pokaż hasło" toggle inside the field.
+    Playwright's `getByLabel` matches substrings by default, so the button's
+    own name contains the field's and a bare lookup resolves to two elements -
+    which broke thirteen call sites across six specs at once. The label is
+    right (a screen reader hearing only „Pokaż" would not know of what), so
+    the locators are what had to become precise.
+  */
+  await fillReliably(page.getByLabel('Hasło', { exact: true }), params.password);
   await page.getByRole('button', { name: 'Załóż konto' }).click();
 
   await expect(page).toHaveURL('/moje-konto', { timeout: REGISTER_BUDGET_MS });

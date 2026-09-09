@@ -9,6 +9,7 @@ import { Alert, Button, Stack, TextField, Typography } from '@mui/material';
 
 import { authFormErrorMessage, authIssueMessage } from '@/content/pl/messages';
 import { SITE } from '@/content/pl/site';
+import { PasswordField } from '@/ui/islands/auth/PasswordField';
 import { submitRegister } from '@/server/actions/auth';
 import type { RegisterFormState } from '@/server/actions/auth';
 
@@ -53,15 +54,10 @@ export function RegisterForm() {
           size="small"
           fullWidth
         />
-        <TextField
-          label={SITE.authPasswordLabelPl}
-          name="password"
-          type="password"
+        <PasswordField
           autoComplete="new-password"
           error={state.fieldErrors.password !== undefined}
           helperText={state.fieldErrors.password !== undefined ? authIssueMessage(state.fieldErrors.password) : undefined}
-          size="small"
-          fullWidth
         />
 
         <SubmitButton />

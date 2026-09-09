@@ -21,9 +21,9 @@ async function login(page: Page, params: { readonly email: string; readonly pass
   // `/logowanie` has TWO "Adres e-mail" fields (password login + the OTP
   // request form below it) - scoped to the form that also has "Hasło",
   // which only the password-login form does.
-  const passwordForm = page.locator('form').filter({ has: page.getByLabel('Hasło') });
+  const passwordForm = page.locator('form').filter({ has: page.getByLabel('Hasło', { exact: true }) });
   await fillReliably(passwordForm.getByLabel('Adres e-mail'), params.email);
-  await fillReliably(passwordForm.getByLabel('Hasło'), params.password);
+  await fillReliably(passwordForm.getByLabel('Hasło', { exact: true }), params.password);
   await passwordForm.getByRole('button', { name: 'Zaloguj się' }).click();
   await expect(page).toHaveURL('/moje-konto');
 }

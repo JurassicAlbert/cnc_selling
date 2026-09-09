@@ -25,9 +25,9 @@ async function registerAndPromote(
   // so the next request carries a session reflecting the real, current role.
   await page.getByRole('button', { name: 'Wyloguj się' }).click();
   await page.goto('/logowanie');
-  const passwordForm = page.locator('form').filter({ has: page.getByLabel('Hasło') });
+  const passwordForm = page.locator('form').filter({ has: page.getByLabel('Hasło', { exact: true }) });
   await fillReliably(passwordForm.getByLabel('Adres e-mail'), params.email);
-  await fillReliably(passwordForm.getByLabel('Hasło'), params.password);
+  await fillReliably(passwordForm.getByLabel('Hasło', { exact: true }), params.password);
   await passwordForm.getByRole('button', { name: 'Zaloguj się' }).click();
   // STAFF/ADMIN sign-in lands on /panel directly, not /moje-konto - the
   // real redirect logic §9z17 fixed, incidentally re-proven here by a

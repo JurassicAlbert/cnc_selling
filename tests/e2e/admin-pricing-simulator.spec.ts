@@ -46,9 +46,9 @@ test('the pre-publish simulator prices real, named products, and gates the butto
   // at sign-up, before the promotion above. Same dance as `admin-authz.spec.ts`.
   await page.getByRole('button', { name: 'Wyloguj się' }).click();
   await page.goto('/logowanie');
-  const passwordForm = page.locator('form').filter({ has: page.getByLabel('Hasło') });
+  const passwordForm = page.locator('form').filter({ has: page.getByLabel('Hasło', { exact: true }) });
   await fillReliably(passwordForm.getByLabel('Adres e-mail'), email);
-  await fillReliably(passwordForm.getByLabel('Hasło'), password);
+  await fillReliably(passwordForm.getByLabel('Hasło', { exact: true }), password);
   await passwordForm.getByRole('button', { name: 'Zaloguj się' }).click();
   await expect(page).toHaveURL('/panel');
 

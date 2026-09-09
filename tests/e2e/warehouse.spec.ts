@@ -18,9 +18,9 @@ async function signInAsAdmin(page: Page, email: string): Promise<void> {
   // The session's role claim was read at sign-up, before the promotion.
   await page.getByRole('button', { name: 'Wyloguj się' }).click();
   await page.goto('/logowanie');
-  const passwordForm = page.locator('form').filter({ has: page.getByLabel('Hasło') });
+  const passwordForm = page.locator('form').filter({ has: page.getByLabel('Hasło', { exact: true }) });
   await fillReliably(passwordForm.getByLabel('Adres e-mail'), email);
-  await fillReliably(passwordForm.getByLabel('Hasło'), password);
+  await fillReliably(passwordForm.getByLabel('Hasło', { exact: true }), password);
   await passwordForm.getByRole('button', { name: 'Zaloguj się' }).click();
   await expect(page).toHaveURL('/panel');
 }
@@ -104,9 +104,9 @@ test('a staff member can read the warehouse but not write to it', async ({ page 
   await prisma.user.update({ where: { email }, data: { role: 'STAFF' } });
   await page.getByRole('button', { name: 'Wyloguj się' }).click();
   await page.goto('/logowanie');
-  const passwordForm = page.locator('form').filter({ has: page.getByLabel('Hasło') });
+  const passwordForm = page.locator('form').filter({ has: page.getByLabel('Hasło', { exact: true }) });
   await fillReliably(passwordForm.getByLabel('Adres e-mail'), email);
-  await fillReliably(passwordForm.getByLabel('Hasło'), password);
+  await fillReliably(passwordForm.getByLabel('Hasło', { exact: true }), password);
   await passwordForm.getByRole('button', { name: 'Zaloguj się' }).click();
   await expect(page).toHaveURL('/panel');
 

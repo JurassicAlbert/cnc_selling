@@ -278,6 +278,13 @@ export const SITE = {
     375 px row; „Konto" rather than „Moje konto" for the same reason, and it
     is what the header's own account menu is called once opened.
   */
+  /*
+    RWD-03. The button's name says what pressing it will DO, not what the
+    field is currently showing - a toggle named after its own state is the
+    classic way to leave a screen-reader user guessing which way it goes.
+  */
+  authShowPasswordPl: 'Pokaż hasło',
+  authHidePasswordPl: 'Ukryj hasło',
   bottomNavLabelPl: 'Nawigacja dolna',
   bottomNavHomePl: 'Strona główna',
   bottomNavCollectionsPl: 'Kolekcje',
