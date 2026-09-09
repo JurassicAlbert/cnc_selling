@@ -1,6 +1,7 @@
 import { prisma } from '@/server/db/client';
 import { evaluateDeliveryMethod } from '@/domain/checkout/delivery';
 import type { DeliveryPriceInfo } from '@/domain/checkout/delivery';
+import { chooseInsuranceTier } from '@/domain/checkout/insurance';
 import type { CartWeightItem } from '@/domain/shipping/weight';
 import type { CartItemView } from '@/server/repositories/cart';
 
@@ -43,6 +44,18 @@ export type ActiveDeliveryMethod = {
    * themselves is a sentence about nothing.
    */
   readonly freeShippingApplied: boolean;
+  /**
+   * INSURANCE-01. The declared-value band that covers THIS cart, or `null`
+   * when the carrier has no table or the order is worth more than the table
+   * covers - `chooseInsuranceTier` refuses to sell "do 5000 zł" cover on a
+   * 6000 zł order, and the caller hides the option rather than offering
+   * something that would not pay out.
+   *
+   * Resolved here, beside the delivery price, because `createOrder`
+   * re-derives both from this same function and the two must never disagree
+   * with the picker that produced the submission.
+   */
+  readonly insurance: { readonly labelPl: string; readonly priceGrosze: number } | null;
 };
 
 function toCartWeightItems(items: readonly CartItemView[]): readonly CartWeightItem[] {
@@ -92,6 +105,10 @@ export async function resolveDeliveryMethodsForCart(cart: {
         orderBy: { sortOrder: 'asc' },
         select: { labelPl: true, maxWeightGrams: true, priceGrosze: true, maxWidthMm: true, maxHeightMm: true, maxDepthMm: true },
       },
+      insuranceTiers: {
+        orderBy: { sortOrder: 'asc' },
+        select: { labelPl: true, maxValueGrosze: true, priceGrosze: true },
+      },
     },
   });
 
@@ -104,6 +121,14 @@ export async function resolveDeliveryMethodsForCart(cart: {
       weightTiers: method.weightTiers,
     };
     const evaluation = evaluateDeliveryMethod(priceInfo, { subtotalGrossGrosze: cart.subtotalGrossGrosze, items: weightItems });
+    /*
+      Banded on the value of the goods - what a carrier's declared-value table
+      is about - rather than on the total, which would insure the postage as
+      well. Only offered on a method the cart can actually be sent by: cover
+      for a shipment that cannot happen is not an option, it is noise beside a
+      greyed-out choice.
+    */
+    const insuranceTier = evaluation.feasible ? chooseInsuranceTier(method.insuranceTiers, cart.subtotalGrossGrosze) : null;
 
     return {
       id: method.id,
@@ -119,6 +144,7 @@ export async function resolveDeliveryMethodsForCart(cart: {
       infeasibleReasonPl: evaluation.feasible ? null : infeasibleReasonMessage(evaluation.reason),
       matchedTierLabelPl: evaluation.feasible ? evaluation.matchedTierLabelPl : null,
       freeShippingApplied: evaluation.feasible && evaluation.freeShippingApplied,
+      insurance: insuranceTier === null ? null : { labelPl: insuranceTier.labelPl, priceGrosze: insuranceTier.priceGrosze },
     };
   });
 }

@@ -116,6 +116,9 @@ export type AdminOrderView = {
   readonly subtotalNetGrosze: number;
   readonly vatGrosze: number;
   readonly shippingGrosze: number;
+  /** INSURANCE-01. Snapshotted at checkout, like `shippingGrosze`. Zero and `null` when no cover was bought. */
+  readonly insuranceGrosze: number;
+  readonly insuranceLabelPl: string | null;
   readonly email: string;
   readonly phone: string | null;
   readonly firstName: string;
@@ -151,6 +154,8 @@ export async function findOrderForAdmin(orderNumber: string): Promise<AdminOrder
       subtotalNetGrosze: true,
       vatGrosze: true,
       shippingGrosze: true,
+      insuranceGrosze: true,
+      insuranceLabelPl: true,
       email: true,
       phone: true,
       firstName: true,
@@ -193,6 +198,8 @@ export async function findOrderForAdmin(orderNumber: string): Promise<AdminOrder
     subtotalNetGrosze: order.subtotalNetGrosze,
     vatGrosze: order.vatGrosze,
     shippingGrosze: order.shippingGrosze,
+    insuranceGrosze: order.insuranceGrosze,
+    insuranceLabelPl: order.insuranceLabelPl,
     email: order.email,
     phone: order.phone,
     firstName: order.firstName,

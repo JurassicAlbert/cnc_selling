@@ -178,31 +178,38 @@ audit trail arguably requires) or purged on request (a real GDPR
 erasure path, larger). Both are a couple of hours once decided; deciding
 is the part only the owner can do.
 
-## 10. Package insurance - real carrier rate cards needed
+## 10. Package insurance - built, waiting only for the real rate cards
 
 - **Owner request, 2026-09-05**, answering BUG-08: package insurance as a
   checkout option the customer can select. Asked how it should be priced,
   the owner chose **the carrier's real declared-value table** over a flat
   fee or a percentage.
-- **What exists so far** (2026-09-05): the data model and the band-selection
-  rule. `DeliveryInsuranceTier` holds a carrier's declared-value bands the
-  same way `DeliveryWeightTier` holds weight brackets, `Order` carries
-  `insuranceGrosze` and `insuranceLabelPl` snapshotted like
-  `shippingGrosze`/`deliveryMethodNamePl` beside them, and
-  `domain/checkout/insurance.ts` picks the cheapest band that covers an order
-  (8 unit tests, written first). **No band is seeded**, so
-  `isInsuranceOffered` is false for every method and nothing appears anywhere
-  in the UI.
-- **Still to build**: the checkout checkbox, adding the premium to the order
-  total at creation, showing it on the confirmation and in the admin order
-  view, and the `/panel/dostawa` screen for entering bands. Deliberately not
-  built ahead of the rates - a checkout control that cannot be priced is a
-  control that cannot be tested end to end, and the shape of the screen
-  depends on what a real rate card turns out to look like (flat bands, or
-  bands per weight tier as well).
-- **What's blocking it**: InPost's and DPD's actual declared-value
-  ("ubezpieczenie przesyłki") rate cards - the value bands and what each
-  band costs. Both publish these to business account holders; neither has
+- **What exists** (complete 2026-09-09): the whole mechanism, end to end.
+  `DeliveryInsuranceTier` holds a carrier's declared-value bands the same way
+  `DeliveryWeightTier` holds weight brackets; `domain/checkout/insurance.ts`
+  picks the cheapest band that covers an order (8 unit tests, written first);
+  `resolveDeliveryMethodsForCart` resolves the offer beside the delivery
+  price, so checkout and `createOrder` cannot disagree; the checkout shows an
+  opt-in control and the premium in the total; `createOrder` re-derives the
+  premium server-side from the carrier's table and snapshots
+  `insuranceGrosze`/`insuranceLabelPl` like `shippingGrosze` beside them; the
+  confirmation, order history and admin order views show it; and
+  `/panel/dostawa/[id]` has the editor for typing the bands in.
+- **What the owner has to do to turn it on**: open a delivery method under
+  `/panel/dostawa`, and enter the carrier's value bands under „Ubezpieczenie
+  przesyłki". That is the whole activation. **No band is seeded**, so today
+  every method's table is empty, no method offers cover, and no customer sees
+  anything at all - the screen says so in as many words rather than looking
+  broken.
+- **Two rules worth knowing before entering a card.** An order worth more
+  than the highest band is offered **nothing**, deliberately: selling „do
+  5000 zł" cover on a 6000 zł order would leave the customer believing they
+  are covered when they are not. And a customer who asks for cover that has
+  since been withdrawn gets a refusal at checkout rather than an uninsured
+  order placed quietly - `INSURANCE_UNAVAILABLE`.
+- **What's blocking it**: nothing in the code. Only the content - InPost's
+  and DPD's actual declared-value ("ubezpieczenie przesyłki") rate cards, the
+  value bands and what each band costs. Both publish these to business account holders; neither has
   a citable public table, which is the same wall item 2 hit with GEIS. The
   owner chose this over a flat fee or a percentage of order value, both of
   which could have shipped immediately.

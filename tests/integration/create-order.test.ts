@@ -79,7 +79,13 @@ async function seedGuestCartWithOneItem() {
   return { sessionToken, product, cart };
 }
 
-async function seedDeliveryMethod(overrides: { readonly isActive?: boolean; readonly requiresPickupPoint?: boolean } = {}) {
+async function seedDeliveryMethod(
+  overrides: {
+    readonly isActive?: boolean;
+    readonly requiresPickupPoint?: boolean;
+    readonly insuranceTiers?: readonly { readonly labelPl: string; readonly maxValueGrosze: number; readonly priceGrosze: number }[];
+  } = {},
+) {
   return prisma.deliveryMethod.create({
     data: {
       namePl: `${PREFIX}dostawa`,
@@ -89,6 +95,7 @@ async function seedDeliveryMethod(overrides: { readonly isActive?: boolean; read
       estimatedDaysMax: 3,
       isActive: overrides.isActive ?? true,
       requiresPickupPoint: overrides.requiresPickupPoint ?? false,
+      insuranceTiers: overrides.insuranceTiers === undefined ? undefined : { create: [...overrides.insuranceTiers] },
     },
   });
 }
@@ -204,9 +211,11 @@ function baseInput(overrides: {
   readonly paymentMethodConfigId: string;
   readonly pickupPointId?: string | null;
   readonly idempotencyKey?: string;
+  readonly insuranceSelected?: boolean;
 }) {
   return {
     idempotencyKey: overrides.idempotencyKey ?? uid(),
+    insuranceSelected: overrides.insuranceSelected ?? false,
     sessionToken: overrides.sessionToken,
     userId: null,
     email: 'test@example.test',
@@ -630,5 +639,100 @@ describe('the order snapshot, as ARCHITECTURE.md §6.8 specifies it', () => {
     expect(snapshot.materialNamePl).not.toBeNull();
     expect(snapshot.moduleLayout.totalModules).toBeGreaterThan(0);
     expect(snapshot.priceBreakdown.unitGrossGrosze).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * INSURANCE-01. The premium is re-derived here from the carrier's own table
+ * and the real cart, exactly like the delivery price beside it: the client
+ * sends a **boolean**, never an amount, so there is nothing for a crafted
+ * submission to set.
+ *
+ * `Order.insuranceGrosze` and `insuranceLabelPl` are snapshotted like
+ * `shippingGrosze` and `deliveryMethodNamePl` - editing or removing a band
+ * later must never change what a past order says it was charged.
+ */
+describe('createOrder - insurance', () => {
+  const COVERS_ANYTHING = [{ labelPl: 'do 5000 zł', maxValueGrosze: 500_000, priceGrosze: 900 }] as const;
+
+  it('charges the band that covers the cart, and puts it in the total', async () => {
+    const { sessionToken } = await seedPriceableGuestCart();
+    const delivery = await seedDeliveryMethod({ insuranceTiers: COVERS_ANYTHING });
+    const payment = await seedPaymentMethodConfig();
+
+    const result = await createOrder(
+      baseInput({ sessionToken, deliveryMethodId: delivery.id, paymentMethodConfigId: payment.id, insuranceSelected: true }),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const order = await prisma.order.findUnique({ where: { orderNumber: result.orderNumber } });
+    expect(order?.insuranceGrosze).toBe(900);
+    expect(order?.insuranceLabelPl).toBe('do 5000 zł');
+    // The premium is part of what the customer owes, not a note beside it.
+    expect(order?.totalGrossGrosze).toBe(
+      (order?.subtotalNetGrosze ?? 0) + (order?.vatGrosze ?? 0) + (order?.shippingGrosze ?? 0) + 900,
+    );
+    expect(result.confirmation?.totalGrossGrosze).toBe(order?.totalGrossGrosze);
+  });
+
+  it('charges nothing when the customer did not ask for it, even where it is offered', async () => {
+    const { sessionToken } = await seedPriceableGuestCart();
+    const delivery = await seedDeliveryMethod({ insuranceTiers: COVERS_ANYTHING });
+    const payment = await seedPaymentMethodConfig();
+
+    const result = await createOrder(
+      baseInput({ sessionToken, deliveryMethodId: delivery.id, paymentMethodConfigId: payment.id, insuranceSelected: false }),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const order = await prisma.order.findUnique({ where: { orderNumber: result.orderNumber } });
+    expect(order?.insuranceGrosze).toBe(0);
+    expect(order?.insuranceLabelPl).toBeNull();
+    expect(order?.totalGrossGrosze).toBe((order?.subtotalNetGrosze ?? 0) + (order?.vatGrosze ?? 0) + (order?.shippingGrosze ?? 0));
+  });
+
+  it('refuses rather than quietly shipping uninsured when the method offers no cover', async () => {
+    const { sessionToken } = await seedPriceableGuestCart();
+    // No bands at all - the state every method is in today.
+    const delivery = await seedDeliveryMethod();
+    const payment = await seedPaymentMethodConfig();
+
+    const result = await createOrder(
+      baseInput({ sessionToken, deliveryMethodId: delivery.id, paymentMethodConfigId: payment.id, insuranceSelected: true }),
+    );
+
+    /*
+      Placing the order anyway with `insuranceGrosze: 0` would be the worst
+      outcome available: the customer asked to be covered, was charged
+      nothing, and finds out what that meant only if the parcel is lost.
+      Refusing sends them back to a checkout that no longer offers it.
+    */
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe('INSURANCE_UNAVAILABLE');
+    expect(await prisma.order.count({ where: { deliveryMethodId: delivery.id } })).toBe(0);
+  });
+
+  it('refuses when the cart is worth more than the carrier will cover', async () => {
+    const { sessionToken } = await seedPriceableGuestCart();
+    // A table that exists but tops out below any real cart. Selling this band
+    // would tell the customer they are covered for the whole order when they
+    // are not.
+    const delivery = await seedDeliveryMethod({
+      insuranceTiers: [{ labelPl: 'do 1 zł', maxValueGrosze: 100, priceGrosze: 300 }],
+    });
+    const payment = await seedPaymentMethodConfig();
+
+    const result = await createOrder(
+      baseInput({ sessionToken, deliveryMethodId: delivery.id, paymentMethodConfigId: payment.id, insuranceSelected: true }),
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe('INSURANCE_UNAVAILABLE');
   });
 });

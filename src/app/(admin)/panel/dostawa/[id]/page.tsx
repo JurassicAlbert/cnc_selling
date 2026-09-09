@@ -4,6 +4,7 @@ import { Stack, Typography } from '@mui/material';
 import { findDeliveryMethodForAdmin } from '@/server/repositories/admin-delivery-methods';
 import { setDeliveryMethodActive } from '@/server/actions/admin-delivery-methods';
 import { ActiveToggleButton } from '@/ui/primitives/ActiveToggleButton';
+import { DeliveryInsuranceTiersEditor } from '@/ui/islands/admin/DeliveryInsuranceTiersEditor';
 import { DeliveryMethodForm } from '@/ui/islands/admin/DeliveryMethodForm';
 import { DeliveryWeightTiersEditor } from '@/ui/islands/admin/DeliveryWeightTiersEditor';
 import { RecordActivityTimeline } from '@/ui/islands/admin/RecordActivityTimeline';
@@ -33,6 +34,13 @@ export default async function AdminDeliveryMethodDetailPage({ params }: Delivery
        * (`docs/AUDIT-2026-08-30.md` §20).
        */}
       <DeliveryWeightTiersEditor deliveryMethodId={method.id} tiers={method.weightTiers} />
+      {/*
+       * INSURANCE-01. Below the weight tiers because it is the same kind of
+       * thing - a table copied from the carrier's rate card - and because it
+       * is optional: what a customer is charged for delivery is settled
+       * above, and this only adds to it if they ask for it.
+       */}
+      <DeliveryInsuranceTiersEditor deliveryMethodId={method.id} tiers={method.insuranceTiers} />
       <RecordActivityTimeline entity="DeliveryMethod" entityId={method.id} />
     </>
   );

@@ -47,6 +47,8 @@ type OrderSummaryOrderView = Pick<
   | 'subtotalNetGrosze'
   | 'vatGrosze'
   | 'shippingGrosze'
+  | 'insuranceGrosze'
+  | 'insuranceLabelPl'
   | 'totalGrossGrosze'
   | 'items'
   | 'deliveryMethodNamePl'
@@ -136,6 +138,27 @@ export function OrderSummary({
             {order.shippingGrosze === 0 ? SITE.orderFreeShippingPl : formatPln(order.shippingGrosze)}
           </Typography>
         </Stack>
+
+        {/*
+          INSURANCE-01. Only when it was actually bought. A zero line on every
+          order would read as cover included with everything, which is the
+          opposite of true.
+
+          The band's own label is shown beside the amount because a premium on
+          its own does not say what is covered, and this is the document the
+          customer keeps.
+        */}
+        {order.insuranceGrosze > 0 && (
+          <Stack direction="row" sx={{ justifyContent: 'space-between', mt: 0.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              {SITE.checkoutInsuranceSummaryLabelPl}
+              {order.insuranceLabelPl === null ? '' : ` - ${order.insuranceLabelPl}`}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+              {formatPln(order.insuranceGrosze)}
+            </Typography>
+          </Stack>
+        )}
 
         <Divider sx={{ my: 1.5 }} />
         <Stack direction="row" sx={{ justifyContent: 'space-between' }}>

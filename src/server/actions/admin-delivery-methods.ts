@@ -50,3 +50,17 @@ export async function removeDeliveryWeightTier(
 ): ReturnType<typeof operations.removeDeliveryWeightTier> {
   return operations.removeDeliveryWeightTier(...args);
 }
+
+export type { DeliveryInsuranceTierInput } from '@/server/operations/admin-delivery-methods';
+
+export async function addDeliveryInsuranceTier(
+  ...args: Parameters<typeof operations.addDeliveryInsuranceTier>
+): ReturnType<typeof operations.addDeliveryInsuranceTier> {
+  return operations.addDeliveryInsuranceTier(...args);
+}
+
+export async function removeDeliveryInsuranceTier(
+  ...args: Parameters<typeof operations.removeDeliveryInsuranceTier>
+): ReturnType<typeof operations.removeDeliveryInsuranceTier> {
+  return operations.removeDeliveryInsuranceTier(...args);
+}

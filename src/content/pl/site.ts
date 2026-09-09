@@ -374,6 +374,19 @@ export const SITE = {
   checkoutDeliveryInfeasibleTagPl: 'Niedostępne dla Twojego koszyka',
   checkoutDeliveryMatchedTierPl: (label: string) => `Rozmiar/waga: ${label}`,
   checkoutFreeShippingAppliedPl: 'Darmowa dostawa - Twoje zamówienie kwalifikuje się do darmowej wysyłki tą metodą.',
+  /*
+    INSURANCE-01. The band's own label comes from the carrier's rate card as
+    an admin typed it („do 5000 zł"), so the copy around it must not restate
+    the amount - two numbers that can disagree is exactly how a customer ends
+    up believing they are covered for something they are not.
+  */
+  checkoutInsuranceOptionLabelPl: (bandPl: string, pricePl: string) => `Ubezpieczenie przesyłki ${bandPl} - ${pricePl}`,
+  checkoutInsuranceHelperPl:
+    'Ochrona na wypadek zaginięcia lub uszkodzenia przesyłki w transporcie, według tabeli przewoźnika. Kwota zostanie doliczona do sumy zamówienia.',
+  checkoutInsuranceSummaryLabelPl: 'Ubezpieczenie',
+  /** Says plainly that nothing was charged, for the same reason `checkoutRateLimitedPl` does. */
+  checkoutInsuranceUnavailablePl:
+    'Ubezpieczenie nie jest już dostępne dla tego zamówienia - przewoźnik zmienił tabelę albo wartość koszyka wykracza poza jej zakres. Nic nie zostało obciążone. Odśwież stronę i wybierz ponownie.',
   checkoutCourierNoteLabelPl: 'Uwagi dla kuriera (opcjonalnie)',
   // The closing mark here was a straight `"` against an opening `„` - the
   // Polish pair is „…”, and a mismatched one is visible to any Polish

@@ -77,6 +77,15 @@ export type CreateOrderInput = {
   readonly courierNotePl: string | null;
   /** A note FOR US about the shipment - nothing to do with production, staff-visible only. */
   readonly internalShipmentNotePl: string | null;
+  /**
+   * INSURANCE-01. Whether the customer ticked the declared-value cover the
+   * chosen method offered.
+   *
+   * A **boolean, never an amount**: the premium is the carrier's own band for
+   * this cart, re-derived below from `resolveDeliveryMethodsForCart` exactly
+   * as the shipping price is, so a crafted submission has nothing to set.
+   */
+  readonly insuranceSelected: boolean;
 };
 
 export type CreateOrderResult =
@@ -115,7 +124,18 @@ export type CreateOrderResult =
   | { readonly ok: false; readonly code: 'OPTION_UNAVAILABLE' }
   | { readonly ok: false; readonly code: 'DELIVERY_METHOD_INVALID' }
   | { readonly ok: false; readonly code: 'PAYMENT_METHOD_INVALID' }
-  | { readonly ok: false; readonly code: 'PICKUP_POINT_INVALID' };
+  | { readonly ok: false; readonly code: 'PICKUP_POINT_INVALID' }
+  /**
+   * INSURANCE-01. The customer asked to be covered and the chosen method
+   * cannot cover this cart - either the carrier has no declared-value table,
+   * or the order is worth more than the table goes up to.
+   *
+   * A refusal rather than a silent downgrade on purpose. Placing the order
+   * with `insuranceGrosze: 0` would charge nothing for something the customer
+   * asked for and let them find out what that meant only if the parcel went
+   * missing.
+   */
+  | { readonly ok: false; readonly code: 'INSURANCE_UNAVAILABLE' };
 
 type RevalidatedItem = {
   readonly item: CartItemView;
@@ -297,7 +317,20 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   // figures, so re-deriving it again from the post-revalidation total would
   // only ever agree, never differ.
   const shippingGrosze = deliveryMethod.priceGrosze;
-  const totalGrossGrosze = subtotalNetGrosze + vatGrosze + shippingGrosze;
+  /*
+    Same reasoning one line up, and the same source: `deliveryMethod.insurance`
+    is the band the carrier's table gives THIS cart, decided by the function
+    that rendered the picker. `null` while the customer asked for cover means
+    the offer moved between the page render and the submission (a band edited
+    or removed at `/panel/dostawa`, or a cart that grew past the top band), and
+    that is a refusal, not a zero.
+  */
+  const insurance = input.insuranceSelected ? deliveryMethod.insurance : null;
+  if (input.insuranceSelected && insurance === null) {
+    return { ok: false, code: 'INSURANCE_UNAVAILABLE' };
+  }
+  const insuranceGrosze = insurance?.priceGrosze ?? 0;
+  const totalGrossGrosze = subtotalNetGrosze + vatGrosze + shippingGrosze + insuranceGrosze;
 
   const accessToken = randomBytes(32).toString('base64url');
   const cartItemIds = cart.items.map((i) => i.cartItemId);
@@ -370,6 +403,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
           subtotalNetGrosze,
           vatGrosze,
           shippingGrosze,
+          insuranceGrosze,
+          insuranceLabelPl: insurance?.labelPl ?? null,
           totalGrossGrosze,
           deliveryMethodId: input.deliveryMethodId,
           deliveryMethodNamePl: deliveryMethod.namePl,

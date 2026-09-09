@@ -179,8 +179,21 @@ export function CheckoutForm({
   const selectedPickupPoint =
     selectedPickupPointId !== null && pickupCarrier !== null ? findPickupPointById(pickupCarrier, selectedPickupPointId) : null;
 
+  /*
+    INSURANCE-01. The offer belongs to the SELECTED method, so switching
+    carrier can withdraw it - hence `insuranceOffered` recomputed on every
+    render rather than a second piece of state that could disagree with the
+    picker. The tick itself is kept, so going away to another method and
+    coming back does not silently drop cover the customer already chose;
+    what decides the charge is `insuranceOffered`, and an unrendered checkbox
+    posts nothing, so the server sees `false` either way.
+  */
+  const insuranceOffered = selectedDelivery?.feasible === true ? selectedDelivery.insurance : null;
+  const [insuranceSelected, setInsuranceSelected] = useState(state.values.insuranceSelected === 'true');
+  const insuranceGrosze = insuranceOffered !== null && insuranceSelected ? insuranceOffered.priceGrosze : 0;
+
   const shippingGrosze = selectedDelivery?.feasible === true ? selectedDelivery.priceGrosze : null;
-  const totalGrossGrosze = shippingGrosze !== null ? cart.subtotalGrossGrosze + shippingGrosze : null;
+  const totalGrossGrosze = shippingGrosze !== null ? cart.subtotalGrossGrosze + shippingGrosze + insuranceGrosze : null;
   const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
@@ -201,6 +214,9 @@ export function CheckoutForm({
             {state.formError === 'RATE_LIMITED' && <Alert severity="warning">{SITE.checkoutRateLimitedPl}</Alert>}
             {state.formError === 'OPTION_UNAVAILABLE' && (
               <Alert severity="warning">{SITE.checkoutOptionUnavailablePl}</Alert>
+            )}
+            {state.formError === 'INSURANCE_UNAVAILABLE' && (
+              <Alert severity="warning">{SITE.checkoutInsuranceUnavailablePl}</Alert>
             )}
 
             {/*
@@ -439,6 +455,32 @@ export function CheckoutForm({
                 <FormHelperText error>{checkoutIssueMessage(state.fieldErrors.deliveryMethodId)}</FormHelperText>
               )}
 
+              {/*
+                INSURANCE-01. Rendered only when the carrier's own table has a
+                band that covers this cart. Nothing is shown when it does not:
+                a disabled box is an offer of something we cannot sell, and a
+                band that stops below the order value would pay out less than
+                the customer would assume.
+
+                Opt-in, never pre-ticked. This adds money to the total.
+              */}
+              {insuranceOffered !== null && (
+                <Stack sx={{ pt: 1 }}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        name="insuranceSelected"
+                        size="small"
+                        checked={insuranceSelected}
+                        onChange={(event) => setInsuranceSelected(event.target.checked)}
+                      />
+                    }
+                    label={SITE.checkoutInsuranceOptionLabelPl(insuranceOffered.labelPl, formatPln(insuranceOffered.priceGrosze))}
+                  />
+                  <FormHelperText>{SITE.checkoutInsuranceHelperPl}</FormHelperText>
+                </Stack>
+              )}
+
               {selectedDelivery?.requiresPickupPoint === true && pickupCarrier !== null && (
                 <Stack spacing={1} sx={{ pt: 1 }}>
                   <Typography variant="subtitle2">{SITE.checkoutPickupPointLabelPl}</Typography>
@@ -584,6 +626,16 @@ export function CheckoutForm({
                   </Typography>
                   <Typography variant="body2">{shippingGrosze !== null ? formatPln(shippingGrosze) : '-'}</Typography>
                 </Stack>
+                {/* Only once it is actually being charged - a permanent zero
+                    row would read as cover included with every order. */}
+                {insuranceGrosze > 0 && (
+                  <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">
+                      {SITE.checkoutInsuranceSummaryLabelPl}
+                    </Typography>
+                    <Typography variant="body2">{formatPln(insuranceGrosze)}</Typography>
+                  </Stack>
+                )}
                 <Divider sx={{ my: 0.5 }} />
                 <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
                   <Typography variant="subtitle1">{SITE.orderTotalLabelPl}</Typography>

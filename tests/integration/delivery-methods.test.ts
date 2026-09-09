@@ -21,6 +21,11 @@ async function seedMethod(overrides: {
     readonly maxHeightMm?: number;
     readonly maxDepthMm?: number;
   }[];
+  readonly insuranceTiers?: readonly {
+    readonly labelPl: string;
+    readonly maxValueGrosze: number;
+    readonly priceGrosze: number;
+  }[];
 }) {
   return prisma.deliveryMethod.create({
     data: {
@@ -34,6 +39,7 @@ async function seedMethod(overrides: {
       sortOrder: overrides.sortOrder ?? 0,
       requiresPickupPoint: overrides.requiresPickupPoint ?? false,
       weightTiers: overrides.weightTiers === undefined ? undefined : { create: [...overrides.weightTiers] },
+      insuranceTiers: overrides.insuranceTiers === undefined ? undefined : { create: [...overrides.insuranceTiers] },
     },
   });
 }
@@ -84,6 +90,7 @@ function cartItem(overrides: Partial<CartItemView> = {}): CartItemView {
 afterEach(async () => {
   await prisma.order.deleteMany({ where: { deliveryMethod: { namePl: { startsWith: PREFIX } } } });
   await prisma.deliveryWeightTier.deleteMany({ where: { deliveryMethod: { namePl: { startsWith: PREFIX } } } });
+  await prisma.deliveryInsuranceTier.deleteMany({ where: { deliveryMethod: { namePl: { startsWith: PREFIX } } } });
   await prisma.deliveryMethod.deleteMany({ where: { namePl: { startsWith: PREFIX } } });
 });
 
@@ -167,5 +174,85 @@ describe('resolveDeliveryMethodsForCart', () => {
 
     expect(resolved?.feasible).toBe(true);
     expect(resolved?.priceGrosze).toBe(0);
+  });
+});
+
+/**
+ * INSURANCE-01. The offer a customer is shown has to be decided in the same
+ * place the delivery price is, because `createOrder` re-derives both from
+ * this one function and must never disagree with the picker that produced the
+ * submission.
+ *
+ * The bands themselves are the carrier's own declared-value table, entered at
+ * `/panel/dostawa`. None is seeded, so no method offers insurance today - that
+ * is `docs/OPEN_ITEMS.md` §10 and the owner's "you are not allowed to lie",
+ * not an oversight. These tests supply their own.
+ */
+/**
+ * The resolver returns EVERY active method, and other files create methods in
+ * parallel against the same database, so the one this test seeded has to be
+ * picked out by id. Taking `[0]` is how these four tests were first written
+ * and it failed once in three full runs - the same lesson the tests above
+ * already encode with `result.find(...)`.
+ */
+async function resolveOne(id: string, subtotalGrossGrosze: number) {
+  const all = await resolveDeliveryMethodsForCart({ subtotalGrossGrosze, items: [cartItem()] });
+  return all.find((method) => method.id === id) ?? null;
+}
+
+describe('resolveDeliveryMethodsForCart - insurance', () => {
+  it('offers nothing when the carrier has no declared-value table', async () => {
+    const seeded = await seedMethod({ namePl: `${PREFIX}bez-ubezpieczenia` });
+
+    const method = await resolveOne(seeded.id, 20_000);
+
+    expect(method?.insurance).toBeNull();
+  });
+
+  it('offers the cheapest band that actually covers the order', async () => {
+    const seeded = await seedMethod({
+      namePl: `${PREFIX}z-ubezpieczeniem`,
+      // Deliberately out of order: a rate card typed in as it is read must
+      // still band a cart correctly.
+      insuranceTiers: [
+        { labelPl: 'do 5000 zł', maxValueGrosze: 500_000, priceGrosze: 900 },
+        { labelPl: 'do 1000 zł', maxValueGrosze: 100_000, priceGrosze: 300 },
+        { labelPl: 'do 2500 zł', maxValueGrosze: 250_000, priceGrosze: 500 },
+      ],
+    });
+
+    const method = await resolveOne(seeded.id, 150_000);
+
+    expect(method?.insurance).toEqual({ labelPl: 'do 2500 zł', priceGrosze: 500 });
+  });
+
+  it('offers nothing for an order worth more than the table covers', async () => {
+    const seeded = await seedMethod({
+      namePl: `${PREFIX}poza-tabela`,
+      insuranceTiers: [{ labelPl: 'do 1000 zł', maxValueGrosze: 100_000, priceGrosze: 300 }],
+    });
+
+    // The band that exists would be a lie here: "do 1000 zł" cover on a
+    // 2000 zł order leaves the customer believing they are covered when they
+    // are not. Hidden rather than sold.
+    const method = await resolveOne(seeded.id, 200_000);
+
+    expect(method?.insurance).toBeNull();
+  });
+
+  it('bands on the value of the goods, exactly at the boundary', async () => {
+    const seeded = await seedMethod({
+      namePl: `${PREFIX}granica`,
+      insuranceTiers: [
+        { labelPl: 'do 1000 zł', maxValueGrosze: 100_000, priceGrosze: 300 },
+        { labelPl: 'do 2500 zł', maxValueGrosze: 250_000, priceGrosze: 500 },
+      ],
+    });
+
+    // Inclusive: `maxValueGrosze` is "the highest order value this band
+    // covers", so an order worth exactly that is in it.
+    const method = await resolveOne(seeded.id, 100_000);
+
+    expect(method?.insurance).toEqual({ labelPl: 'do 1000 zł', priceGrosze: 300 });
   });
 });

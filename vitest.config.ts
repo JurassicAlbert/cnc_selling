@@ -29,6 +29,25 @@ export default defineConfig({
     // The one test that genuinely needs longer still says so explicitly
     // (`starting-price.test.ts`, 60s, for a deliberately exhaustive sweep).
     testTimeout: 20_000,
+    /*
+      Raised from Vitest's 10s default on 2026-09-09, for the same reason the
+      line above was raised and with the same character: a deadline, not a
+      budget.
+
+      T-32 gave `PricingSettings` a reader/writer advisory lock, so the files
+      that price something now wait in `beforeAll` while a file that publishes
+      pricing versions holds it. That wait is the fix working. What it is
+      bounded by is the publisher's own runtime - `admin-pricing.test.ts` is
+      about 4s alone and several times that under four-way contention for one
+      Postgres - and a reader can queue behind both publishers, so 10s was
+      simply too tight: `starting-price.test.ts` failed with "Hook timed out"
+      while doing nothing but waiting its turn.
+
+      Not narrowed to a per-test lock instead: that would trade a bounded wait
+      for lock churn on every test and let a reader slip between a publisher's
+      tests, which is the interleaving the lock exists to prevent.
+    */
+    hookTimeout: 45_000,
     setupFiles: ['./tests/integration/env-setup.ts'],
     // Runs once around the whole run, in the main process, when no worker is
     // still touching the database - which is the only safe moment to delete a

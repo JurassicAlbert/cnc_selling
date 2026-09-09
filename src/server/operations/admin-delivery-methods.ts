@@ -263,3 +263,117 @@ export async function removeDeliveryWeightTier(deliveryMethodId: string, tierId:
   revalidatePath(`/panel/dostawa/${deliveryMethodId}`);
   revalidatePath('/koszyk/zamowienie');
 }
+
+/**
+ * INSURANCE-01. The declared-value bands a customer can buy at checkout.
+ *
+ * Same shape as the weight tiers above, and the same snapshot guarantee:
+ * `Order.insuranceGrosze` and `Order.insuranceLabelPl` are copied at checkout,
+ * so editing or removing a band can never change what a past order says it
+ * was charged.
+ *
+ * Audited against entity `'DeliveryMethod'` for the same reason as the weight
+ * tiers - this is one method's pricing, and staff reading that method's
+ * activity timeline should find it there.
+ */
+export type DeliveryInsuranceTierInput = {
+  readonly labelPl: string;
+  /** The highest order value this band covers, inclusive. */
+  readonly maxValueGrosze: number;
+  readonly priceGrosze: number;
+};
+
+function validateInsuranceTier(input: DeliveryInsuranceTierInput): string | null {
+  if (input.labelPl.trim().length === 0) {
+    return 'Nazwa progu jest wymagana.';
+  }
+  /*
+    A 0 (or negative) ceiling covers no real order, and `chooseInsuranceTier`
+    sorts ascending and takes the first band that fits - so a zero band would
+    sit at the front of the table matching nothing, which is the same trap
+    `validateWeightTier` guards with its 0 g bracket.
+  */
+  if (!Number.isFinite(input.maxValueGrosze) || input.maxValueGrosze <= 0) {
+    return 'Maksymalna wartość zamówienia musi być większa od zera.';
+  }
+  if (!Number.isFinite(input.priceGrosze) || input.priceGrosze < 0) {
+    return 'Cena nie może być ujemna.';
+  }
+  return null;
+}
+
+export async function applyAddDeliveryInsuranceTier(
+  staff: CurrentSession,
+  deliveryMethodId: string,
+  input: DeliveryInsuranceTierInput,
+): Promise<DeliveryMethodMutationResult> {
+  const issue = validateInsuranceTier(input);
+  if (issue !== null) {
+    return { ok: false, detail: issue };
+  }
+  const method = await prisma.deliveryMethod.findUnique({ where: { id: deliveryMethodId }, select: { id: true } });
+  if (method === null) {
+    return { ok: false, detail: 'Metoda dostawy nie istnieje.' };
+  }
+  await prisma.deliveryInsuranceTier.create({
+    data: {
+      deliveryMethodId,
+      labelPl: input.labelPl.trim(),
+      maxValueGrosze: input.maxValueGrosze,
+      priceGrosze: input.priceGrosze,
+      // Mirrors the band, so a card typed in out of order still reads
+      // correctly anywhere the raw `sortOrder` is used.
+      sortOrder: input.maxValueGrosze,
+    },
+  });
+  await writeAuditLog({
+    actor: staff,
+    entity: 'DeliveryMethod',
+    entityId: deliveryMethodId,
+    action: 'update',
+    diff: { addInsuranceTier: input },
+  });
+  return { ok: true, id: deliveryMethodId };
+}
+
+export async function addDeliveryInsuranceTier(
+  deliveryMethodId: string,
+  input: DeliveryInsuranceTierInput,
+): Promise<DeliveryMethodMutationResult> {
+  const staff = await requireAdminSession();
+  const result = await applyAddDeliveryInsuranceTier(staff, deliveryMethodId, input);
+  if (result.ok) {
+    revalidatePath(`/panel/dostawa/${deliveryMethodId}`);
+    // Checkout decides whether to offer cover from these rows, so a changed
+    // table must not keep serving the old answer from cache.
+    revalidatePath('/koszyk/zamowienie');
+  }
+  return result;
+}
+
+export async function applyRemoveDeliveryInsuranceTier(
+  staff: CurrentSession,
+  deliveryMethodId: string,
+  tierId: string,
+): Promise<void> {
+  // `deleteMany` scoped to the method rather than `delete` by id, for the
+  // reasons given at `applyRemoveDeliveryWeightTier`.
+  const removed = await prisma.deliveryInsuranceTier.deleteMany({ where: { id: tierId, deliveryMethodId } });
+  if (removed.count === 0) {
+    return;
+  }
+  await writeAuditLog({
+    actor: staff,
+    entity: 'DeliveryMethod',
+    entityId: deliveryMethodId,
+    action: 'update',
+    diff: { removeInsuranceTier: tierId },
+  });
+}
+
+export async function removeDeliveryInsuranceTier(deliveryMethodId: string, tierId: string): Promise<void> {
+  const staff = await requireAdminSession();
+  await applyRemoveDeliveryInsuranceTier(staff, deliveryMethodId, tierId);
+  revalidatePath(`/panel/dostawa/${deliveryMethodId}`);
+  revalidatePath('/koszyk/zamowienie');
+}

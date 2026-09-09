@@ -508,6 +508,23 @@ export const ADMIN = {
     'Wymiary wypełnij tylko przy realnym ograniczeniu fizycznym, np. skrytce paczkomatu. Puste = brak limitu wymiarów dla tego progu.',
   deliveryTierNoDimensionLimitPl: 'bez limitu wymiarów',
 
+  /*
+    INSURANCE-01. The intro says out loud that the table is empty on purpose
+    and what filling it in does, because an admin opening this screen today
+    finds a feature that looks broken and is not: no carrier publishes a
+    declared-value card citably, so nobody could seed one honestly.
+  */
+  deliveryInsuranceHeadingPl: 'Ubezpieczenie przesyłki (cennik przewoźnika)',
+  deliveryInsuranceIntroPl:
+    'Progi wartości z cennika przewoźnika. Klient przy zamawianiu widzi najtańszy próg, który pokrywa wartość jego koszyka, i decyduje sam, czy go dokupić. Zamówienie warte więcej niż najwyższy próg nie dostaje żadnej propozycji - lepiej nie proponować nic niż ochronę, która nie pokryje szkody.',
+  deliveryInsuranceEmptyPl:
+    'Brak progów - ta metoda nie proponuje ubezpieczenia i klient nie widzi żadnej opcji. Wpisz progi z cennika przewoźnika, aby ją włączyć.',
+  deliveryInsuranceFieldLabelPl: 'Nazwa progu',
+  deliveryInsuranceFieldMaxValuePlnPl: 'Wartość do (zł)',
+  deliveryInsuranceFieldPricePlnPl: 'Składka (zł)',
+  deliveryInsuranceHelperPl:
+    'Nazwa progu trafia na potwierdzenie zamówienia, więc wpisz ją tak, jak ma ją zobaczyć klient, np. „do 1000 zł”.',
+
   paymentMethodsHeadingPl: 'Metody płatności',
   paymentMethodsNewPl: 'Nowa metoda',
   paymentMethodsEmptyPl: 'Brak metod płatności. Dodaj pierwszą, aby pojawiła się w koszyku.',
