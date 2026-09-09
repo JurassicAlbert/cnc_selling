@@ -10,6 +10,7 @@ import { readGuestSessionToken } from '@/server/session/read-guest-session';
 import { readConsentChoice } from '@/server/session/consent';
 import { CookieConsentBanner } from '@/ui/islands/consent/CookieConsentBanner';
 import { Footer } from '@/ui/primitives/Footer';
+import { MobileBottomNav } from '@/ui/primitives/MobileBottomNav';
 import { SearchBar } from '@/ui/primitives/SearchBar';
 import { SiteHeader } from '@/ui/primitives/SiteHeader';
 import { SiteTopBar } from '@/ui/primitives/SiteTopBar';
@@ -89,6 +90,14 @@ export async function StorefrontChrome({ children }: { readonly children: ReactN
         {children}
       </main>
       <Footer categories={categories} />
+
+      {/*
+        RWD-05. After the footer, so it is the last thing in the document and
+        a screen reader reaches it last rather than between the content and
+        the footer. Fixed positioning takes it to the bottom of the viewport
+        either way; `theme-vars.css` hides it above the burger's breakpoint.
+      */}
+      <MobileBottomNav cartItemCount={cartSummary.itemCount} />
       {consentChoice === null && <CookieConsentBanner />}
     </>
   );

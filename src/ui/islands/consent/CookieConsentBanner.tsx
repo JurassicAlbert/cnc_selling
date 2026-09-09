@@ -33,7 +33,14 @@ export function CookieConsentBanner() {
       style={{
         position: 'fixed',
         insetInline: 0,
-        bottom: 0,
+        /*
+          Above RWD-05's bottom navigation, which is `z-index: 20` and 56 px
+          tall on a phone. Left at `bottom: 0` this banner's own buttons sat
+          underneath it - consent controls a customer could see and not press,
+          which an e2e click timeout caught on the day the navigation landed.
+          The variable is 0 at desktop widths, where there is no navigation.
+        */
+        bottom: 'var(--bottom-nav-height)',
         zIndex: 10,
         display: 'flex',
         flexWrap: 'wrap',

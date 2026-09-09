@@ -273,6 +273,16 @@ export const SITE = {
     name up would cost a query on every cart render to say something the
     customer watched happen a moment ago.
   */
+  /*
+    RWD-05's bottom navigation. Short labels because four of them share a
+    375 px row; „Konto" rather than „Moje konto" for the same reason, and it
+    is what the header's own account menu is called once opened.
+  */
+  bottomNavLabelPl: 'Nawigacja dolna',
+  bottomNavHomePl: 'Strona główna',
+  bottomNavCollectionsPl: 'Kolekcje',
+  bottomNavCartPl: 'Koszyk',
+  bottomNavAccountPl: 'Konto',
   cartUndoRemovedPl: 'Pozycja została usunięta z koszyka.',
   cartUndoActionPl: 'Cofnij',
   cartRemovePl: 'Usuń',

@@ -231,11 +231,90 @@ body {
  * needs this number rather than a new one.
  */
 :root {
-  --sticky-bottom-space: 56px;
+  --bottom-nav-height: 56px;
+  /*
+    Room for BOTH bottom-fixed things at once: the navigation, and the
+    product page's price bar sitting on top of it. Above the burger's
+    breakpoint the navigation is gone and only the bar is left, which the
+    media query below accounts for.
+  */
+  --sticky-bottom-space: 112px;
+}
+
+@media (min-width: 900px) {
+  :root {
+    --bottom-nav-height: 0px;
+    --sticky-bottom-space: 56px;
+  }
 }
 
 footer {
   padding-block-end: var(--sticky-bottom-space);
+}
+
+/*
+ * RWD-05. Four destinations pinned to the bottom on a phone, the pattern the
+ * owner pointed at by citing `template.getbazaar.io`. Hidden from 900px, the
+ * burger's own breakpoint, where the full navigation is already on screen.
+ */
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  align-items: stretch;
+  height: var(--bottom-nav-height);
+  background: var(--mui-palette-background-paper);
+  border-top: 1px solid var(--mui-palette-divider);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
+}
+
+@media (min-width: 900px) {
+  .bottom-nav {
+    display: none;
+  }
+}
+
+.bottom-nav-link {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 44px;
+  color: var(--mui-palette-text-primary);
+  text-decoration: none;
+  font: var(--mui-font-caption);
+}
+
+.bottom-nav-link:hover,
+.bottom-nav-link:focus-visible {
+  color: var(--mui-palette-secondary-main);
+}
+
+/* `relative` so the badge anchors to the icon rather than to the whole link. */
+.bottom-nav-icon-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.bottom-nav-badge {
+  position: absolute;
+  top: -6px;
+  inset-inline-start: 12px;
+  min-width: 16px;
+  height: 16px;
+  padding-inline: 4px;
+  border-radius: 999px;
+  background: var(--mui-palette-secondary-main);
+  color: #fff;
+  font: var(--mui-font-caption);
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
 }
 
 /*

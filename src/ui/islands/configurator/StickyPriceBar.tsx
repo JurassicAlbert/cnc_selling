@@ -46,7 +46,14 @@ export function StickyPriceBar({
         position: 'fixed',
         left: 0,
         right: 0,
-        bottom: 0,
+        /*
+          Above RWD-05's bottom navigation, not underneath it. Two things
+          want the bottom of a phone viewport now, and a customer
+          configuring a product needs both the price and a way off the page -
+          "whichever renders last wins" is not a layout. The variable is 0 at
+          desktop widths, where the navigation is not rendered at all.
+        */
+        bottom: 'var(--bottom-nav-height)',
         zIndex: 10,
         background: 'var(--mui-palette-background-paper)',
         borderTop: '1px solid var(--mui-palette-divider)',

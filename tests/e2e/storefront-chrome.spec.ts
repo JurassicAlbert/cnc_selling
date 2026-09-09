@@ -91,7 +91,12 @@ test('the cart link keeps its accessible name when its label is hidden to fit', 
   // Not `toBeVisible`: below 600px the label is clipped to a pixel, which is
   // the point. What must survive is the NAME, and `getByRole` is what
   // computes it the way a screen reader would.
-  await expect(page.getByRole('link', { name: /Koszyk/ })).toHaveAttribute('href', '/koszyk');
+  //
+  // Scoped to the header since RWD-05, which put a second cart link in the
+  // mobile bottom navigation. Two links named „Koszyk" is the intended state
+  // - a shopper should reach the cart from either - so the fix is for this
+  // test to say which one it means, not for one of them to be renamed.
+  await expect(page.getByRole('banner').getByRole('link', { name: /Koszyk/ })).toHaveAttribute('href', '/koszyk');
 });
 
 /**
