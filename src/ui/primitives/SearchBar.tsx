@@ -1,7 +1,8 @@
 import Link from 'next/link';
 
-import { ExpandMoreIcon, GridViewIcon, SearchIcon } from '@/ui/icons';
+import { ExpandMoreIcon, GridViewIcon } from '@/ui/icons';
 import { Container } from '@/ui/primitives/Container';
+import { SearchForm } from '@/ui/primitives/SearchForm';
 import { SITE } from '@/content/pl/site';
 
 type CategoryOption = {
@@ -19,9 +20,8 @@ type CategoryOption = {
  * performance property for a cosmetic one.
  *
  * What the audit DID fix here is accessibility (P2-10/§11): the input had no
- * accessible name at all. A placeholder is not a label - it is not announced
- * as one by screen readers and it vanishes the moment anyone types - so this
- * carries a real `aria-label`, and a visible `:focus-visible` ring.
+ * accessible name at all. That field now lives in `SearchForm`, which
+ * carries the name and the focus ring with it.
  *
  * **2026-09-04, second pass.** The category list used to be a `<select
  * name="k">` inside the form, narrowing the search. The owner removed that
@@ -36,12 +36,22 @@ type CategoryOption = {
  * working server capability because one control stopped sending it would be
  * throwing away more than was asked for. Nothing in the UI sends it now.
  *
+ * **2026-09-09, RWD-04: this band is desktop-only.** It cost 128 px of a
+ * 375 px-wide screen - the pill and the field stacked into two rows - on
+ * every route including the cart, the checkout and every account page, and
+ * `.search-band-section` hides it below the burger's own 900 px breakpoint.
+ * Neither of its two jobs is lost there: the categories are the burger's
+ * „Produkty" menu, which already listed exactly the same links, and the
+ * field is behind the header's magnifier. Both are asserted in
+ * `tests/e2e/mobile-rwd.spec.ts`.
+ *
  * Still zero client JS. The menu is a `<details>`, the same pattern the main
  * navigation already uses, so it opens without a single byte of script.
  */
 export function SearchBar({ categories }: { readonly categories: readonly CategoryOption[] }) {
   return (
     <div
+      className="search-band-section"
       style={{
         backgroundColor: 'var(--mui-palette-background-default)',
         borderBottom: '1px solid var(--mui-palette-divider)',
@@ -79,27 +89,7 @@ export function SearchBar({ categories }: { readonly categories: readonly Catego
             </details>
           </nav>
 
-          {/* The real `<search>` landmark rather than `role="search"` on the
-              form - same semantics for assistive technology, no ARIA needed
-              (§11: don't add ARIA where an element already says it). */}
-          <search className="search-band-form">
-            <form action="/szukaj" method="get" className="search-form">
-              <div className="search-group">
-                <input
-                  type="search"
-                  name="q"
-                  aria-label={SITE.searchPlaceholderPl}
-                  placeholder={SITE.searchPlaceholderPl}
-                  className="search-input"
-                />
-
-                <button type="submit" aria-label={SITE.searchButtonLabelPl} className="search-submit">
-                  <SearchIcon size={18} />
-                  <span className="search-submit-text">{SITE.searchButtonLabelPl}</span>
-                </button>
-              </div>
-            </form>
-          </search>
+          <SearchForm />
         </div>
       </Container>
     </div>

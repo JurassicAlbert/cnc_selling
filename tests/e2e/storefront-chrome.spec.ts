@@ -109,14 +109,22 @@ test('the cart link keeps its accessible name when its label is hidden to fit', 
  * rozwijanej kategorii jako opcji wyszukiwania - wyszukiwanie dobrze sobie
  * radzi bez tego, za to możemy tą listę rozwijaną kategorii traktować jako
  * quick access". So the rule under test changed with it: the menu must take
- * you to the category, and the search form must no longer carry a category
- * at all.
+ * you to the category.
  *
- * The second half is the one worth having. A leftover `k=` on a form that no
- * longer offers the choice would put a filter in every shared search URL
- * that nobody selected.
+ * **Split in two and made width-aware, 2026-09-09 (RWD-04).** The band that
+ * holds this menu is desktop-only now, so the menu genuinely does not exist
+ * on a phone - what replaces it there is the burger's „Produkty" list, and
+ * `mobile-rwd.spec.ts` asserts every category is still reachable through it.
+ * Skipped rather than deleted: the desktop projects still have a real
+ * control to check, and a test that quietly passes at one width because the
+ * thing it tests is missing is worse than one that says so.
  */
-test('the category menu is quick access to a category, and the search carries no category', async ({ page }) => {
+test('the category menu is quick access to a category', async ({ page }) => {
+  test.skip(
+    (page.viewportSize()?.width ?? 0) < 900,
+    'The search band is hidden below 900px (RWD-04); the burger carries the categories there.',
+  );
+
   await page.goto('/');
 
   // Opened the way a customer opens it. The menu is a `<details>` - zero
@@ -129,8 +137,27 @@ test('the category menu is quick access to a category, and the search carries no
 
   await expect(page).toHaveURL('/obrazy-drewniane');
   await expect(page.getByRole('heading', { name: 'Obrazy', exact: true })).toBeVisible();
+});
 
+/**
+ * The half worth having most: a leftover `k=` on a form that no longer offers
+ * the choice would put a filter nobody selected into every shared search URL.
+ *
+ * This one runs at both widths, because the form runs at both widths - the
+ * same `SearchForm`, in the band on a desktop and behind the header's
+ * magnifier on a phone. Which is the point of there being one component:
+ * a category creeping back into the query string has to fail here whichever
+ * way the visitor reached the field.
+ */
+test('the search form carries no category', async ({ page }) => {
   await page.goto('/');
+
+  // Below 900px the field is behind the header's toggle, and revealing it is
+  // what a visitor on a phone does. Above it the toggle is `display: none`,
+  // so there is nothing to press and the band's field is already there.
+  const toggle = page.locator('label[for="header-search-toggle"]');
+  if (await toggle.isVisible()) await toggle.click();
+
   await page.getByRole('searchbox').fill('obraz');
   await page.getByRole('button', { name: 'Szukaj' }).click();
 

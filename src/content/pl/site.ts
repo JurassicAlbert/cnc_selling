@@ -504,6 +504,18 @@ export const SITE = {
   // 900px the control is the icon alone, so a screen reader is the only
   // consumer of this string.
   headerMenuTogglePl: 'Menu',
+
+  /*
+    RWD-04. The header's search toggle, below 900px where the band is gone.
+    Also an icon alone, so also read only by a screen reader.
+
+    A noun rather than the verb RWD-03 argued for. That control's name could
+    flip with its state because two components rendered it; this one is one
+    checkbox whose label CSS cannot rewrite, so a name saying "open" would be
+    a lie half the time. „Wyszukiwarka" is true in both states, and the
+    checkbox announces open or closed for itself.
+  */
+  headerSearchTogglePl: 'Wyszukiwarka',
   /*
     BUG-28. The first thing a keyboard reaches on every page. Names the
     destination rather than the mechanism ("Przejdź do treści", not "Pomiń

@@ -805,6 +805,79 @@ html {
 }
 
 /*
+ * RWD-04 - search behind an icon below 900px, where the band is hidden.
+ *
+ * The same checkbox-and-label disclosure as the burger above, for the same
+ * recorded reason, with one addition: the checkbox is pinned to the header's
+ * own corner rather than left at its static position. An absolutely
+ * positioned child of a flex container lands at the container's content-box
+ * start - measured at (28, 38) here, which is exactly where the burger's own
+ * hidden checkbox already sits. Two 1px targets at one point is a WCAG 2.5.8
+ * crowding failure, and `accessibility.spec.ts` measures precisely that.
+ *
+ * `display: none` above the breakpoint rather than only hiding the label: a
+ * checkbox still in the tab order on desktop is a focus stop that announces
+ * „Wyszukiwarka" and does nothing.
+ */
+.header-search-checkbox,
+.header-search-toggle,
+.header-search-panel {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .header-search-checkbox {
+    display: block;
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .header-search-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 4px;
+    color: var(--mui-palette-text-primary);
+    cursor: pointer;
+  }
+  .header-search-toggle:hover {
+    background-color: var(--mui-palette-action-hover, rgba(0, 0, 0, 0.04));
+  }
+  .header-search-checkbox:focus-visible + .header-search-toggle {
+    outline: 3px solid var(--mui-palette-secondary-main);
+    outline-offset: 2px;
+  }
+
+  /* One icon at a time: a magnifier to open, a cross to close. */
+  .header-search-close-icon {
+    display: none;
+  }
+  .header-search-checkbox:checked + .header-search-toggle .header-search-open-icon {
+    display: none;
+  }
+  .header-search-checkbox:checked + .header-search-toggle .header-search-close-icon {
+    display: block;
+  }
+
+  /*
+    A full line of its own, in flow, as the last child of the header row. The
+    row wraps, the header grows while the search is open, and nothing is
+    covered - including the burger's panel, which is positioned at the
+    header's `top: 100%` and so moves down with it.
+  */
+  .header-search-checkbox:checked ~ .header-search-panel {
+    display: block;
+    flex: 1 0 100%;
+  }
+}
+
+/*
  * UX-23 - the search band, and the slim topbar above the navigation.
  *
  * Owner request, 2026-09-04: take the *arrangement* from
@@ -965,20 +1038,22 @@ html {
   display: none;
 }
 
-@media (max-width: 599px) {
-  /* The category menu takes its own full-width line above the field rather
-     than squeezing two controls into one cramped row. Both stay full size
-     and tappable, and the gap between them becomes vertical. */
-  .search-band {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-2);
-  }
-  .search-quick-access-summary {
-    justify-content: center;
-  }
-  .search-submit {
-    padding-inline: 12px;
+/*
+  RWD-04, 2026-09-09. The band is desktop-only. Measured at 375x812 it was
+  128px of the 206px of chrome above the content on EVERY route - the cart,
+  the checkout, every account page - and both of its jobs are already done
+  elsewhere at that width: the categories are in the burger's list, the field
+  is behind the header's magnifier.
+
+  What stood here was a `max-width: 599px` block stacking the category pill
+  above the field, which is what made the band 128px rather than 70px in the
+  first place. Deleted rather than kept "just in case": the band no longer
+  renders at any width that rule could match, and CSS for a state that cannot
+  happen is what the next person spends an afternoon on.
+*/
+@media (max-width: 899px) {
+  .search-band-section {
+    display: none;
   }
 }
 
@@ -1170,6 +1245,17 @@ main[tabindex='-1']:focus:not(:focus-visible) {
  * accessible name became the count badge - a link announced as "1". Checked
  * with `.cart-link`'s own `innerText`, which is what caught it. Clipped to
  * 1px instead, the label is gone from the layout and still read out. */
+/*
+ * RWD-04. The row's gap, moved out of `SiteHeader`'s inline style so that the
+ * `max-width: 599px` override below can actually win. Inline styles beat a
+ * stylesheet, so that override - written 2026-09-06 for a row that had become
+ * icons - had never once applied, and the measured row still spent 24px
+ * between every icon. Which is what left no room for the search toggle.
+ */
+.site-header-nav {
+  gap: var(--space-5);
+}
+
 @media (max-width: 599px) {
   .header-label-text {
     position: absolute;

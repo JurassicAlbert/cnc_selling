@@ -11,8 +11,10 @@ import {
   InfoIcon,
   MenuIcon,
   PersonIcon,
+  SearchIcon,
 } from '@/ui/icons';
 import { Container } from '@/ui/primitives/Container';
+import { SearchForm } from '@/ui/primitives/SearchForm';
 import { logout } from '@/server/actions/auth';
 import { SITE } from '@/content/pl/site';
 import { LoginDialog } from '@/ui/islands/auth/LoginDialog';
@@ -100,7 +102,14 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 'var(--space-5)',
+            /*
+              RWD-04. The gap lives in `theme-vars.css` rather than here,
+              because an inline style beats a stylesheet: the `max-width:
+              599px` rule that tightens this row to 12px for a line of icons
+              has been written since 2026-09-06 and was never in effect. The
+              measured row still had 24px between every icon, which is what
+              left no room for a fifth one.
+            */
             paddingBlock: 'var(--space-4)',
             flexWrap: 'wrap',
           }}
@@ -225,6 +234,38 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
           </div>
 
           {/*
+            RWD-04. Search on a phone: an icon here, and the band below the
+            header gone entirely under 900px. It cost 128px of a 375px screen
+            on every route - the cart, the checkout, every account page -
+            which is more than the header itself.
+
+            A checkbox and its label rather than a `<details>`, matching the
+            burger beside it and for the same recorded reason: a closed
+            `<details>` has its content hidden by the user agent through
+            `::details-content`, which author CSS cannot reliably override.
+
+            The panel is the LAST child of this row, not the next one after
+            the label, and that ordering is load-bearing. It takes a full
+            line when open (`flex: 1 0 100%`), so anything after it wraps
+            below it - put here, the cart and the account menu would drop
+            onto a third line the moment anyone opened the search.
+
+            It also means the two panels never fight: this one is in flow, so
+            the header grows and the burger's absolutely positioned panel
+            (`top: 100%`) moves down with it instead of landing on top.
+          */}
+          <input
+            type="checkbox"
+            id="header-search-toggle"
+            className="header-search-checkbox"
+            aria-label={SITE.headerSearchTogglePl}
+          />
+          <label htmlFor="header-search-toggle" className="header-search-toggle">
+            <SearchIcon size={20} className="header-search-open-icon" />
+            <CloseIcon size={20} className="header-search-close-icon" />
+          </label>
+
+          {/*
             Owner request, 2026-09-06, against `template.getbazaar.io`: the
             cart is an icon and a count and nothing else. The word „Koszyk"
             and the running total used to sit beside it, clipped away below
@@ -300,6 +341,14 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
             */
             <LoginDialog />
           )}
+
+          {/* Same `SearchForm` the band renders, so there is one search form
+              on the site rather than two that drift. Only ever one of them is
+              in the accessibility tree: the other is `display: none` at that
+              width. */}
+          <div className="header-search-panel">
+            <SearchForm />
+          </div>
         </nav>
       </Container>
     </header>

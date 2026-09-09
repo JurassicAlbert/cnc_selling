@@ -148,3 +148,94 @@ test('every field on the checkout tells the browser what it holds', async ({ pag
 
   expect(Object.fromEntries(actual)).toEqual(Object.fromEntries(CHECKOUT_FIELDS.map(([n, v]) => [n, v])));
 });
+
+/**
+ * RWD-04 / UX-14. Measured on this build at 375x812: `main` starts 206 px
+ * down the page on every route, which is a quarter of the screen spent
+ * before the page says anything. The owner's own reference
+ * (`template.getbazaar.io`) spends about 104 px and reaches search through
+ * an icon.
+ *
+ * 128 of those 206 px are the search band alone - it stacks into two rows
+ * under 600 px, the category pill above the field - and it renders on the
+ * cart, the checkout and every account page, where a product search is not
+ * what anyone is about to do.
+ *
+ * The budget is deliberately not pinned to the exact height the header
+ * happens to have. What it forbids is a second full-width band creeping back
+ * in above the content; 120 px leaves room for the strip plus the header at
+ * every width this runs at, and nothing else.
+ */
+const CHROME_BUDGET_PX = 120;
+
+for (const path of ['/', '/koszyk', '/obrazy-drewniane']) {
+  test(`the chrome above ${path} leaves the screen to the page`, async ({ page }) => {
+    await page.goto(path);
+    await expect(page.locator('#tresc')).toBeVisible();
+
+    // Where the content actually begins, which is the thing a visitor sees -
+    // not the sum of the parts, which would miss margins and borders.
+    const contentTop = await page.evaluate(() =>
+      Math.round(document.querySelector('main')?.getBoundingClientRect().top ?? -1),
+    );
+
+    expect(contentTop).toBeGreaterThan(0);
+    expect(contentTop).toBeLessThan(CHROME_BUDGET_PX);
+  });
+}
+
+/*
+  The visible control is a `<label>`, not a button: the disclosure is a
+  checkbox and its label, the zero-JS pattern the burger beside it already
+  uses (`theme-vars.css`, "Responsive navigation"). `SiteHeader` is a Server
+  Component with no client JavaScript at all, so there is no handler to hang
+  a real button off. The checkbox carries the accessible name; the label is
+  what a thumb lands on, so it is what a test presses.
+*/
+const SEARCH_TOGGLE = 'label[for="header-search-toggle"]';
+
+test('search is one tap away from a page that is not the shop front', async ({ page }) => {
+  await page.goto('/koszyk');
+  await expect(page.locator('#tresc')).toBeVisible();
+
+  /*
+    Nothing to type into until it is asked for. `getByRole` only matches what
+    is in the accessibility tree, so the band's field - still in the DOM,
+    hidden by the breakpoint - is correctly not counted here. That is the
+    same question a screen reader asks.
+  */
+  await expect(page.getByRole('searchbox')).toHaveCount(0);
+
+  await page.locator(SEARCH_TOGGLE).click();
+
+  await page.getByRole('searchbox').fill('obraz');
+  await page.getByRole('button', { name: 'Szukaj' }).click();
+
+  await expect(page).toHaveURL(/\/szukaj\?q=obraz/);
+  // A real result, not just the results page: a search box that submits to a
+  // page listing nothing would satisfy every assertion above it.
+  await expect(page.getByRole('link', { name: /Obraz drewniany z grawerem/ })).toBeVisible();
+});
+
+/**
+ * The other half of what the band was doing: „Kategorie" was quick access to
+ * a category page, and on a phone that list has to survive the band's
+ * removal.
+ *
+ * This one passes before the change as well as after, and is written down as
+ * exactly that - a guard on what the change takes away, not a red test.
+ * Every category the pill listed is in the burger's „Produkty" menu, which
+ * is where it was already duplicated.
+ */
+test('every category the band offered is still reachable on a phone', async ({ page }) => {
+  await page.goto('/');
+
+  await page.locator('label[for="nav-burger-toggle"]').click();
+
+  const menu = page.getByRole('navigation', { name: 'Menu główne' });
+  await menu.getByText('Produkty', { exact: true }).click();
+  await menu.getByRole('link', { name: 'Obrazy', exact: true }).click();
+
+  await expect(page).toHaveURL('/obrazy-drewniane');
+  await expect(page.getByRole('heading', { name: 'Obrazy', exact: true })).toBeVisible();
+});
