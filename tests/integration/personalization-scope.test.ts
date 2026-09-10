@@ -84,7 +84,27 @@ describe('the inscription step is offered where it can actually be made', () => 
     expect(products.length).toBeGreaterThan(0);
 
     for (const product of products) {
-      const offered = (await stepsFor(product.slug)).includes('PERSONALIZATION');
+      const data = await getConfiguratorProductData(product.slug);
+      if (data === null) {
+        /*
+          It was in the listing a moment ago and is gone now. That means
+          another test file's fixture: this sweep reads the whole catalogue,
+          and Vitest runs files in parallel against one database, so a
+          product created and deleted by `auth.test.ts` can appear above and
+          vanish before this line. Caught on 2026-09-10 as
+          "no configurator data for test-p6-…", which is `auth.test.ts`'s own
+          prefix, not this file's.
+
+          Skipped rather than tolerated blindly: a product that STILL EXISTS
+          and has no configurator data is a real failure, so that is asserted
+          here instead of being swallowed with it.
+        */
+        const stillThere = await prisma.product.findUnique({ where: { slug: product.slug }, select: { id: true } });
+        expect(stillThere, `${product.slug} exists but has no configurator data`).toBeNull();
+        continue;
+      }
+
+      const offered = applicableSteps(data, EMPTY_SELECTIONS).includes('PERSONALIZATION');
       expect(offered, `${product.slug} offers the inscription step`).toBe(product.personalization !== null);
     }
   });

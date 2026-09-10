@@ -1,18 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import {
-  CartIcon,
-  CloseIcon,
-  CollectionsIcon,
-  ExpandMoreIcon,
-  GridViewIcon,
-  HelpIcon,
-  InfoIcon,
-  MenuIcon,
-  PersonIcon,
-  SearchIcon,
-} from '@/ui/icons';
+import { ArticleIcon, CartIcon, CloseIcon, CollectionsIcon, ExpandMoreIcon, GridViewIcon, HelpIcon, InfoIcon, MenuIcon, PersonIcon, SearchIcon } from '@/ui/icons';
 import { Container } from '@/ui/primitives/Container';
 import { SearchForm } from '@/ui/primitives/SearchForm';
 import { logout } from '@/server/actions/auth';
@@ -143,7 +132,7 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
           </Link>
 
           {/*
-            Below 900px these four collapse behind a burger; above it the
+            Below 900px these five collapse behind a burger; above it the
             panel is styled back into a plain flex row and the toggle is
             hidden, so desktop markup and desktop appearance are unchanged.
             A `<details>` rather than a button because this header is a
@@ -212,6 +201,21 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
             <Link href="/faq" className="nav-link" style={{ font: 'var(--mui-font-body2)' }}>
               <HelpIcon size={18} />
               {SITE.headerFaqLinkPl}
+            </Link>
+            {/*
+              UX-16, owner decision 2026-09-10: "Both in both places." The
+              blog was linked from the footer and nowhere else, so it was
+              invisible to anyone who never scrolled to the bottom - not a
+              rule anybody chose, just what two separate additions left
+              behind. FAQ made the same trip the other way, into the footer.
+
+              Between the plain links and the Kolekcje dropdown, so the
+              informational links stay together and the two dropdowns still
+              bracket the row.
+            */}
+            <Link href="/blog" className="nav-link" style={{ font: 'var(--mui-font-body2)' }}>
+              <ArticleIcon size={18} />
+              {SITE.footerBlogLinkPl}
             </Link>
 
             <details className="nav-dropdown">

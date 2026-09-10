@@ -137,6 +137,15 @@ export function Footer({ categories }: FooterProps) {
                 {SITE.footerBlogLinkPl}
               </Link>
               {/*
+                UX-16, owner decision 2026-09-10: "Both in both places." FAQ
+                was in the navigation and nowhere else; someone who has
+                scrolled to the bottom looking for help is exactly the person
+                who needs it, and the footer is where they are looking.
+              */}
+              <Link href="/faq" className="footer-link" style={{ font: 'var(--mui-font-body2)' }}>
+                {SITE.headerFaqLinkPl}
+              </Link>
+              {/*
                * The "Wzory" link is deliberately absent, not forgotten.
                * `/wzory` calls `notFound()` on purpose (owner, 2026-08-29:
                * "ukryj na razie podstronę dla wzorów") - but this link was
