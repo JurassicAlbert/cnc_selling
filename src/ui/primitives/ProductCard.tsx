@@ -30,8 +30,13 @@ type ProductCardProps = {
   readonly minWidthMm: number;
   readonly maxWidthMm: number;
   readonly materials: readonly MaterialChoice[];
-  /** Set on the homepage's first card only - see CategoryTile.tsx's comment on why this matters. */
-  readonly priority?: boolean;
+  /**
+   * Preloads this card's photo - renamed from `priority` (PERF-06). Set only
+   * where the card is genuinely the LCP element; measured 2026-09-10, the
+   * homepage's first card is 1905 px down on desktop and 3496 px down on a
+   * phone, so it is not set there any more.
+   */
+  readonly preload?: boolean;
 };
 
 /**
@@ -59,7 +64,7 @@ export function ProductCard({
   minWidthMm,
   maxWidthMm,
   materials,
-  priority = false,
+  preload = false,
 }: ProductCardProps) {
   const CategoryIcon = getCategoryIcon(categorySlug);
   const materialSummary = summariseMaterials(materials);
@@ -109,7 +114,7 @@ export function ProductCard({
             */
             sizes="(max-width: 599px) 88vw, (max-width: 767px) 45vw, (max-width: 1023px) 34vw, 300px"
             style={{ objectFit: 'cover' }}
-            priority={priority}
+            preload={preload}
           />
         )}
         <span className="card-icon-badge" aria-hidden="true">

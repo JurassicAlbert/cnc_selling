@@ -117,14 +117,22 @@ export default async function MarketingHomePage() {
               gap: 24,
             }}
           >
-            {categories.map((category, index) => (
+            {/*
+              PERF-06. `priority={index === 0}` used to sit on the first tile,
+              and it was right when it was written - Next flagged that tile as
+              the LCP element. Measured again on 2026-09-10 it is not: the
+              tile sits 1365 px down a 720 px-tall desktop window and 1537 px
+              down a phone, and this page's real LCP element is the hero
+              `<video>`'s poster. Preloading it was competing with the element
+              that actually paints.
+            */}
+            {categories.map((category) => (
               <CategoryTile
                 key={category.slug}
                 href={`/${category.slug}`}
                 namePl={category.namePl}
                 imageUrl={category.imageUrl}
                 categorySlug={category.slug}
-                priority={index === 0}
               />
             ))}
           </div>
@@ -142,7 +150,12 @@ export default async function MarketingHomePage() {
               gap: 24,
             }}
           >
-            {products.map((product, index) => (
+            {/*
+              PERF-06, same as the tiles above: measured 1905 px down on desktop
+              and 3496 px down on a phone, so the first card is not the LCP
+              element and no longer asks to be preloaded.
+            */}
+            {products.map((product) => (
               <ProductCard
                 key={product.slug}
                 href={`/produkt/${product.slug}`}
@@ -157,7 +170,6 @@ export default async function MarketingHomePage() {
                 minWidthMm={product.minWidthMm}
                 maxWidthMm={product.maxWidthMm}
                 materials={product.materials}
-                priority={index === 0}
               />
             ))}
           </div>

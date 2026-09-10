@@ -8,8 +8,20 @@ type CategoryTileProps = {
   readonly namePl: string;
   readonly imageUrl: string | null;
   readonly categorySlug: string;
-  /** Set on the first tile only - Next.js flagged it as the LCP element (real Playwright output, not guessed). */
-  readonly priority?: boolean;
+  /**
+   * Preloads this tile's photo. Renamed from `priority`, deprecated in Next
+   * 16 (PERF-06); `get-img-props.js` shows the two are the same switch -
+   * `isLazy = !priority && !preload && …` and `preload: preload || priority`.
+   *
+   * **Nothing sets it today.** It was set on the homepage's first tile
+   * because Next flagged that tile as the LCP element, which was true when it
+   * was recorded and is not now: measured 2026-09-10, that tile sits 1365 px
+   * down a 720 px-tall desktop window and 1537 px down a phone, and the
+   * homepage's real LCP element is the hero `<video>` poster. Kept as a prop
+   * rather than deleted because it is the right switch for a page whose hero
+   * IS a tile.
+   */
+  readonly preload?: boolean;
 };
 
 /**
@@ -19,7 +31,7 @@ type CategoryTileProps = {
  * (responsive sizing, lazy loading, format negotiation) is a genuine win
  * here rather than dead weight.
  */
-export function CategoryTile({ href, namePl, imageUrl, categorySlug, priority = false }: CategoryTileProps) {
+export function CategoryTile({ href, namePl, imageUrl, categorySlug, preload = false }: CategoryTileProps) {
   const Icon = getCategoryIcon(categorySlug);
 
   return (
@@ -56,7 +68,7 @@ export function CategoryTile({ href, namePl, imageUrl, categorySlug, priority = 
           */
           sizes="(max-width: 599px) 88vw, (max-width: 767px) 45vw, 240px"
           style={{ objectFit: 'cover' }}
-          priority={priority}
+          preload={preload}
         />
       )}
       <div

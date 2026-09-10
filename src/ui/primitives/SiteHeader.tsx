@@ -116,8 +116,10 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
 
             Sized in CSS with the intrinsic ratio declared, so the browser
             reserves the right box before the file arrives; `preload` because
-            it is above the fold on every page (`priority` is deprecated in
-            Next 16 - see this component's neighbours, which still use it).
+            it is above the fold on every page. This was the first use of
+            `preload` in the repository; PERF-06 finished the job on
+            2026-09-10, so `priority` - deprecated in Next 16 - is gone
+            everywhere now.
           */}
           <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
             <Image

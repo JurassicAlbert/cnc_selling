@@ -56,7 +56,7 @@ export default async function CollectionDetailPage({ params }: CollectionDetailP
               boxShadow: 'var(--shadow-sm)',
             }}
           >
-            <Image src={collection.imageUrl} alt="" fill sizes="(max-width: 900px) 100vw, 900px" style={{ objectFit: 'cover' }} priority />
+            <Image src={collection.imageUrl} alt="" fill sizes="(max-width: 900px) 100vw, 900px" style={{ objectFit: 'cover' }} preload />
           </div>
         )}
 
