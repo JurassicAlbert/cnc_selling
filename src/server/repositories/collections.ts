@@ -108,7 +108,7 @@ export async function listActiveProductsByCollectionSlug(collectionSlug: string)
           productionDaysMax: true,
           minWidthMm: true,
           maxWidthMm: true,
-          materials: { select: { material: { select: { namePl: true } } } },
+          materials: { select: { material: { select: { namePl: true, family: true } } } },
         },
       },
     },
@@ -127,6 +127,6 @@ export async function listActiveProductsByCollectionSlug(collectionSlug: string)
     productionDaysMax: product.productionDaysMax,
     minWidthMm: product.minWidthMm,
     maxWidthMm: product.maxWidthMm,
-    materials: product.materials.map((m) => ({ namePl: m.material.namePl })),
+    materials: product.materials.map((m) => ({ namePl: m.material.namePl, family: m.material.family })),
   }));
 }

@@ -42,7 +42,19 @@ export function CategoryTile({ href, namePl, imageUrl, categorySlug, priority = 
           src={imageUrl}
           alt=""
           fill
-          sizes="(max-width: 768px) 50vw, 300px"
+          /*
+            BUG-26 named `ProductCard` only, and its parenthetical says image
+            serving is otherwise correct - but measuring it found this tile
+            carrying the identical mistake, so it is fixed on evidence rather
+            than left because a list did not mention it. At 375 px the tile
+            renders 327 px, 87vw, against a declared 50vw.
+
+            Measured across the range: 375->327, 600->264, 768->221,
+            1000->218, 1600->211. Simpler than the product card - one column,
+            then two, then a size that barely moves - so it needs three stops
+            rather than four.
+          */
+          sizes="(max-width: 599px) 88vw, (max-width: 767px) 45vw, 240px"
           style={{ objectFit: 'cover' }}
           priority={priority}
         />

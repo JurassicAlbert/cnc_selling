@@ -265,7 +265,17 @@ describe('applySetProductMaterial (nested editor, proven end to end)', () => {
     expect(await prisma.auditLog.count({ where: { entity: 'Product', entityId: created.id, actorEmail: staff.email } })).toBeGreaterThan(0);
 
     const after = await listActiveProductsByCategorySlug(category.slug);
-    expect(after.find((p) => p.slug === input.slug)?.materials).toEqual([{ namePl: material.namePl }]);
+    /*
+      `family` joined this DTO for UX-17: the product card chooses between
+      „N gatunków drewna" and „N materiałów" from the families rather than the
+      count, because a ceramic option must never be called wood. Taken from
+      the seeded row rather than written out, so this stays an assertion about
+      the repository carrying the material through and not about which family
+      the fixture happens to use.
+    */
+    expect(after.find((p) => p.slug === input.slug)?.materials).toEqual([
+      { namePl: material.namePl, family: material.family },
+    ]);
   });
 });
 

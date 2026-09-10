@@ -43,6 +43,17 @@ export const SITE = {
   catalogueIndividualQuotePl: 'Wycena indywidualna',
   catalogueProductionTimeLabelPl: 'Czas realizacji',
   catalogueProductionTimeUnitPl: 'dni roboczych',
+  /*
+    UX-17. The card used to show `materials[0]` plus „ +N" - „Dąb +3" - which
+    is shorthand only a developer reads correctly. The noun is chosen from the
+    families, not from the count: `fartuch-kuchenny-z-grawerem` offers one
+    CERAMIC material, and the schema also allows PLYWOOD, MDF, LEATHER and
+    OTHER, so „gatunki drewna" is not always true. See
+    `domain/catalogue/material-summary.ts`.
+  */
+  catalogueMaterialsWoodPl: (count: number) =>
+    `${countPl(count, { one: 'gatunek', few: 'gatunki', many: 'gatunków' })} drewna`,
+  catalogueMaterialsMixedPl: (count: number) => countPl(count, { one: 'materiał', few: 'materiały', many: 'materiałów' }),
   catalogueDimensionsLabelPl: 'Wymiary',
   catalogueMaterialsLabelPl: 'Dostępne materiały',
   catalogueCareInstructionsLabelPl: 'Pielęgnacja',
