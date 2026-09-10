@@ -27,7 +27,9 @@
  * link sets a cookie the page never reads.
  */
 
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
+
+import { isSecureRequest } from '@/server/security/headers';
 
 export const ORDER_ACCESS_COOKIE = 'order-access';
 
@@ -46,12 +48,31 @@ export async function setOrderAccessCookie(token: string): Promise<void> {
   (await cookies()).set(ORDER_ACCESS_COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
-    // `NODE_ENV` rather than the request's scheme, unlike `proxy.ts` which has
-    // a `NextRequest` to read: a `Secure` cookie is silently dropped over
-    // http, which would break the e2e suite - it runs a production build on
-    // plain localhost - while looking like an authorization bug. SEC-11 is the
-    // same trap in a different header.
-    secure: process.env.NODE_ENV === 'production' && process.env.E2E !== '1',
+    /*
+      SEC-12. Decided from the request's own scheme, not from `NODE_ENV`.
+
+      **What was here before did not do what its comment said.** The rule was
+      `NODE_ENV === 'production' && process.env.E2E !== '1'`, and nothing in
+      this repository has ever set `E2E` - the only mention of it was that
+      expression - so the clause was never false and the exemption it
+      described did not exist.
+
+      Correct in production, where the site is https. Wrong on every other
+      way a production build gets served over plain http: a staging box, a
+      LAN preview, a container behind a TLS-terminating proxy, and this
+      repo's own e2e suite. **WebKit accepts a `Secure` cookie over http into
+      the jar and then declines to send it back**, so for a guest order token
+      that is a confirmation link which works once and never again. UX-11 hit
+      exactly this with the cart-undo cookie; this is the same rule on the
+      credential path, and `cart-undo.ts` carries the longer account of how it
+      was diagnosed.
+
+      `protocol: 'http:'` because a Server Action has no `NextRequest` to read
+      a scheme from, so `x-forwarded-proto` is the only record of what the
+      browser used - the same call `cart-undo.ts` makes, deliberately
+      identical so the two cookie writers cannot drift.
+    */
+    secure: isSecureRequest({ protocol: 'http:', forwardedProto: (await headers()).get('x-forwarded-proto') }),
     path: ORDER_ACCESS_COOKIE_PATH,
   });
 }
