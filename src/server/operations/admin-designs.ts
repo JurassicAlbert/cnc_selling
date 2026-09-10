@@ -21,7 +21,7 @@ import { prisma } from '@/server/db/client';
 import { requireAdminSession } from '@/server/auth/session';
 import type { CurrentSession } from '@/server/auth/session';
 import { writeAuditLog } from '@/server/audit/write-audit-log';
-import { savePublicImage } from '@/server/storage/public-images';
+import { deletePublicImage, savePublicImage } from '@/server/storage/public-images';
 import { nextAvailableSlug } from '@/server/util/unique-slug';
 import type { DesignRightsStatus, ProductionMethod } from '@/generated/prisma/enums';
 
@@ -424,6 +424,29 @@ export async function applyUpdateDesign(staff: CurrentSession, id: string, formD
 
   await prisma.design.update({ where: { id }, data: { ...fields, thumbnailUrl, previewUrl } });
   await writeAuditLog({ actor: staff, entity: 'Design', entityId: id, action: 'update', diff: { before: current, after: fields } });
+
+  /*
+    PERF-04. Delete the file the update replaced.
+
+    `savePublicImage` had four callers and `deletePublicImage` one, so every
+    replaced image stayed on disk forever. Nothing referred to it once the row
+    above committed - and order snapshots carry no image URLs at all
+    (`server/orders/snapshot.ts`), so there is no past document to break.
+
+    **After the update, not before.** A failed write must never leave the row
+    pointing at a file that has been deleted; the worst case in this order is
+    an orphan, which is the state we are already in and can be swept.
+
+    Only when the URL actually changed: an update that touched other fields
+    leaves the image alone, and re-deleting the live file would blank the
+    page.
+  */
+  if (thumbnailUrl !== current.thumbnailUrl) {
+    await deletePublicImage(current.thumbnailUrl);
+  }
+  if (previewUrl !== current.previewUrl) {
+    await deletePublicImage(current.previewUrl);
+  }
 
   return { ok: true, id };
 }

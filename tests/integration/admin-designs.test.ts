@@ -18,6 +18,7 @@ import { applyAddDesignMaterial } from '@/server/operations/admin-design-materia
 import { listDesignOptionsForAdmin } from '@/server/repositories/admin-products';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';
+import { publicImageExists, removeTestPublicImages } from './public-image-files';
 
 const PREFIX = 'test-admin-designs-';
 
@@ -73,6 +74,8 @@ afterEach(async () => {
   await prisma.designCollection.deleteMany({ where: { slug: { startsWith: PREFIX } } });
   await prisma.material.deleteMany({ where: { slug: { startsWith: PREFIX } } });
   await prisma.auditLog.deleteMany({ where: { actorEmail: { startsWith: PREFIX } } });
+  // The rows were always cleared here; the files they point at were not.
+  await removeTestPublicImages(PREFIX);
 });
 
 describe('applyCreateCollection / applyUpdateCollection / applySetCollectionActive', () => {
@@ -372,5 +375,54 @@ describe('applyAddDesignMaterial (nested editor)', () => {
     expect(link).not.toBeNull();
 
     await prisma.material.delete({ where: { id: material.id } });
+  });
+});
+/**
+ * PERF-04. `savePublicImage` is called from four operation modules and
+ * `deletePublicImage` from one, so replacing an image left the file it
+ * replaced on disk forever. Nothing referenced it any more - the row now
+ * points at the new URL, and order snapshots carry no image URLs at all
+ * (`server/orders/snapshot.ts`), so this is a pure leak rather than a
+ * retention decision.
+ *
+ * It is a production defect that this suite happened to exercise thousands
+ * of times: 7 296 orphaned directories in `public/images` when it was found,
+ * which is what Turbopack's over-bundling warnings were really counting.
+ *
+ * Asserted on the disk, not on the row: the row was always right. What was
+ * wrong was the file beside it.
+ */
+describe('design images on disk', () => {
+  it('deletes the thumbnail it replaced, and keeps the one it did not', async () => {
+    const staff = staffActor();
+    const created = await applyCreateDesign(staff, designFormData());
+    if (!created.ok) throw new Error('setup failed - could not create a design');
+
+    const before = await prisma.design.findUniqueOrThrow({
+      where: { id: created.id },
+      select: { slug: true, thumbnailUrl: true, previewUrl: true },
+    });
+    expect(publicImageExists(before.thumbnailUrl)).toBe(true);
+    expect(publicImageExists(before.previewUrl)).toBe(true);
+
+    // A new thumbnail and NO new preview - which is the ordinary case, and
+    // the one that proves the delete is driven by what actually changed
+    // rather than fired at every image on the row.
+    const update = designFormData({ slug: before.slug, skipPreview: 'true' });
+    const updated = await applyUpdateDesign(staff, created.id, update);
+    expect(updated.ok).toBe(true);
+
+    const after = await prisma.design.findUniqueOrThrow({
+      where: { id: created.id },
+      select: { thumbnailUrl: true, previewUrl: true },
+    });
+
+    expect(after.thumbnailUrl).not.toBe(before.thumbnailUrl);
+    expect(publicImageExists(after.thumbnailUrl)).toBe(true);
+    expect(publicImageExists(before.thumbnailUrl)).toBe(false);
+
+    // Untouched, and still there. Deleting this one would break the page.
+    expect(after.previewUrl).toBe(before.previewUrl);
+    expect(publicImageExists(before.previewUrl)).toBe(true);
   });
 });
