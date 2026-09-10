@@ -408,6 +408,31 @@ export function CheckoutForm({
                                   {method.feasible ? formatPln(method.priceGrosze) : '-'}
                                 </Typography>
                               </Stack>
+                              {/*
+                                UX-09. On the row, not once below the group
+                                for whichever method is selected. With every
+                                method free, the estimate is the only thing
+                                left that distinguishes them - and the seeded
+                                catalogue really does differ (personal
+                                collection 1 to 5 working days against the
+                                couriers' 1 to 3). Rendered once per method so
+                                two can be read at the same time, which is
+                                what comparing means.
+
+                                Directly under the price, so the two facts a
+                                choice actually turns on sit together, above
+                                the prose.
+
+                                Not shown for a method the cart cannot use:
+                                its price is already „-" and how fast it would
+                                have been is not a fact anyone needs.
+                              */}
+                              {method.feasible && (
+                                <Typography variant="caption" color="text.secondary">
+                                  {SITE.checkoutDeliveryEstimateLabelPl} {method.estimatedDaysMin}–{method.estimatedDaysMax}{' '}
+                                  {SITE.checkoutDeliveryEstimateUnitPl}
+                                </Typography>
+                              )}
                               <Typography variant="caption" color="text.secondary">
                                 {method.descPl}
                               </Typography>
@@ -444,12 +469,6 @@ export function CheckoutForm({
                     ))}
                   </Stack>
                 </RadioGroup>
-              )}
-              {selectedDelivery !== null && (
-                <Typography variant="caption" color="text.secondary">
-                  {SITE.checkoutDeliveryEstimateLabelPl} {selectedDelivery.estimatedDaysMin}–{selectedDelivery.estimatedDaysMax}{' '}
-                  {SITE.checkoutDeliveryEstimateUnitPl}
-                </Typography>
               )}
               {state.fieldErrors.deliveryMethodId !== undefined && (
                 <FormHelperText error>{checkoutIssueMessage(state.fieldErrors.deliveryMethodId)}</FormHelperText>
