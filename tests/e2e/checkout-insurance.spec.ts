@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { expect, test } from '@playwright/test';
 
 import { prisma } from '../../src/server/db/client';
+import { addToCart } from './add-to-cart';
 
 /**
  * INSURANCE-01, the customer journey.
@@ -47,10 +48,7 @@ test('a customer can buy the carrier cover, and only once it exists', async ({ p
   test.slow();
 
   await page.goto('/produkt/obraz-drewniany-z-grawerem');
-  const main = page.getByRole('main');
-  const addToCartButton = main.getByRole('button', { name: 'Dodaj do koszyka' });
-  await expect(addToCartButton).toBeEnabled({ timeout: 30_000 });
-  await addToCartButton.click();
+  await addToCart(page);
 
   await expect(page).toHaveURL('/koszyk');
   await page.getByRole('link', { name: 'Przejdź do zamówienia' }).click();

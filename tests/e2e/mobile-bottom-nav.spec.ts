@@ -1,6 +1,7 @@
 import 'dotenv/config';
 
 import { expect, test } from '@playwright/test';
+import { addToCart, addToCartButton, waitForAddToCartReady } from './add-to-cart';
 
 /**
  * `docs/AI-CHECKLIST.md` RWD-05 - no bottom navigation on mobile.
@@ -64,9 +65,7 @@ test('the bar is a labelled landmark, and gone on a desktop width', async ({ pag
 test('the cart count on the bar is the real one', async ({ page }) => {
   test.slow();
   await page.goto('/produkt/obraz-drewniany-z-grawerem');
-  const addToCart = page.getByRole('main').getByRole('button', { name: 'Dodaj do koszyka' });
-  await expect(addToCart).toBeEnabled({ timeout: 30_000 });
-  await addToCart.click();
+  await addToCart(page);
   await expect(page).toHaveURL('/koszyk');
 
   // The same server-side summary the header badge uses, not a second source
@@ -84,9 +83,7 @@ test('the product page price bar sits above the bar, not under it', async ({ pag
   test.slow();
   await page.goto('/produkt/obraz-drewniany-z-grawerem');
   await page.getByRole('button', { name: 'Tylko niezbędne' }).click();
-  await expect(page.getByRole('main').getByRole('button', { name: 'Dodaj do koszyka' })).toBeEnabled({
-    timeout: 30_000,
-  });
+  await waitForAddToCartReady(addToCartButton(page));
 
   const geometry = await page.evaluate(() => {
     const nav = document.querySelector('nav[data-bottom-nav]');

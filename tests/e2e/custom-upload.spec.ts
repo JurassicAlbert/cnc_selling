@@ -14,6 +14,7 @@ import path from 'node:path';
 import { expect, test } from './fixtures';
 
 import { prisma } from '../../src/server/db/client';
+import { addToCart } from './add-to-cart';
 
 /**
  * P4's real end-to-end path, checklist's own framing: "Custom upload:
@@ -77,9 +78,7 @@ test('uploads a custom design, completes checkout, and lands in DESIGN_REVIEW', 
   await expect(
     main.getByText('Podana cena to wstępny szacunek', { exact: false }),
   ).toBeVisible();
-  const addToCartButton = main.getByRole('button', { name: 'Dodaj do koszyka' });
-  await expect(addToCartButton).toBeEnabled();
-  await addToCartButton.click();
+  await addToCart(page);
 
   await expect(page).toHaveURL('/koszyk');
   // The cart row's own heading, not any text on the page: a bare `getByText`

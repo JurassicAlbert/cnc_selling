@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { expect, test } from '@playwright/test';
 
 import { prisma } from '../../src/server/db/client';
+import { addToCart } from './add-to-cart';
 
 /**
  * The P5 add-to-cart -> cart -> checkout -> confirmation path, end to end,
@@ -41,10 +42,7 @@ import { prisma } from '../../src/server/db/client';
 test('adds a configuration to the cart and completes checkout as a guest', async ({ page }) => {
   await page.goto('/produkt/obraz-drewniany-z-grawerem');
 
-  const main = page.getByRole('main');
-  const addToCartButton = main.getByRole('button', { name: 'Dodaj do koszyka' });
-  await expect(addToCartButton).toBeEnabled();
-  await addToCartButton.click();
+  await addToCart(page);
 
   await expect(page).toHaveURL('/koszyk');
   await expect(page.getByRole('heading', { name: 'Koszyk' })).toBeVisible();

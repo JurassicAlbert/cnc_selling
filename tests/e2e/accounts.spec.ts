@@ -4,6 +4,7 @@ import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { fillReliably, checkReliably } from './fill-reliably';
 import { registerAccount } from './register';
+import { addToCart } from './add-to-cart';
 
 /**
  * P6's real point, per the guest-cart-merge plan: adding to cart as a
@@ -41,10 +42,7 @@ async function login(page: Page, params: { readonly email: string; readonly pass
 // it goes straight to "Dodaj do koszyka". No crumb click needed at all.
 async function addSampleConfigurationToCart(page: Page): Promise<void> {
   await page.goto('/produkt/obraz-drewniany-z-grawerem');
-  const main = page.getByRole('main');
-  const addToCartButton = main.getByRole('button', { name: 'Dodaj do koszyka' });
-  await expect(addToCartButton).toBeEnabled();
-  await addToCartButton.click();
+  await addToCart(page);
   await expect(page).toHaveURL('/koszyk');
 }
 

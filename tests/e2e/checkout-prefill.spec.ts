@@ -5,6 +5,7 @@ import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { registerAccount } from './register';
 import { prisma } from '../../src/server/db/client';
+import { waitForAddToCartReady } from './add-to-cart';
 
 /**
  * „Uzupełnij moimi danymi" and the guest account prompt - owner request,
@@ -28,7 +29,7 @@ async function addSomethingToTheCart(page: Page): Promise<void> {
   await page.goto('/produkt/obraz-drewniany-z-grawerem');
   const main = page.getByRole('main');
   const addToCart = main.getByRole('button', { name: 'Dodaj do koszyka' });
-  await expect(addToCart).toBeEnabled({ timeout: 20_000 });
+  await waitForAddToCartReady(addToCart);
   await addToCart.click();
   await expect(page).toHaveURL('/koszyk', { timeout: 15_000 });
 }

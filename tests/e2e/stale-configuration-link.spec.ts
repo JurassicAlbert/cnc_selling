@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { expect, test } from '@playwright/test';
 
 import { prisma } from '../../src/server/db/client';
+import { waitForAddToCartReady } from './add-to-cart';
 
 /**
  * UX-21, the last visible edge of SEC-03.
@@ -76,7 +77,7 @@ test('a link naming a retired pattern shows no price and cannot be added to the 
   // hydrate and its first snapshot to arrive, after which the price is
   // already on the page.
   await page.goto(link(offered?.designId ?? ''));
-  await expect(addToCart).toBeEnabled();
+  await waitForAddToCartReady(addToCart);
   await expect(page.getByText(/^Cena: /)).toBeVisible();
 
   /*

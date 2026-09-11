@@ -1,6 +1,7 @@
 import 'dotenv/config';
 
 import { expect, test } from '@playwright/test';
+import { waitForAddToCartReady } from './add-to-cart';
 
 /**
  * `docs/AI-CHECKLIST.md` UX-08 / BUG-14 - switching carrier left the pickup
@@ -41,7 +42,7 @@ test('switching carrier clears the pickup point instead of submitting a stale on
     machine that is comfortably more than five seconds - a property of the
     test machine, not of the shop.
   */
-  await expect(addToCart).toBeEnabled({ timeout: 30_000 });
+  await waitForAddToCartReady(addToCart);
   await addToCart.click();
 
   await expect(page).toHaveURL('/koszyk');

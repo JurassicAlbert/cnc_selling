@@ -1,6 +1,7 @@
 import 'dotenv/config';
 
 import { expect, test } from '@playwright/test';
+import { addToCart, addToCartButton, waitForAddToCartReady } from './add-to-cart';
 
 /**
  * `docs/AI-CHECKLIST.md`'s mobile/RWD sweep, 2026-09-09.
@@ -43,9 +44,7 @@ test('the fixed price bar does not sit on top of the end of the page', async ({ 
   await page.getByRole('button', { name: 'Tylko niezbędne' }).click();
 
   // The bar only exists once the configurator has priced something.
-  await expect(page.getByRole('main').getByRole('button', { name: 'Dodaj do koszyka' })).toBeEnabled({
-    timeout: 30_000,
-  });
+  await waitForAddToCartReady(addToCartButton(page));
 
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await page.waitForTimeout(500);
@@ -132,9 +131,7 @@ test('every field on the checkout tells the browser what it holds', async ({ pag
   test.slow();
 
   await page.goto('/produkt/obraz-drewniany-z-grawerem');
-  const addToCart = page.getByRole('main').getByRole('button', { name: 'Dodaj do koszyka' });
-  await expect(addToCart).toBeEnabled({ timeout: 30_000 });
-  await addToCart.click();
+  await addToCart(page);
   await expect(page).toHaveURL('/koszyk');
   await page.goto('/koszyk/zamowienie');
 

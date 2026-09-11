@@ -1,6 +1,7 @@
 import 'dotenv/config';
 
 import { expect, test } from '@playwright/test';
+import { addToCart } from './add-to-cart';
 
 /**
  * `docs/AI-CHECKLIST.md` UX-13 - the cart showed none of what it knows about
@@ -29,9 +30,7 @@ test('a cart line keeps the notes the customer accepted while configuring it', a
   test.slow();
 
   await page.goto('/produkt/obraz-drewniany-z-grawerem');
-  const addToCart = page.getByRole('main').getByRole('button', { name: 'Dodaj do koszyka' });
-  await expect(addToCart).toBeEnabled({ timeout: 30_000 });
-  await addToCart.click();
+  await addToCart(page);
   await expect(page).toHaveURL('/koszyk');
 
   // The disclosure is closed by default - the cart's job is the total, and a

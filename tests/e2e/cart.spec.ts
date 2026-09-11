@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
+import { waitForAddToCartReady } from './add-to-cart';
 
 /**
  * `docs/CHECKLIST.md` §36's "Duplicate configuration" and "Two different
@@ -45,7 +46,7 @@ async function addToCart(page: Page, presetLabel?: 'Średni' | 'Duży'): Promise
   // trip returns, and this helper is often the first thing to touch
   // `/produkt/[slug]` on a just-started server. A real wait for that first
   // load, not a flake mask: every assertion after it keeps the default.
-  await expect(addToCartButton).toBeEnabled({ timeout: 20_000 });
+  await waitForAddToCartReady(addToCartButton);
   await addToCartButton.click();
   // Adding to the cart is a Server Action that redirects; the wait is for
   // that round trip under a loaded suite, not for anything on the page.

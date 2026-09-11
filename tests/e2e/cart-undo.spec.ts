@@ -1,6 +1,7 @@
 import 'dotenv/config';
 
 import { expect, test } from '@playwright/test';
+import { addToCart } from './add-to-cart';
 
 /**
  * `docs/AI-CHECKLIST.md` UX-11 - removing a cart line was instant and
@@ -24,9 +25,7 @@ test('a removed line can be taken back, including when it was the only one', asy
   test.slow();
 
   await page.goto('/produkt/obraz-drewniany-z-grawerem');
-  const addToCart = page.getByRole('main').getByRole('button', { name: 'Dodaj do koszyka' });
-  await expect(addToCart).toBeEnabled({ timeout: 30_000 });
-  await addToCart.click();
+  await addToCart(page);
   await expect(page).toHaveURL('/koszyk');
 
   // Two of them, so the restore has a quantity to get wrong.

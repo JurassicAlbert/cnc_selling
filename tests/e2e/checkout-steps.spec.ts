@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { waitForAddToCartReady } from './add-to-cart';
 
 /**
  * The checkout stage rail, in a real browser - owner request, 2026-09-04:
@@ -25,7 +26,7 @@ async function addSomethingToTheCart(page: Page): Promise<void> {
   // trip returns, and this is often the first thing to touch
   // `/produkt/[slug]` on a just-started server. Every assertion after it
   // keeps the default timeout.
-  await expect(addToCart).toBeEnabled({ timeout: 20_000 });
+  await waitForAddToCartReady(addToCart);
   await addToCart.click();
   await expect(page).toHaveURL('/koszyk', { timeout: 15_000 });
 }

@@ -1,6 +1,7 @@
 import 'dotenv/config';
 
 import { expect, test } from '@playwright/test';
+import { addToCart } from './add-to-cart';
 
 /**
  * `docs/AI-CHECKLIST.md` SEC-12.
@@ -29,9 +30,7 @@ test('the guest order cookie is one the browser will send back', async ({ page }
   test.slow();
 
   await page.goto('/produkt/obraz-drewniany-z-grawerem');
-  const addToCart = page.getByRole('main').getByRole('button', { name: 'Dodaj do koszyka' });
-  await expect(addToCart).toBeEnabled({ timeout: 30_000 });
-  await addToCart.click();
+  await addToCart(page);
 
   await expect(page).toHaveURL('/koszyk');
   await page.getByRole('link', { name: 'Przejdź do zamówienia' }).click();
