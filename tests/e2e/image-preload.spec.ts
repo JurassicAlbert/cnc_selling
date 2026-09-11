@@ -59,3 +59,38 @@ test('the above-the-fold images are preloaded and the rest are not', async ({ pa
     expect(img.top, `an eager image sits ${img.top}px down the page`).toBeLessThan(viewportHeight * 2);
   }
 });
+
+/**
+ * PERF-07. The homepage's largest-contentful-paint element is the hero's
+ * first frame, and it used to be the `<video>`'s own `poster` attribute -
+ * which `next/image` cannot preload, so the browser only learned the URL
+ * after parsing the SVG, the `foreignObject` and the video. The element that
+ * decides the score was the one discovered last.
+ *
+ * Two things are pinned here, and the second matters as much as the first:
+ * the frame is preloaded, **and the video no longer carries a `poster`**.
+ * Putting the attribute back would fetch the same frame twice under two URLs,
+ * because the optimiser serves `/_next/image?url=…` rather than the file path,
+ * and nothing on screen would look wrong.
+ */
+test('the hero first frame is preloaded, and fetched only once', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#tresc')).toBeVisible();
+
+  const state = await page.evaluate(() => {
+    const preloaded = [...document.querySelectorAll('link[rel="preload"][as="image"]')]
+      .map((link) => (link as HTMLLinkElement).getAttribute('imagesrcset') ?? (link as HTMLLinkElement).href)
+      .join(' ');
+    const video = document.querySelector('foreignObject video');
+    const image = document.querySelector('foreignObject img');
+    return {
+      posterIsPreloaded: preloaded.includes('hero-carving-poster'),
+      videoHasPoster: video?.hasAttribute('poster') ?? null,
+      heroImageIsOptimised: (image?.getAttribute('src') ?? '').includes('/_next/image'),
+    };
+  });
+
+  expect(state.posterIsPreloaded).toBe(true);
+  expect(state.videoHasPoster).toBe(false);
+  expect(state.heroImageIsOptimised).toBe(true);
+});
