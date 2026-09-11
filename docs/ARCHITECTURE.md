@@ -565,7 +565,7 @@ model CartItem {
 }
 ```
 
-Two different configurations of the same product are two `CartItem` rows pointing at two `Configuration` rows - the brief's edge case ("two different configurations of the same product in one cart") is satisfied structurally. "Duplicate configuration" deep-copies the `Configuration` row rather than incrementing quantity.
+Two different configurations of the same product are two `CartItem` rows pointing at two `Configuration` rows - the brief's edge case ("two different configurations of the same product in one cart") is satisfied structurally. "Duplicate configuration" **increments the quantity of the existing line** rather than deep-copying the `Configuration` row. It did deep-copy, and this paragraph said so deliberately, until the owner reversed it on 2026-08-30: "duplicate the same product in basket like separate product since its the same only the quantity should change." The reversal also removed a real cost - a duplicate that was never edited left two identical lines to delete one at a time **and** a second identical `Configuration`, which `/moje-konto/projekty` then listed as a second saved project. `applyDuplicateCartItem` in `server/operations/cart.ts` carries the full reasoning; the schema comment on `CartItem` was updated at the time and this line was missed (DOC-01).
 
 ### 6.8 Order and the immutable snapshot
 

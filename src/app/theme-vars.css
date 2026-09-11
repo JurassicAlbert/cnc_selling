@@ -722,13 +722,13 @@ html {
  * navigation rather than none of it.
  */
 .nav-burger-checkbox {
-  /* Off-screen rather than `display: none`, so it stays keyboard-focusable
-     and the label's focus ring below has something to react to. */
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
+  /* UX-30. `display: none` above the breakpoint, where the label
+     (`.nav-burger-toggle`) is hidden too. It used to be off-screen at every
+     width, which left a keyboard user on a 1280px page tabbing onto a control
+     announced as the menu whose label and panel are both invisible - a focus
+     stop attached to nothing. The search toggle beside it was built this way
+     from the start; the burger predates it. */
+  display: none;
 }
 .nav-burger-toggle {
   display: none;
@@ -740,6 +740,17 @@ html {
 }
 
 @media (max-width: 899px) {
+  /* Off-screen rather than `display: none` HERE, where this is the real
+     control: it has to stay keyboard-focusable, and the label's focus ring
+     below needs something to react to. */
+  .nav-burger-checkbox {
+    display: block;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
   .nav-burger-toggle {
     display: flex;
     align-items: center;
