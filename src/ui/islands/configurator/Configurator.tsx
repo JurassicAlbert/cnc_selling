@@ -102,7 +102,7 @@ import type {
 // Node built-ins), so it is safe to import as a real value into this client
 // island. That is what lets the default selection be filtered by exactly the
 // same rules the server enforces, rather than by a second copy of them.
-import { findUnavailableSelection } from '@/server/configurator/resolve-options';
+import { findUnavailableSelection } from '@/domain/configuration/availability';
 import { getConfiguratorSnapshot } from '@/server/actions/configurator';
 import type { ConfiguratorSnapshot } from '@/server/actions/configurator';
 import { addToCart, updateCartItemConfiguration } from '@/server/actions/cart';

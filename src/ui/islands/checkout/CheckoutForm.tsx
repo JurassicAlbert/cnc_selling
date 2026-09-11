@@ -77,7 +77,7 @@ import type { ActivePaymentMethod } from '@/server/repositories/payment-methods'
 // A plain-data module (no `prisma`/Node-only imports) - safe to import as a
 // real value here, unlike `delivery-methods.ts`'s own type-only import
 // above (see that file's comment on why THAT one can't cross this boundary).
-import { findPickupPointById, searchPickupPoints } from '@/server/delivery/pickup-points';
+import { findPickupPointById, searchPickupPoints } from '@/domain/delivery/pickup-points';
 
 // Not exported from checkout.ts itself: a 'use server' file may only
 // export async functions, never a plain data constant.

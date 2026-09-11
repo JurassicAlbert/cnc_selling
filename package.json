@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "lint": "biome lint . && node scripts/check-polish-literals.mjs",
+    "lint": "biome lint . && node scripts/check-polish-literals.mjs && node scripts/check-client-server-imports.mjs",
     "lint:fix": "biome lint --write .",
     "format": "biome format --write .",
     "dev": "next dev",

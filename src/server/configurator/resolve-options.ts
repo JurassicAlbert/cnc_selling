@@ -15,6 +15,17 @@ import {
   availableThicknesses,
 } from '@/domain/compatibility/resolve';
 import type { Selections } from '@/domain/configuration/steps';
+import type { ResolvedOptions } from '@/domain/configuration/availability';
+
+/*
+  P2-11. `ResolvedOptions` and `findUnavailableSelection` moved to
+  `@/domain/configuration/availability` because the configurator - a Client
+  Component - needs them, and `src/server` is the wrong address for anything
+  the browser imports. Re-exported here so the twenty-odd server-side callers
+  that already reference them through this module keep working unchanged.
+*/
+export type { ResolvedOptions } from '@/domain/configuration/availability';
+export { findUnavailableSelection } from '@/domain/configuration/availability';
 
 export type MaterialOptionRow = {
   readonly id: string;
@@ -89,18 +100,6 @@ export type ConfiguratorOptionData = {
   readonly fonts: readonly FontOptionRow[];
   /** Empty for a product with none seeded yet, or for one where `requiresExactSize` makes a fixed list nonsensical. */
   readonly presetSizes: readonly PresetSizeOptionRow[];
-};
-
-export type ResolvedOptions = {
-  readonly materialIds: readonly string[];
-  readonly designIds: readonly string[];
-  /** Empty before a material is chosen - there is nothing to resolve finishes against yet. */
-  readonly finishIds: readonly string[];
-  readonly thicknessesMm: readonly number[];
-  /** Unfiltered - nothing narrows which installation variants exist. */
-  readonly installVariantCodes: readonly string[];
-  /** Unfiltered - no compatibility rule narrows which font applies, unlike material/design. */
-  readonly fontIds: readonly string[];
 };
 
 export function resolveOptions(
@@ -284,51 +283,3 @@ export function resolveOptionAvailability(
   return { materials, designs, finishes, thicknesses, fonts };
 }
 
-/**
- * The first selection naming something the shop does not currently offer, or
- * `null` when every set field is selectable.
- *
- * Added 2026-09-04 for `docs/REVIEW-DETAILED.md` UX-21, and shared on purpose.
- * The server calls it from `priceAndValidateSelections` after `resolveOptions`;
- * the configurator calls it against the `ResolvedOptions` already in its
- * snapshot. SEC-03 happened because the picker's rules and the write path's
- * rules were two separate pieces of code that disagreed, and answering the
- * same question twice in two places is how that recurs.
- *
- * Order is not arbitrary. A retired pattern is overwhelmingly why a saved
- * project or a shared link stops being orderable, so the design is checked
- * first and the customer gets the sentence they can act on rather than a
- * technically-true one about a material they never touched.
- *
- * `widthMm`/`heightMm` and `customUploadId` are absent deliberately: the
- * first two are bounded by the product's dimension envelope and the third by
- * ownership, and neither is a question a `ResolvedOptions` can answer.
- * Reporting them here would name the wrong thing.
- */
-export function findUnavailableSelection(
-  options: ResolvedOptions,
-  selections: Selections,
-): keyof Selections | null {
-  const offered = <T>(selected: T | null, available: readonly T[]): boolean =>
-    selected === null || available.includes(selected);
-
-  if (!offered(selections.designId, options.designIds)) {
-    return 'designId';
-  }
-  if (!offered(selections.materialId, options.materialIds)) {
-    return 'materialId';
-  }
-  if (!offered(selections.finishId, options.finishIds)) {
-    return 'finishId';
-  }
-  if (!offered(selections.thicknessMm, options.thicknessesMm)) {
-    return 'thicknessMm';
-  }
-  if (!offered(selections.installationVariant, options.installVariantCodes)) {
-    return 'installationVariant';
-  }
-  if (!offered(selections.fontId, options.fontIds)) {
-    return 'fontId';
-  }
-  return null;
-}

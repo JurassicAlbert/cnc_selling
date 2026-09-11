@@ -41,7 +41,7 @@ import type { CartItemView } from '@/server/repositories/cart';
 import { priceAndValidateSelections } from '@/server/configurator/validate-and-price';
 import type { ValidatedPricing } from '@/server/configurator/validate-and-price';
 import { resolveDeliveryMethodsForCart } from '@/server/repositories/delivery-methods';
-import { findPickupPointById } from '@/server/delivery/pickup-points';
+import { findPickupPointById } from '@/domain/delivery/pickup-points';
 import { SITE } from '@/content/pl/site';
 import type { OrderItemSnapshot } from './snapshot';
 
