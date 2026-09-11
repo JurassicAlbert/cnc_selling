@@ -154,6 +154,18 @@ export async function getConfiguratorProductData(
                 isNaturalVariable: true,
                 family: true,
                 finishes: {
+                  /*
+                    BUG-32/BUG-03. This select had no `orderBy` at all, and
+                    every seeded `Finish` has `sortOrder: 0` - so nothing made
+                    the order stable even in principle, and the configurator
+                    takes `[0]` as its default. A different default finish is a
+                    different `setupFeeGrosze` and `pricePerM2Grosze`, which is
+                    how an unordered list turns into an unexplained
+                    `PRICE_CHANGED` at checkout. `slug` breaks the tie so the
+                    order is total rather than merely partial, exactly as the
+                    materials and designs above already do.
+                  */
+                  orderBy: [{ finish: { sortOrder: 'asc' } }, { finish: { slug: 'asc' } }],
                   select: {
                     finish: {
                       select: {
@@ -215,7 +227,10 @@ export async function getConfiguratorProductData(
         },
         presetSizes: {
           select: { id: true, widthMm: true, heightMm: true, labelPl: true },
-          orderBy: { sortOrder: 'asc' },
+          // Distinct `sortOrder` per product today, so the tie-break is
+          // insurance - but "distinct today" is exactly the assumption that
+          // turned out to be false for finishes.
+          orderBy: [{ sortOrder: 'asc' }, { widthMm: 'asc' }, { heightMm: 'asc' }],
         },
         // 2026-08-29: which finishes are excluded for THIS product even when
         // the material otherwise allows them (`ProductFinishExclusion`'s own
@@ -253,7 +268,9 @@ export async function getConfiguratorProductData(
             minHeightUm: true,
             coveredCodePointRanges: true,
           },
-          orderBy: { sortOrder: 'asc' },
+          // One row today (BUG-31), which is why this has never mattered. The
+          // tie-break costs nothing and stops it mattering later.
+          orderBy: [{ sortOrder: 'asc' }, { namePl: 'asc' }],
         });
 
   const materialsById = new Map(
