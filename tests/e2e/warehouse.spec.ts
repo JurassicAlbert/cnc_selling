@@ -5,24 +5,12 @@ import type { Page } from '@playwright/test';
 // one IP ten per day - fewer than a full suite run needs. See fixtures.ts.
 import { expect, test } from './fixtures';
 import { fillReliably } from './fill-reliably';
-import { registerAccount } from './register';
+import { registerAndPromote } from './admin-session';
 
 import { prisma } from '../../src/server/db/client';
 
 async function signInAsAdmin(page: Page, email: string): Promise<void> {
-  const password = 'correcthorse123';
-  await registerAccount(page, { name: 'E2E Warehouse Admin', email, password });
-
-  await prisma.user.update({ where: { email }, data: { role: 'ADMIN' } });
-
-  // The session's role claim was read at sign-up, before the promotion.
-  await page.getByRole('button', { name: 'Wyloguj się' }).click();
-  await page.goto('/logowanie');
-  const passwordForm = page.locator('form').filter({ has: page.getByLabel('Hasło', { exact: true }) });
-  await fillReliably(passwordForm.getByLabel('Adres e-mail'), email);
-  await fillReliably(passwordForm.getByLabel('Hasło', { exact: true }), password);
-  await passwordForm.getByRole('button', { name: 'Zaloguj się' }).click();
-  await expect(page).toHaveURL('/panel');
+  await registerAndPromote(page, { name: 'E2E Warehouse Admin', email, password: 'correcthorse123', role: 'ADMIN' });
 }
 
 test('an admin records a delivery and sees what it can make', async ({ page }) => {
@@ -97,18 +85,7 @@ test('a staff member can read the warehouse but not write to it', async ({ page 
   // pinning here: the warehouse is where it was decided first.
   const stamp = Date.now();
   const email = `e2e-warehouse-staff-${stamp}@example.test`;
-  const password = 'correcthorse123';
-
-  await registerAccount(page, { name: 'E2E Warehouse Staff', email, password });
-
-  await prisma.user.update({ where: { email }, data: { role: 'STAFF' } });
-  await page.getByRole('button', { name: 'Wyloguj się' }).click();
-  await page.goto('/logowanie');
-  const passwordForm = page.locator('form').filter({ has: page.getByLabel('Hasło', { exact: true }) });
-  await fillReliably(passwordForm.getByLabel('Adres e-mail'), email);
-  await fillReliably(passwordForm.getByLabel('Hasło', { exact: true }), password);
-  await passwordForm.getByRole('button', { name: 'Zaloguj się' }).click();
-  await expect(page).toHaveURL('/panel');
+  await registerAndPromote(page, { name: 'E2E Warehouse Staff', email, password: 'correcthorse123', role: 'STAFF' });
 
   await page.goto('/panel/magazyn');
   await expect(page.getByText('Magazyn materiałów', { exact: true })).toBeVisible();

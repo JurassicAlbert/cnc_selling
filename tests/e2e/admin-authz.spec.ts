@@ -1,39 +1,15 @@
 // Unlike `webServer`'s own `next build && next start` (Next.js loads `.env`
-// itself), the Playwright test-runner process does not - needed here only
-// because this file is the first e2e spec to talk to Postgres directly.
+// itself), the Playwright test-runner process does not. This spec no longer
+// touches Postgres itself - T-33 moved the promotion into
+// `admin-session.ts` - but that helper does, so the environment still has to
+// be loaded before it is imported.
 import 'dotenv/config';
 
-import type { Page } from '@playwright/test';
 // Not `@playwright/test`: this spec registers accounts, and SEC-01 allows
 // one IP ten per day - fewer than a full suite run needs. See fixtures.ts.
 import { expect, test } from './fixtures';
-import { fillReliably } from './fill-reliably';
+import { registerAndPromote } from './admin-session';
 import { registerAccount } from './register';
-
-import { prisma } from '../../src/server/db/client';
-
-async function registerAndPromote(
-  page: Page,
-  params: { readonly name: string; readonly email: string; readonly password: string; readonly role: 'STAFF' | 'ADMIN' },
-): Promise<void> {
-  await registerAccount(page, params);
-
-  await prisma.user.update({ where: { email: params.email }, data: { role: params.role } });
-
-  // The just-created session's own role claim is now stale (Better Auth
-  // read it at sign-up, before the promotion above) - sign out and back in
-  // so the next request carries a session reflecting the real, current role.
-  await page.getByRole('button', { name: 'Wyloguj się' }).click();
-  await page.goto('/logowanie');
-  const passwordForm = page.locator('form').filter({ has: page.getByLabel('Hasło', { exact: true }) });
-  await fillReliably(passwordForm.getByLabel('Adres e-mail'), params.email);
-  await fillReliably(passwordForm.getByLabel('Hasło', { exact: true }), params.password);
-  await passwordForm.getByRole('button', { name: 'Zaloguj się' }).click();
-  // STAFF/ADMIN sign-in lands on /panel directly, not /moje-konto - the
-  // real redirect logic §9z17 fixed, incidentally re-proven here by a
-  // completely different test than the one that originally verified it.
-  await expect(page).toHaveURL('/panel');
-}
 
 test('unauthenticated visitor is redirected to /logowanie, never sees the panel', async ({ page }) => {
   const response = await page.goto('/panel');

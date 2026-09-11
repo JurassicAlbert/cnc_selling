@@ -11,9 +11,8 @@ import type { Page } from '@playwright/test';
 // one IP ten per day - fewer than a full suite run needs. See fixtures.ts.
 import { expect, test } from './fixtures';
 import { fillReliably } from './fill-reliably';
+import { registerAndPromote } from './admin-session';
 import { registerAccount } from './register';
-
-import { prisma } from '../../src/server/db/client';
 
 /**
  * `submitLogin` redirects role-dependently (`mergeAndGetRedirectTarget`) -
@@ -106,10 +105,7 @@ test('customer uploads, staff requests changes, customer sees the notice and reu
     the loop: that they see the notice, see the comment, and can reupload. It
     just needs an account that can actually press the button.
   */
-  await registerAccount(page, { name: 'E2E Reviewer', email: staffEmail, password: 'correcthorse123' });
-  await prisma.user.update({ where: { email: staffEmail }, data: { role: 'ADMIN' } });
-  await logout(page);
-  await login(page, { email: staffEmail, password: 'correcthorse123' });
+  await registerAndPromote(page, { name: 'E2E Reviewer', email: staffEmail, password: 'correcthorse123', role: 'ADMIN' });
 
   await page.goto(`/panel/weryfikacja/${designId}`);
   await expect(page.getByText('PENDING_REVIEW', { exact: true })).toBeVisible();

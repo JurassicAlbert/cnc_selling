@@ -1,8 +1,7 @@
 import 'dotenv/config';
 
 import { expect, test } from './fixtures';
-import { fillReliably } from './fill-reliably';
-import { registerAccount } from './register';
+import { registerAndPromote } from './admin-session';
 
 import { prisma } from '../../src/server/db/client';
 
@@ -38,19 +37,7 @@ test('the pre-publish simulator prices real, named products, and gates the butto
   test.slow();
 
   const email = `${PREFIX}-${Date.now()}@example.test`;
-  const password = 'TestoweHaslo123!';
-  await registerAccount(page, { name: 'Pricing Admin', email, password });
-  await prisma.user.update({ where: { email }, data: { role: 'ADMIN' } });
-
-  // The role claim on the session just created is stale - Better Auth read it
-  // at sign-up, before the promotion above. Same dance as `admin-authz.spec.ts`.
-  await page.getByRole('button', { name: 'Wyloguj się' }).click();
-  await page.goto('/logowanie');
-  const passwordForm = page.locator('form').filter({ has: page.getByLabel('Hasło', { exact: true }) });
-  await fillReliably(passwordForm.getByLabel('Adres e-mail'), email);
-  await fillReliably(passwordForm.getByLabel('Hasło', { exact: true }), password);
-  await passwordForm.getByRole('button', { name: 'Zaloguj się' }).click();
-  await expect(page).toHaveURL('/panel');
+  await registerAndPromote(page, { name: 'Pricing Admin', email, password: 'TestoweHaslo123!', role: 'ADMIN' });
 
   // Straight into the database rather than through the "new version" form: the
   // form is not what this spec is about, and a draft row is inert until
