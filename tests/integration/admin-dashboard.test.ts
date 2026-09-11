@@ -4,6 +4,15 @@ import { getDashboardKpis, getOrdersByStatus, getRevenueOverTime, getTopEntities
 import { prisma } from '@/server/db/client';
 import type { OrderStatus } from '@/generated/prisma/enums';
 import type { OrderItemSnapshot } from '@/server/orders/snapshot';
+import { writesProductionOrders } from './production-fixture';
+
+/*
+  T-34. This file creates orders in a production status, which land in the
+  global sum `admin-production.test.ts` measures. Shared, so this still runs
+  in parallel with every other writer - it only stands aside while that
+  measurement is running. See `production-fixture.ts`.
+*/
+writesProductionOrders();
 
 const PREFIX = 'test-admin-dashboard-';
 

@@ -4,6 +4,15 @@ import { getProductionCapacity, listOrderModuleManifest, listProductionQueue } f
 import { prisma } from '@/server/db/client';
 import type { OrderItemSnapshot } from '@/server/orders/snapshot';
 import type { OrderStatus } from '@/generated/prisma/enums';
+import { readsProductionCapacity } from './production-fixture';
+
+/*
+  T-34. This file measures the WHOLE production queue - `getProductionCapacity`
+  takes no filter - so it cannot run while another file is inserting orders in
+  a production status. Exclusive; the five files that write them declare
+  `writesProductionOrders()` and stand aside. See `production-fixture.ts`.
+*/
+readsProductionCapacity();
 
 const PREFIX = 'test-admin-production-';
 

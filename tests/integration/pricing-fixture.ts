@@ -49,8 +49,7 @@
  * on the same event.
  */
 
-import pg from 'pg';
-import { afterAll, beforeAll } from 'vitest';
+import { LOCK_KEYS, holdsAdvisoryLock } from './advisory-lock';
 
 import { prisma } from '@/server/db/client';
 import { refreshStartingPricesAfterCatalogueChange } from '@/server/pricing/starting-price';
@@ -59,62 +58,6 @@ import { refreshStartingPricesAfterCatalogueChange } from '@/server/pricing/star
 // safely" rather than two. The constant itself lives with the sweep that acts
 // on it, which has no application imports of its own.
 export { TEST_PRICING_NOTE_PREFIX } from './global-setup';
-
-/**
- * Its own key, deliberately not `singleton-lock.ts`'s. Nothing takes both, so
- * there is no lock ordering to get wrong and no way to deadlock the two
- * against each other.
- */
-const PRICING_LOCK_KEY = 918_273_642;
-
-const TAKE = { exclusive: 'pg_advisory_lock', shared: 'pg_advisory_lock_shared' } as const;
-const GIVE = { exclusive: 'pg_advisory_unlock', shared: 'pg_advisory_unlock_shared' } as const;
-
-/**
- * Take the pricing lock, and hand back the release.
- *
- * Its own `pg.Client` rather than Prisma, for the reason `singleton-lock.ts`
- * sets out at length: a session-level advisory lock belongs to the connection
- * that took it, and Prisma pools, so a `$executeRaw` lock and a `$executeRaw`
- * unlock can land on different connections and the lock is never released.
- *
- * Releasing an exclusive hold refreshes the advertised starting prices first.
- * That is not tidiness: publishing rates is exactly the event production
- * hooks `refreshStartingPricesAfterCatalogueChange` to, and a file that
- * published a throwaway version has left every "od X zł" derived from rates
- * that are about to stop being live. Doing it inside the release means it
- * happens while the lock is still held, so no reader can see the half-way
- * state, and a file cannot forget.
- */
-async function acquirePricingLock(mode: 'exclusive' | 'shared'): Promise<() => Promise<void>> {
-  const connectionString = process.env.DATABASE_URL;
-  if (connectionString === undefined || connectionString.length === 0) {
-    throw new Error('acquirePricingLock needs DATABASE_URL - see tests/integration/env-setup.ts');
-  }
-
-  const client = new pg.Client({ connectionString });
-  await client.connect();
-
-  try {
-    // Blocks until it is this file's turn. No timeout on purpose, same as
-    // `singleton-lock.ts`: Vitest's own deadline is the backstop.
-    await client.query(`SELECT ${TAKE[mode]}($1)`, [PRICING_LOCK_KEY]);
-  } catch (error) {
-    await client.end();
-    throw error;
-  }
-
-  return async () => {
-    try {
-      if (mode === 'exclusive') {
-        await refreshStartingPricesAfterCatalogueChange();
-      }
-      await client.query(`SELECT ${GIVE[mode]}($1)`, [PRICING_LOCK_KEY]);
-    } finally {
-      await client.end();
-    }
-  };
-}
 
 /**
  * Declare that this file prices things against whatever version is live.
@@ -129,16 +72,7 @@ async function acquirePricingLock(mode: 'exclusive' | 'shared'): Promise<() => P
  * Shared, so every reader still runs in parallel with every other reader.
  */
 export function readsActivePricing(): void {
-  let release: (() => Promise<void>) | null = null;
-
-  beforeAll(async () => {
-    release = await acquirePricingLock('shared');
-  });
-
-  afterAll(async () => {
-    await release?.();
-    release = null;
-  });
+  holdsAdvisoryLock(LOCK_KEYS.pricing, 'shared');
 }
 
 /**
@@ -150,16 +84,16 @@ export function readsActivePricing(): void {
  * merely interleave, they fail on `PricingSettings_single_active`.
  */
 export function publishesPricingVersions(): void {
-  let release: (() => Promise<void>) | null = null;
-
-  beforeAll(async () => {
-    release = await acquirePricingLock('exclusive');
-  });
-
-  afterAll(async () => {
-    await release?.();
-    release = null;
-  });
+  /*
+    The release refreshes the advertised starting prices before letting go,
+    and that is not tidiness: publishing rates is exactly the event production
+    hooks `refreshStartingPricesAfterCatalogueChange` to, and a file that
+    published a throwaway version has left every „od X zł" derived from rates
+    that are about to stop being live. Inside the release means it happens
+    while the lock is still held, so no reader sees the half-way state, and a
+    file cannot forget.
+  */
+  holdsAdvisoryLock(LOCK_KEYS.pricing, 'exclusive', refreshStartingPricesAfterCatalogueChange);
 }
 
 /**

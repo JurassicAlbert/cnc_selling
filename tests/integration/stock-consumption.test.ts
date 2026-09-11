@@ -21,6 +21,15 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';
 import { applyOrderStatusTransition } from '@/server/operations/admin-orders';
+import { writesProductionOrders } from './production-fixture';
+
+/*
+  T-34. This file creates orders in a production status, which land in the
+  global sum `admin-production.test.ts` measures. Shared, so this still runs
+  in parallel with every other writer - it only stands aside while that
+  measurement is running. See `production-fixture.ts`.
+*/
+writesProductionOrders();
 
 const PREFIX = 'test-warehouse01-';
 const uid = (): string => `${PREFIX}${crypto.randomUUID()}`;
