@@ -745,6 +745,20 @@ export const SITE = {
   collectionEmptyProductsPl: 'W tej kolekcji nie ma jeszcze żadnych produktów.',
 
   faqHeadingPl: 'Najczęściej zadawane pytania',
+  /*
+    The FAQ page was a heading and nine identical accordion bars, with nothing
+    before them and nothing after - a dead end for anyone whose question is
+    not on the list. The lead says what the page is; the closing block gives
+    them somewhere to go.
+
+    Deliberately no response-time promise („odpowiadamy w ciągu 24 godzin" and
+    the like): nobody has committed to one, and a number invented here would
+    be a promise the shop has not made.
+  */
+  faqLeadPl: 'Zebrane w jednym miejscu pytania, które dostajemy najczęściej - o realizację, materiały, dostawę i zwroty.',
+  faqStillStuckHeadingPl: 'Nie ma tu Twojego pytania?',
+  faqStillStuckBodyPl: 'Napisz do nas przez formularz kontaktowy - odpowiemy na podany adres e-mail.',
+  faqStillStuckActionPl: 'Przejdź do kontaktu',
   faqSeoTitlePl: 'Najczęściej zadawane pytania - RYT',
   faqSeoDescPl: 'Odpowiedzi na najczęstsze pytania o zamówienia, personalizację i realizację.',
   faqEmptyStatePl: 'Pytania pojawią się tutaj wkrótce.',
@@ -762,6 +776,23 @@ export const SITE = {
   */
 
   homeReviewsHeadingPl: 'Opinie klientów',
+  /*
+    Owner feedback, 2026-09-11: "something seems missing in this layout - the
+    way the sections are presented". Every section on the site was a bare
+    heading and then content; the reference the owner pointed at
+    (`template.getbazaar.io`) puts a one-sentence lead under every single one.
+    These are those leads - `SectionIntro` renders them.
+
+    Each says something true and checkable rather than filling space. The
+    reviews line is the one worth flagging: `Review.orderId` is required, so
+    an opinion here really did follow a real order, and the sentence is
+    allowed to say so.
+  */
+  homeCategoriesLeadPl: 'Od drobnych grawerów po duże panele - i osobna ścieżka, jeśli masz własny projekt.',
+  homeProductsLeadPl: 'Każdy produkt konfigurujesz sam: wzór, materiał, rozmiar i grawer. Cenę widzisz od razu, zanim dodasz do koszyka.',
+  homeBlogLeadPl: 'Jak powstają nasze projekty i co warto wiedzieć, zanim zamówisz.',
+  homeReviewsLeadPl: 'Opinie wystawione po zrealizowanych zamówieniach.',
+  homeFaqLeadPl: 'Krótkie odpowiedzi na pytania, które dostajemy najczęściej.',
   reviewFormHeadingPl: 'Zostaw opinię',
   reviewFormAuthorNameLabelPl: 'Twoje imię (widoczne publicznie)',
   reviewFormRatingLabelPl: 'Ocena (1–5)',

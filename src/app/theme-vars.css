@@ -1421,3 +1421,21 @@ main[tabindex='-1']:focus:not(:focus-visible) {
     padding: 8px 10px;
   }
 }
+
+/*
+  The „see all" link in a section header - owner feedback 2026-09-11, via
+  `SectionIntro`. Underlined on hover rather than always, so a row of section
+  headers does not read as a row of buttons, and given the same 44px touch
+  height the rest of the chrome uses so it is not a 17px target on a phone.
+*/
+.section-intro-action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--mui-palette-secondary-main);
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+.section-intro-action:hover {
+  text-decoration: underline;
+}
