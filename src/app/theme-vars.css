@@ -810,8 +810,22 @@ html {
     border: none;
     box-shadow: none;
   }
-  .nav-burger-checkbox:checked ~ .nav-burger-panel .nav-link {
+  /* UX-04's end-to-end re-read, 2026-09-13. `.nav-link` covers the five
+     top-level rows; the links inside the two sub-dropdowns are
+     `.nav-dropdown-item` and were never named here, so they came out at
+     **38px** - every category and every collection, eleven rows, the deepest
+     links in the menu and the ones a thumb reaches for after two taps.
+
+     Not a WCAG failure (2.5.8 asks for 24x24, and `accessibility.spec.ts`
+     rightly never complained), which is exactly why it survived: it is this
+     project's own 44px standard applied to one list and not the other.
+     `display: flex` with `align-items: center` rather than padding, so the
+     text stays vertically centred in the taller row. */
+  .nav-burger-checkbox:checked ~ .nav-burger-panel .nav-link,
+  .nav-burger-checkbox:checked ~ .nav-burger-panel .nav-dropdown-item {
     min-height: 44px;
+    display: flex;
+    align-items: center;
   }
 }
 
