@@ -143,7 +143,7 @@ async function main(): Promise<void> {
   await seedMaterialFinishCompatibility(materials, finishes);
   const designs = await seedDesigns();
   await seedDesignCollections(designs);
-  const font = await seedFont();
+  const font = await seedFonts();
 
   const categories = await seedCategories();
   await seedProducts(categories, materials, finishes, designs, font);
@@ -891,69 +891,126 @@ async function seedDesignCollections(designs: readonly SeededDesign[]): Promise<
 }
 
 /**
- * The first real engraving font - the `Font` model's own header comment
+ * The real engraving faces - the `Font` model's own header comment
  * (`prisma/schema.prisma`) says coverage is "parsed from the font's cmap
  * table at seed time and stored - never assumed from the font's name or its
- * declared language support." This function is that parse, run for real
- * against a real file every time the seed runs, not a JSON blob copied in
+ * declared language support." `seedFonts` below is that parse, run for real
+ * against every real file every time the seed runs, not a JSON blob copied in
  * once and left to go stale.
  *
- * Inter, not a placeholder pick: it is the site's own self-hosted body face
- * (`src/ui/theme/fonts.ts`), already relied on for real Polish body copy
- * sitewide, SIL Open Font License (`public/fonts/Inter-OFL.txt`, MIT-compatible
- * for this purpose), and a genuinely plausible real-world choice for
- * laser-engraved text - a clean sans-serif alongside decorative faces is
- * common in real engraving shops. `public/fonts/Inter-Variable.ttf` was
- * downloaded from Google's own OFL font repository
- * (github.com/google/fonts, ofl/inter) - the exact file this function reads.
- * `minHeightUm` (3mm) is this pass's one invented number here, same
- * TODO_PRICING-style placeholder discipline as everywhere else - a real
- * legibility floor needs an actual test cut, not a guess.
+ * Inter was never a placeholder pick: it is the site's own self-hosted body
+ * face (`src/ui/theme/fonts.ts`), already relied on for real Polish body copy
+ * sitewide, and a genuinely plausible choice for engraved text. What it was,
+ * until 2026-09-13, was **alone** - which is what BUG-31 was about.
+ *
+ * The faces on offer, in the order the configurator shows them.
+ *
+ * **Owner decision 2026-09-13**, answering BUG-31: „only one `Font` is seeded
+ * and it is `Inter`, the site's own UI face; the cmap-coverage apparatus
+ * guards a single sans-serif." The apparatus was never the problem - it
+ * parses a real file and refuses a face missing a Polish glyph. It simply had
+ * nothing to prove itself against.
+ *
+ * All four additions are SIL Open Font License, fetched from
+ * `github.com/google/fonts` - the same source and licence family as the Inter
+ * file already here - and each one's `OFL.txt` sits beside it in
+ * `public/fonts/`. Every one was verified to carry all 18 Polish-specific
+ * letters before it entered the repository, and `seedFonts` below refuses to
+ * seed one that does not, every run.
+ *
+ * **`sortOrder` is editorial and deliberate**, not alphabetical. The two
+ * faces that stay legible smallest lead (a clean sans, then a second sans),
+ * the two serifs follow, and the script comes last because it is the most
+ * decorative and the first to fail at small sizes. There is no price to sort
+ * by here, unlike materials and finishes.
+ *
+ * **`minHeightUm` is the one invented number, and it is the same invented
+ * number as before.** 3 mm was Inter's placeholder from the start, flagged as
+ * such, and it stays one placeholder across all five rather than becoming
+ * five guesses that look like measurements. **This is very likely wrong for
+ * `Parisienne`**: a connected script with thin strokes almost certainly needs
+ * a higher floor than a grotesque, and nobody can say what that floor is
+ * without an actual test cut. Recorded in `docs/OPEN_ITEMS.md` rather than
+ * guessed at, exactly as `TODO_PRICING` treats every price.
  */
-async function seedFont(): Promise<{ readonly id: string }> {
-  const fontPath = join(
-    dirname(fileURLToPath(import.meta.url)),
-    '../public/fonts/Inter-Variable.ttf',
-  );
-  const buffer = readFileSync(fontPath);
-  const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
-  const parsed = opentype.parse(arrayBuffer);
-  const cmap = parsed.tables.cmap as { glyphIndexMap: Record<string, number> };
-  const codePoints = Object.keys(cmap.glyphIndexMap).map(Number);
-  const codePointSet = new Set(codePoints);
-  const ranges = compressToRanges(codePoints);
+const FONT_SEEDS = [
+  { slug: 'inter', namePl: 'Inter', file: 'Inter-Variable.ttf', sortOrder: 0 },
+  { slug: 'montserrat', namePl: 'Montserrat', file: 'Montserrat-Variable.ttf', sortOrder: 1 },
+  { slug: 'ebgaramond', namePl: 'EB Garamond', file: 'EBGaramond-Variable.ttf', sortOrder: 2 },
+  { slug: 'playfairdisplay', namePl: 'Playfair Display', file: 'PlayfairDisplay-Variable.ttf', sortOrder: 3 },
+  { slug: 'parisienne', namePl: 'Parisienne', file: 'Parisienne-Regular.ttf', sortOrder: 4 },
+] as const;
 
-  const supportsPolishDiacritics = [...POLISH_SPECIFIC_LETTERS].every((letter) => {
-    const codePoint = letter.codePointAt(0);
-    return codePoint !== undefined && codePointSet.has(codePoint);
-  });
-  if (!supportsPolishDiacritics) {
-    throw new Error(
-      'seedFont: Inter-Variable.ttf is missing a Polish-specific glyph - re-check the downloaded file, do not seed a font that fails this.',
-    );
+/** See `FONT_SEEDS` above. A placeholder, shared by every face, never measured. */
+const PLACEHOLDER_MIN_HEIGHT_UM = 3_000;
+
+/**
+ * Seeds every face in `FONT_SEEDS`, parsing each real file for its real cmap.
+ *
+ * Returns the first one, which is what `seedProducts` attaches as a product's
+ * default personalization face.
+ */
+async function seedFonts(): Promise<{ readonly id: string }> {
+  const seeded: { readonly id: string }[] = [];
+
+  for (const seed of FONT_SEEDS) {
+    const fontPath = join(dirname(fileURLToPath(import.meta.url)), '../public/fonts', seed.file);
+    const buffer = readFileSync(fontPath);
+    const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+    const parsed = opentype.parse(arrayBuffer);
+    const cmap = parsed.tables.cmap as { glyphIndexMap: Record<string, number> };
+    const codePoints = Object.keys(cmap.glyphIndexMap).map(Number);
+    const codePointSet = new Set(codePoints);
+    const ranges = compressToRanges(codePoints);
+
+    const supportsPolishDiacritics = [...POLISH_SPECIFIC_LETTERS].every((letter) => {
+      const codePoint = letter.codePointAt(0);
+      return codePoint !== undefined && codePointSet.has(codePoint);
+    });
+    if (!supportsPolishDiacritics) {
+      const missing = [...POLISH_SPECIFIC_LETTERS].filter((letter) => {
+        const codePoint = letter.codePointAt(0);
+        return codePoint === undefined || !codePointSet.has(codePoint);
+      });
+      throw new Error(
+        `seedFonts: ${seed.file} is missing Polish glyphs (${missing.join('')}) - re-check the downloaded file, do not seed a face that cannot engrave a Polish name.`,
+      );
+    }
+
+    const font = await prisma.font.upsert({
+      where: { slug: seed.slug },
+      create: {
+        slug: seed.slug,
+        namePl: seed.namePl,
+        fileUrl: `/fonts/${seed.file}`,
+        minHeightUm: PLACEHOLDER_MIN_HEIGHT_UM,
+        coveredCodePointRanges: ranges,
+        supportsPolishDiacritics: true,
+        isActive: true,
+        sortOrder: seed.sortOrder,
+      },
+      /*
+        The cmap is re-derived from the file on every run, so a replaced font
+        file cannot leave a stale coverage set behind claiming glyphs that are
+        no longer there. `minHeightUm` is deliberately NOT updated: once
+        somebody replaces the placeholder with a real test-cut figure, a
+        re-seed must not throw it away.
+      */
+      update: {
+        coveredCodePointRanges: ranges,
+        supportsPolishDiacritics: true,
+        fileUrl: `/fonts/${seed.file}`,
+      },
+    });
+    console.log(`Font: ${font.namePl} (${codePoints.length} glyphs, ${ranges.length} ranges, parsed live from ${seed.file})`);
+    seeded.push(font);
   }
 
-  const font = await prisma.font.upsert({
-    where: { slug: 'inter' },
-    create: {
-      slug: 'inter',
-      namePl: 'Inter',
-      fileUrl: '/fonts/Inter-Variable.ttf',
-      minHeightUm: 3_000,
-      coveredCodePointRanges: ranges,
-      supportsPolishDiacritics: true,
-      isActive: true,
-      sortOrder: 0,
-    },
-    update: {
-      coveredCodePointRanges: ranges,
-      supportsPolishDiacritics: true,
-    },
-  });
-  console.log(
-    `Font: ${font.namePl} (${codePoints.length} glyphs, ${ranges.length} ranges, parsed live from ${fontPath})`,
-  );
-  return font;
+  const first = seeded[0];
+  if (first === undefined) {
+    throw new Error('seedFonts: FONT_SEEDS is empty - a product with personalization needs a face.');
+  }
+  return first;
 }
 
 /**

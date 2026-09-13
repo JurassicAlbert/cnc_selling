@@ -155,6 +155,38 @@ themselves wanting to change any of these without a developer. `Font` is
 the one most likely to come up, and is also the one that needs the most
 care beyond a CRUD form.
 
+## 11. Engraving faces exist - their legibility floors are still a guess
+
+**Status 2026-09-13: the faces are real, one number about them is not.**
+
+BUG-31 was that a single face was seeded (Inter, the site's own UI
+sans), so the cmap-coverage apparatus had nothing to prove itself
+against. Four more are now seeded at the owner's choice - **EB Garamond,
+Playfair Display, Montserrat and Parisienne** - all SIL Open Font
+License, all taken from `github.com/google/fonts`, each with its
+`OFL.txt` stored beside the file in `public/fonts/`, and every one
+verified to carry all 18 Polish-specific letters before it entered the
+repository. The seed re-parses each real file on every run and refuses
+to seed a face missing a Polish glyph.
+
+**What is still owed by the owner: a real `minHeightUm` per face.** All
+five carry the same **3 mm placeholder** Inter has had since 2026-08-24,
+and it is a placeholder in exactly the `TODO_PRICING` sense - a number
+nobody measured. One shared placeholder rather than five invented ones,
+because five different guesses would look like measurements.
+
+This matters most for **Parisienne**. A connected script with thin
+strokes and fine joins will stop being legible well above the size a
+grotesque does, and 3 mm is very likely too low for it - which in
+practice means the configurator would accept an engraving that comes off
+the machine unreadable. Nothing in the code can settle that.
+
+**What's needed**: a test cut per face - engrave a Polish word with
+diacritics at descending cap heights on a real material and record the
+smallest that stays readable. Then set `Font.minHeightUm` per row. Until
+then the floor is uniform and optimistic, and the honest thing is that
+this is written down rather than assumed correct.
+
 ## 9. A customer cannot delete an uploaded design
 
 Found during the 2026-08-30 duplicate sweep, alongside the saved-project
