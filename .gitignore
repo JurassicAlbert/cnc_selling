@@ -40,3 +40,7 @@ Thumbs.db
 # Prisma client is generated from prisma/schema.prisma by `npm run prisma:generate`
 # (also run automatically on `npm install`). Never edited, never committed.
 /src/generated/
+
+# Database dumps taken before a destructive sweep (T-35). Never committed:
+# they hold real customer rows.
+/backups/

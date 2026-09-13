@@ -128,15 +128,36 @@ export async function getConfiguratorProductData(
           },
         },
         materials: {
-          // `docs/REVIEW-DETAILED.md` BUG-03. Without an ORDER BY, Postgres
-          // makes no promise about row order, and the configurator takes
-          // `[0]` as its default material - so the default (and therefore
-          // the price, via `priceFactorBp`) could differ between two loads
-          // of the same page, surfacing later as an unexplained
-          // PRICE_CHANGED at checkout. `sortOrder` is what staff actually
-          // control; `slug` breaks ties so the result is total, not merely
-          // partial.
-          orderBy: [{ material: { sortOrder: 'asc' } }, { material: { slug: 'asc' } }],
+          /*
+            `docs/REVIEW-DETAILED.md` BUG-03. Without an ORDER BY, Postgres
+            makes no promise about row order, and the configurator takes the
+            first selectable row as its default material - so the default
+            (and therefore the price, via `priceFactorBp`) could differ
+            between two loads of the same page, surfacing later as an
+            unexplained PRICE_CHANGED at checkout.
+
+            **Cheapest first, owner decision 2026-09-13.** BUG-32 left this
+            open in as many words: it made the order *stable* and said the
+            content decision was the owner's. All six materials share
+            `sortOrder: 0`, so every one of them fell through to the
+            alphabetical tie-break - an order nobody chose, just what a total
+            order needed as its last term.
+
+            `sortOrder` still leads, because it is the column staff edit at
+            `/panel/materialy` and an explicit choice must still win; `slug`
+            still ends it, because price is not a total order either.
+
+            This moves the default selection, which is the point rather than
+            a side effect: the advertised „od X zł" is already the cheapest
+            combination (`starting-price.ts` searches for it exhaustively),
+            so the configurator now opens on the same material that price was
+            quoted from instead of on whichever one sorts first.
+          */
+          orderBy: [
+            { material: { sortOrder: 'asc' } },
+            { material: { pricePerM2Grosze: 'asc' } },
+            { material: { slug: 'asc' } },
+          ],
           select: {
             priceFactorBp: true,
             material: {
@@ -164,8 +185,28 @@ export async function getConfiguratorProductData(
                     `PRICE_CHANGED` at checkout. `slug` breaks the tie so the
                     order is total rather than merely partial, exactly as the
                     materials and designs above already do.
+
+                    **Cheapest first, owner decision 2026-09-13**, same
+                    reasoning as the materials above.
+
+                    One honest limit. A finish costs `setupFeeGrosze +
+                    pricePerM2Grosze × area`, so "cheapest" genuinely depends
+                    on the piece, Prisma cannot order by that sum, and there
+                    is no area to compute it against at the moment this list
+                    is built. The per-m² rate leads because it dominates at
+                    every size this catalogue sells, with the setup fee as
+                    the next term; every seeded finish has a setup fee of 0
+                    today, so nothing is being approximated yet. A finish
+                    with a large setup fee and a low rate would order wrongly
+                    for small pieces, and the answer there is a `sortOrder`
+                    on that row - which is exactly what the column is for.
                   */
-                  orderBy: [{ finish: { sortOrder: 'asc' } }, { finish: { slug: 'asc' } }],
+                  orderBy: [
+                    { finish: { sortOrder: 'asc' } },
+                    { finish: { pricePerM2Grosze: 'asc' } },
+                    { finish: { setupFeeGrosze: 'asc' } },
+                    { finish: { slug: 'asc' } },
+                  ],
                   select: {
                     finish: {
                       select: {

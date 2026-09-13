@@ -12,12 +12,25 @@ import { expect, test } from '@playwright/test';
  *   one that produces a completely blank page rather than a warning;
  * - nothing on a real page violates the policy.
  *
- * Deliberately asserts only what holds in BOTH environments. `npm run e2e`
- * builds and starts a production server, but `reuseExistingServer` means a
- * developer with `next dev` already on :3000 runs these against dev - where
- * `'unsafe-eval'` is present and HSTS is not, both correctly. Those two
- * branches are covered by the unit tests instead of being asserted here
- * against whichever server happened to answer.
+ * Deliberately asserts only what holds in BOTH environments. `'unsafe-eval'`
+ * is present in dev and absent in production, HSTS is the other way round,
+ * and both of those are correct - so neither is asserted here. The two
+ * branches are covered by the unit tests instead.
+ *
+ * **The reason this file used to give is gone as of 2026-09-13**, and it is
+ * worth correcting rather than leaving to mislead. It said a developer with
+ * `next dev` already on :3000 would run these against dev, because
+ * `reuseExistingServer` adopts a running server. That is no longer possible:
+ * the e2e server has its own port (3100), so nothing but a server this suite
+ * started can ever answer. That scenario was a real hole and not a quirk -
+ * it pointed a whole run at the development database and wrote 93 rows into
+ * it - and this comment had been documenting it as something to live with.
+ *
+ * The narrow assertions stay anyway, because they are the right ones for what
+ * this file is about. Asserting the production-only headers here is now
+ * *possible* and would be a genuine coverage gain; it is a separate change,
+ * with its own verification, rather than something to fold in while moving a
+ * port.
  */
 
 const PAGES = [

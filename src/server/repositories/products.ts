@@ -75,7 +75,28 @@ export async function listActiveProductsByCategorySlug(
       productionDaysMax: true,
       minWidthMm: true,
       maxWidthMm: true,
-      materials: { select: { material: { select: { namePl: true, family: true } } } },
+      /*
+        BUG-03's rule, one layer out from the configurator, and it was missing
+        here entirely until 2026-09-13: Postgres promises nothing about the
+        order of an unordered select. No money moves on this list the way it
+        does in the configurator, which is presumably how it survived - but it
+        is customer-visible. The product page joins these names into one line,
+        and `summariseMaterials` takes `materials[0]` for the name it shows
+        when a product offers exactly one.
+
+        Cheapest first, matching the configurator exactly (owner decision,
+        2026-09-13). Found by looking at a product page in a browser: the
+        picker read „Sosna, Świerk, Modrzew, Dąb" and the chip six centimetres
+        above it read „Dąb, Świerk, Modrzew, Sosna".
+      */
+      materials: {
+        orderBy: [
+          { material: { sortOrder: 'asc' } },
+          { material: { pricePerM2Grosze: 'asc' } },
+          { material: { slug: 'asc' } },
+        ],
+        select: { material: { select: { namePl: true, family: true } } },
+      },
     },
   });
 
@@ -139,7 +160,15 @@ export async function listAllActiveProducts(): Promise<ProductCardData[]> {
       productionDaysMax: true,
       minWidthMm: true,
       maxWidthMm: true,
-      materials: { select: { material: { select: { namePl: true, family: true } } } },
+      materials: {
+        // Same clause and the same reason as the listing above.
+        orderBy: [
+          { material: { sortOrder: 'asc' } },
+          { material: { pricePerM2Grosze: 'asc' } },
+          { material: { slug: 'asc' } },
+        ],
+        select: { material: { select: { namePl: true, family: true } } },
+      },
     },
   });
 
@@ -295,6 +324,12 @@ async function findProductBySlug(slug: string, activeOnly: boolean): Promise<Pro
         select: { url: true, altPl: true },
       },
       materials: {
+        // Same clause and the same reason as the listing above.
+        orderBy: [
+          { material: { sortOrder: 'asc' } },
+          { material: { pricePerM2Grosze: 'asc' } },
+          { material: { slug: 'asc' } },
+        ],
         select: { material: { select: { namePl: true, family: true } } },
       },
       installVariants: {
