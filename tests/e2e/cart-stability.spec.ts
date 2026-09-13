@@ -84,7 +84,7 @@ test('the cart page settles, so its checkout link can actually be clicked', asyn
         // Only what could actually move THIS link: an animation on it, or on
         // something it sits inside. The footer's decorative orbit is neither.
         const target = (a.effect as KeyframeEffect | null)?.target as Element | null;
-        if (target !== null && target !== undefined && target.contains(link)) {
+        if (target?.contains(link) === true) {
           animations.add(String((a as Animation & { animationName?: string }).animationName ?? 'transition'));
         }
       }

@@ -70,7 +70,7 @@
  * something a human already edited through the future admin panel.
  */
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -104,7 +104,32 @@ const PLACEHOLDER_IMAGE = (slug: string) => `/images/placeholders/${slug}.svg`;
  *   inne.jpg                  unsplash.com/photos/photo-1781032040825-04240013c228
  *   material-dab.jpg          unsplash.com/photos/photo-1611072337226-1140ab367200
  */
-const STOCK_PHOTO = (slug: string) => `/images/photos/${slug}.jpg`;
+/**
+ * The URL of a tracked stock photo, **checked against the filesystem**.
+ *
+ * BUG-36. This used to be a bare template string, which made a category's
+ * photo a function of its own slug - so renaming a category silently renamed
+ * the file it was looking for. That is what happened to „Inne" on 2026-09-04:
+ * the slug moved to `zamowienie-wlasne`, `inne.jpg` stayed where it was, and
+ * every freshly seeded database got a category whose tile could not render.
+ * Nine days, because the development database predates the rename and was
+ * corrected in place, so the seed and the database a developer actually looks
+ * at disagreed without either of them complaining.
+ *
+ * Throwing is the point. A seed is the one place where a wrong path is cheap
+ * to fix and expensive to discover later, and a broken image in a catalogue
+ * is exactly the kind of defect that survives review because everyone assumes
+ * somebody else's data is stale.
+ */
+const STOCK_PHOTO = (slug: string): string => {
+  const url = `/images/photos/${slug}.jpg`;
+  if (!existsSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'public', url.slice(1)))) {
+    throw new Error(
+      `Seed: no stock photo at public${url} (asked for by "${slug}"). Add the file, or point this row at a photo that exists.`,
+    );
+  }
+  return url;
+};
 
 async function main(): Promise<void> {
   await seedMachineSettings();
@@ -1064,6 +1089,12 @@ const CATEGORY_SEEDS: readonly CategorySeed[] = [
     seoDescPl: 'Prześlij własny wzór i zamów grawer na drewnie lub gresie. Wycena indywidualna.',
     sortOrder: 7,
     isActive: true,
+    // Stated rather than derived, and this is the row that taught us why.
+    // The photo was sourced for this category back when it was called
+    // „Inne"; the category was renamed and the file was not. Naming it here
+    // keeps a fresh seed and the development database saying the same thing,
+    // which they had quietly stopped doing.
+    imageUrl: STOCK_PHOTO('inne'),
   },
 ];
 
