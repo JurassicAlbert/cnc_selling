@@ -50,19 +50,42 @@ describe('the loading indicator only shows up when it is needed', () => {
   });
 });
 
-describe('every part of the app has a loading state', () => {
-  /*
-    `loading.tsx` at a route-group root covers every page beneath it. The
-    storefront and marketing groups had one; **the admin panel had none at
-    all**, found on 2026-09-16 - and it is the slowest part of the app, since
-    its dashboard aggregates over every order line. The place most likely to
-    need a loading state was the one place without one.
-  */
+describe('where a loading state may and may not go', () => {
   it.each([
     ['(marketing)', 'src/app/(marketing)/loading.tsx'],
     ['(shop)', 'src/app/(shop)/loading.tsx'],
-    ['(admin)', 'src/app/(admin)/panel/loading.tsx'],
   ])('%s has one', (_group, file) => {
     expect(existsSync(path.resolve(process.cwd(), file)), `${file} is missing`).toBe(true);
+  });
+
+  it('the admin panel deliberately has none', () => {
+    /*
+      **This assertion is the reverse of the one written here first, and the
+      reversal is the point.**
+
+      A `loading.tsx` was added at `panel/` on 2026-09-16 on the reasoning
+      that the admin panel is the slowest part of the app and was the one
+      place with no loading state. The full e2e run then failed
+      `admin-authz.spec.ts` on **both** browsers: a STAFF user hitting the
+      ADMIN-only staff screen got **200 instead of 404**.
+
+      The mechanism is documented rather than surprising. A `loading.tsx`
+      wraps its segment in a `<Suspense>` boundary, and Next's `not-found`
+      reference states it plainly: "Next.js will return a `200` HTTP status
+      code for streamed responses, and `404` for non-streamed responses". The
+      status is flushed before `requireAdminSession()` reaches its
+      `notFound()`.
+
+      **Nothing leaked** - `notFound()` throws, so the page body never
+      renders and the authorization still holds. What changed is the status
+      code, and on an authorization boundary that is not a detail worth a
+      spinner: a back-office behind a login gains little from one, and the
+      right answer to "my change broke a security assertion" is to undo the
+      change, never to relax the assertion.
+    */
+    expect(
+      existsSync(path.resolve(process.cwd(), 'src/app/(admin)/panel/loading.tsx')),
+      'a loading.tsx here turns the ADMIN-only 404 into a 200 - see admin-authz.spec.ts',
+    ).toBe(false);
   });
 });
