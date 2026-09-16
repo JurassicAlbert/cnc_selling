@@ -1,0 +1,29 @@
+# Line endings.
+#
+# Added 2026-09-16 with the Docker deployment, and it is a correctness matter
+# rather than tidiness: a shell script checked out with CRLF fails on Linux
+# with `bad interpreter: /bin/sh^M`. `docker/entrypoint.sh` runs on every
+# container start, so getting this wrong is a container that restart-loops
+# before it ever serves a request - and it would only happen for whoever
+# checked the repository out on Windows with core.autocrlf=true, which is the
+# default there.
+#
+# Normalize everything text in the repository, then force LF on the files that
+# are executed rather than read.
+* text=auto
+
+*.sh text eol=lf
+Dockerfile text eol=lf
+docker/**/*.conf text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Binary, so git never tries to "fix" them.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.mp4 binary
+*.ttf binary
+*.woff binary
+*.woff2 binary

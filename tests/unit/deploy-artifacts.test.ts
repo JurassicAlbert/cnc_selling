@@ -160,3 +160,25 @@ describe('the deploy workflow', () => {
     expect(workflow).toMatch(/cancel-in-progress:\s*false/);
   });
 });
+
+describe('line endings', () => {
+  /*
+    A correctness matter, not tidiness. A shell script checked out with CRLF
+    fails on Linux with `bad interpreter: /bin/sh^M`, and
+    `docker/entrypoint.sh` runs on every container start - so the symptom
+    would be a container that restart-loops before serving a request, for
+    whoever happened to clone the repository on Windows, where
+    `core.autocrlf=true` is the default.
+
+    `.gitattributes` forces LF for these; this checks the working tree agrees,
+    because a `.gitattributes` added after a file was already committed with
+    CRLF does not retroactively fix that file.
+  */
+  it.each(['docker/entrypoint.sh', 'scripts/deploy.sh'])('%s has no carriage returns', (file) => {
+    expect(read(file), `${file} would fail on Linux with "bad interpreter"`).not.toMatch(/\r/);
+  });
+
+  it('declares the rule, so a fresh clone cannot reintroduce it', () => {
+    expect(read('.gitattributes')).toMatch(/\*\.sh\s+text\s+eol=lf/);
+  });
+});
