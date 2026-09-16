@@ -1,0 +1,115 @@
+# Continuous deployment: main reaches the server without anyone typing anything.
+#
+# Triggered by CI **finishing successfully on main**, not by the push itself.
+# `workflow_run` is the only way one workflow can wait for another; a plain
+# `on: push` job would race CI and could deploy a commit whose tests were
+# still running, or had already failed.
+#
+# ## There is no server yet
+#
+# As of 2026-09-16 no server has been provisioned, so every run of this
+# workflow stops at the `gate` job below and says so. That is deliberate: the
+# pipeline is complete and inert rather than absent, so the day a server
+# exists the only work is adding four repository secrets. A workflow that
+# pretended to deploy, or that failed with a generic error, would be worse
+# than either.
+#
+# ## The secrets it needs
+#
+#   DEPLOY_HOST        user@host of the server
+#   DEPLOY_SSH_KEY     a private key whose public half is in the server's
+#                      authorized_keys - a deploy-only key, not anybody's
+#                      personal one
+#   DEPLOY_KNOWN_HOSTS output of `ssh-keyscan your-server`, so the connection
+#                      is verified rather than trusted on first use
+#   DEPLOY_PATH        checkout directory (optional, defaults to /srv/cnc-selling)
+#
+# Guarded by `tests/unit/deploy-artifacts.test.ts`, because a workflow only
+# ever runs somewhere else - the same reason `ci.yml` has `ci-workflow.test.ts`.
+
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [main]
+
+# Two deploys of different commits at once would race to replace the same
+# container, and the loser's image could end up running. Never cancel the one
+# in flight, though: interrupting a deploy mid-migration is how a database
+# ends up half-migrated.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: Is there anywhere to deploy to?
+    runs-on: ubuntu-latest
+    # A CI run that failed, or was cancelled, must not reach the server.
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        # Secrets are not available to `if:` conditions at job level, so the
+        # check has to happen inside a step and be published as an output.
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          if [ -z "$DEPLOY_HOST" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### No deployment target configured"
+              echo ""
+              echo "\`DEPLOY_HOST\` is not set, so this commit was **not** deployed anywhere."
+              echo ""
+              echo "This is the expected state until a server exists. Nothing failed."
+              echo "See \`docs/DEPLOYMENT.md\` for what to set when there is one."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    name: Build and release to production
+    runs-on: ubuntu-latest
+    needs: gate
+    if: ${{ needs.gate.outputs.configured == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The commit CI actually tested, not whatever main points at now.
+          # Between CI finishing and this job starting, main can have moved.
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Authorize the deploy key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          # Pinned host keys rather than StrictHostKeyChecking=no, which would
+          # accept whatever answers on that address - including something that
+          # is not the server.
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/srv/cnc-selling' }}
+          DEPLOY_REF: ${{ github.event.workflow_run.head_sha }}
+        # The same script a human runs locally. One code path, so a manual
+        # deploy and an automatic one cannot drift apart - and whatever goes
+        # wrong at 2am is reproducible by hand.
+        run: ./scripts/deploy.sh
+
+      - name: Say what landed
+        if: success()
+        run: |
+          {
+            echo "### Deployed"
+            echo ""
+            echo "\`${{ github.event.workflow_run.head_sha }}\` is live."
+          } >> "$GITHUB_STEP_SUMMARY"

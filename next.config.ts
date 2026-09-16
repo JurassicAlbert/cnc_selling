@@ -76,6 +76,18 @@ const allowedOrigins = resolveAllowedOrigins(process.env.SERVER_ACTIONS_ALLOWED_
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  /*
+    Added 2026-09-16 for the Docker deployment. `next build` writes
+    `.next/standalone` containing a `server.js` and only the `node_modules`
+    actually reached, which is what the production image copies instead of
+    installing dependencies again.
+
+    **Its `server.js` does not serve `public/` or `.next/static` by itself** -
+    Next's own `output` reference says so, and the Dockerfile copies both in
+    explicitly. Getting this wrong produces a site that renders with no CSS
+    and no images, which looks like a styling bug rather than a packaging one.
+  */
+  output: 'standalone',
   // `X-Powered-By: Next.js` on every response, on by default. Obscurity is
   // not security and nothing here depends on hiding the framework, but the
   // header buys nothing either, and it hands a scanner the exact stack to
@@ -91,7 +103,22 @@ const nextConfig: NextConfig = {
     return Promise.resolve([
       {
         source: '/:path*',
-        headers: [...baseSecurityHeaders({ isProduction })],
+        headers: [
+          ...baseSecurityHeaders({ isProduction }),
+          /*
+            Streaming has to survive the reverse proxy. nginx buffers upstream
+            responses by default, which holds a streamed render until it is
+            complete - the page still arrives all at once, just later, and the
+            entire benefit of a `<Suspense>` boundary disappears with no error
+            anywhere. `X-Accel-Buffering: no` is the documented opt-out
+            (`self-hosting.md`, "Streaming and Suspense").
+
+            Set here rather than only in `docker/nginx/` so the guarantee
+            travels with the application to any proxy that honours it, instead
+            of living in one server's configuration file.
+          */
+          { key: 'X-Accel-Buffering', value: 'no' },
+        ],
       },
     ]);
   },
