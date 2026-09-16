@@ -44,6 +44,19 @@ export function RouteLoading() {
     <Section>
       <Container>
         <div role="status" style={{ minBlockSize: '60vh' }}>
+          {/*
+            Owner's request, 2026-09-16: an indicator for the corner case
+            where a page really is slow, explicitly NOT something a visitor
+            should normally see. It is transparent for its first 450 ms and
+            fades in only if the navigation is still running - so on the 35 to
+            46 ms that a storefront route actually takes, nobody ever sees it.
+
+            `aria-hidden` because the `role="status"` region already announces
+            the sentence beside it; a screen reader gaining "image" here would
+            be noise, and the decoration carries no information the text does
+            not.
+          */}
+          <span className="route-loading-indicator" aria-hidden="true" />
           <Text muted>{SITE.routeLoadingPl}</Text>
         </div>
       </Container>

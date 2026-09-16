@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { getDashboardKpis, getOrdersByStatus, getRevenueOverTime, getTopEntities } from '@/server/repositories/admin-dashboard';
+import {
+  getDashboardKpis,
+  getOrdersByStatus,
+  getRevenueOverTime,
+  getTopEntitiesForKinds,
+} from '@/server/repositories/admin-dashboard';
 import { prisma } from '@/server/db/client';
 import type { OrderStatus } from '@/generated/prisma/enums';
 import type { OrderItemSnapshot } from '@/server/orders/snapshot';
@@ -214,7 +219,13 @@ describe('getOrdersByStatus', () => {
   });
 });
 
-describe('getTopEntities', () => {
+/*
+  Rewritten 2026-09-16 for `getTopEntitiesForKinds`, which reads the order
+  lines once for every kind instead of once per kind. Every assertion below is
+  unchanged - that is the point: the refactor had to be provably behaviour-
+  preserving, so the test that proves it is the one that already existed.
+*/
+describe('getTopEntitiesForKinds', () => {
   it('ranks by revenue, descending, excluding CANCELLED orders', async () => {
     const from = new Date('2026-03-01T00:00:00.000Z');
     const to = new Date('2026-03-31T23:59:59.999Z');
@@ -234,7 +245,7 @@ describe('getTopEntities', () => {
       items: [{ snapshot: buildSnapshot({ productNamePl: 'Obraz C (anulowany)' }), lineGrossGrosze: 99999 }],
     });
 
-    const top = await getTopEntities({ from, to }, 'product', 5);
+    const { product: top } = await getTopEntitiesForKinds({ from, to }, ['product'], 5);
 
     expect(top.map((t) => t.name)).toEqual(['Obraz B', 'Obraz A']); // Obraz C excluded (cancelled), sorted desc
     expect(top[0]).toMatchObject({ name: 'Obraz B', revenueGrosze: 5000 });
@@ -252,8 +263,12 @@ describe('getTopEntities', () => {
       ],
     });
 
-    const topDesigns = await getTopEntities({ from, to }, 'design', 5);
-    const topMaterials = await getTopEntities({ from, to }, 'material', 5);
+    // Both kinds from a single read, which is the whole change.
+    const { design: topDesigns, material: topMaterials } = await getTopEntitiesForKinds(
+      { from, to },
+      ['design', 'material'],
+      5,
+    );
 
     expect(topDesigns).toEqual([{ name: 'W-014', revenueGrosze: 2000, quantity: 1 }]);
     expect(topMaterials).toEqual([]); // materialNamePl is null - CUSTOM-style item, correctly skipped

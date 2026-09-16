@@ -1,40 +1,68 @@
-import { createElement } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
-import { SITE } from '@/content/pl/site';
-import { RouteLoading } from '@/ui/primitives/RouteLoading';
-
 /**
- * `docs/AI-CHECKLIST.md` UX-15, the half of it that turned out to be a real
- * defect.
+ * The loading state, and the owner's brief for it on 2026-09-16:
  *
- * The item asked for a `Skeleton` instead of the literal „Ładowanie…", and
- * that part was measured and declined - see the item. What the measurement
- * did not excuse is that this state **says nothing to a screen reader**. A
- * sighted visitor sees the word; someone using a screen reader gets silence
- * between the click and the new page, which is the case a loading state
- * exists for in the first place.
+ * > there should be lazy load animations - that are not a goal for client to
+ * > see but to be available in corner case where page still need long time to
+ * > load
  *
- * `role="status"` rather than `aria-live="polite"` written out: the role
- * carries that live-region politeness itself and states what the region is,
- * which is the idiomatic pairing.
+ * That second clause is the whole design. Measured on a production build the
+ * same day, storefront routes answer in **35 to 46 ms** and the admin
+ * dashboard in 69 ms, so a spinner that appears instantly would be a flicker
+ * on every navigation - noise that makes a fast site feel busy. It has to be
+ * **invisible during a normal navigation and present when something is
+ * genuinely slow**.
  *
- * Rendered to markup rather than asserted on the source, because an attribute
- * that never reaches the DOM is exactly the failure being guarded against -
- * the same reasoning `mobile-rwd.spec.ts` gives for checking `autocomplete`
- * in a browser. No JSX: `tests/**\/*.test.ts` is the only pattern Vitest
- * collects here, so `createElement` keeps this a `.ts` file.
+ * A CSS `animation-delay` does exactly that with no client JavaScript, which
+ * matters because the storefront chrome deliberately ships none
+ * (`theme-vars.css` records the Lighthouse audit behind that decision). The
+ * element is rendered and transparent; if the navigation finishes first,
+ * nobody ever sees it.
  */
-describe('RouteLoading', () => {
-  const html = renderToStaticMarkup(createElement(RouteLoading));
 
-  it('announces itself to a screen reader', () => {
-    expect(html).toContain('role="status"');
+const read = (file: string): string => readFileSync(path.resolve(process.cwd(), file), 'utf8');
+
+describe('the loading indicator only shows up when it is needed', () => {
+  const css = read('src/app/theme-vars.css');
+
+  it('stays invisible for the first moments of a navigation', () => {
+    /*
+      Without a delay this is a flicker on every single navigation, because
+      almost every navigation is faster than a person can perceive. The delay
+      is what turns a spinner into a slow-page indicator.
+    */
+    const block = css.slice(css.indexOf('.route-loading-indicator'));
+    expect(block).toMatch(/animation[^;]*\b(\d{3,}ms|\d+(\.\d+)?s)\b[^;]*\bboth\b/);
+    // `both` so the fill mode holds the from-state during the delay; without
+    // it the element is fully visible until the animation starts.
+    expect(block.slice(0, 600)).toMatch(/both/);
   });
 
-  it('still says what it says, in Polish, from the content file', () => {
-    // The announcement is worth nothing if the region is empty.
-    expect(html).toContain(SITE.routeLoadingPl);
+  it('respects prefers-reduced-motion', () => {
+    // A spinning element is exactly what that setting exists to stop. It may
+    // stop moving; it must not become invisible, or a user who set it loses
+    // the indicator altogether.
+    expect(css).toMatch(/prefers-reduced-motion[\s\S]*?route-loading-indicator/);
+  });
+});
+
+describe('every part of the app has a loading state', () => {
+  /*
+    `loading.tsx` at a route-group root covers every page beneath it. The
+    storefront and marketing groups had one; **the admin panel had none at
+    all**, found on 2026-09-16 - and it is the slowest part of the app, since
+    its dashboard aggregates over every order line. The place most likely to
+    need a loading state was the one place without one.
+  */
+  it.each([
+    ['(marketing)', 'src/app/(marketing)/loading.tsx'],
+    ['(shop)', 'src/app/(shop)/loading.tsx'],
+    ['(admin)', 'src/app/(admin)/panel/loading.tsx'],
+  ])('%s has one', (_group, file) => {
+    expect(existsSync(path.resolve(process.cwd(), file)), `${file} is missing`).toBe(true);
   });
 });

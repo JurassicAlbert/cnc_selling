@@ -16,6 +16,11 @@
 import { prisma } from '@/server/db/client';
 import type { OrderStatus } from '@/generated/prisma/enums';
 import type { OrderItemSnapshot } from '@/server/orders/snapshot';
+import { summariseTopEntities } from '@/domain/analytics/top-entities';
+import type {
+  TopEntity as TopEntityValue,
+  TopEntityKind as TopEntityKindValue,
+} from '@/domain/analytics/top-entities';
 import { PRODUCTION_STATUSES } from '@/server/repositories/admin-production';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -127,40 +132,42 @@ export async function getOrdersByStatus(range: DateRange): Promise<ReadonlyMap<O
   return new Map(grouped.map((g) => [g.status, g._count._all]));
 }
 
-export type TopEntity = { readonly name: string; readonly revenueGrosze: number; readonly quantity: number };
-export type TopEntityKind = 'product' | 'design' | 'material';
+/*
+  Types and arithmetic both live in `@/domain/analytics/top-entities` now.
+  Re-exported here so the dashboard keeps importing its data from one place.
+*/
+export type { TopEntity, TopEntityKind } from '@/domain/analytics/top-entities';
 
-function entityName(kind: TopEntityKind, snapshot: OrderItemSnapshot): string | null {
-  if (kind === 'product') {
-    return snapshot.productNamePl;
-  }
-  if (kind === 'design') {
-    return snapshot.designNamePl ?? snapshot.designCode;
-  }
-  return snapshot.materialNamePl;
-}
-
-export async function getTopEntities(range: DateRange, kind: TopEntityKind, limit = 5): Promise<readonly TopEntity[]> {
+/**
+ * Best sellers for several kinds, from **one** read of the order lines.
+ *
+ * Replaces a per-kind `getTopEntities`, which the dashboard called three
+ * times. Each call read every `OrderItem` in the range and aggregated in
+ * JavaScript, so the three differed only in which key of the snapshot they
+ * looked at: measured at **107 ms of the dashboard's 116 ms** on 2026-09-16.
+ *
+ * The rows cannot be grouped in SQL, because the names live inside
+ * `OrderItem.snapshot` - the immutable JSON an order keeps so that rendering
+ * it never joins a live catalogue row. What was avoidable was reading them
+ * three times, not reading them at all.
+ */
+export async function getTopEntitiesForKinds(
+  range: DateRange,
+  kinds: readonly TopEntityKindValue[],
+  limit = 5,
+): Promise<Record<TopEntityKindValue, readonly TopEntityValue[]>> {
   const items = await prisma.orderItem.findMany({
     where: { order: { createdAt: { gte: range.from, lte: range.to }, status: { not: 'CANCELLED' } } },
     select: { quantity: true, lineGrossGrosze: true, snapshot: true },
   });
 
-  const byName = new Map<string, { revenueGrosze: number; quantity: number }>();
-  for (const item of items) {
-    const snapshot = item.snapshot as unknown as OrderItemSnapshot;
-    const name = entityName(kind, snapshot);
-    if (name === null) {
-      continue;
-    }
-    const bucket = byName.get(name) ?? { revenueGrosze: 0, quantity: 0 };
-    bucket.revenueGrosze += item.lineGrossGrosze;
-    bucket.quantity += item.quantity;
-    byName.set(name, bucket);
-  }
-
-  return Array.from(byName.entries())
-    .map(([name, bucket]) => ({ name, ...bucket }))
-    .sort((a, b) => b.revenueGrosze - a.revenueGrosze)
-    .slice(0, limit);
+  return summariseTopEntities(
+    items.map((item) => ({
+      quantity: item.quantity,
+      lineGrossGrosze: item.lineGrossGrosze,
+      snapshot: item.snapshot as unknown as OrderItemSnapshot,
+    })),
+    kinds,
+    limit,
+  );
 }

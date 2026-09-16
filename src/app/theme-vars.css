@@ -1453,3 +1453,61 @@ main[tabindex='-1']:focus:not(:focus-visible) {
 .section-intro-action:hover {
   text-decoration: underline;
 }
+
+/* ---------------------------------------------------------------------------
+ * The slow-page indicator.
+ *
+ * Owner's brief, 2026-09-16: "lazy load animations - that are not a goal for
+ * client to see but to be available in corner case where page still need long
+ * time to load". The second half is the design.
+ *
+ * Measured the same day on a production build, storefront routes answer in
+ * **35 to 46 ms** and the admin dashboard in 69 ms. A spinner shown instantly
+ * would therefore be a flicker on every navigation - noise that makes a fast
+ * site feel busy and tells the visitor nothing. So this is transparent for
+ * the first 450 ms and fades in only if the navigation is still going.
+ *
+ * `both` is load-bearing: the fill mode holds the `from` state during the
+ * delay. Without it the element sits fully visible until the animation
+ * starts, which is the exact flicker being avoided.
+ *
+ * Pure CSS, no client JavaScript - the storefront chrome deliberately ships
+ * none (see this file's header for the Lighthouse audit behind that).
+ * ------------------------------------------------------------------------ */
+.route-loading-indicator {
+  display: inline-block;
+  inline-size: 20px;
+  block-size: 20px;
+  border: 2px solid var(--mui-palette-divider, #e0dbd2);
+  border-block-start-color: var(--mui-palette-text-secondary, #6b645c);
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-inline-end: 10px;
+  animation:
+    route-loading-appear 200ms ease 450ms both,
+    route-loading-spin 900ms linear 450ms infinite;
+}
+
+@keyframes route-loading-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes route-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Stops moving, but must NOT disappear: a visitor who set this still needs
+     to know the page is working. It fades in on the same delay and then
+     simply holds still. */
+  .route-loading-indicator {
+    animation: route-loading-appear 200ms ease 450ms both;
+  }
+}
