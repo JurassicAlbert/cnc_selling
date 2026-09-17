@@ -240,7 +240,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
                 fill
                 sizes="(max-width: 900px) 100vw, 50vw"
                 style={{ objectFit: 'cover' }}
-                priority
+                preload
               />
             )}
           </div>

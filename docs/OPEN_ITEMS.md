@@ -63,17 +63,38 @@ for the full technical detail behind each line here).
   "we'll send the account number separately" instead of showing one.
 - **What's needed**: fill it in at `/panel/ustawienia`. Nothing to build.
 
-## 5. Sitewide UI polish - real, but only partly done
+## 5. Sitewide UI polish - and a warning about how NOT to do it
 
-- Cart, checkout, and all three order-detail surfaces (guest confirmation,
-  account history, admin) are now real MUI (rounds 8–10).
-- Confirmed still raw HTML/CSS-variable styling in most of the rest of the
-  site (this was never disputed, just not yet acted on systematically):
-  FAQ, product listing pages, the home page's own sections, and other
-  storefront forms/views not yet touched.
-- No blocker here - this is scope/time, not a missing credential. Worth
-  deciding whether to keep converting page-by-page as flagged, or do one
-  deliberate systematic sweep across the storefront in a dedicated round.
+**Corrected 2026-09-13.** This section used to list the storefront's
+"raw HTML/CSS-variable styling" as a gap, with FAQ, the product listing
+pages and the home page's own sections named as not yet converted to
+MUI. Read today, that is an instruction to undo a measured decision, so
+it is rewritten rather than left to mislead.
+
+**The storefront deliberately mounts no MUI theme provider, and this is
+not a shortcut.** `src/app/theme-vars.css`'s own header records the
+Lighthouse audit that settled it (2026-08-23, measured rather than
+assumed): with `ThemeRegistry` wrapping every page from the root layout,
+mobile performance was **74/100 with a 3.8s LCP on a product page that
+used zero interactive MUI components** - roughly 154KB of MUI, Emotion
+and React client runtime shipped to pages needing none of it. The RSC
+primitives (`Heading`, `Text`, `Container`, `Section`, `Card`,
+`SiteHeader`) only ever needed the CSS custom properties.
+
+So the rule is the one that file states: `ThemeRegistry` is still
+correct and still used - wrap it around the specific island that needs a
+live `@mui/material` component (the configurator, cart, checkout, the
+login dialog, the whole `/panel`), never around the root layout again.
+Converting a storefront page to MUI "for consistency" is a performance
+regression, not polish.
+
+**What is genuinely open here is visual, not technical.** Several of the
+surfaces this section used to name have since been worked on in their
+own right - the home page's sections and the FAQ page both got headings,
+leads and a way out on 2026-09-11 (UX-16 and the section-intro pass),
+and the header, cart and checkout were reshaped across RWD-04, UX-23,
+UX-27 and UX-29. What is left is taste and time, not a missing
+credential and not a missing library.
 
 ## 6. Rate limits on order creation and login (§16.1) - **RESOLVED 2026-08-30/31**
 
@@ -178,31 +199,38 @@ audit trail arguably requires) or purged on request (a real GDPR
 erasure path, larger). Both are a couple of hours once decided; deciding
 is the part only the owner can do.
 
-## 10. Package insurance - real carrier rate cards needed
+## 10. Package insurance - built, waiting only for the real rate cards
 
 - **Owner request, 2026-09-05**, answering BUG-08: package insurance as a
   checkout option the customer can select. Asked how it should be priced,
   the owner chose **the carrier's real declared-value table** over a flat
   fee or a percentage.
-- **What exists so far** (2026-09-05): the data model and the band-selection
-  rule. `DeliveryInsuranceTier` holds a carrier's declared-value bands the
-  same way `DeliveryWeightTier` holds weight brackets, `Order` carries
-  `insuranceGrosze` and `insuranceLabelPl` snapshotted like
-  `shippingGrosze`/`deliveryMethodNamePl` beside them, and
-  `domain/checkout/insurance.ts` picks the cheapest band that covers an order
-  (8 unit tests, written first). **No band is seeded**, so
-  `isInsuranceOffered` is false for every method and nothing appears anywhere
-  in the UI.
-- **Still to build**: the checkout checkbox, adding the premium to the order
-  total at creation, showing it on the confirmation and in the admin order
-  view, and the `/panel/dostawa` screen for entering bands. Deliberately not
-  built ahead of the rates - a checkout control that cannot be priced is a
-  control that cannot be tested end to end, and the shape of the screen
-  depends on what a real rate card turns out to look like (flat bands, or
-  bands per weight tier as well).
-- **What's blocking it**: InPost's and DPD's actual declared-value
-  ("ubezpieczenie przesyłki") rate cards - the value bands and what each
-  band costs. Both publish these to business account holders; neither has
+- **What exists** (complete 2026-09-09): the whole mechanism, end to end.
+  `DeliveryInsuranceTier` holds a carrier's declared-value bands the same way
+  `DeliveryWeightTier` holds weight brackets; `domain/checkout/insurance.ts`
+  picks the cheapest band that covers an order (8 unit tests, written first);
+  `resolveDeliveryMethodsForCart` resolves the offer beside the delivery
+  price, so checkout and `createOrder` cannot disagree; the checkout shows an
+  opt-in control and the premium in the total; `createOrder` re-derives the
+  premium server-side from the carrier's table and snapshots
+  `insuranceGrosze`/`insuranceLabelPl` like `shippingGrosze` beside them; the
+  confirmation, order history and admin order views show it; and
+  `/panel/dostawa/[id]` has the editor for typing the bands in.
+- **What the owner has to do to turn it on**: open a delivery method under
+  `/panel/dostawa`, and enter the carrier's value bands under „Ubezpieczenie
+  przesyłki". That is the whole activation. **No band is seeded**, so today
+  every method's table is empty, no method offers cover, and no customer sees
+  anything at all - the screen says so in as many words rather than looking
+  broken.
+- **Two rules worth knowing before entering a card.** An order worth more
+  than the highest band is offered **nothing**, deliberately: selling „do
+  5000 zł" cover on a 6000 zł order would leave the customer believing they
+  are covered when they are not. And a customer who asks for cover that has
+  since been withdrawn gets a refusal at checkout rather than an uninsured
+  order placed quietly - `INSURANCE_UNAVAILABLE`.
+- **What's blocking it**: nothing in the code. Only the content - InPost's
+  and DPD's actual declared-value ("ubezpieczenie przesyłki") rate cards, the
+  value bands and what each band costs. Both publish these to business account holders; neither has
   a citable public table, which is the same wall item 2 hit with GEIS. The
   owner chose this over a flat fee or a percentage of order value, both of
   which could have shipped immediately.
@@ -210,6 +238,38 @@ is the part only the owner can do.
   seeded `isActive: false`. The owner's own instruction is that "you are not
   allowed to lie", and a plausible-looking premium presented as a quote is
   exactly that.
+
+## 11. Engraving faces exist - their legibility floors are still a guess
+
+**Status 2026-09-13: the faces are real, one number about them is not.**
+
+BUG-31 was that a single face was seeded (Inter, the site's own UI
+sans), so the cmap-coverage apparatus had nothing to prove itself
+against. Four more are now seeded at the owner's choice - **EB Garamond,
+Playfair Display, Montserrat and Parisienne** - all SIL Open Font
+License, all taken from `github.com/google/fonts`, each with its
+`OFL.txt` stored beside the file in `public/fonts/`, and every one
+verified to carry all 18 Polish-specific letters before it entered the
+repository. The seed re-parses each real file on every run and refuses
+to seed a face missing a Polish glyph.
+
+**What is still owed by the owner: a real `minHeightUm` per face.** All
+five carry the same **3 mm placeholder** Inter has had since 2026-08-24,
+and it is a placeholder in exactly the `TODO_PRICING` sense - a number
+nobody measured. One shared placeholder rather than five invented ones,
+because five different guesses would look like measurements.
+
+This matters most for **Parisienne**. A connected script with thin
+strokes and fine joins will stop being legible well above the size a
+grotesque does, and 3 mm is very likely too low for it - which in
+practice means the configurator would accept an engraving that comes off
+the machine unreadable. Nothing in the code can settle that.
+
+**What's needed**: a test cut per face - engrave a Polish word with
+diacritics at descending cap heights on a real material and record the
+smallest that stays readable. Then set `Font.minHeightUm` per row. Until
+then the floor is uniform and optimistic, and the honest thing is that
+this is written down rather than assumed correct.
 
 ---
 

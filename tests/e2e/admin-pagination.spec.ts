@@ -3,7 +3,7 @@ import 'dotenv/config';
 import type { Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
-import { registerAccount } from './register';
+import { registerAndPromote } from './admin-session';
 import { prisma } from '../../src/server/db/client';
 
 /**
@@ -47,9 +47,7 @@ const SEEDED_AUDIT_ROWS = 30;
 async function signInAsAdmin(page: Page): Promise<string> {
   const email = `test-admin-pagination-${crypto.randomUUID()}@example.test`;
 
-  await registerAccount(page, { name: 'E2E Pagination Admin', email, password: PASSWORD });
-
-  await prisma.user.update({ where: { email }, data: { role: 'ADMIN' } });
+  await registerAndPromote(page, { name: 'E2E Pagination Admin', email, password: PASSWORD, role: 'ADMIN' });
   return email;
 }
 

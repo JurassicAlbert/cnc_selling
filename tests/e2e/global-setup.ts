@@ -1,5 +1,6 @@
 import { clearLoopbackRateLimits } from './rate-limit-reset';
 import { describeDatabase, isTestDatabaseUrl } from './database-guard';
+import { removeTestPublicImages } from '../integration/public-image-files';
 import { prisma } from '../../src/server/db/client';
 
 /**
@@ -33,6 +34,20 @@ async function globalSetup(): Promise<void> {
     );
   }
   console.log(`e2e: using ${describeDatabase(databaseUrl)}`);
+
+  /*
+    PERF-04. The same "clears whatever the previous run left behind" job, for
+    the files this suite writes into `public/images`. Several specs create a
+    design, material or finish with a real photo; `savePublicImage` names
+    every file with a fresh UUID, so a fixed slug like `test-e2e-wzor` still
+    accumulates one more file per run forever.
+
+    Reusing the integration helper across tiers on purpose. Deletion logic is
+    the last thing that should exist in two copies, and this one already
+    refuses an empty prefix and matches only directory names that start with
+    the caller's own.
+  */
+  await removeTestPublicImages('test-e2e-');
 
   const cleared = await clearLoopbackRateLimits();
   if (cleared > 0) {

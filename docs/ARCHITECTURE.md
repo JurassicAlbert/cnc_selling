@@ -565,7 +565,7 @@ model CartItem {
 }
 ```
 
-Two different configurations of the same product are two `CartItem` rows pointing at two `Configuration` rows - the brief's edge case ("two different configurations of the same product in one cart") is satisfied structurally. "Duplicate configuration" deep-copies the `Configuration` row rather than incrementing quantity.
+Two different configurations of the same product are two `CartItem` rows pointing at two `Configuration` rows - the brief's edge case ("two different configurations of the same product in one cart") is satisfied structurally. "Duplicate configuration" **increments the quantity of the existing line** rather than deep-copying the `Configuration` row. It did deep-copy, and this paragraph said so deliberately, until the owner reversed it on 2026-08-30: "duplicate the same product in basket like separate product since its the same only the quantity should change." The reversal also removed a real cost - a duplicate that was never edited left two identical lines to delete one at a time **and** a second identical `Configuration`, which `/moje-konto/projekty` then listed as a second saved project. `applyDuplicateCartItem` in `server/operations/cart.ts` carries the full reasoning; the schema comment on `CartItem` was updated at the time and this line was missed (DOC-01).
 
 ### 6.8 Order and the immutable snapshot
 
@@ -993,10 +993,18 @@ Customers see plain status text („Projekt oczekuje na weryfikację." / „Proj
 
 | Service | Interface | MVP implementation | Test double |
 |---|---|---|---|
-| Storage | `FileStorage { put, get, getSignedUrl, delete, exists }` | Local disk (dev) / S3-compatible (prod) | In-memory |
+| Storage | `FileStorage { put, get, getStream, getSignedUrl, delete, exists }` | Local disk (dev) / S3-compatible (prod) | In-memory |
 | Mail | `Mailer { send(template, to, data) }` | Real SMTP/Resend adapter; **if unconfigured, the app logs and marks the notification as not sent** | Recording mock asserting template + recipient |
 | Payment | `PaymentProvider` interface only | **No implementation.** Checkout offers bank transfer / contact | Mock with success/failure/cancel/timeout for future integration tests |
 | Production files | - | **Not built.** No SVG/DXF/G-code generation | - |
+
+> `getStream` was added on 2026-09-08 (SEC-09) and is the one member of that
+> interface this section did not originally list. It had to be: §16.1
+> describes `/api/plik/[fileId]` as a route that "streams via the storage
+> adapter", and `get` returns a `Buffer`, so a route built only on the
+> interface as written reads whole files into memory - which is exactly what
+> it was doing. Recorded here rather than left as a contradiction between two
+> sections for the next reader to trip over.
 
 Per your project rules, three things are explicitly forbidden in this codebase and will be checked in review:
 
@@ -1126,7 +1134,7 @@ CRUD with availability toggles, price per m², sheet size limits, min line width
 Machine rates, module surcharge, packaging tiers, VAT rate, material and finish rates, product base and minimum price, all per-relation factors. **Highest-risk screen in the application** - a mistyped rate changes every price on the site. Therefore:
 
 - Every save creates a **new `PricingSettings` version**; nothing is edited in place.
-- A **price simulator** shows before/after for a fixed set of reference configurations, and the change cannot be published without viewing it.
+- A **price simulator** shows before/after for a set of reference configurations, and the change cannot be published without viewing it. **Enforced in the database since 2026-09-08** (BUG-34): a simulation stamps `PricingSettings.simulatedAt`/`simulatedByEmail`, and `applyPublishPricingVersion` refuses a version that has none. Before that the rule lived only in `PricingSimulator.tsx`, so a direct call to the server action skipped it. The reference set is no longer "fixed" either - it is read from the live catalogue (`listPricingReferenceProducts`, one product per type), because the hard-coded list of three slugs had silently gone two-thirds stale as categories were retired.
 - Existing orders are pinned to their version and never reprice.
 - Every change is audit-logged with a full diff.
 

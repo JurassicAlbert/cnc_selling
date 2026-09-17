@@ -12,6 +12,7 @@ import { applyAddMaterialFinish } from '@/server/operations/admin-material-finis
 import { listMaterialOptionsForAdmin } from '@/server/repositories/admin-products';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';
+import { publicImageExists, removeTestPublicImages } from './public-image-files';
 
 const PREFIX = 'test-admin-materials-';
 
@@ -61,6 +62,8 @@ afterEach(async () => {
   await prisma.material.deleteMany({ where: { slug: { startsWith: PREFIX } } });
   await prisma.finish.deleteMany({ where: { slug: { startsWith: PREFIX } } });
   await prisma.auditLog.deleteMany({ where: { actorEmail: { startsWith: PREFIX } } });
+  // The rows were always cleared here; the files they point at were not.
+  await removeTestPublicImages(PREFIX);
 });
 
 describe('applyCreateMaterial', () => {
@@ -220,5 +223,48 @@ describe('applyAddMaterialFinish (nested editor)', () => {
 
     const link = await prisma.materialFinish.findUnique({ where: { materialId_finishId: { materialId: material.id, finishId: finish.id } } });
     expect(link).not.toBeNull();
+  });
+});
+/**
+ * PERF-04, the same leak as `admin-designs.test.ts` records: `savePublicImage`
+ * had four callers and `deletePublicImage` one, so a replaced image stayed on
+ * disk forever. Asserted on the disk, because the row was always right.
+ */
+describe('material images on disk', () => {
+  it('deletes the image it replaced', async () => {
+    const staff = staffActor();
+    const created = await applyCreateMaterial(staff, materialFormData());
+    if (!created.ok) throw new Error('setup failed - could not create a material');
+
+    const before = await prisma.material.findUniqueOrThrow({ where: { id: created.id }, select: { slug: true, imageUrl: true } });
+    expect(before.imageUrl).not.toBeNull();
+    if (before.imageUrl === null) return;
+    expect(publicImageExists(before.imageUrl)).toBe(true);
+
+    const updated = await applyUpdateMaterial(staff, created.id, materialFormData({ slug: before.slug }));
+    expect(updated.ok).toBe(true);
+
+    const after = await prisma.material.findUniqueOrThrow({ where: { id: created.id }, select: { imageUrl: true } });
+    expect(after.imageUrl).not.toBe(before.imageUrl);
+    if (after.imageUrl === null) return;
+    expect(publicImageExists(after.imageUrl)).toBe(true);
+    expect(publicImageExists(before.imageUrl)).toBe(false);
+  });
+
+  it('leaves the image alone when the update carries no new file', async () => {
+    const staff = staffActor();
+    const created = await applyCreateMaterial(staff, materialFormData());
+    if (!created.ok) throw new Error('setup failed - could not create a material');
+    const before = await prisma.material.findUniqueOrThrow({ where: { id: created.id }, select: { slug: true, imageUrl: true } });
+    if (before.imageUrl === null) return;
+
+    // Editing a price must not blank the photo. This is the assertion that
+    // makes the delete conditional rather than unconditional.
+    const updated = await applyUpdateMaterial(staff, created.id, materialFormData({ slug: before.slug, skipFile: 'true', pricePerM2Pln: '199' }));
+    expect(updated.ok).toBe(true);
+
+    const after = await prisma.material.findUniqueOrThrow({ where: { id: created.id }, select: { imageUrl: true } });
+    expect(after.imageUrl).toBe(before.imageUrl);
+    expect(publicImageExists(before.imageUrl)).toBe(true);
   });
 });

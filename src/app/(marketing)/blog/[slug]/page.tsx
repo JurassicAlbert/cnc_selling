@@ -67,7 +67,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
               boxShadow: 'var(--shadow-sm)',
             }}
           >
-            <Image src={post.imageUrl} alt="" fill sizes="(max-width: 768px) 100vw, 720px" style={{ objectFit: 'cover' }} priority />
+            <Image src={post.imageUrl} alt="" fill sizes="(max-width: 768px) 100vw, 720px" style={{ objectFit: 'cover' }} preload />
           </div>
         )}
         <div style={{ marginBlockStart: 24, maxWidth: 720, whiteSpace: 'pre-wrap' }}>

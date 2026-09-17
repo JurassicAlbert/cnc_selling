@@ -1,4 +1,5 @@
 import { cache } from 'react';
+import type { MaterialChoice } from '@/domain/catalogue/material-summary';
 
 import { matchesPl } from '@/domain/text/collation';
 import { prisma } from '@/server/db/client';
@@ -25,7 +26,7 @@ export type ProductCardData = {
   readonly minWidthMm: number;
   readonly maxWidthMm: number;
   /** A real many-to-many join (`ProductMaterial`) - every seeded product has exactly one today, but the card must not assume that's permanent. */
-  readonly materials: readonly { readonly namePl: string }[];
+  readonly materials: readonly MaterialChoice[];
 };
 
 export type ProductSort = 'price_asc' | 'price_desc' | null;
@@ -74,7 +75,28 @@ export async function listActiveProductsByCategorySlug(
       productionDaysMax: true,
       minWidthMm: true,
       maxWidthMm: true,
-      materials: { select: { material: { select: { namePl: true } } } },
+      /*
+        BUG-03's rule, one layer out from the configurator, and it was missing
+        here entirely until 2026-09-13: Postgres promises nothing about the
+        order of an unordered select. No money moves on this list the way it
+        does in the configurator, which is presumably how it survived - but it
+        is customer-visible. The product page joins these names into one line,
+        and `summariseMaterials` takes `materials[0]` for the name it shows
+        when a product offers exactly one.
+
+        Cheapest first, matching the configurator exactly (owner decision,
+        2026-09-13). Found by looking at a product page in a browser: the
+        picker read „Sosna, Świerk, Modrzew, Dąb" and the chip six centimetres
+        above it read „Dąb, Świerk, Modrzew, Sosna".
+      */
+      materials: {
+        orderBy: [
+          { material: { sortOrder: 'asc' } },
+          { material: { pricePerM2Grosze: 'asc' } },
+          { material: { slug: 'asc' } },
+        ],
+        select: { material: { select: { namePl: true, family: true } } },
+      },
     },
   });
 
@@ -91,7 +113,7 @@ export async function listActiveProductsByCategorySlug(
     productionDaysMax: product.productionDaysMax,
     minWidthMm: product.minWidthMm,
     maxWidthMm: product.maxWidthMm,
-    materials: product.materials.map((m) => ({ namePl: m.material.namePl })),
+    materials: product.materials.map((m) => ({ namePl: m.material.namePl, family: m.material.family })),
   }));
 }
 
@@ -138,7 +160,15 @@ export async function listAllActiveProducts(): Promise<ProductCardData[]> {
       productionDaysMax: true,
       minWidthMm: true,
       maxWidthMm: true,
-      materials: { select: { material: { select: { namePl: true } } } },
+      materials: {
+        // Same clause and the same reason as the listing above.
+        orderBy: [
+          { material: { sortOrder: 'asc' } },
+          { material: { pricePerM2Grosze: 'asc' } },
+          { material: { slug: 'asc' } },
+        ],
+        select: { material: { select: { namePl: true, family: true } } },
+      },
     },
   });
 
@@ -155,7 +185,7 @@ export async function listAllActiveProducts(): Promise<ProductCardData[]> {
     productionDaysMax: product.productionDaysMax,
     minWidthMm: product.minWidthMm,
     maxWidthMm: product.maxWidthMm,
-    materials: product.materials.map((m) => ({ namePl: m.material.namePl })),
+    materials: product.materials.map((m) => ({ namePl: m.material.namePl, family: m.material.family })),
   }));
 }
 
@@ -245,7 +275,7 @@ export type ProductDetail = {
   readonly requiresExactSize: boolean;
   readonly category: { readonly slug: string; readonly namePl: string };
   readonly images: readonly { readonly url: string; readonly altPl: string }[];
-  readonly materials: readonly { readonly namePl: string }[];
+  readonly materials: readonly MaterialChoice[];
   /**
    * Rights-clear, active designs this product's configurator actually
    * offers - 2026-08-28, owner feedback: patterns were only ever visible by
@@ -294,7 +324,13 @@ async function findProductBySlug(slug: string, activeOnly: boolean): Promise<Pro
         select: { url: true, altPl: true },
       },
       materials: {
-        select: { material: { select: { namePl: true } } },
+        // Same clause and the same reason as the listing above.
+        orderBy: [
+          { material: { sortOrder: 'asc' } },
+          { material: { pricePerM2Grosze: 'asc' } },
+          { material: { slug: 'asc' } },
+        ],
+        select: { material: { select: { namePl: true, family: true } } },
       },
       installVariants: {
         orderBy: { sortOrder: 'asc' },
@@ -314,7 +350,7 @@ async function findProductBySlug(slug: string, activeOnly: boolean): Promise<Pro
   const { installVariants, designs, ...rest } = product;
   return {
     ...rest,
-    materials: product.materials.map((m) => ({ namePl: m.material.namePl })),
+    materials: product.materials.map((m) => ({ namePl: m.material.namePl, family: m.material.family })),
     installationVariants: installVariants,
     designs: designs.map((d) => d.design),
   };

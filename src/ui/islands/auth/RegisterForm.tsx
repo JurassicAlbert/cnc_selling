@@ -9,6 +9,7 @@ import { Alert, Button, Stack, TextField, Typography } from '@mui/material';
 
 import { authFormErrorMessage, authIssueMessage } from '@/content/pl/messages';
 import { SITE } from '@/content/pl/site';
+import { PasswordField } from '@/ui/islands/auth/PasswordField';
 import { submitRegister } from '@/server/actions/auth';
 import type { RegisterFormState } from '@/server/actions/auth';
 
@@ -35,6 +36,7 @@ export function RegisterForm() {
         <TextField
           label={SITE.authNameLabelPl}
           name="name"
+          autoComplete="name"
           defaultValue={state.values.name}
           error={state.fieldErrors.name !== undefined}
           helperText={state.fieldErrors.name !== undefined ? authIssueMessage(state.fieldErrors.name) : undefined}
@@ -44,6 +46,7 @@ export function RegisterForm() {
         <TextField
           label={SITE.authEmailLabelPl}
           name="email"
+          autoComplete="email"
           type="email"
           defaultValue={state.values.email}
           error={state.fieldErrors.email !== undefined}
@@ -51,14 +54,10 @@ export function RegisterForm() {
           size="small"
           fullWidth
         />
-        <TextField
-          label={SITE.authPasswordLabelPl}
-          name="password"
-          type="password"
+        <PasswordField
+          autoComplete="new-password"
           error={state.fieldErrors.password !== undefined}
           helperText={state.fieldErrors.password !== undefined ? authIssueMessage(state.fieldErrors.password) : undefined}
-          size="small"
-          fullWidth
         />
 
         <SubmitButton />

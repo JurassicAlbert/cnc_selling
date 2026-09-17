@@ -77,7 +77,7 @@ import type { ActivePaymentMethod } from '@/server/repositories/payment-methods'
 // A plain-data module (no `prisma`/Node-only imports) - safe to import as a
 // real value here, unlike `delivery-methods.ts`'s own type-only import
 // above (see that file's comment on why THAT one can't cross this boundary).
-import { findPickupPointById, searchPickupPoints } from '@/server/delivery/pickup-points';
+import { findPickupPointById, searchPickupPoints } from '@/domain/delivery/pickup-points';
 
 // Not exported from checkout.ts itself: a 'use server' file may only
 // export async functions, never a plain data constant.
@@ -179,8 +179,21 @@ export function CheckoutForm({
   const selectedPickupPoint =
     selectedPickupPointId !== null && pickupCarrier !== null ? findPickupPointById(pickupCarrier, selectedPickupPointId) : null;
 
+  /*
+    INSURANCE-01. The offer belongs to the SELECTED method, so switching
+    carrier can withdraw it - hence `insuranceOffered` recomputed on every
+    render rather than a second piece of state that could disagree with the
+    picker. The tick itself is kept, so going away to another method and
+    coming back does not silently drop cover the customer already chose;
+    what decides the charge is `insuranceOffered`, and an unrendered checkbox
+    posts nothing, so the server sees `false` either way.
+  */
+  const insuranceOffered = selectedDelivery?.feasible === true ? selectedDelivery.insurance : null;
+  const [insuranceSelected, setInsuranceSelected] = useState(state.values.insuranceSelected === 'true');
+  const insuranceGrosze = insuranceOffered !== null && insuranceSelected ? insuranceOffered.priceGrosze : 0;
+
   const shippingGrosze = selectedDelivery?.feasible === true ? selectedDelivery.priceGrosze : null;
-  const totalGrossGrosze = shippingGrosze !== null ? cart.subtotalGrossGrosze + shippingGrosze : null;
+  const totalGrossGrosze = shippingGrosze !== null ? cart.subtotalGrossGrosze + shippingGrosze + insuranceGrosze : null;
   const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
@@ -201,6 +214,9 @@ export function CheckoutForm({
             {state.formError === 'RATE_LIMITED' && <Alert severity="warning">{SITE.checkoutRateLimitedPl}</Alert>}
             {state.formError === 'OPTION_UNAVAILABLE' && (
               <Alert severity="warning">{SITE.checkoutOptionUnavailablePl}</Alert>
+            )}
+            {state.formError === 'INSURANCE_UNAVAILABLE' && (
+              <Alert severity="warning">{SITE.checkoutInsuranceUnavailablePl}</Alert>
             )}
 
             {/*
@@ -229,11 +245,22 @@ export function CheckoutForm({
               <GuestAccountPanel />
             )}
 
+            {/*
+              RWD-02. `autoComplete` on every field, which none of them had.
+              It is what a phone keyboard and a password manager read: without
+              it a saved address is nine fields of thumb-typing on the screen
+              where a customer is deciding whether to bother.
+
+              `nip` deliberately has none - there is no standard token for a
+              tax identifier, and inventing one would either do nothing or
+              invite a browser to fill it with something else.
+            */}
             <SectionCard heading={SITE.checkoutBuyerSectionHeadingPl}>
               <TextField
                 label={SITE.checkoutEmailLabelPl}
                 name="email"
                 type="email"
+                autoComplete="email"
                 required
                 defaultValue={v.email}
                 error={state.fieldErrors.email !== undefined}
@@ -245,6 +272,7 @@ export function CheckoutForm({
                 label={SITE.checkoutPhoneLabelPl}
                 name="phone"
                 type="tel"
+                autoComplete="tel"
                 required
                 defaultValue={v.phone}
                 error={state.fieldErrors.phone !== undefined}
@@ -255,6 +283,7 @@ export function CheckoutForm({
               <TextField
                 label={SITE.checkoutFirstNameLabelPl}
                 name="firstName"
+                autoComplete="given-name"
                 required
                 defaultValue={v.firstName}
                 error={state.fieldErrors.firstName !== undefined}
@@ -265,6 +294,7 @@ export function CheckoutForm({
               <TextField
                 label={SITE.checkoutLastNameLabelPl}
                 name="lastName"
+                autoComplete="family-name"
                 required
                 defaultValue={v.lastName}
                 error={state.fieldErrors.lastName !== undefined}
@@ -275,7 +305,7 @@ export function CheckoutForm({
             </SectionCard>
 
             <SectionCard heading={SITE.checkoutInvoiceSectionHeadingPl}>
-              <TextField label={SITE.checkoutCompanyNameLabelPl} name="companyName" defaultValue={v.companyName} size="small" fullWidth />
+              <TextField label={SITE.checkoutCompanyNameLabelPl} name="companyName" autoComplete="organization" defaultValue={v.companyName} size="small" fullWidth />
               <TextField
                 label={SITE.checkoutNipLabelPl}
                 name="nip"
@@ -291,6 +321,7 @@ export function CheckoutForm({
               <TextField
                 label={SITE.checkoutStreetLabelPl}
                 name="street"
+                autoComplete="street-address"
                 required
                 defaultValue={v.street}
                 error={state.fieldErrors.street !== undefined}
@@ -302,6 +333,7 @@ export function CheckoutForm({
                 <TextField
                   label={SITE.checkoutPostalCodeLabelPl}
                   name="postalCode"
+                  autoComplete="postal-code"
                   placeholder="00-001"
                   required
                   defaultValue={v.postalCode}
@@ -313,6 +345,7 @@ export function CheckoutForm({
                 <TextField
                   label={SITE.checkoutCityLabelPl}
                   name="city"
+                  autoComplete="address-level2"
                   required
                   defaultValue={v.city}
                   error={state.fieldErrors.city !== undefined}
@@ -327,7 +360,27 @@ export function CheckoutForm({
               {deliveryMethods.length === 0 ? (
                 <Alert severity="warning">{SITE.checkoutNoDeliveryMethodsPl}</Alert>
               ) : (
-                <RadioGroup name="deliveryMethodId" value={selectedDeliveryId} onChange={(e) => setSelectedDeliveryId(e.target.value)}>
+                <RadioGroup
+                  name="deliveryMethodId"
+                  value={selectedDeliveryId}
+                  onChange={(e) => {
+                    /*
+                      UX-08 / BUG-14. Changing the method used to set only the
+                      method: a locker chosen for InPost stayed selected after
+                      a switch to DPD, the hidden field kept submitting the
+                      InPost id, and the customer's order was refused at the
+                      last step of checkout.
+
+                      A pickup point belongs to one carrier's network, so it
+                      cannot survive a change of carrier - and neither can the
+                      search box, since a query typed against one network is
+                      not a query against another's.
+                    */
+                    setSelectedDeliveryId(e.target.value);
+                    setSelectedPickupPointId(null);
+                    setPickupPointQuery('');
+                  }}
+                >
                   <Stack spacing={1.5}>
                     {deliveryMethods.map((method) => (
                       <Paper
@@ -355,6 +408,31 @@ export function CheckoutForm({
                                   {method.feasible ? formatPln(method.priceGrosze) : '-'}
                                 </Typography>
                               </Stack>
+                              {/*
+                                UX-09. On the row, not once below the group
+                                for whichever method is selected. With every
+                                method free, the estimate is the only thing
+                                left that distinguishes them - and the seeded
+                                catalogue really does differ (personal
+                                collection 1 to 5 working days against the
+                                couriers' 1 to 3). Rendered once per method so
+                                two can be read at the same time, which is
+                                what comparing means.
+
+                                Directly under the price, so the two facts a
+                                choice actually turns on sit together, above
+                                the prose.
+
+                                Not shown for a method the cart cannot use:
+                                its price is already „-" and how fast it would
+                                have been is not a fact anyone needs.
+                              */}
+                              {method.feasible && (
+                                <Typography variant="caption" color="text.secondary">
+                                  {SITE.checkoutDeliveryEstimateLabelPl} {method.estimatedDaysMin}–{method.estimatedDaysMax}{' '}
+                                  {SITE.checkoutDeliveryEstimateUnitPl}
+                                </Typography>
+                              )}
                               <Typography variant="caption" color="text.secondary">
                                 {method.descPl}
                               </Typography>
@@ -392,14 +470,34 @@ export function CheckoutForm({
                   </Stack>
                 </RadioGroup>
               )}
-              {selectedDelivery !== null && (
-                <Typography variant="caption" color="text.secondary">
-                  {SITE.checkoutDeliveryEstimateLabelPl} {selectedDelivery.estimatedDaysMin}–{selectedDelivery.estimatedDaysMax}{' '}
-                  {SITE.checkoutDeliveryEstimateUnitPl}
-                </Typography>
-              )}
               {state.fieldErrors.deliveryMethodId !== undefined && (
                 <FormHelperText error>{checkoutIssueMessage(state.fieldErrors.deliveryMethodId)}</FormHelperText>
+              )}
+
+              {/*
+                INSURANCE-01. Rendered only when the carrier's own table has a
+                band that covers this cart. Nothing is shown when it does not:
+                a disabled box is an offer of something we cannot sell, and a
+                band that stops below the order value would pay out less than
+                the customer would assume.
+
+                Opt-in, never pre-ticked. This adds money to the total.
+              */}
+              {insuranceOffered !== null && (
+                <Stack sx={{ pt: 1 }}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        name="insuranceSelected"
+                        size="small"
+                        checked={insuranceSelected}
+                        onChange={(event) => setInsuranceSelected(event.target.checked)}
+                      />
+                    }
+                    label={SITE.checkoutInsuranceOptionLabelPl(insuranceOffered.labelPl, formatPln(insuranceOffered.priceGrosze))}
+                  />
+                  <FormHelperText>{SITE.checkoutInsuranceHelperPl}</FormHelperText>
+                </Stack>
               )}
 
               {selectedDelivery?.requiresPickupPoint === true && pickupCarrier !== null && (
@@ -547,6 +645,16 @@ export function CheckoutForm({
                   </Typography>
                   <Typography variant="body2">{shippingGrosze !== null ? formatPln(shippingGrosze) : '-'}</Typography>
                 </Stack>
+                {/* Only once it is actually being charged - a permanent zero
+                    row would read as cover included with every order. */}
+                {insuranceGrosze > 0 && (
+                  <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">
+                      {SITE.checkoutInsuranceSummaryLabelPl}
+                    </Typography>
+                    <Typography variant="body2">{formatPln(insuranceGrosze)}</Typography>
+                  </Stack>
+                )}
                 <Divider sx={{ my: 0.5 }} />
                 <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
                   <Typography variant="subtitle1">{SITE.orderTotalLabelPl}</Typography>
@@ -558,8 +666,18 @@ export function CheckoutForm({
 
               <Box sx={{ mt: 3 }}>
                 <SubmitButton
+                  /*
+                    Gated on the RESOLVED point, not on the id - the second
+                    half of BUG-14, and the half that holds even when the
+                    reset above does not run. `selectedPickupPointId` comes
+                    back from `state.values` after a refused submission, and
+                    an id that belonged to another carrier is not `null`; only
+                    `findPickupPointById` can say whether it means anything
+                    for the carrier now selected. Asking the id was asking the
+                    wrong question, which is why a stale value passed.
+                  */
                   disabledReason={
-                    selectedDelivery?.requiresPickupPoint === true && selectedPickupPointId === null
+                    selectedDelivery?.requiresPickupPoint === true && selectedPickupPoint === null
                       ? 'pickup'
                       : selectedDelivery === null || !selectedDelivery.feasible
                         ? 'delivery'

@@ -32,11 +32,13 @@ import {
   applyDeleteConfiguration,
   applyDuplicateCartItem,
   applyRemoveCartItem,
+  applyRestoreCartItem,
   applyUpdateCartItemConfiguration,
   applyUpdateCartItemQuantity,
 } from '@/server/operations/cart';
 import { ensureGuestSessionToken } from '@/server/session/guest-session';
 import { currentOwner } from '@/server/session/ownership';
+import { clearCartUndo, readCartUndo, setCartUndo } from '@/server/session/cart-undo';
 
 export type { AddToCartResult } from '@/server/operations/cart';
 
@@ -116,7 +118,41 @@ export async function adjustCartItemQuantity(cartItemId: string, delta: 1 | -1):
 
 export async function removeCartItem(cartItemId: string): Promise<void> {
   const owner = await currentOwner();
-  await applyRemoveCartItem(owner, cartItemId);
+  const removed = await applyRemoveCartItem(owner, cartItemId);
+  /*
+    UX-11. The removal remembers what it took, so the cart can offer it back.
+    `null` means nothing was removed - a second click on a line the first
+    click already took - and arming an undo for that would offer to restore a
+    line twice.
+  */
+  if (removed !== null) {
+    await setCartUndo(removed);
+  }
+  revalidateCart();
+}
+
+/**
+ * „Cofnij" - UX-11's other half.
+ *
+ * Takes no arguments on purpose: the line to restore is the one in the
+ * customer's own `HttpOnly` cookie, never an id from the form. That keeps a
+ * `<form action>` with no hidden fields, and means the only thing a client
+ * can influence is *whether* to undo, not what.
+ *
+ * The cookie is cleared whatever happens. An undo that was refused - an
+ * expired session, a configuration that is no longer this customer's - must
+ * not leave a button on screen that will keep failing.
+ */
+export async function undoRemoveCartItem(): Promise<void> {
+  const line = await readCartUndo();
+  await clearCartUndo();
+  if (line === null) {
+    revalidateCart();
+    return;
+  }
+  const owner = await currentOwner();
+  const sessionToken = await ensureGuestSessionToken();
+  await applyRestoreCartItem(owner, sessionToken, line);
   revalidateCart();
 }
 

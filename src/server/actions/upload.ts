@@ -33,6 +33,7 @@ import { findOwnedDesignByChecksum } from '@/server/repositories/customer-design
 import { storage } from '@/server/storage/local-disk';
 import type { InspectFileErrorCode } from '@/server/upload/inspect-file';
 import { inspectUploadedFile } from '@/server/upload/inspect-file';
+import { consumeUploadAttempt } from '@/server/rate-limit/auth-throttle';
 import { isUploadRateLimited } from '@/server/upload/rate-limit';
 
 /** Same intentional double-cast as `cart.ts`/`create-order.ts`'s `toJsonInput` - a single, named, auditable spot rather than an unchecked cast scattered through the file. */
@@ -62,7 +63,21 @@ export async function uploadCustomDesign(formData: FormData): Promise<UploadCust
   const session = await getSession();
   const userId = session?.userId ?? null;
 
+  /*
+    Two dimensions, SEC-08. `isUploadRateLimited` is 16.1's "uploads per
+    session/hour" and stays: for a signed-in customer the identity is real.
+    For a guest the session is a cookie they hold, so clearing it hands them a
+    fresh allowance as often as they like - and each upload can be 25 MB of
+    disk. The per-IP counter is the half a client cannot reset.
+
+    Both are checked BEFORE `file.arrayBuffer()` below, which is the whole
+    point: a refused upload must not first be pulled into memory.
+  */
   if (await isUploadRateLimited({ sessionToken, userId })) {
+    return { ok: false, code: 'RATE_LIMITED' };
+  }
+
+  if (!(await consumeUploadAttempt({ ip: await requestIpAddress() })).allowed) {
     return { ok: false, code: 'RATE_LIMITED' };
   }
 

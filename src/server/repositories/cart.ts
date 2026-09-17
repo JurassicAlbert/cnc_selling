@@ -96,12 +96,20 @@ export async function listConfigurationsForUser(userId: string): Promise<readonl
   // Deduplicated on read as well as prevented on write (2026-08-30, owner:
   // "client should not be able to save the same project twice").
   //
-  // `applyAddToCart` now reuses a matching `Configuration` instead of
-  // creating a second one, which stops NEW duplicates - but it cannot undo
-  // the ones already in the database from before that, and this page lists
-  // these rows directly. Nothing is deleted: the newest row of each
-  // identical set is shown and the older twins are simply not listed, so a
-  // historical row is never destroyed on a read path.
+  // **This comment used to claim more than was true, and BUG-21 is what that
+  // cost.** `applyAddToCart` reuses a matching `Configuration` rather than
+  // creating a second one, and that was written up here as stopping NEW
+  // duplicates - but `applyUpdateCartItemConfiguration` went on producing
+  // them from two directions for another nine days, and nobody saw it,
+  // because this filter was quietly absorbing them. A read-side dedupe that
+  // is described as a backstop for historical rows, while actually hiding a
+  // live write-side bug, is worse than no dedupe at all.
+  //
+  // Both write paths are closed as of 2026-09-08, so what is left here is
+  // genuinely the historical backstop it always said it was. Nothing is
+  // deleted: the newest row of each identical set is shown and the older
+  // twins are simply not listed, so a historical row is never destroyed on a
+  // read path.
   const seen = new Set<string>();
   const unique = configurations.filter((configuration) => {
     const identity = cartItemSignature(configuration.product.slug, {

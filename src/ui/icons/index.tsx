@@ -74,6 +74,20 @@ export const DiamondIcon = makeIcon(
   'M19 3H5L2 9l10 12L22 9zM9.62 8l1.5-3h1.76l1.5 3zM11 10v6.68L5.44 10zm2 0h5.56L13 16.68zm6.26-2h-2.65l-1.5-3h2.65zM6.24 5h2.65l-1.5 3H4.74z',
 );
 
+/** RWD-05's bottom navigation. Material's own `home` glyph, same source as its neighbours. */
+export const HomeIcon = makeIcon(
+  'M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1',
+);
+
+/** RWD-03's password reveal. Material's own `visibility` pair. */
+export const VisibilityIcon = makeIcon(
+  'M12 6a9.77 9.77 0 0 1 8.82 5.5A9.77 9.77 0 0 1 12 17a9.77 9.77 0 0 1-8.82-5.5A9.77 9.77 0 0 1 12 6m0-2C7 4 2.73 7.11 1 11.5 2.73 15.89 7 19 12 19s9.27-3.11 11-7.5C21.27 7.11 17 4 12 4m0 5a2.5 2.5 0 0 1 0 5 2.5 2.5 0 0 1 0-5m0-2c-2.48 0-4.5 2.02-4.5 4.5S9.52 16 12 16s4.5-2.02 4.5-4.5S14.48 7 12 7',
+);
+
+export const VisibilityOffIcon = makeIcon(
+  'M12 6a9.77 9.77 0 0 1 8.82 5.5 9.6 9.6 0 0 1-2.41 3.12l1.41 1.41A11.8 11.8 0 0 0 23 11.5 11.83 11.83 0 0 0 12 4a11 11 0 0 0-3.18.46l1.66 1.66A9.5 9.5 0 0 1 12 6M2.71 3.16a.996.996 0 0 0 0 1.41l1.97 1.97A11.9 11.9 0 0 0 1 11.5 11.83 11.83 0 0 0 12 19c1.52 0 2.97-.3 4.31-.82l2.72 2.72a.996.996 0 1 0 1.41-1.41L4.13 3.16a.996.996 0 0 0-1.42 0M12 17a9.77 9.77 0 0 1-8.82-5.5 9.65 9.65 0 0 1 2.92-3.4l1.65 1.65A4.5 4.5 0 0 0 12 16c.47 0 .92-.08 1.35-.22l.93.93A7.6 7.6 0 0 1 12 17',
+);
+
 export const GridViewIcon = makeIcon(
   'M3 3v8h8V3zm6 6H5V5h4zm-6 4v8h8v-8zm6 6H5v-4h4zm4-16v8h8V3zm6 6h-4V5h4zm-6 4v8h8v-8zm6 6h-4v-4h4z',
 );
@@ -101,6 +115,10 @@ export const InfoIcon = makeIcon(
 
 export const HelpIcon = makeIcon(
   'M11 18h2v-2h-2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8m0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4',
+);
+
+export const ArticleIcon = makeIcon(
+  'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m-5 14H7v-2h7zm3-4H7v-2h10zm0-4H7V7h10z',
 );
 
 export const CollectionsIcon = makeIcon(

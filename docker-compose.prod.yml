@@ -1,0 +1,126 @@
+# Production stack: Postgres, the app, and nginx in front of it.
+#
+# Run with an explicit file so it can never be confused with the development
+# `docker-compose.yml`, which publishes Postgres on 5433 with a known password:
+#
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Every value comes from `.env.production` on the server, which is never
+# committed. `scripts/preflight-env.mjs` checks that file against the manifest
+# in `scripts/deploy-env.mjs` before a release is allowed to proceed.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Matches development and CI exactly. Collation affects index ordering,
+      # so a different locale here means queries that sort differently in
+      # production than anywhere they were tested.
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      # Creates the `unaccent` extension the diacritic-insensitive search
+      # needs (ARCHITECTURE.md §17.3). Same file development and CI use.
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    # Deliberately NOT published to the host. The app reaches it over the
+    # compose network; exposing 5432 to the internet is how a database gets
+    # found by a scanner within the hour.
+    expose:
+      - '5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # These three are needed at BUILD time - see the Dockerfile's builder
+      # stage for why each one cannot simply be set at runtime.
+      args:
+        DATABASE_URL: ${DATABASE_URL}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+        NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      SESSION_SECRET: ${SESSION_SECRET}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
+      SERVER_ACTIONS_ALLOWED_ORIGINS: ${SERVER_ACTIONS_ALLOWED_ORIGINS}
+      # Optional. Empty is a valid, meaningful state: no email is sent, and
+      # only bank transfer is offered. Both are owner-parked, not oversights.
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      P24_MERCHANT_ID: ${P24_MERCHANT_ID:-}
+      P24_POS_ID: ${P24_POS_ID:-}
+      P24_CRC: ${P24_CRC:-}
+      P24_API_KEY: ${P24_API_KEY:-}
+      P24_SANDBOX: ${P24_SANDBOX:-}
+    volumes:
+      # The five upload kinds, and ONLY those five.
+      #
+      # Mounting `public/images` wholesale would hide the 37 tracked files
+      # underneath it - every stock photo, the brand wordmark, the pattern
+      # artwork - and the site would come up with broken images everywhere.
+      # These five are exactly the directories `.gitignore` lists as
+      # admin-uploaded, so they are empty in the image and must outlive it.
+      - uploads-products:/app/public/images/products
+      - uploads-categories:/app/public/images/categories
+      - uploads-materials:/app/public/images/materials
+      - uploads-finishes:/app/public/images/finishes
+      - uploads-designs:/app/public/images/designs
+    expose:
+      - '3000'
+    # Uses node's own fetch rather than curl: the alpine image does not ship
+    # curl, and adding a package to the runtime layer just to check on it is
+    # the wrong trade. `/api/health` queries Postgres, so this reports "the
+    # site works" rather than merely "the process is up".
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      # Generous, because the entrypoint applies migrations before the server
+      # starts listening. A tight value here restarts the container in the
+      # middle of its own migration, repeatedly.
+      start_period: 90s
+
+  proxy:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./docker/nginx/app.conf:/etc/nginx/conf.d/default.conf:ro
+      # TLS certificates, issued on the host (certbot) and mounted read-only.
+      # Not managed here: a certificate renewal should not require a redeploy.
+      - ./docker/nginx/certs:/etc/nginx/certs:ro
+
+volumes:
+  db-data:
+  uploads-products:
+  uploads-categories:
+  uploads-materials:
+  uploads-finishes:
+  uploads-designs:

@@ -1,13 +1,15 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  applyAddDeliveryInsuranceTier,
   applyAddDeliveryWeightTier,
   applyCreateDeliveryMethod,
+  applyRemoveDeliveryInsuranceTier,
   applyRemoveDeliveryWeightTier,
   applySetDeliveryMethodActive,
   applyUpdateDeliveryMethod,
 } from '@/server/operations/admin-delivery-methods';
-import type { DeliveryWeightTierInput } from '@/server/operations/admin-delivery-methods';
+import type { DeliveryInsuranceTierInput, DeliveryWeightTierInput } from '@/server/operations/admin-delivery-methods';
 import { findDeliveryMethodForAdmin, listDeliveryMethodsForAdmin } from '@/server/repositories/admin-delivery-methods';
 import { resolveDeliveryMethodsForCart } from '@/server/repositories/delivery-methods';
 
@@ -215,5 +217,147 @@ describe('delivery weight tiers - admin CRUD', () => {
     expect(
       await prisma.auditLog.count({ where: { entity: 'DeliveryMethod', entityId: id, actorEmail: staff.email } }),
     ).toBeGreaterThanOrEqual(2);
+  });
+});
+
+/**
+ * INSURANCE-01. The screen that unblocks the item.
+ *
+ * The owner chose the carrier's real declared-value table over a flat fee or
+ * a percentage, and neither InPost nor DPD publishes one citably - so the
+ * bands cannot be seeded, only typed in from the rate card the owner holds.
+ * Until they are, `insurance` is `null` on every method and no customer sees
+ * anything, which is the same "you are not allowed to lie" rule that keeps
+ * `Kurier GEIS` inactive.
+ *
+ * Audited against `DeliveryMethod`, like the weight tiers: these are edits to
+ * one method's pricing and belong on that method's activity timeline.
+ */
+/** By id rather than by position: the resolver returns every active method. */
+async function resolveOne(id: string, subtotalGrossGrosze: number) {
+  const all = await resolveDeliveryMethodsForCart({ ...EMPTY_CART, subtotalGrossGrosze });
+  return all.find((method) => method.id === id) ?? null;
+}
+
+describe('delivery insurance bands - admin CRUD', () => {
+  async function seedMethod() {
+    const staff = staffActor();
+    const created = await applyCreateDeliveryMethod(staff, formData());
+    if (!created.ok) throw new Error('setup failed - could not create a delivery method');
+    return { staff, id: created.id };
+  }
+
+  function bandInput(overrides: Partial<DeliveryInsuranceTierInput> = {}): DeliveryInsuranceTierInput {
+    return { labelPl: 'do 1000 zł', maxValueGrosze: 100_000, priceGrosze: 300, ...overrides };
+  }
+
+  it('adds a band, and the band is what the customer-facing resolver then offers', async () => {
+    const { staff, id } = await seedMethod();
+
+    const result = await applyAddDeliveryInsuranceTier(staff, id, bandInput());
+    expect(result.ok).toBe(true);
+
+    const method = await findDeliveryMethodForAdmin(id);
+    expect(method?.insuranceTiers).toHaveLength(1);
+
+    // The point of the screen: what an admin types is what a customer is
+    // offered, through the one resolver checkout and `createOrder` share.
+    // Found by id, not taken as `[0]` - other files create delivery methods
+    // in parallel against this database.
+    const resolved = await resolveOne(id, 50_000);
+    expect(resolved?.insurance).toEqual({ labelPl: 'do 1000 zł', priceGrosze: 300 });
+  });
+
+  it('turns the offer on for a method that had none, and off again when the last band goes', async () => {
+    const { staff, id } = await seedMethod();
+
+    // Before: no table, so nothing is offered. This is every method today.
+    expect((await resolveOne(id, 50_000))?.insurance).toBeNull();
+
+    const added = await applyAddDeliveryInsuranceTier(staff, id, bandInput());
+    if (!added.ok) throw new Error('setup failed - could not add a band');
+    const method = await findDeliveryMethodForAdmin(id);
+    const bandId = method?.insuranceTiers[0]?.id;
+    expect(bandId).toBeDefined();
+    if (bandId === undefined) return;
+
+    await applyRemoveDeliveryInsuranceTier(staff, id, bandId);
+
+    expect((await findDeliveryMethodForAdmin(id))?.insuranceTiers).toHaveLength(0);
+    expect((await resolveOne(id, 50_000))?.insurance).toBeNull();
+  });
+
+  it('refuses a band that covers nothing', async () => {
+    const { staff, id } = await seedMethod();
+
+    // A 0 zł ceiling would band no real order, and being the cheapest it
+    // would win the sort - the same trap `validateWeightTier` guards against
+    // with a 0 g bracket.
+    const result = await applyAddDeliveryInsuranceTier(staff, id, bandInput({ maxValueGrosze: 0 }));
+
+    expect(result.ok).toBe(false);
+    expect((await findDeliveryMethodForAdmin(id))?.insuranceTiers).toHaveLength(0);
+  });
+
+  it('refuses a band with no name and a band with a negative premium', async () => {
+    const { staff, id } = await seedMethod();
+
+    expect((await applyAddDeliveryInsuranceTier(staff, id, bandInput({ labelPl: '   ' }))).ok).toBe(false);
+    expect((await applyAddDeliveryInsuranceTier(staff, id, bandInput({ priceGrosze: -1 }))).ok).toBe(false);
+    expect((await findDeliveryMethodForAdmin(id))?.insuranceTiers).toHaveLength(0);
+  });
+
+  it('refuses to add a band to a method that does not exist', async () => {
+    const staff = staffActor();
+
+    const result = await applyAddDeliveryInsuranceTier(staff, 'does-not-exist', bandInput());
+
+    expect(result.ok).toBe(false);
+  });
+
+  it('leaves a past order alone when the band it was sold under is removed', async () => {
+    const { staff, id } = await seedMethod();
+    const added = await applyAddDeliveryInsuranceTier(staff, id, bandInput());
+    if (!added.ok) throw new Error('setup failed - could not add a band');
+
+    // What a checkout snapshotted. `Order.insuranceGrosze`/`insuranceLabelPl`
+    // are copies, not references, exactly like `shippingGrosze` - so this is
+    // the assertion that a rate-card edit cannot rewrite history.
+    const order = await prisma.order.create({
+      data: {
+        orderNumber: uid(),
+        accessToken: uid(),
+        paymentMethod: 'BANK_TRANSFER',
+        email: `${PREFIX}buyer@example.test`,
+        phone: '600100200',
+        firstName: 'Ala',
+        lastName: 'Kowalska',
+        street: 'Kwiatowa 5',
+        postalCode: '30-001',
+        city: 'Kraków',
+        subtotalNetGrosze: 10_000,
+        vatGrosze: 2_300,
+        shippingGrosze: 1_500,
+        insuranceGrosze: 300,
+        insuranceLabelPl: 'do 1000 zł',
+        totalGrossGrosze: 14_100,
+        deliveryMethodNamePl: 'Kurier',
+        termsVersion: '1',
+        termsAcceptedAt: new Date(),
+        withdrawalExemptionTextPl: 'test',
+        withdrawalAcknowledgedAt: new Date(),
+      },
+    });
+
+    const method = await findDeliveryMethodForAdmin(id);
+    const bandId = method?.insuranceTiers[0]?.id;
+    if (bandId === undefined) throw new Error('setup failed - no band to remove');
+    await applyRemoveDeliveryInsuranceTier(staff, id, bandId);
+
+    const after = await prisma.order.findUnique({ where: { id: order.id } });
+    expect(after?.insuranceGrosze).toBe(300);
+    expect(after?.insuranceLabelPl).toBe('do 1000 zł');
+
+    await prisma.order.deleteMany({ where: { email: { startsWith: PREFIX } } });
   });
 });

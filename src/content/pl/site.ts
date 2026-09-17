@@ -43,6 +43,17 @@ export const SITE = {
   catalogueIndividualQuotePl: 'Wycena indywidualna',
   catalogueProductionTimeLabelPl: 'Czas realizacji',
   catalogueProductionTimeUnitPl: 'dni roboczych',
+  /*
+    UX-17. The card used to show `materials[0]` plus „ +N" - „Dąb +3" - which
+    is shorthand only a developer reads correctly. The noun is chosen from the
+    families, not from the count: `fartuch-kuchenny-z-grawerem` offers one
+    CERAMIC material, and the schema also allows PLYWOOD, MDF, LEATHER and
+    OTHER, so „gatunki drewna" is not always true. See
+    `domain/catalogue/material-summary.ts`.
+  */
+  catalogueMaterialsWoodPl: (count: number) =>
+    `${countPl(count, { one: 'gatunek', few: 'gatunki', many: 'gatunków' })} drewna`,
+  catalogueMaterialsMixedPl: (count: number) => countPl(count, { one: 'materiał', few: 'materiały', many: 'materiałów' }),
   catalogueDimensionsLabelPl: 'Wymiary',
   catalogueMaterialsLabelPl: 'Dostępne materiały',
   catalogueCareInstructionsLabelPl: 'Pielęgnacja',
@@ -257,6 +268,41 @@ export const SITE = {
   cartShippingAtCheckoutPl: 'Koszt dostawy poznasz w kolejnym kroku, po wybraniu sposobu wysyłki.',
   cartKeepShoppingHeadingPl: 'Przeglądaj dalej',
   cartQuantityLabelPl: 'Ilość',
+  /*
+    UX-13. The cart used to say nothing about a line's uploaded design, so the
+    one line that changes what happens to the whole order looked like every
+    other line. The existing status sentences (`COPY.designStatus*`) say what
+    state the design is in; neither of them says what that means for the
+    order, which is the part a customer standing at the checkout needs.
+  */
+  cartDesignReviewHoldPl: 'Zamówienie trafi do weryfikacji projektu, zanim ruszy produkcja.',
+  /** The closed label of the per-line notes disclosure. The count follows in brackets, which needs no plural form. */
+  cartLineNotesSummaryPl: 'Uwagi do tej pozycji',
+  /*
+    UX-11. The bar shown after a removal, for thirty seconds. It names no
+    product deliberately: the message is about the action, and looking the
+    name up would cost a query on every cart render to say something the
+    customer watched happen a moment ago.
+  */
+  /*
+    RWD-05's bottom navigation. Short labels because four of them share a
+    375 px row; „Konto" rather than „Moje konto" for the same reason, and it
+    is what the header's own account menu is called once opened.
+  */
+  /*
+    RWD-03. The button's name says what pressing it will DO, not what the
+    field is currently showing - a toggle named after its own state is the
+    classic way to leave a screen-reader user guessing which way it goes.
+  */
+  authShowPasswordPl: 'Pokaż hasło',
+  authHidePasswordPl: 'Ukryj hasło',
+  bottomNavLabelPl: 'Nawigacja dolna',
+  bottomNavHomePl: 'Strona główna',
+  bottomNavCollectionsPl: 'Kolekcje',
+  bottomNavCartPl: 'Koszyk',
+  bottomNavAccountPl: 'Konto',
+  cartUndoRemovedPl: 'Pozycja została usunięta z koszyka.',
+  cartUndoActionPl: 'Cofnij',
   cartRemovePl: 'Usuń',
   /*
     „Aktualizuj", „Duplikuj" and „Edytuj" were removed here on 2026-09-05
@@ -339,6 +385,19 @@ export const SITE = {
   checkoutDeliveryInfeasibleTagPl: 'Niedostępne dla Twojego koszyka',
   checkoutDeliveryMatchedTierPl: (label: string) => `Rozmiar/waga: ${label}`,
   checkoutFreeShippingAppliedPl: 'Darmowa dostawa - Twoje zamówienie kwalifikuje się do darmowej wysyłki tą metodą.',
+  /*
+    INSURANCE-01. The band's own label comes from the carrier's rate card as
+    an admin typed it („do 5000 zł"), so the copy around it must not restate
+    the amount - two numbers that can disagree is exactly how a customer ends
+    up believing they are covered for something they are not.
+  */
+  checkoutInsuranceOptionLabelPl: (bandPl: string, pricePl: string) => `Ubezpieczenie przesyłki ${bandPl} - ${pricePl}`,
+  checkoutInsuranceHelperPl:
+    'Ochrona na wypadek zaginięcia lub uszkodzenia przesyłki w transporcie, według tabeli przewoźnika. Kwota zostanie doliczona do sumy zamówienia.',
+  checkoutInsuranceSummaryLabelPl: 'Ubezpieczenie',
+  /** Says plainly that nothing was charged, for the same reason `checkoutRateLimitedPl` does. */
+  checkoutInsuranceUnavailablePl:
+    'Ubezpieczenie nie jest już dostępne dla tego zamówienia - przewoźnik zmienił tabelę albo wartość koszyka wykracza poza jej zakres. Nic nie zostało obciążone. Odśwież stronę i wybierz ponownie.',
   checkoutCourierNoteLabelPl: 'Uwagi dla kuriera (opcjonalnie)',
   // The closing mark here was a straight `"` against an opening `„` - the
   // Polish pair is „…”, and a mismatched one is visible to any Polish
@@ -469,6 +528,18 @@ export const SITE = {
   // 900px the control is the icon alone, so a screen reader is the only
   // consumer of this string.
   headerMenuTogglePl: 'Menu',
+
+  /*
+    RWD-04. The header's search toggle, below 900px where the band is gone.
+    Also an icon alone, so also read only by a screen reader.
+
+    A noun rather than the verb RWD-03 argued for. That control's name could
+    flip with its state because two components rendered it; this one is one
+    checkbox whose label CSS cannot rewrite, so a name saying "open" would be
+    a lie half the time. „Wyszukiwarka" is true in both states, and the
+    checkbox announces open or closed for itself.
+  */
+  headerSearchTogglePl: 'Wyszukiwarka',
   /*
     BUG-28. The first thing a keyboard reaches on every page. Names the
     destination rather than the mechanism ("Przejdź do treści", not "Pomiń
@@ -674,6 +745,20 @@ export const SITE = {
   collectionEmptyProductsPl: 'W tej kolekcji nie ma jeszcze żadnych produktów.',
 
   faqHeadingPl: 'Najczęściej zadawane pytania',
+  /*
+    The FAQ page was a heading and nine identical accordion bars, with nothing
+    before them and nothing after - a dead end for anyone whose question is
+    not on the list. The lead says what the page is; the closing block gives
+    them somewhere to go.
+
+    Deliberately no response-time promise („odpowiadamy w ciągu 24 godzin" and
+    the like): nobody has committed to one, and a number invented here would
+    be a promise the shop has not made.
+  */
+  faqLeadPl: 'Zebrane w jednym miejscu pytania, które dostajemy najczęściej - o realizację, materiały, dostawę i zwroty.',
+  faqStillStuckHeadingPl: 'Nie ma tu Twojego pytania?',
+  faqStillStuckBodyPl: 'Napisz do nas przez formularz kontaktowy - odpowiemy na podany adres e-mail.',
+  faqStillStuckActionPl: 'Przejdź do kontaktu',
   faqSeoTitlePl: 'Najczęściej zadawane pytania - RYT',
   faqSeoDescPl: 'Odpowiedzi na najczęstsze pytania o zamówienia, personalizację i realizację.',
   faqEmptyStatePl: 'Pytania pojawią się tutaj wkrótce.',
@@ -691,6 +776,23 @@ export const SITE = {
   */
 
   homeReviewsHeadingPl: 'Opinie klientów',
+  /*
+    Owner feedback, 2026-09-11: "something seems missing in this layout - the
+    way the sections are presented". Every section on the site was a bare
+    heading and then content; the reference the owner pointed at
+    (`template.getbazaar.io`) puts a one-sentence lead under every single one.
+    These are those leads - `SectionIntro` renders them.
+
+    Each says something true and checkable rather than filling space. The
+    reviews line is the one worth flagging: `Review.orderId` is required, so
+    an opinion here really did follow a real order, and the sentence is
+    allowed to say so.
+  */
+  homeCategoriesLeadPl: 'Od drobnych grawerów po duże panele - i osobna ścieżka, jeśli masz własny projekt.',
+  homeProductsLeadPl: 'Każdy produkt konfigurujesz sam: wzór, materiał, rozmiar i grawer. Cenę widzisz od razu, zanim dodasz do koszyka.',
+  homeBlogLeadPl: 'Jak powstają nasze projekty i co warto wiedzieć, zanim zamówisz.',
+  homeReviewsLeadPl: 'Opinie wystawione po zrealizowanych zamówieniach.',
+  homeFaqLeadPl: 'Krótkie odpowiedzi na pytania, które dostajemy najczęściej.',
   reviewFormHeadingPl: 'Zostaw opinię',
   reviewFormAuthorNameLabelPl: 'Twoje imię (widoczne publicznie)',
   reviewFormRatingLabelPl: 'Ocena (1–5)',

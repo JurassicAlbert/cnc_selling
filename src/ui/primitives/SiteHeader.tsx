@@ -1,18 +1,9 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
-import {
-  CartIcon,
-  CloseIcon,
-  CollectionsIcon,
-  ExpandMoreIcon,
-  GridViewIcon,
-  HelpIcon,
-  InfoIcon,
-  MenuIcon,
-  PersonIcon,
-  PrecisionManufacturingIcon,
-} from '@/ui/icons';
+import { ArticleIcon, CartIcon, CloseIcon, CollectionsIcon, ExpandMoreIcon, GridViewIcon, HelpIcon, InfoIcon, MenuIcon, PersonIcon, SearchIcon } from '@/ui/icons';
 import { Container } from '@/ui/primitives/Container';
+import { SearchForm } from '@/ui/primitives/SearchForm';
 import { logout } from '@/server/actions/auth';
 import { SITE } from '@/content/pl/site';
 import { LoginDialog } from '@/ui/islands/auth/LoginDialog';
@@ -100,28 +91,50 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 'var(--space-5)',
+            /*
+              RWD-04. The gap lives in `theme-vars.css` rather than here,
+              because an inline style beats a stylesheet: the `max-width:
+              599px` rule that tightens this row to 12px for a line of icons
+              has been written since 2026-09-06 and was never in effect. The
+              measured row still had 24px between every icon, which is what
+              left no room for a fifth one.
+            */
             paddingBlock: 'var(--space-4)',
             flexWrap: 'wrap',
           }}
         >
-          <Link
-            href="/"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-2)',
-              font: 'var(--mui-font-h6)',
-              color: 'var(--mui-palette-text-primary)',
-              textDecoration: 'none',
-            }}
-          >
-            <PrecisionManufacturingIcon size={22} style={{ color: 'var(--mui-palette-secondary-main)' }} />
-            RYT
+          {/*
+            The owner's carved wordmark, 2026-09-08, replacing the machine
+            icon plus the word set in the body face. The icon goes with it
+            rather than sitting beside it: a mark and a wordmark that both
+            say "this is RYT" is one of them too many, and the carving is
+            already the thing the shop sells.
+
+            `alt="RYT"` gives the home link its accessible name - the image
+            IS the name, so a decorative empty alt here would leave the only
+            link to the home page unlabelled.
+
+            Sized in CSS with the intrinsic ratio declared, so the browser
+            reserves the right box before the file arrives; `preload` because
+            it is above the fold on every page. This was the first use of
+            `preload` in the repository; PERF-06 finished the job on
+            2026-09-10, so `priority` - deprecated in Next 16 - is gone
+            everywhere now.
+          */}
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+            <Image
+              src="/images/brand/ryt-wordmark.png"
+              alt="RYT"
+              width={900}
+              height={356}
+              sizes="140px"
+              preload
+              className="site-logo"
+            />
           </Link>
 
           {/*
-            Below 900px these four collapse behind a burger; above it the
+            Below 900px these five collapse behind a burger; above it the
             panel is styled back into a plain flex row and the toggle is
             hidden, so desktop markup and desktop appearance are unchanged.
             A `<details>` rather than a button because this header is a
@@ -191,6 +204,21 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
               <HelpIcon size={18} />
               {SITE.headerFaqLinkPl}
             </Link>
+            {/*
+              UX-16, owner decision 2026-09-10: "Both in both places." The
+              blog was linked from the footer and nowhere else, so it was
+              invisible to anyone who never scrolled to the bottom - not a
+              rule anybody chose, just what two separate additions left
+              behind. FAQ made the same trip the other way, into the footer.
+
+              Between the plain links and the Kolekcje dropdown, so the
+              informational links stay together and the two dropdowns still
+              bracket the row.
+            */}
+            <Link href="/blog" className="nav-link" style={{ font: 'var(--mui-font-body2)' }}>
+              <ArticleIcon size={18} />
+              {SITE.footerBlogLinkPl}
+            </Link>
 
             <details className="nav-dropdown">
               <summary className="nav-link" style={{ font: 'var(--mui-font-body2)', cursor: 'pointer', listStyle: 'none' }}>
@@ -210,6 +238,38 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
               </div>
             </details>
           </div>
+
+          {/*
+            RWD-04. Search on a phone: an icon here, and the band below the
+            header gone entirely under 900px. It cost 128px of a 375px screen
+            on every route - the cart, the checkout, every account page -
+            which is more than the header itself.
+
+            A checkbox and its label rather than a `<details>`, matching the
+            burger beside it and for the same recorded reason: a closed
+            `<details>` has its content hidden by the user agent through
+            `::details-content`, which author CSS cannot reliably override.
+
+            The panel is the LAST child of this row, not the next one after
+            the label, and that ordering is load-bearing. It takes a full
+            line when open (`flex: 1 0 100%`), so anything after it wraps
+            below it - put here, the cart and the account menu would drop
+            onto a third line the moment anyone opened the search.
+
+            It also means the two panels never fight: this one is in flow, so
+            the header grows and the burger's absolutely positioned panel
+            (`top: 100%`) moves down with it instead of landing on top.
+          */}
+          <input
+            type="checkbox"
+            id="header-search-toggle"
+            className="header-search-checkbox"
+            aria-label={SITE.headerSearchTogglePl}
+          />
+          <label htmlFor="header-search-toggle" className="header-search-toggle">
+            <SearchIcon size={20} className="header-search-open-icon" />
+            <CloseIcon size={20} className="header-search-close-icon" />
+          </label>
 
           {/*
             Owner request, 2026-09-06, against `template.getbazaar.io`: the
@@ -287,6 +347,14 @@ export function SiteHeader({ categories, collections, cartSummary, session }: Si
             */
             <LoginDialog />
           )}
+
+          {/* Same `SearchForm` the band renders, so there is one search form
+              on the site rather than two that drift. Only ever one of them is
+              in the accessibility tree: the other is `display: none` at that
+              width. */}
+          <div className="header-search-panel">
+            <SearchForm />
+          </div>
         </nav>
       </Container>
     </header>

@@ -8,6 +8,17 @@ import { getConfiguratorProductData } from '@/server/repositories/configurator';
 import { resolveOptions } from '@/server/configurator/resolve-options';
 import { stepsForProductType } from '@/domain/configuration/steps';
 import type { Selections } from '@/domain/configuration/steps';
+import { readsActivePricing } from './pricing-fixture';
+
+/*
+  T-32. This file prices against whichever `PricingSettings` version is live,
+  so it must not run while `admin-pricing.test.ts` or
+  `pricing-version-swap.test.ts` has a throwaway version published. A shared
+  lock, so it still runs in parallel with every other reader - see
+  `pricing-fixture.ts` for why an exclusive one would have serialised the
+  suite.
+*/
+readsActivePricing();
 
 /**
  * `docs/REVIEW-DETAILED.md` BUG-02.
@@ -219,10 +230,26 @@ describe('the stored starting price stays in step with the catalogue', () => {
     // cheapest configuration uses, so changing its price is guaranteed to
     // move the advertised figure. Picking an arbitrary material could leave
     // the minimum untouched and pass vacuously.
+    /*
+      **The whole row, not three columns, and that is a bug fix.**
+
+      This test edits a REAL seeded material through the real admin action -
+      which is the point, since that is the write path whose side effect it is
+      checking. It used to snapshot `{ id, slug, pricePerM2Grosze }` and its
+      `finally` restored only the price, so everything else the form set was
+      simply left behind.
+
+      That is not theoretical. On 2026-09-13 the test database's `sosna` was
+      found holding **`namePl: "Materiał testowy ceny"`**, `characteristicsPl:
+      "."`, `grainDirection: NONE`, `supportsCnc: false`, `isNaturalVariable:
+      false`, and machining limits from this form rather than from the seed -
+      a pine that does not exist, which every other spec had been quietly
+      testing against. It surfaced only when the configurator started
+      defaulting to the cheapest material, which is the one this test picks.
+    */
     const material = await prisma.material.findFirstOrThrow({
       where: { isAvailable: true, products: { some: { product: { slug: WALL_ART_SLUG } } } },
       orderBy: { pricePerM2Grosze: 'asc' },
-      select: { id: true, slug: true, pricePerM2Grosze: true },
     });
     await refreshAllStartingPrices();
     const before = await prisma.product.findUniqueOrThrow({
@@ -262,11 +289,28 @@ describe('the stored starting price stays in step with the catalogue', () => {
       expect(after.startingPriceGrossGrosze).not.toBe(before.startingPriceGrossGrosze);
       expect(after.startingPriceGrossGrosze).toBe(await computeStartingPriceGrossGrosze(WALL_ART_SLUG));
     } finally {
-      await prisma.material.update({
-        where: { id: material.id },
-        data: { pricePerM2Grosze: material.pricePerM2Grosze },
-      });
+      const { id, createdAt, updatedAt, ...restorable } = material;
+      await prisma.material.update({ where: { id }, data: restorable });
       await refreshAllStartingPrices();
+    }
+
+    /*
+      **The test proves it cleaned up, rather than being trusted to.** This is
+      `docs/AI-CHECKLIST.md` T-35's second half - "a check that the tests
+      clean up what they create" - applied where it actually failed.
+
+      Compared field by field against the row as it was found, outside the
+      `finally` so a restore that silently does nothing cannot hide behind a
+      failure in the body above. Anything this test touches and does not put
+      back is a lie every other spec in the suite then tests against.
+    */
+    const restored = await prisma.material.findUniqueOrThrow({ where: { id: material.id } });
+    for (const [field, original] of Object.entries(material)) {
+      if (field === 'updatedAt') continue;
+      expect(
+        restored[field as keyof typeof restored],
+        `${field} was not put back on "${material.slug}"`,
+      ).toEqual(original);
     }
   });
 });

@@ -40,3 +40,15 @@ Thumbs.db
 # Prisma client is generated from prisma/schema.prisma by `npm run prisma:generate`
 # (also run automatically on `npm install`). Never edited, never committed.
 /src/generated/
+
+# Database dumps taken before a destructive sweep (T-35). Never committed:
+# they hold real customer rows.
+/backups/
+
+# Production configuration and deploy target. Both hold real secrets and must
+# never be committed; `scripts/preflight-env.mjs` checks the first against the
+# manifest in `scripts/deploy-env.mjs` before a release is allowed to proceed.
+/.env.production
+/.env.deploy
+# TLS certificates are issued on the server by certbot and mounted read-only.
+/docker/nginx/certs/

@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 
+import { readServerActionsEncryptionKey, resolveAllowedOrigins } from './src/server/security/deployment';
 import { baseSecurityHeaders } from './src/server/security/headers';
 
 /**
@@ -32,8 +33,61 @@ import { baseSecurityHeaders } from './src/server/security/headers';
  * `production`, and `headers()` runs at build time, so this is evaluated
  * once per build and not per request.
  */
+const isProduction = process.env.NODE_ENV === 'production';
+
+/*
+  BUG-18. Checked here rather than documented and hoped for, because both
+  failure modes are invisible at build time and fatal afterwards.
+
+  An **invalid** key is fatal on the first Server Action a customer triggers:
+  Next hands it straight to `crypto.subtle.importKey`, which throws for
+  anything that is not 16, 24 or 32 bytes of standard base64. A build that
+  succeeded and then breaks the cart for everyone is worse than a build that
+  refuses, so this throws.
+
+  An **absent** key is correct for a single instance and wrong for more than
+  one: Next then generates a key per build and caches it in `.next` with an
+  expiry, so two instances - or two rolling releases - can disagree, and every
+  bound closure a client already holds fails with "Failed to find Server
+  Action". That is a warning rather than an error because plenty of real
+  deployments are one instance, and `next build` is run locally and in the e2e
+  suite constantly.
+*/
+const encryptionKey = readServerActionsEncryptionKey(process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY);
+if (encryptionKey.kind === 'invalid') {
+  throw new Error(
+    `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY is set but unusable: ${encryptionKey.detail} See .env.example, and next/dist/docs/01-app/02-guides/self-hosting.md.`,
+  );
+}
+if (encryptionKey.kind === 'absent' && isProduction) {
+  console.warn(
+    '[next.config] NEXT_SERVER_ACTIONS_ENCRYPTION_KEY is not set. Fine on a single instance. Behind a load balancer, or across a rolling deploy, bound Server Actions (every cart button) will intermittently fail with "Failed to find Server Action". See .env.example.',
+  );
+}
+
+/*
+  Next compares a Server Action's Origin against Host/X-Forwarded-Host and
+  aborts on a mismatch - the CSRF defence in `data-security.md`. There is no
+  environment variable for the allow-list, so this is the bridge. Omitted
+  entirely when empty: an empty array is a statement, and the statement it
+  makes is not the one we want.
+*/
+const allowedOrigins = resolveAllowedOrigins(process.env.SERVER_ACTIONS_ALLOWED_ORIGINS);
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  /*
+    Added 2026-09-16 for the Docker deployment. `next build` writes
+    `.next/standalone` containing a `server.js` and only the `node_modules`
+    actually reached, which is what the production image copies instead of
+    installing dependencies again.
+
+    **Its `server.js` does not serve `public/` or `.next/static` by itself** -
+    Next's own `output` reference says so, and the Dockerfile copies both in
+    explicitly. Getting this wrong produces a site that renders with no CSS
+    and no images, which looks like a styling bug rather than a packaging one.
+  */
+  output: 'standalone',
   // `X-Powered-By: Next.js` on every response, on by default. Obscurity is
   // not security and nothing here depends on hiding the framework, but the
   // header buys nothing either, and it hands a scanner the exact stack to
@@ -42,13 +96,29 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: '26mb',
+      ...(allowedOrigins.length > 0 ? { allowedOrigins: [...allowedOrigins] } : {}),
     },
   },
   headers() {
     return Promise.resolve([
       {
         source: '/:path*',
-        headers: [...baseSecurityHeaders({ isProduction: process.env.NODE_ENV === 'production' })],
+        headers: [
+          ...baseSecurityHeaders({ isProduction }),
+          /*
+            Streaming has to survive the reverse proxy. nginx buffers upstream
+            responses by default, which holds a streamed render until it is
+            complete - the page still arrives all at once, just later, and the
+            entire benefit of a `<Suspense>` boundary disappears with no error
+            anywhere. `X-Accel-Buffering: no` is the documented opt-out
+            (`self-hosting.md`, "Streaming and Suspense").
+
+            Set here rather than only in `docker/nginx/` so the guarantee
+            travels with the application to any proxy that honours it, instead
+            of living in one server's configuration file.
+          */
+          { key: 'X-Accel-Buffering', value: 'no' },
+        ],
       },
     ]);
   },

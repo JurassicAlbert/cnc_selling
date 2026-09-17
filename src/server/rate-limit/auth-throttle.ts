@@ -126,3 +126,21 @@ export async function consumeRegisterAttempt(attempt: { readonly ip: string | nu
 export async function consumeOrderAttempt(attempt: { readonly ip: string | null }, now?: Date): Promise<ThrottleVerdict> {
   return consumeAll(ipEntry('order', attempt.ip, AUTH_RATE_LIMITS.orderPerIp), now);
 }
+
+/**
+ * SEC-08 - the dimension a guest cannot reset.
+ *
+ * `isUploadRateLimited` (`server/upload/rate-limit.ts`) counts this hour's
+ * uploads for the session or the user, which is what 16.1 asks for and stays
+ * in place. Its weakness is only the guest half: the session token is a
+ * cookie the client holds, so discarding it starts a fresh allowance. This
+ * counts the same attempt against the address as well.
+ *
+ * Skipped without an IP, exactly like every other rule here - see `ipEntry`.
+ * That is also what keeps the e2e upload specs working, since the loopback
+ * counters are cleared before each test and the suite would otherwise be
+ * limited by a control it is not testing.
+ */
+export async function consumeUploadAttempt(attempt: { readonly ip: string | null }, now?: Date): Promise<ThrottleVerdict> {
+  return consumeAll(ipEntry('upload', attempt.ip, AUTH_RATE_LIMITS.uploadPerIp), now);
+}

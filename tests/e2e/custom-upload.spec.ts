@@ -1,6 +1,20 @@
+// This spec now reads the uploaded file's id straight from Postgres, so it
+// needs `.env` the way `admin-authz.spec.ts` does - the Playwright runner
+// process is not the app.
+import 'dotenv/config';
+
 import path from 'node:path';
 
-import { expect, test } from '@playwright/test';
+// Not `@playwright/test`: this spec uploads, and SEC-08 added a per-IP upload
+// limit on 2026-09-08. A per-session limit could never bite here (each test
+// gets a fresh cookie jar); a per-IP one accumulates across every run on this
+// machine, so without the fixture's reset the suite would start refusing
+// uploads after enough runs in an hour - silently, the way SEC-01's
+// registration limit did. See `fixtures.ts` and `rate-limit-reset.ts`.
+import { expect, test } from './fixtures';
+
+import { prisma } from '../../src/server/db/client';
+import { addToCart } from './add-to-cart';
 
 /**
  * P4's real end-to-end path, checklist's own framing: "Custom upload:
@@ -64,9 +78,7 @@ test('uploads a custom design, completes checkout, and lands in DESIGN_REVIEW', 
   await expect(
     main.getByText('Podana cena to wstępny szacunek', { exact: false }),
   ).toBeVisible();
-  const addToCartButton = main.getByRole('button', { name: 'Dodaj do koszyka' });
-  await expect(addToCartButton).toBeEnabled();
-  await addToCartButton.click();
+  await addToCart(page);
 
   await expect(page).toHaveURL('/koszyk');
   // The cart row's own heading, not any text on the page: a bare `getByText`
@@ -75,6 +87,19 @@ test('uploads a custom design, completes checkout, and lands in DESIGN_REVIEW', 
   // violation that only fires inside that window, so it reads as a browser
   // flake (2026-09-04).
   await expect(page.getByRole('heading', { name: 'Własny projekt z grawerem' })).toBeVisible();
+
+  /*
+    UX-13. This line's design is `PENDING_REVIEW`, and that is not a property
+    of the line - it holds the WHOLE order in `DESIGN_REVIEW` after checkout.
+    Until 2026-09-08 the cart said nothing about it, so the one line that
+    changes what happens to the order looked exactly like any other.
+
+    Asserted here rather than in `cart-line-notices.spec.ts` because this is
+    the spec that genuinely uploads a file, and a real pending design is the
+    only honest way to reach this state.
+  */
+  await expect(page.getByText('Projekt oczekuje na weryfikację')).toBeVisible();
+  await expect(page.getByText('Zamówienie trafi do weryfikacji', { exact: false })).toBeVisible();
 
   await page.getByRole('link', { name: 'Przejdź do zamówienia' }).click();
   await expect(page).toHaveURL('/koszyk/zamowienie');
@@ -97,4 +122,52 @@ test('uploads a custom design, completes checkout, and lands in DESIGN_REVIEW', 
 
   await expect(page.getByRole('heading', { name: 'Zamówienie przyjęte' })).toBeVisible();
   await expect(page.getByText('Numer zamówienia:')).toBeVisible();
+
+  /*
+    SEC-09, on the file this test has just genuinely uploaded.
+
+    `/api/plik/[fileId]` stopped reading whole files into memory and now hands
+    the response a `ReadableStream` from the storage adapter. Every page that
+    shows an uploaded design does it through an `<img>`, and a broken `<img>`
+    is invisible to a test that only looks at headings - so the bytes are
+    fetched here and counted. A streamed body that arrives short, or a
+    `Content-Length` that disagrees with what actually arrives, is exactly the
+    failure this change could introduce and nothing else would catch.
+
+    Fetched from the page's own context, so it carries the session cookie the
+    route authorises against.
+  */
+  /*
+    Scoped to THIS browser's guest session, not "the newest design in the
+    database" - which is what the first version asked for, and it failed on
+    desktop-chromium while passing on mobile-safari. The two projects run in
+    parallel against one database, so the newest row was usually the other
+    project's, and the route refused it with a 404. Exactly right of the
+    route, and a test that reads another session's data would have been
+    wrong even on the runs where it happened to pass.
+  */
+  const cookies = await page.context().cookies();
+  const guestSession = cookies.find((cookie) => cookie.name === 'gsid')?.value;
+  expect(guestSession).toBeTruthy();
+  const design = await prisma.customerDesign.findFirstOrThrow({
+    where: { sessionToken: guestSession },
+    orderBy: { createdAt: 'desc' },
+    select: { fileId: true },
+  });
+
+  const served = await page.evaluate(async (fileId) => {
+    const response = await fetch(`/api/plik/${fileId}`);
+    const body = await response.arrayBuffer();
+    return {
+      status: response.status,
+      contentLength: response.headers.get('content-length'),
+      nosniff: response.headers.get('x-content-type-options'),
+      received: body.byteLength,
+    };
+  }, design.fileId);
+
+  expect(served.status).toBe(200);
+  expect(served.received).toBeGreaterThan(0);
+  expect(served.contentLength).toBe(String(served.received));
+  expect(served.nosniff).toBe('nosniff');
 });

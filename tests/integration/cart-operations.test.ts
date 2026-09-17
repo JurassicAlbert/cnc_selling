@@ -14,9 +14,21 @@ import {
   applyDeleteConfiguration,
   applyDuplicateCartItem,
   applyRemoveCartItem,
+  applyRestoreCartItem,
   applyUpdateCartItemConfiguration,
 } from '@/server/operations/cart';
 import type { Owner } from '@/server/session/ownership';
+import { readsActivePricing } from './pricing-fixture';
+
+/*
+  T-32. This file prices against whichever `PricingSettings` version is live,
+  so it must not run while `admin-pricing.test.ts` or
+  `pricing-version-swap.test.ts` has a throwaway version published. A shared
+  lock, so it still runs in parallel with every other reader - see
+  `pricing-fixture.ts` for why an exclusive one would have serialised the
+  suite.
+*/
+readsActivePricing();
 
 /**
  * The realistic-user-behaviour half of `docs/AUDIT-2026-08-30.md`: the
@@ -329,7 +341,12 @@ describe('cart ownership (audit - §16.1 re-derives the actor, never trusts an i
     if (cartItemId === undefined) throw new Error('setup failed');
 
     await applyRemoveCartItem(guestOwner(sessionToken), cartItemId);
-    await expect(applyRemoveCartItem(guestOwner(sessionToken), cartItemId)).resolves.toBeUndefined();
+    /*
+      `null`, not `undefined`, since UX-11 gave this a return value: the second
+      call removed nothing and says so. That is what stops a double-click from
+      arming a second „Cofnij" for a line the first click already took.
+    */
+    await expect(applyRemoveCartItem(guestOwner(sessionToken), cartItemId)).resolves.toBeNull();
 
     expect((await readCart(sessionToken)).items).toHaveLength(0);
   });
@@ -503,6 +520,158 @@ describe('no two identical lines, by any path (owner request, 2026-08-30)', () =
     // The edited line's quantity is carried over, not discarded.
     expect(after.items[0]?.quantity).toBe(3);
   });
+
+  it('takes the redundant configuration with it, not just the cart line - BUG-21', async () => {
+    /*
+      The merge deleted the `CartItem` and left the `Configuration` behind: an
+      exact duplicate of the surviving line's, owned by the same customer,
+      pointing at nothing. Invisible on `/moje-konto/projekty` only because
+      `listConfigurationsForUser` deduplicates on read - a filter added for
+      the rows that were already in the database before the write-side fix,
+      which then quietly absorbed the ones this branch kept creating.
+
+      Asserted against the database rather than through that list, precisely
+      because the list is the thing that was hiding it.
+    */
+    const sessionToken = uid();
+    const selections = await priceableSelections();
+    const variant: Selections = { ...selections, personalizationText: 'Anna' };
+    if (!(await priceAndValidateSelections(PRODUCT_SLUG, variant)).ok) {
+      return;
+    }
+
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 1);
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, variant, [], 1);
+    const before = await readCart(sessionToken);
+    const variantLine = before.items.find((line) => line.personalizationText === 'Anna');
+    const plainLine = before.items.find((line) => line.personalizationText === null);
+    if (variantLine === undefined || plainLine === undefined) throw new Error('setup failed');
+
+    await applyUpdateCartItemConfiguration(
+      guestOwner(sessionToken),
+      variantLine.configurationId,
+      PRODUCT_SLUG,
+      selections,
+      [],
+    );
+
+    expect(await prisma.configuration.findUnique({ where: { id: variantLine.configurationId } })).toBeNull();
+    // The survivor is untouched, and is still the one the remaining line points at.
+    expect(await prisma.configuration.findUnique({ where: { id: plainLine.configurationId } })).not.toBeNull();
+    expect((await readCart(sessionToken)).items[0]?.configurationId).toBe(plainLine.configurationId);
+    expect(await prisma.configuration.count({ where: { sessionToken } })).toBe(1);
+  });
+
+  it('does not leave two identical saved projects when neither is in a cart - BUG-21, the other door', async () => {
+    /*
+      The same duplicate through a different entry. `applyUpdateCartItemConfiguration`
+      returns early when no `CartItem` points at the configuration - the case
+      of editing a saved project from `/moje-konto/projekty` - and its comment
+      said "nothing to re-key or merge", which is true of the cart and false
+      of the projects list: the row it just rewrote can now be an exact copy
+      of another saved project, and `listConfigurationsForUser` hides the
+      second one on read.
+
+      Found while fixing the merge branch. Fixing only that branch would have
+      left the read-side filter still masking new duplicates, which is the
+      thing the merge fix's own comment complains about.
+    */
+    const sessionToken = uid();
+    const selections = await priceableSelections();
+    const variant: Selections = { ...selections, personalizationText: 'Kasia' };
+    if (!(await priceAndValidateSelections(PRODUCT_SLUG, variant)).ok) {
+      return;
+    }
+
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 1);
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, variant, [], 1);
+    const lines = (await readCart(sessionToken)).items;
+    const plainLine = lines.find((line) => line.personalizationText === null);
+    const variantLine = lines.find((line) => line.personalizationText === 'Kasia');
+    if (plainLine === undefined || variantLine === undefined) throw new Error('setup failed');
+
+    // Out of the cart, still saved projects - which is what
+    // `applyRemoveCartItem` leaves behind by design.
+    await applyRemoveCartItem(guestOwner(sessionToken), plainLine.cartItemId);
+    await applyRemoveCartItem(guestOwner(sessionToken), variantLine.cartItemId);
+    expect(await prisma.configuration.count({ where: { sessionToken } })).toBe(2);
+
+    await applyUpdateCartItemConfiguration(
+      guestOwner(sessionToken),
+      variantLine.configurationId,
+      PRODUCT_SLUG,
+      selections,
+      [],
+    );
+
+    expect(await prisma.configuration.count({ where: { sessionToken } })).toBe(1);
+    // The survivor is the one that was already that shape, not the edited copy.
+    expect(await prisma.configuration.findUnique({ where: { id: plainLine.configurationId } })).not.toBeNull();
+  });
+
+  it('keeps a saved project that is not a copy of anything', async () => {
+    /*
+      The other side of the rule above, because "delete the row you just
+      edited" is a dangerous shape to get slightly wrong: with nothing to be
+      a duplicate OF, the edit is an ordinary edit and the project stays.
+    */
+    const sessionToken = uid();
+    const selections = await priceableSelections();
+    const variant: Selections = { ...selections, personalizationText: 'Ewa' };
+    if (!(await priceAndValidateSelections(PRODUCT_SLUG, variant)).ok) {
+      return;
+    }
+
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, variant, [], 1);
+    const line = (await readCart(sessionToken)).items[0];
+    if (line === undefined) throw new Error('setup failed');
+    await applyRemoveCartItem(guestOwner(sessionToken), line.cartItemId);
+
+    await applyUpdateCartItemConfiguration(
+      guestOwner(sessionToken),
+      line.configurationId,
+      PRODUCT_SLUG,
+      selections,
+      [],
+    );
+
+    expect(await prisma.configuration.findUnique({ where: { id: line.configurationId } })).not.toBeNull();
+    expect(await prisma.configuration.count({ where: { sessionToken } })).toBe(1);
+  });
+
+  it('keeps a configuration that another cart line still points at', async () => {
+    /*
+      The delete is conditional on nothing referencing the row, not on having
+      reached the merge branch. `mergeGuestCartIntoUser` can leave a
+      configuration reachable from a line this operation never looked at, and
+      deleting one out from under a live cart line would be a far worse bug
+      than the duplicate it is fixing - a customer's cart row losing the thing
+      it describes.
+    */
+    const sessionToken = uid();
+    const selections = await priceableSelections();
+    const variant: Selections = { ...selections, personalizationText: 'Ola' };
+    if (!(await priceAndValidateSelections(PRODUCT_SLUG, variant)).ok) {
+      return;
+    }
+
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, variant, [], 1);
+    const line = (await readCart(sessionToken)).items[0];
+    if (line === undefined) throw new Error('setup failed');
+
+    // Edited into something no other line is, so the merge branch is not
+    // taken at all - the configuration must simply survive, re-keyed.
+    await applyUpdateCartItemConfiguration(
+      guestOwner(sessionToken),
+      line.configurationId,
+      PRODUCT_SLUG,
+      selections,
+      [],
+    );
+
+    expect(await prisma.configuration.findUnique({ where: { id: line.configurationId } })).not.toBeNull();
+    expect((await readCart(sessionToken)).items).toHaveLength(1);
+  });
 });
 
 /**
@@ -563,5 +732,114 @@ describe('deleting a saved project', () => {
 
     expect(await applyDeleteConfiguration(guestOwner(mine), configurationId)).toBe(false);
     expect(await prisma.configuration.count({ where: { sessionToken: theirs } })).toBe(1);
+  });
+});
+
+/**
+ * `docs/AI-CHECKLIST.md` UX-11 - removing a line was instant and
+ * irreversible.
+ *
+ * `ARCHITECTURE.md` §16A.5 states the rule the panel already follows:
+ * "optimistic updates with undo ... rather than a confirmation dialog before
+ * every action", and dialogs reserved for what genuinely cannot be taken
+ * back. A cart removal is not one of those - the `Configuration` survives the
+ * removal untouched, because `applyRemoveCartItem` only ever deleted the
+ * `CartItem`. So the item was never really destroyed; there was simply no way
+ * back to it.
+ *
+ * That is what makes undo cheap here and worth doing properly: nothing needs
+ * a soft delete, a tombstone or a retention policy. It needs the line's own
+ * identity kept for half a minute.
+ */
+describe('undoing a cart removal', () => {
+  it('reports what it removed, so something can offer it back', async () => {
+    const sessionToken = uid();
+    const selections = await priceableSelections();
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 3);
+    const line = (await readCart(sessionToken)).items[0];
+    if (line === undefined) throw new Error('setup failed');
+
+    const removed = await applyRemoveCartItem(guestOwner(sessionToken), line.cartItemId);
+
+    expect(removed).not.toBeNull();
+    expect(removed?.configurationId).toBe(line.configurationId);
+    expect(removed?.quantity).toBe(3);
+    expect((await readCart(sessionToken)).items).toHaveLength(0);
+  });
+
+  it('puts the line back with the quantity it had, not with one', async () => {
+    const sessionToken = uid();
+    const selections = await priceableSelections();
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 4);
+    const line = (await readCart(sessionToken)).items[0];
+    if (line === undefined) throw new Error('setup failed');
+
+    const removed = await applyRemoveCartItem(guestOwner(sessionToken), line.cartItemId);
+    if (removed === null) throw new Error('setup failed');
+
+    expect(await applyRestoreCartItem(guestOwner(sessionToken), sessionToken, removed)).toBe(true);
+
+    const after = await readCart(sessionToken);
+    expect(after.items).toHaveLength(1);
+    expect(after.items[0]?.quantity).toBe(4);
+    // The same configuration, not a fresh copy of it - re-pricing on the way
+    // back would be a different item at a possibly different price, which is
+    // not what „Cofnij" promises.
+    expect(after.items[0]?.configurationId).toBe(line.configurationId);
+  });
+
+  it('merges rather than throwing when the same thing is already back in the cart', async () => {
+    /*
+      The customer removes a line, adds the same product again from another
+      tab, and only then presses „Cofnij". `CartItem` has a unique index on
+      (cartId, configurationSignature), so a naive re-insert is a 500 for a
+      sequence a real person can produce in ten seconds.
+    */
+    const sessionToken = uid();
+    const selections = await priceableSelections();
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 2);
+    const line = (await readCart(sessionToken)).items[0];
+    if (line === undefined) throw new Error('setup failed');
+
+    const removed = await applyRemoveCartItem(guestOwner(sessionToken), line.cartItemId);
+    if (removed === null) throw new Error('setup failed');
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 1);
+
+    expect(await applyRestoreCartItem(guestOwner(sessionToken), sessionToken, removed)).toBe(true);
+
+    const after = await readCart(sessionToken);
+    expect(after.items).toHaveLength(1);
+    expect(after.items[0]?.quantity).toBe(3);
+  });
+
+  it('refuses a configuration the asker does not own', async () => {
+    // The undo token is an `HttpOnly` cookie, but a cookie is still something
+    // a client holds, and this is the check that makes that not matter.
+    const owner = uid();
+    const stranger = uid();
+    const selections = await priceableSelections();
+    await applyAddToCart(guestOwner(owner), owner, PRODUCT_SLUG, selections, [], 1);
+    const line = (await readCart(owner)).items[0];
+    if (line === undefined) throw new Error('setup failed');
+    const removed = await applyRemoveCartItem(guestOwner(owner), line.cartItemId);
+    if (removed === null) throw new Error('setup failed');
+
+    expect(await applyRestoreCartItem(guestOwner(stranger), stranger, removed)).toBe(false);
+    expect((await readCart(stranger)).items).toHaveLength(0);
+  });
+
+  it('never restores past the per-line maximum', async () => {
+    const sessionToken = uid();
+    const selections = await priceableSelections();
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], MAX_CART_ITEM_QUANTITY);
+    const line = (await readCart(sessionToken)).items[0];
+    if (line === undefined) throw new Error('setup failed');
+    const removed = await applyRemoveCartItem(guestOwner(sessionToken), line.cartItemId);
+    if (removed === null) throw new Error('setup failed');
+    await applyAddToCart(guestOwner(sessionToken), sessionToken, PRODUCT_SLUG, selections, [], 2);
+
+    await applyRestoreCartItem(guestOwner(sessionToken), sessionToken, removed);
+
+    expect((await readCart(sessionToken)).items[0]?.quantity).toBe(MAX_CART_ITEM_QUANTITY);
   });
 });

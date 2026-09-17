@@ -24,6 +24,18 @@
  * carrier value here, so a customer picking one method never sees the
  * other carrier's points mixed in - `searchPickupPoints` is carrier-scoped
  * for exactly that reason.
+ *
+ * **Moved out of `src/server/delivery/` on 2026-09-11 (P2-11).** It is pure
+ * data and two pure lookups, and `CheckoutForm` - a Client Component - calls
+ * both as the customer types. Living under `src/server/` made that import read
+ * like a boundary violation while being harmless, and would have become one
+ * the day this file turns into the live InPost client it is waiting to be:
+ * an API key added here would have shipped to the browser with the rest.
+ *
+ * When that day comes the split is already in the right place - the API client
+ * goes in `src/server/delivery/`, the `PickupPoint` shape and whatever the
+ * picker needs stay here. `scripts/check-client-server-imports.mjs` keeps it
+ * honest.
  */
 
 export type PickupPoint = {

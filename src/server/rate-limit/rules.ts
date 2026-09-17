@@ -57,4 +57,18 @@ export const AUTH_RATE_LIMITS = {
    * solved by `Order.idempotencyKey` and cart claiming.
    */
   orderPerIp: { limit: 10, windowSeconds: 1 * HOUR },
+
+  /**
+   * SEC-08. `isUploadRateLimited` already applies 16.1's "uploads per
+   * session/hour" - ten - by counting this hour's `UploadedFile` rows. For a
+   * signed-in customer that is a real identity. For a guest the session IS a
+   * cookie they hold, so clearing it hands them a fresh ten, as often as they
+   * care to, and each upload can be 25 MB of disk.
+   *
+   * Thirty rather than ten, because this dimension is shared: an office, a
+   * school or a carrier NAT is one address, and the session rule is still the
+   * one an ordinary customer meets. Three sessions' worth is comfortably
+   * above anyone working normally and turns "unlimited" into a number.
+   */
+  uploadPerIp: { limit: 30, windowSeconds: 1 * HOUR },
 } as const satisfies Record<string, RateLimitRule>;

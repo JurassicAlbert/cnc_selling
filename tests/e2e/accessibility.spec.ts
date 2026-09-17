@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
+import { waitForAddToCartReady } from './add-to-cart';
 
 /**
  * `docs/AI-CHECKLIST.md` BUG-27, BUG-28, BUG-29, BUG-30 - the sitewide
@@ -29,7 +30,7 @@ async function addSampleConfigurationToCart(page: Page): Promise<void> {
   await page.goto('/produkt/obraz-drewniany-z-grawerem');
   const main = page.getByRole('main');
   const addToCart = main.getByRole('button', { name: 'Dodaj do koszyka' });
-  await expect(addToCart).toBeEnabled({ timeout: 20_000 });
+  await waitForAddToCartReady(addToCart);
   await addToCart.click();
   await expect(page).toHaveURL('/koszyk', { timeout: 15_000 });
 }

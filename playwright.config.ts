@@ -72,7 +72,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:3100',
     trace: 'on-first-retry',
   },
   projects: [
@@ -80,8 +80,36 @@ export default defineConfig({
     { name: 'mobile-safari', use: { ...devices['iPhone 14'] } },
   ],
   webServer: {
-    command: 'npm run build && npm run start',
-    url: 'http://localhost:3000',
+    /*
+      **Port 3100, not 3000, and that is the whole of ARCH-03's remaining
+      hole.**
+
+      The `env` override below is correct and has always worked - but it only
+      applies to a server Playwright *starts*. `reuseExistingServer` adopts an
+      already-running one exactly as it is, with whatever database **it** was
+      launched with, and `global-setup.ts`'s guard checks the runner's own
+      environment rather than the server's. So `next dev` on :3000, left
+      running to look at a page, silently became the application under test.
+
+      That is not hypothetical: on 2026-09-13 it pointed 190 tests at the
+      development database and wrote **93 rows** into it - 10 users, 4 orders,
+      39 configurations, 38 carts - before the run was stopped. It is very
+      likely how that database came to hold 259 orders and the leftovers
+      recorded as T-35, and `security-headers.spec.ts` had already written the
+      scenario down as something to tolerate.
+
+      The tell is easy to miss, which is why a port is better than care: the
+      run looks normal, this file prints „using cnc_selling_test" truthfully
+      (that is the runner's connection), and the only sign is **zero
+      `[WebServer]` lines** in the log - the T-25 check, which still has to be
+      remembered.
+
+      Nothing else listens on 3100, so `reuseExistingServer` can now only ever
+      adopt a server this config started, which is what it was for. Pinned by
+      `tests/unit/e2e-server-port.test.ts`.
+    */
+    command: 'npm run build && npm run start -- --port 3100',
+    url: 'http://localhost:3100',
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
     /*

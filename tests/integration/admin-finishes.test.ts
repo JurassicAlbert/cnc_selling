@@ -10,6 +10,7 @@ import {
 import { listFinishOptionsForAdmin } from '@/server/repositories/admin-finishes';
 import type { CurrentSession } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';
+import { publicImageExists, removeTestPublicImages } from './public-image-files';
 
 const PREFIX = 'test-admin-finishes-';
 
@@ -51,6 +52,8 @@ function finishFormData(overrides: Record<string, string> = {}): FormData {
 afterEach(async () => {
   await prisma.finish.deleteMany({ where: { slug: { startsWith: PREFIX } } });
   await prisma.auditLog.deleteMany({ where: { actorEmail: { startsWith: PREFIX } } });
+  // The rows were always cleared here; the files they point at were not.
+  await removeTestPublicImages(PREFIX);
 });
 
 describe('applyCreateFinish', () => {
@@ -152,5 +155,31 @@ describe('applySetFinishSortOrder', () => {
 
     const finish = await prisma.finish.findUniqueOrThrow({ where: { id: created.id } });
     expect(finish.sortOrder).toBe(1);
+  });
+});
+/**
+ * PERF-04, the same leak as `admin-designs.test.ts` records: `savePublicImage`
+ * had four callers and `deletePublicImage` one, so a replaced image stayed on
+ * disk forever. Asserted on the disk, because the row was always right.
+ */
+describe('finish images on disk', () => {
+  it('deletes the image it replaced', async () => {
+    const staff = staffActor();
+    const created = await applyCreateFinish(staff, finishFormData());
+    if (!created.ok) throw new Error('setup failed - could not create a finish');
+
+    const before = await prisma.finish.findUniqueOrThrow({ where: { id: created.id }, select: { slug: true, imageUrl: true } });
+    expect(before.imageUrl).not.toBeNull();
+    if (before.imageUrl === null) return;
+    expect(publicImageExists(before.imageUrl)).toBe(true);
+
+    const updated = await applyUpdateFinish(staff, created.id, finishFormData({ slug: before.slug }));
+    expect(updated.ok).toBe(true);
+
+    const after = await prisma.finish.findUniqueOrThrow({ where: { id: created.id }, select: { imageUrl: true } });
+    expect(after.imageUrl).not.toBe(before.imageUrl);
+    if (after.imageUrl === null) return;
+    expect(publicImageExists(after.imageUrl)).toBe(true);
+    expect(publicImageExists(before.imageUrl)).toBe(false);
   });
 });

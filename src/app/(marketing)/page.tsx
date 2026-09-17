@@ -10,6 +10,7 @@ import { listApprovedReviews } from '@/server/repositories/reviews';
 import { CategoryTile } from '@/ui/primitives/CategoryTile';
 import { Container } from '@/ui/primitives/Container';
 import { Heading } from '@/ui/primitives/Heading';
+import { SectionIntro } from '@/ui/primitives/SectionIntro';
 import { CompassEngraving, GeometricEngraving, LeafSprigEngraving, WaveGrainEngraving } from '@/ui/primitives/engravings';
 import { HeroHexMosaic } from '@/ui/primitives/HeroHexMosaic';
 import { ProductCard } from '@/ui/primitives/ProductCard';
@@ -106,9 +107,11 @@ export default async function MarketingHomePage() {
 
       <Section decorative={{ side: 'right', icons: ICON_PAIRS.kategorie, engraving: WaveGrainEngraving }}>
         <Container>
-          <div id="kategorie" style={{ scrollMarginTop: 96 }}>
-            <Heading level={2}>{SITE.catalogueCategoriesHeadingPl}</Heading>
-          </div>
+          <SectionIntro
+            id="kategorie"
+            headingPl={SITE.catalogueCategoriesHeadingPl}
+            leadPl={SITE.homeCategoriesLeadPl}
+          />
           <div
             style={{
               marginBlockStart: 24,
@@ -117,14 +120,22 @@ export default async function MarketingHomePage() {
               gap: 24,
             }}
           >
-            {categories.map((category, index) => (
+            {/*
+              PERF-06. `priority={index === 0}` used to sit on the first tile,
+              and it was right when it was written - Next flagged that tile as
+              the LCP element. Measured again on 2026-09-10 it is not: the
+              tile sits 1365 px down a 720 px-tall desktop window and 1537 px
+              down a phone, and this page's real LCP element is the hero
+              `<video>`'s poster. Preloading it was competing with the element
+              that actually paints.
+            */}
+            {categories.map((category) => (
               <CategoryTile
                 key={category.slug}
                 href={`/${category.slug}`}
                 namePl={category.namePl}
                 imageUrl={category.imageUrl}
                 categorySlug={category.slug}
-                priority={index === 0}
               />
             ))}
           </div>
@@ -133,7 +144,7 @@ export default async function MarketingHomePage() {
 
       <Section surface="paper" decorative={{ side: 'left', icons: ICON_PAIRS.produkty, engraving: CompassEngraving }}>
         <Container>
-          <Heading level={2}>{SITE.homeProductsHeadingPl}</Heading>
+          <SectionIntro headingPl={SITE.homeProductsHeadingPl} leadPl={SITE.homeProductsLeadPl} />
           <div
             style={{
               marginBlockStart: 24,
@@ -142,7 +153,12 @@ export default async function MarketingHomePage() {
               gap: 24,
             }}
           >
-            {products.map((product, index) => (
+            {/*
+              PERF-06, same as the tiles above: measured 1905 px down on desktop
+              and 3496 px down on a phone, so the first card is not the LCP
+              element and no longer asks to be preloaded.
+            */}
+            {products.map((product) => (
               <ProductCard
                 key={product.slug}
                 href={`/produkt/${product.slug}`}
@@ -157,7 +173,6 @@ export default async function MarketingHomePage() {
                 minWidthMm={product.minWidthMm}
                 maxWidthMm={product.maxWidthMm}
                 materials={product.materials}
-                priority={index === 0}
               />
             ))}
           </div>
@@ -167,7 +182,11 @@ export default async function MarketingHomePage() {
       {blogPosts.length > 0 && (
         <Section decorative={{ side: 'right', icons: ICON_PAIRS.blog, engraving: LeafSprigEngraving }}>
           <Container>
-            <Heading level={2}>{SITE.homeBlogHeadingPl}</Heading>
+            <SectionIntro
+              headingPl={SITE.homeBlogHeadingPl}
+              leadPl={SITE.homeBlogLeadPl}
+              action={{ href: '/blog', labelPl: SITE.blogViewAllPl }}
+            />
             <div
               style={{
                 marginBlockStart: 24,
@@ -220,16 +239,6 @@ export default async function MarketingHomePage() {
                 </Link>
               ))}
             </div>
-            <div style={{ marginBlockStart: 32 }}>
-              <Link
-                href="/blog"
-                className="nav-link"
-                style={{ font: 'var(--mui-font-button)',
-                letterSpacing: 'var(--mui-letter-spacing-button)', textTransform: 'none' }}
-              >
-                {SITE.blogViewAllPl}
-              </Link>
-            </div>
           </Container>
         </Section>
       )}
@@ -237,7 +246,7 @@ export default async function MarketingHomePage() {
       {reviews.length > 0 && (
         <Section surface="paper">
           <Container>
-            <Heading level={2}>{SITE.homeReviewsHeadingPl}</Heading>
+            <SectionIntro headingPl={SITE.homeReviewsHeadingPl} leadPl={SITE.homeReviewsLeadPl} />
             <div
               style={{
                 marginBlockStart: 24,
@@ -264,7 +273,11 @@ export default async function MarketingHomePage() {
       {faqTeaser.length > 0 && (
         <Section>
           <Container>
-            <Heading level={2}>{SITE.homeFaqHeadingPl}</Heading>
+            <SectionIntro
+              headingPl={SITE.homeFaqHeadingPl}
+              leadPl={SITE.homeFaqLeadPl}
+              action={{ href: '/faq', labelPl: SITE.faqViewAllPl }}
+            />
             <div style={{ marginBlockStart: 24, display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 720 }}>
               {faqTeaser.map((faq) => (
                 <details
@@ -277,12 +290,6 @@ export default async function MarketingHomePage() {
                   </div>
                 </details>
               ))}
-            </div>
-            <div style={{ marginBlockStart: 32 }}>
-              <Link href="/faq" className="nav-link" style={{ font: 'var(--mui-font-button)',
-                letterSpacing: 'var(--mui-letter-spacing-button)', textTransform: 'none' }}>
-                {SITE.faqViewAllPl}
-              </Link>
             </div>
           </Container>
         </Section>

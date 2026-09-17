@@ -42,6 +42,8 @@ export type CheckoutFormState = {
     | 'RATE_LIMITED'
     /** A pattern, material or finish in the cart is no longer offered (`docs/REVIEW-DETAILED.md` SEC-03). */
     | 'OPTION_UNAVAILABLE'
+    /** INSURANCE-01. Cover was asked for and the chosen method cannot give it to this cart. */
+    | 'INSURANCE_UNAVAILABLE'
     | null;
   /**
    * Echoed back so a validation error on one field doesn't erase everything
@@ -90,6 +92,13 @@ export async function submitCheckout(
   const internalShipmentNotePl = internalShipmentNoteRaw.length > 0 ? internalShipmentNoteRaw : null;
   const termsAccepted = formData.get('termsAccepted') === 'on';
   const withdrawalAcknowledged = formData.get('withdrawalAcknowledged') === 'on';
+  /*
+    INSURANCE-01. A boolean and nothing else. The premium is the carrier's own
+    band for this cart, re-derived by `createOrder` from the same function
+    that rendered the picker - there is no amount here for a crafted
+    submission to set.
+  */
+  const insuranceSelected = formData.get('insuranceSelected') === 'on';
 
   const fieldErrors: Partial<Record<string, CheckoutFieldIssueCode>> = {};
   if (email.length === 0) fieldErrors.email = 'EMAIL_REQUIRED';
@@ -124,6 +133,14 @@ export async function submitCheckout(
     pickupPointId: pickupPointId ?? '',
     courierNotePl: courierNotePl ?? '',
     internalShipmentNotePl: internalShipmentNotePl ?? '',
+    /*
+      INSURANCE-01. Echoed back, unlike the two consent checkboxes above it.
+      Re-confirming a consent on a corrected resubmission is the right
+      default; silently dropping cover the customer asked and is about to pay
+      for is not - they would see the total fall and have no reason to look
+      for why.
+    */
+    insuranceSelected: insuranceSelected ? 'true' : '',
   };
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -169,6 +186,7 @@ export async function submitCheckout(
     pickupPointId,
     courierNotePl,
     internalShipmentNotePl,
+    insuranceSelected,
   });
 
   if (!result.ok) {

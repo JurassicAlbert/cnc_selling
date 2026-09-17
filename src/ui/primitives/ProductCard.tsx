@@ -1,4 +1,6 @@
 import Image from 'next/image';
+import type { MaterialChoice } from '@/domain/catalogue/material-summary';
+import { summariseMaterials } from '@/domain/catalogue/material-summary';
 import Link from 'next/link';
 
 import { formatPln } from '@/domain/money/money';
@@ -27,9 +29,14 @@ type ProductCardProps = {
   readonly productionDaysMax: number;
   readonly minWidthMm: number;
   readonly maxWidthMm: number;
-  readonly materials: readonly { readonly namePl: string }[];
-  /** Set on the homepage's first card only - see CategoryTile.tsx's comment on why this matters. */
-  readonly priority?: boolean;
+  readonly materials: readonly MaterialChoice[];
+  /**
+   * Preloads this card's photo - renamed from `priority` (PERF-06). Set only
+   * where the card is genuinely the LCP element; measured 2026-09-10, the
+   * homepage's first card is 1905 px down on desktop and 3496 px down on a
+   * phone, so it is not set there any more.
+   */
+  readonly preload?: boolean;
 };
 
 /**
@@ -57,9 +64,11 @@ export function ProductCard({
   minWidthMm,
   maxWidthMm,
   materials,
-  priority = false,
+  preload = false,
 }: ProductCardProps) {
   const CategoryIcon = getCategoryIcon(categorySlug);
+  const materialSummary = summariseMaterials(materials);
+
 
   return (
     <Link
@@ -86,9 +95,26 @@ export function ProductCard({
             src={imageUrl}
             alt=""
             fill
-            sizes="(max-width: 768px) 50vw, 280px"
+            /*
+              BUG-26, re-measured on 2026-09-10 rather than taken on trust.
+              The declaration said 50vw below 768; the card actually renders
+              325 px of a 375 px screen - 87vw - so at DPR 2 the browser asked
+              for a 384 px file to fill a slot needing about 650. Every phone
+              was being served a visibly soft image.
+
+              The rest is measured too, and one number is not what anyone
+              would guess: the widest this image ever gets is 331 px at a
+              1000 px viewport, because the grid gains a column at 1024 and
+              the cards get SMALLER above it (220 px at 1024, 282 px at 1280
+              and 1600, where the container caps). 375->325, 600->262,
+              768->219, 1000->331, 1024->220, 1100->245, 1280->282, 1600->282.
+
+              Each stop is rounded up, never down: over-declaring costs one
+              candidate width, under-declaring is the blur this item is about.
+            */
+            sizes="(max-width: 599px) 88vw, (max-width: 767px) 45vw, (max-width: 1023px) 34vw, 300px"
             style={{ objectFit: 'cover' }}
-            priority={priority}
+            preload={preload}
           />
         )}
         <span className="card-icon-badge" aria-hidden="true">
@@ -150,11 +176,23 @@ export function ProductCard({
           <span aria-hidden="true">·</span>
           {formatMmAsCentimetres(minWidthMm)}–{formatMmAsCentimetres(maxWidthMm)} cm
         </div>
-        {materials.length > 0 && (
+        {/*
+          UX-17. This chip used to render the first material's name followed
+          by "+N" - shorthand only a developer parses, and it also presented
+          one arbitrary option as if it were the headline.
+          `summariseMaterials` picks the noun from the families rather than
+          from the count, because `fartuch-kuchenny-z-grawerem` offers a
+          single CERAMIC material and the schema allows plywood, MDF, leather
+          and other besides, so "species of wood" is not always true.
+        */}
+        {materialSummary.kind !== 'none' && (
           <div style={{ marginBlockStart: 'var(--space-2)' }}>
             <span className="material-chip">
-              {materials[0]?.namePl}
-              {materials.length > 1 ? ` +${materials.length - 1}` : ''}
+              {materialSummary.kind === 'single'
+                ? materialSummary.namePl
+                : materialSummary.kind === 'wood'
+                  ? SITE.catalogueMaterialsWoodPl(materialSummary.count)
+                  : SITE.catalogueMaterialsMixedPl(materialSummary.count)}
             </span>
           </div>
         )}

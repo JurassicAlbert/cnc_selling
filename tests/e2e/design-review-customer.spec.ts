@@ -11,9 +11,8 @@ import type { Page } from '@playwright/test';
 // one IP ten per day - fewer than a full suite run needs. See fixtures.ts.
 import { expect, test } from './fixtures';
 import { fillReliably } from './fill-reliably';
+import { registerAndPromote } from './admin-session';
 import { registerAccount } from './register';
-
-import { prisma } from '../../src/server/db/client';
 
 /**
  * `submitLogin` redirects role-dependently (`mergeAndGetRedirectTarget`) -
@@ -23,9 +22,9 @@ import { prisma } from '../../src/server/db/client';
  */
 async function login(page: Page, params: { readonly email: string; readonly password: string }) {
   await page.goto('/logowanie');
-  const passwordForm = page.locator('form').filter({ has: page.getByLabel('Hasło') });
+  const passwordForm = page.locator('form').filter({ has: page.getByLabel('Hasło', { exact: true }) });
   await fillReliably(passwordForm.getByLabel('Adres e-mail'), params.email);
-  await fillReliably(passwordForm.getByLabel('Hasło'), params.password);
+  await fillReliably(passwordForm.getByLabel('Hasło', { exact: true }), params.password);
   await passwordForm.getByRole('button', { name: 'Zaloguj się' }).click();
   await expect(page).not.toHaveURL('/logowanie');
 }
@@ -36,23 +35,39 @@ async function logout(page: Page): Promise<void> {
 }
 
 /*
-  One retry, for load and not for correctness - recorded 2026-09-05 rather
-  than left as a bare config line.
+  **The retry that used to sit here is gone, and T-30 with it.**
 
-  This is the heaviest spec in the suite: two registrations, three logins and
-  two real multipart uploads in one journey. Run alone it passes on both
-  browser projects, repeatedly. Run while the other project is doing the same
-  uploads, the server has been seen to answer one of them with "The
-  destination stream closed early" and the page renders its error boundary -
-  a failure whose only content is that two uploads collided.
+  It was added on 2026-09-05 because this spec failed once while both browser
+  projects ran its two real multipart uploads at the same time, and the server
+  log carried "The destination stream closed early". The two were assumed to
+  be the same event, and the retry was written up as covering an upload
+  collision.
 
-  A retry is the established remedy in this repository for exactly that
-  (`admin-pricing.test.ts` carries the same, for the same reason) and it is
-  also the one that can hide a real regression, so: the underlying stream
-  error is worth its own investigation and is recorded as T-30. This makes the
-  suite honest in the meantime, it does not close that question.
+  That assumption was wrong, and the investigation is recorded in T-30:
+
+  - the message is React's own `destination.on('close', …)` cancel handler
+    (`react-dom/cjs/react-dom-server.node.development.js:10502`), and the
+    destination is the **response** React is piping into, not the request
+    body. It means the client socket closed before the render finished;
+  - it fires in **every** run of this spec, passing or failing - 8 times
+    across 5 concurrent runs that were all green;
+  - it fires with `--workers=1`, so it is not about collisions;
+  - and across a full suite it comes overwhelmingly from specs that upload
+    nothing at all: `mobile-rwd` 13, `mobile-bottom-nav` 9, `admin-authz` 9.
+    Those are the specs that navigate fastest, which is exactly what closes a
+    response socket mid-render.
+
+  So the retry was justified by a coincidence, and a retry with a wrong reason
+  attached is worse than none: it invites the next person to trust it. This
+  spec passed **12 consecutive times with retries disabled**, including 5 runs
+  under the precise condition the retry was added for. If it flakes again that
+  is a new observation, and it starts with no explanation rather than a
+  discredited one.
+
+  Removing it also gives CI *more* cover, not less: a describe-level
+  `retries: 1` overrode the global `retries: 2`, so this - the heaviest spec
+  in the suite - was the one with the fewest attempts.
 */
-test.describe.configure({ retries: 1 });
 
 test('customer uploads, staff requests changes, customer sees the notice and reuploads', async ({ page }) => {
   // Two registrations, three logins, two file uploads and a staff review in
@@ -106,10 +121,7 @@ test('customer uploads, staff requests changes, customer sees the notice and reu
     the loop: that they see the notice, see the comment, and can reupload. It
     just needs an account that can actually press the button.
   */
-  await registerAccount(page, { name: 'E2E Reviewer', email: staffEmail, password: 'correcthorse123' });
-  await prisma.user.update({ where: { email: staffEmail }, data: { role: 'ADMIN' } });
-  await logout(page);
-  await login(page, { email: staffEmail, password: 'correcthorse123' });
+  await registerAndPromote(page, { name: 'E2E Reviewer', email: staffEmail, password: 'correcthorse123', role: 'ADMIN' });
 
   await page.goto(`/panel/weryfikacja/${designId}`);
   await expect(page.getByText('PENDING_REVIEW', { exact: true })).toBeVisible();

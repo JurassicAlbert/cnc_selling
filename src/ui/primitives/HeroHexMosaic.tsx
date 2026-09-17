@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useRef } from 'react';
 
 import { hexPoints } from '@/ui/primitives/SectionDecoration';
@@ -75,9 +76,30 @@ import { hexPoints } from '@/ui/primitives/SectionDecoration';
  * once inside the foreignObject and behaves identically to the `<image>`
  * it replaced for sizing, clipping, and the parallax transform.
  *
- * `poster="/videos/hero-carving-poster.jpg"` is the video's own first
- * frame (`ffmpeg -i hero-carving.mp4 -frames:v 1`, 30KB) - shown while
- * the video downloads/decodes instead of a blank paper-color rect.
+ * The first frame (`ffmpeg -i hero-carving.mp4 -frames:v 1`, 30KB) is what
+ * shows while the video downloads and decodes, instead of a blank
+ * paper-color rect.
+ *
+ * **PERF-07, 2026-09-11.** It used to be the video's own `poster`
+ * attribute, and that made it the page's largest-contentful-paint element
+ * - measured with a `PerformanceObserver` against a production build, 311
+ * 527 px of painted area - while being **unpreloadable**: `next/image`'s
+ * `preload` cannot reach a `<video poster>`, so the browser only learns
+ * the URL after parsing the SVG, the `foreignObject` and the video. The
+ * element that decides the score was the one discovered last.
+ *
+ * It is now a real `<Image preload>` layered *behind* the video, which
+ * gets it a `<link rel="preload">` in the `<head>` and Next's format
+ * negotiation (WebP/AVIF instead of a 30KB JPEG). The `poster` attribute
+ * is deliberately **gone**: keeping both would fetch the same frame twice
+ * under two different URLs, since the optimiser serves
+ * `/_next/image?url=…` rather than the file path.
+ *
+ * No script does the hand-off. The video simply paints over the image once
+ * it has frames, and a `<video>` with no poster and nothing decoded yet is
+ * transparent - so with JavaScript off, or before the 523KB clip arrives,
+ * the image is what a visitor sees. That is the same thing the poster did,
+ * reached a different way.
  */
 
 /**
@@ -172,16 +194,31 @@ export function HeroHexMosaic() {
         <g clipPath="url(#hero-mosaic-clip)">
           <rect x={0} y={0} width={420} height={370} fill="var(--mui-palette-background-paper)" />
           <foreignObject x={-40} y={-50} width={500} height={470}>
-            <video
-              ref={videoRef}
-              src="/videos/hero-carving.mp4"
-              poster="/videos/hero-carving-poster.jpg"
-              autoPlay
-              muted
-              loop
-              playsInline
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
+            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+              {/*
+                PERF-07. The first frame, preloaded, sitting behind the clip.
+                `alt=""` because it is the same artwork the video shows and
+                the section's own heading names it - a description here would
+                be read out twice.
+              */}
+              <Image
+                src="/videos/hero-carving-poster.jpg"
+                alt=""
+                fill
+                preload
+                sizes="(max-width: 899px) 100vw, 500px"
+                style={{ objectFit: 'cover' }}
+              />
+              <video
+                ref={videoRef}
+                src="/videos/hero-carving.mp4"
+                autoPlay
+                muted
+                loop
+                playsInline
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
           </foreignObject>
         </g>
 

@@ -28,6 +28,17 @@ export type AdminDeliveryWeightTier = {
   readonly maxDepthMm: number | null;
 };
 
+/**
+ * One declared-value band of a carrier's own insurance rate card - see
+ * `DeliveryInsuranceTier`'s schema comment and INSURANCE-01.
+ */
+export type AdminDeliveryInsuranceTier = {
+  readonly id: string;
+  readonly labelPl: string;
+  readonly maxValueGrosze: number;
+  readonly priceGrosze: number;
+};
+
 export type AdminDeliveryMethodDetail = {
   readonly id: string;
   readonly namePl: string;
@@ -48,6 +59,15 @@ export type AdminDeliveryMethodDetail = {
    * only the fallback and is never what a customer is charged.
    */
   readonly weightTiers: readonly AdminDeliveryWeightTier[];
+  /**
+   * INSURANCE-01. Empty for every method today, and that is the feature
+   * working as decided rather than a gap: the owner chose the carrier's real
+   * declared-value table, neither InPost nor DPD publishes one citably, and
+   * inventing plausible bands would be telling a customer they are covered
+   * for a figure nobody agreed to. Typing the real card in here turns the
+   * option on at checkout; nothing else has to change.
+   */
+  readonly insuranceTiers: readonly AdminDeliveryInsuranceTier[];
 };
 
 const WEIGHT_TIER_SELECT = {
@@ -59,6 +79,8 @@ const WEIGHT_TIER_SELECT = {
   maxHeightMm: true,
   maxDepthMm: true,
 } as const;
+
+const INSURANCE_TIER_SELECT = { id: true, labelPl: true, maxValueGrosze: true, priceGrosze: true } as const;
 
 export async function findDeliveryMethodForAdmin(id: string): Promise<AdminDeliveryMethodDetail | null> {
   return prisma.deliveryMethod.findUnique({
@@ -80,6 +102,9 @@ export async function findDeliveryMethodForAdmin(id: string): Promise<AdminDeliv
       // makes sense read lightest-first, and an admin adding a tier out of
       // order should still see a sane list rather than have to fix it.
       weightTiers: { orderBy: { maxWeightGrams: 'asc' }, select: WEIGHT_TIER_SELECT },
+      // Same reasoning as the weight tiers above: a rate card reads
+      // cheapest-band-first, so order by the band rather than by `sortOrder`.
+      insuranceTiers: { orderBy: { maxValueGrosze: 'asc' }, select: INSURANCE_TIER_SELECT },
     },
   });
 }

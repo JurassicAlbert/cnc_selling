@@ -19,6 +19,7 @@ import { Alert, Button, Stack, TextField, Typography } from '@mui/material';
 
 import { authFormErrorMessage, authIssueMessage } from '@/content/pl/messages';
 import { SITE } from '@/content/pl/site';
+import { PasswordField } from '@/ui/islands/auth/PasswordField';
 import { submitLogin } from '@/server/actions/auth';
 import type { LoginFormState } from '@/server/actions/auth';
 
@@ -45,6 +46,7 @@ export function LoginForm() {
         <TextField
           label={SITE.authEmailLabelPl}
           name="email"
+          autoComplete="email"
           type="email"
           defaultValue={state.values.email}
           error={state.fieldErrors.email !== undefined}
@@ -52,14 +54,10 @@ export function LoginForm() {
           size="small"
           fullWidth
         />
-        <TextField
-          label={SITE.authPasswordLabelPl}
-          name="password"
-          type="password"
+        <PasswordField
+          autoComplete="current-password"
           error={state.fieldErrors.password !== undefined}
           helperText={state.fieldErrors.password !== undefined ? authIssueMessage(state.fieldErrors.password) : undefined}
-          size="small"
-          fullWidth
         />
 
         <SubmitButton />

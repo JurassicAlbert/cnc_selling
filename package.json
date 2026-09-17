@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "lint": "biome lint . && node scripts/check-polish-literals.mjs",
+    "lint": "biome lint . && node scripts/check-polish-literals.mjs && node scripts/check-client-server-imports.mjs",
     "lint:fix": "biome lint --write .",
     "format": "biome format --write .",
     "dev": "next dev",
@@ -27,6 +27,9 @@
     "db:deploy:test": "node scripts/migrate-test-db.mjs",
     "db:seed:test": "node scripts/seed-test-db.mjs",
     "db:reset": "node scripts/reset-test-db.mjs",
+    "preflight": "node scripts/preflight-env.mjs",
+    "deploy": "bash scripts/deploy.sh",
+    "release:check": "npm run typecheck && npm run lint && npm test && npm run build",
     "prisma:generate": "prisma generate",
     "postinstall": "prisma generate"
   },

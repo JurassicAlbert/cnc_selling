@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { findPickupPointById, searchPickupPoints } from '@/server/delivery/pickup-points';
+import { findPickupPointById, searchPickupPoints } from '@/domain/delivery/pickup-points';
 
 const INPOST = 'InPost Paczkomaty';
 const DPD = 'DPD Pickup';

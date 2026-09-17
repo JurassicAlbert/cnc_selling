@@ -6,6 +6,17 @@ import { priceAndValidateSelections } from '@/server/configurator/validate-and-p
 import { applyAddToCart } from '@/server/operations/cart';
 import { findCartForRequest } from '@/server/repositories/cart';
 import type { Owner } from '@/server/session/ownership';
+import { readsActivePricing } from './pricing-fixture';
+
+/*
+  T-32. This file prices against whichever `PricingSettings` version is live,
+  so it must not run while `admin-pricing.test.ts` or
+  `pricing-version-swap.test.ts` has a throwaway version published. A shared
+  lock, so it still runs in parallel with every other reader - see
+  `pricing-fixture.ts` for why an exclusive one would have serialised the
+  suite.
+*/
+readsActivePricing();
 
 /**
  * `docs/REVIEW-DETAILED.md` SEC-03.

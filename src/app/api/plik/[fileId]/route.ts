@@ -50,18 +50,33 @@ export async function GET(request: Request, context: RouteContext): Promise<Next
     return new NextResponse(null, { status: 404 });
   }
 
-  const bytes = await storage.get(key);
-  if (bytes === null) {
+  /*
+    SEC-09. This was `storage.get(key)` - a `Buffer` - so every request pulled
+    the whole file into the process before writing a byte of the response.
+    Uploads are capped at 25 MB (`domain/upload/inspect.ts`), so a handful of
+    concurrent downloads was tens of megabytes of resident memory holding data
+    that was only being copied to a socket. 16.1 always said this route
+    "streams via the storage adapter"; now it does.
+
+    Backpressure comes with it: a slow client throttles the disk read instead
+    of filling memory with bytes it has not collected.
+  */
+  const stream = await storage.getStream(key);
+  if (stream === null) {
     return new NextResponse(null, { status: 404 });
   }
 
   const contentType = wantsPreview ? 'image/jpeg' : file.mimeType;
   const disposition = contentType === 'image/svg+xml' ? 'attachment' : 'inline';
 
-  return new NextResponse(new Uint8Array(bytes), {
+  return new NextResponse(stream.body, {
     status: 200,
     headers: {
       'Content-Type': contentType,
+      // Known without reading anything, because `getStream` stats the file it
+      // is about to open. A 25 MB PDF downloads with a real progress bar
+      // rather than a spinner of unknown length.
+      'Content-Length': String(stream.sizeBytes),
       'Content-Disposition': `${disposition}; filename="${encodeURIComponent(file.originalName)}"`,
       'Cache-Control': 'private, no-store',
       // Set here as well as site-wide (`next.config.ts` -> `baseSecurityHeaders`)

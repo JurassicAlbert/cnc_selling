@@ -20,8 +20,8 @@ import { describe, expect, it } from 'vitest';
 
 import { EMPTY_SELECTIONS } from '@/domain/configuration/steps';
 import type { Selections } from '@/domain/configuration/steps';
-import { findUnavailableSelection } from '@/server/configurator/resolve-options';
-import type { ResolvedOptions } from '@/server/configurator/resolve-options';
+import { findUnavailableSelection } from '@/domain/configuration/availability';
+import type { ResolvedOptions } from '@/domain/configuration/availability';
 
 const OFFERED: ResolvedOptions = {
   materialIds: ['oak', 'pine'],

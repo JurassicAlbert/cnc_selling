@@ -49,6 +49,14 @@ export type OrderConfirmationView = {
   readonly subtotalNetGrosze: number;
   readonly vatGrosze: number;
   readonly shippingGrosze: number;
+  /**
+   * INSURANCE-01. Snapshotted like `shippingGrosze` beside it: editing or
+   * removing a band at `/panel/dostawa` must never change what a past order
+   * says it was charged. Zero and `null` when the customer did not buy cover,
+   * which is every order placed before this shipped.
+   */
+  readonly insuranceGrosze: number;
+  readonly insuranceLabelPl: string | null;
   readonly totalGrossGrosze: number;
   readonly email: string;
   /** 2026-08-29, owner feedback: the customer-facing confirmation never showed which delivery method or pickup point they'd actually chosen - a real gap, not by design. */
@@ -123,6 +131,8 @@ export async function findOrderForUser(orderNumber: string, userId: string): Pro
       subtotalNetGrosze: true,
       vatGrosze: true,
       shippingGrosze: true,
+      insuranceGrosze: true,
+      insuranceLabelPl: true,
       totalGrossGrosze: true,
       email: true,
       deliveryMethodNamePl: true,
@@ -144,6 +154,8 @@ export async function findOrderForUser(orderNumber: string, userId: string): Pro
     subtotalNetGrosze: order.subtotalNetGrosze,
     vatGrosze: order.vatGrosze,
     shippingGrosze: order.shippingGrosze,
+    insuranceGrosze: order.insuranceGrosze,
+    insuranceLabelPl: order.insuranceLabelPl,
     totalGrossGrosze: order.totalGrossGrosze,
     email: order.email,
     deliveryMethodNamePl: order.deliveryMethodNamePl,
@@ -179,6 +191,8 @@ export async function queryOrderForConfirmation(
       subtotalNetGrosze: true,
       vatGrosze: true,
       shippingGrosze: true,
+      insuranceGrosze: true,
+      insuranceLabelPl: true,
       totalGrossGrosze: true,
       email: true,
       deliveryMethodNamePl: true,
@@ -210,6 +224,8 @@ export async function queryOrderForConfirmation(
     subtotalNetGrosze: order.subtotalNetGrosze,
     vatGrosze: order.vatGrosze,
     shippingGrosze: order.shippingGrosze,
+    insuranceGrosze: order.insuranceGrosze,
+    insuranceLabelPl: order.insuranceLabelPl,
     totalGrossGrosze: order.totalGrossGrosze,
     email: order.email,
     deliveryMethodNamePl: order.deliveryMethodNamePl,
